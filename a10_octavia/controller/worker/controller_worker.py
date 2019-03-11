@@ -164,7 +164,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             operator_fault_string='This provider does not support updating '
                                   'listeners yet')
 
-    def create_load_balancer(self, load_balancer_id):
+    def create_load_balancer(self, msg):
         """Creates a load balancer by allocating Amphorae.
 
         First tries to allocate an existing Amphora in READY state.
@@ -176,13 +176,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :raises NoResultFound: Unable to find the object
         """
 
-        LOG.info("A10ControllerWorker.create_load_balancer called.")
+        LOG.info("A10ControllerWorker.create_load_balancer called. self: %s msg: %s", self, msg)
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support creating '
-                              'load balancers yet',
-            operator_fault_string='This provider does not support creating '
-                                  'load balancers yet')
+        #raise exceptions.NotImplementedError(
+        #    user_fault_string='This provider does not support creating '
+        #                      'load balancers yet',
+        #    operator_fault_string='This provider does not support creating '
+        #                          'load balancers yet')
 
     def delete_load_balancer(self, load_balancer_id, cascade=False):
         """Deletes a load balancer by de-allocating Amphorae.
