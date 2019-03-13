@@ -24,33 +24,27 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from sqlalchemy.orm import exc as db_exceptions
-from taskflow.listeners import logging as tf_logging
-import tenacity
 
-from octavia.common import base_taskflow
+from octavia.api.drivers import driver_lib
 from octavia.common import constants
-from octavia.controller.worker.flows import amphora_flows
-from octavia.controller.worker.flows import health_monitor_flows
-from octavia.controller.worker.flows import l7policy_flows
-from octavia.controller.worker.flows import l7rule_flows
-from octavia.controller.worker.flows import listener_flows
-from octavia.controller.worker.flows import load_balancer_flows
-from octavia.controller.worker.flows import member_flows
-from octavia.controller.worker.flows import pool_flows
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 
+import acos_client
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
+class A10ControllerWorker:
 
     def __init__(self):
- 
-        super(A10ControllerWorker, self).__init__()
+        self.c = acos_client.Client('138.197.107.20', acos_client.AXAPI_21, 'admin', 'a10')
+        self._lb_repo = repo.LoadBalancerRepository()
+        self._octavia_driver_db = driver_lib.DriverLibrary()
 
     def create_amphora(self):
         """Creates an Amphora.
@@ -164,7 +158,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             operator_fault_string='This provider does not support updating '
                                   'listeners yet')
 
-    def create_load_balancer(self, msg):
+    def create_load_balancer(self, load_balancer_id):
         """Creates a load balancer by allocating Amphorae.
 
         First tries to allocate an existing Amphora in READY state.
@@ -175,14 +169,23 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+        lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
 
-        LOG.info("A10ControllerWorker.create_load_balancer called. self: %s msg: %s", self, msg)
+        LOG.info("A10ControllerWorker.create_load_balancer called. self: %s load_balancer_id: %s lb: %s vip: %s" % (self.__dict__, load_balancer_id, lb.__dict__, lb.vip.__dict__))
+        LOG.info("A10ControllerWorker.create_load_balancer called. lb name: %s lb id: %s vip ip: %s" % (lb.name, load_balancer_id, lb.vip.ip_address))
 
-        #raise exceptions.NotImplementedError(
-        #    user_fault_string='This provider does not support creating '
-        #                      'load balancers yet',
-        #    operator_fault_string='This provider does not support creating '
-        #                          'load balancers yet')
+        try:
+            r = self.c.slb.virtual_server.create(load_balancer_id, lb.vip.ip_address)
+            status = { 'loadbalancers': [{"id": load_balancer_id,
+                       "provisioning_status": constants.ACTIVE }]}
+        except Exception as e:
+            r = str(e)
+            status = { 'loadbalancers': [{"id": load_balancer_id,
+                       "provisioning_status": consts.ERROR }]}
+        LOG.info("vThunder response: %s" % (r))
+        LOG.info("Updating db with this status: %s" % (status))
+        self._octavia_driver_db.update_loadbalancer_status(status)
+
 
     def delete_load_balancer(self, load_balancer_id, cascade=False):
         """Deletes a load balancer by de-allocating Amphorae.
@@ -192,11 +195,19 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :raises LBNotFound: The referenced load balancer was not found
         """
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support deleting '
-                              'load balancers yet',
-            operator_fault_string='This provider does not support deleting '
-                                  'load balancers yet')
+        lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
+        # No exception even when acos fails...
+        try:
+            r = self.c.slb.virtual_server.delete(load_balancer_id)
+            status = { 'loadbalancers': [{"id": load_balancer_id,
+                       "provisioning_status": constants.DELETED}]}
+        except Exception as e:
+            r = str(e)
+            status = { 'loadbalancers': [{"id": load_balancer_id,
+                       "provisioning_status": consts.ERROR }]}
+        LOG.info("vThunder response: %s" % (r))
+        LOG.info("Updating db with this status: %s" % (status))
+        self._octavia_driver_db.update_loadbalancer_status(status)
 
     def update_load_balancer(self, load_balancer_id, load_balancer_updates):
         """Updates a load balancer.
