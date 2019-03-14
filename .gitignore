@@ -8,6 +8,8 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+env/
+bin/
 build/
 develop-eggs/
 dist/
@@ -53,12 +55,21 @@ coverage.xml
 
 # Django stuff:
 *.log
+*.pot
 local_settings.py
 db.sqlite3
 
 # Flask stuff:
 instance/
 .webassets-cache
+
+# Mr Developer
+.mr.developer.cfg
+.project
+.pydevproject
+
+# Rope
+.ropeproject
 
 # Scrapy stuff:
 .scrapy
@@ -70,8 +81,7 @@ docs/_build/
 target/
 
 # Jupyter Notebook
-.ipynb_checkpoints
-
+.ipynb_checkpoints 
 # pyenv
 .python-version
 
@@ -102,3 +112,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+*~
+.DS_Store
+Vagrantfile
+.vagrant/
+*.swp
