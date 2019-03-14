@@ -194,8 +194,6 @@ class A10ControllerWorker:
         :returns: None
         :raises LBNotFound: The referenced load balancer was not found
         """
-
-        lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
         # No exception even when acos fails...
         try:
             r = self.c.slb.virtual_server.delete(load_balancer_id)
@@ -217,12 +215,21 @@ class A10ControllerWorker:
         :returns: None
         :raises LBNotFound: The referenced load balancer was not found
         """
+        LOG.info("A10ControllerWorker.update_load_balancer called. self: %s load_balancer_id: %s load_balancer_updates: %s" % (self.__dict__, load_balancer_id, load_balancer_updates))
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support updating '
-                              'load balancers yet',
-            operator_fault_string='This provider does not support updating '
-                                  'load balancers yet')
+        try:
+            #r = self.c.slb.virtual_server.update(load_balancer_id, lb.vip.ip_address)
+            status = { 'loadbalancers': [{"id": load_balancer_id,
+                       "provisioning_status": constants.ACTIVE }]}
+        except Exception as e:
+            r = str(e)
+            status = { 'loadbalancers': [{"id": load_balancer_id,
+                       "provisioning_status": consts.ERROR }]}
+        LOG.info("Updating db with this status: %s" % (status))
+        lb.update(db_apis.get_session(), loadbalancer.id,
+                                      **update_dict)
+
+
 
     def create_member(self, member_id):
         """Creates a pool member.

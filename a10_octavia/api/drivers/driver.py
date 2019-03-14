@@ -57,5 +57,21 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.LOAD_BALANCER_ID: loadbalancer.loadbalancer_id, 'cascade': cascade}
         self.client.cast({}, 'delete_load_balancer', **payload)
 
-    # Moany other methods may be inheritted from Amphora 
+    def loadbalancer_update(self, old_loadbalancer, new_loadbalancer):
+        # Adapt the provider data model to the queue schema
+        lb_dict = new_loadbalancer.to_dict()
+        if 'admin_state_up' in lb_dict:
+            lb_dict['enabled'] = lb_dict.pop('admin_state_up')
+        lb_id = lb_dict.pop('loadbalancer_id')
+        # Put the qos_policy_id back under the vip element the controller
+        # expects
+        vip_qos_policy_id = lb_dict.pop('vip_qos_policy_id', None)
+        if vip_qos_policy_id:
+            vip_dict = {"qos_policy_id": vip_qos_policy_id}
+            lb_dict["vip"] = vip_dict
 
+        payload = {constants.LOAD_BALANCER_ID: lb_id,
+                   constants.LOAD_BALANCER_UPDATES: lb_dict}
+        self.client.cast({}, 'update_load_balancer', **payload)
+
+    # Many other methods may be inheritted from Amphora 
