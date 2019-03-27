@@ -27,8 +27,11 @@ from sqlalchemy.orm import exc as db_exceptions
 
 from octavia.api.drivers import driver_lib
 from octavia.common import constants
+from octavia.common import base_taskflow
+from taskflow.listeners import logging as tf_logging
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
+from a10_octavia.controller.worker.flows import a10_load_balancer_flows
 
 import acos_client
 import urllib3
@@ -39,12 +42,16 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class A10ControllerWorker:
+class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
     def __init__(self):
         self.c = acos_client.Client('138.197.107.20', acos_client.AXAPI_21, 'admin', 'a10')
         self._lb_repo = repo.LoadBalancerRepository()
         self._octavia_driver_db = driver_lib.DriverLibrary()
+        self._lb_flows = a10_load_balancer_flows.LoadBalancerFlows()
+        self._exclude_result_logging_tasks = ()
+        super(A10ControllerWorker, self).__init__()
+        
 
     def create_amphora(self):
         """Creates an Amphora.
@@ -170,21 +177,39 @@ class A10ControllerWorker:
         :raises NoResultFound: Unable to find the object
         """
         lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
+        if not lb:
+            LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
+                        '60 seconds.', 'load_balancer', load_balancer_id)
+            raise db_exceptions.NoResultFound
 
         LOG.info("A10ControllerWorker.create_load_balancer called. self: %s load_balancer_id: %s lb: %s vip: %s" % (self.__dict__, load_balancer_id, lb.__dict__, lb.vip.__dict__))
         LOG.info("A10ControllerWorker.create_load_balancer called. lb name: %s lb id: %s vip ip: %s" % (lb.name, load_balancer_id, lb.vip.ip_address))
 
-        try:
-            r = self.c.slb.virtual_server.create(load_balancer_id, lb.vip.ip_address)
-            status = { 'loadbalancers': [{"id": load_balancer_id,
-                       "provisioning_status": constants.ACTIVE }]}
-        except Exception as e:
-            r = str(e)
-            status = { 'loadbalancers': [{"id": load_balancer_id,
-                       "provisioning_status": consts.ERROR }]}
-        LOG.info("vThunder response: %s" % (r))
-        LOG.info("Updating db with this status: %s" % (status))
-        self._octavia_driver_db.update_loadbalancer_status(status)
+        store = {constants.LOADBALANCER_ID: load_balancer_id,
+                 constants.BUILD_TYPE_PRIORITY:
+                 constants.LB_CREATE_NORMAL_PRIORITY,
+                 'status': {}}
+        topology = CONF.controller_worker.loadbalancer_topology
+        create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
+            topology=topology, listeners=lb.listeners)
+        create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
+        with tf_logging.DynamicLoggingListener(
+                create_lb_tf, log=LOG,
+                hide_inputs_outputs_of=self._exclude_result_logging_tasks):
+            create_lb_tf.run()
+        
+
+        #try:
+        #    r = self.c.slb.virtual_server.create(load_balancer_id, lb.vip.ip_address)
+        #    status = { 'loadbalancers': [{"id": load_balancer_id,
+        #               "provisioning_status": constants.ACTIVE }]}
+        #except Exception as e:
+        #    r = str(e)
+        #    status = { 'loadbalancers': [{"id": load_balancer_id,
+        #               "provisioning_status": consts.ERROR }]}
+        #LOG.info("vThunder response: %s" % (r))
+        #LOG.info("Updating db with this status: %s" % (status))
+        #self._octavia_driver_db.update_loadbalancer_status(status)
 
 
     def delete_load_balancer(self, load_balancer_id, cascade=False):
