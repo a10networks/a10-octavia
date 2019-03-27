@@ -188,7 +188,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         store = {constants.LOADBALANCER_ID: load_balancer_id,
                  constants.BUILD_TYPE_PRIORITY:
                  constants.LB_CREATE_NORMAL_PRIORITY,
-                 'status': {}}
+                 constants.LOADBALANCER : lb,
+                 }
         topology = CONF.controller_worker.loadbalancer_topology
         create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
             topology=topology, listeners=lb.listeners)

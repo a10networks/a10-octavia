@@ -21,13 +21,14 @@ class BaseVThunderTask(task.Task):
 class CreateVitualServerTask(BaseVThunderTask):
     """Task to create a virtual server in vthunder device."""
 
-    def execute(self, loadbalancer_id):
+    def execute(self, loadbalancer_id, loadbalancer):
         try:
-            r = self.c.slb.virtual_server.create(loadbalancer_id, lb.vip.ip_address)
+            r = self.c.slb.virtual_server.create(loadbalancer_id, loadbalancer.vip.ip_address)
             status = { 'loadbalancers': [{"id": loadbalancer_id,
                        "provisioning_status": constants.ACTIVE }]}
         except Exception as e:
             r = str(e)
+            LOG.info(r)
             status = { 'loadbalancers': [{"id": loadbalancer_id,
                        "provisioning_status": constants.ERROR }]}
         LOG.info("##########################hello##############")

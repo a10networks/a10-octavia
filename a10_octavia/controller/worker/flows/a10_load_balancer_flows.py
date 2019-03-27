@@ -57,7 +57,7 @@ class LoadBalancerFlows(object):
         lb_create_flow = linear_flow.Flow(f_name)
 
         lb_create_flow.add(vthunder_tasks.CreateVitualServerTask(
-            requires=constants.LOADBALANCER_ID,
+            requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER),
             provides=constants.STATUS))
         lb_create_flow.add(a10_database_tasks.UpdateLBStatusTask(
             requires=constants.STATUS))
