@@ -21,17 +21,20 @@ class BaseVThunderTask(task.Task):
 class CreateVitualServerTask(BaseVThunderTask):
     """Task to create a virtual server in vthunder device."""
 
-    def execute(self, loadbalancer_id, loadbalancer):
+    def execute(self, loadbalancer_id, loadbalancer, amphora):
         try:
+            #IMP: update required
+            vthunder = amphora.cached_zone
+            c = acos_client.Client(vthunder.ip, vthunder.acos_version, vthunder.username, vthunder.password)
             r = self.c.slb.virtual_server.create(loadbalancer_id, loadbalancer.vip.ip_address)
             status = { 'loadbalancers': [{"id": loadbalancer_id,
                        "provisioning_status": constants.ACTIVE }]}
+            LOG.info("amphora id is:" + str(amphora.id) )
         except Exception as e:
             r = str(e)
             LOG.info(r)
             status = { 'loadbalancers': [{"id": loadbalancer_id,
                        "provisioning_status": constants.ERROR }]}
-        LOG.info("##########################hello##############")
         LOG.info(str(status))
         return status
 

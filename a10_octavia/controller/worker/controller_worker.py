@@ -168,10 +168,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
     def create_load_balancer(self, load_balancer_id):
         """Creates a load balancer by allocating Amphorae.
 
-        First tries to allocate an existing Amphora in READY state.
-        If none are available it will attempt to build one specifically
-        for this load balancer.
-
         :param load_balancer_id: ID of the load balancer to create
         :returns: None
         :raises NoResultFound: Unable to find the object
@@ -199,19 +195,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 hide_inputs_outputs_of=self._exclude_result_logging_tasks):
             create_lb_tf.run()
         
-
-        #try:
-        #    r = self.c.slb.virtual_server.create(load_balancer_id, lb.vip.ip_address)
-        #    status = { 'loadbalancers': [{"id": load_balancer_id,
-        #               "provisioning_status": constants.ACTIVE }]}
-        #except Exception as e:
-        #    r = str(e)
-        #    status = { 'loadbalancers': [{"id": load_balancer_id,
-        #               "provisioning_status": consts.ERROR }]}
-        #LOG.info("vThunder response: %s" % (r))
-        #LOG.info("Updating db with this status: %s" % (status))
-        #self._octavia_driver_db.update_loadbalancer_status(status)
-
 
     def delete_load_balancer(self, load_balancer_id, cascade=False):
         """Deletes a load balancer by de-allocating Amphorae.
