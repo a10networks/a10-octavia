@@ -173,8 +173,8 @@ class LoadBalancerFlows(object):
         delete_LB_flow = linear_flow.Flow(constants.DELETE_LOADBALANCER_FLOW)
         delete_LB_flow.add(lifecycle_tasks.LoadBalancerToErrorOnRevertTask(
             requires=constants.LOADBALANCER))
-        #delete_LB_flow.add(compute_tasks.NovaServerGroupDelete(
-        #    requires=constants.SERVER_GROUP_ID))
+        delete_LB_flow.add(compute_tasks.NovaServerGroupDelete(
+            requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
             requires=constants.LOADBALANCER))
         #delete_LB_flow.add(listeners_delete)
@@ -182,14 +182,14 @@ class LoadBalancerFlows(object):
         #    requires=constants.LOADBALANCER))
         #delete_LB_flow.add(network_tasks.DeallocateVIP(
         #    requires=constants.LOADBALANCER))
-        #delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
-        #    requires=constants.LOADBALANCER))
+        delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
+            requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
-        delete_LB_flow.add(vthunder_tasks.DeleteVitualServerTask(
-            requires=(constants.LOADBALANCER, constants.AMPHORA),
-            provides=constants.STATUS))
+        #delete_LB_flow.add(vthunder_tasks.DeleteVitualServerTask(
+        #    requires=(constants.LOADBALANCER, constants.AMPHORA),
+        #    provides=constants.STATUS))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeDeletedInDB(
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.DisableLBAmphoraeHealthMonitoring(
