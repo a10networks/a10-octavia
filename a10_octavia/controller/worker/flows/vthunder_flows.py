@@ -258,10 +258,10 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.UPDATE_AMPHORA_INFO,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_OBJ),
             provides=constants.AMPHORA))
-        #create_amp_for_lb_subflow.add(
-        #    amphora_driver_tasks.AmphoraComputeConnectivityWait(
-        #        name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
-        #        requires=constants.AMPHORA))
+        create_amp_for_lb_subflow.add(
+            vthunder_tasks.VThunderComputeConnectivityWait(
+                name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
+                requires=constants.AMPHORA))
         #create_amp_for_lb_subflow.add(amphora_driver_tasks.AmphoraFinalize(
         #    name=sf_name + '-' + constants.AMPHORA_FINALIZE,
         #    requires=constants.AMPHORA))
