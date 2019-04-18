@@ -187,6 +187,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                  constants.LOADBALANCER : lb,
                  }
         topology = CONF.controller_worker.loadbalancer_topology
+
+        store[constants.UPDATE_DICT] = {
+            constants.LOADBALANCER_TOPOLOGY: topology
+        }
+
         create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
             topology=topology, listeners=lb.listeners)
         create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
