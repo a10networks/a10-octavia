@@ -183,9 +183,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         store = {constants.LOADBALANCER_ID: load_balancer_id,
                  constants.BUILD_TYPE_PRIORITY:
-                 constants.LB_CREATE_NORMAL_PRIORITY,
-                 constants.LOADBALANCER : lb,
-                 }
+                 constants.LB_CREATE_NORMAL_PRIORITY}
+
         topology = CONF.controller_worker.loadbalancer_topology
 
         store[constants.UPDATE_DICT] = {

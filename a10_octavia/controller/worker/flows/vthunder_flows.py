@@ -38,9 +38,9 @@ class VThunderFlows(object):
 
     def get_vthunder_for_lb_subflow(
             self, prefix, role=constants.ROLE_STANDALONE):
-        """Tries to allocate a spare vthunder to a loadbalancer if none
+        """Tries to allocate a spare amphora to a loadbalancer if none
 
-        exists, create a new vthunder.
+        exists, create a new amphora.
         """
 
         sf_name = prefix + '-' + constants.GET_AMPHORA_FOR_LB_SUBFLOW
@@ -53,14 +53,7 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.MAP_LOADBALANCER_TO_AMPHORA,
             requires=constants.LOADBALANCER_ID,
             provides=constants.AMPHORA_ID)
-        amp_for_lb_flow.add(allocate_and_associate_amp)
 
-        # adding amphora details in LB - code for Omkar
-        ##map_lb_to_amp = self._get_post_map_lb_subflow(prefix, role)
-        ##amp_for_lb_flow.add(map_lb_to_amp) 
-
-        
-        # IMP: needs to be converted in graph flow for not having amphora entry
         # Define a subflow for if we successfully map an amphora
         map_lb_to_amp = self._get_post_map_lb_subflow(prefix, role)
         # Define a subflow for if we can't map an amphora
@@ -77,9 +70,11 @@ class VThunderFlows(object):
         # Setup the decider for the path if we can't map an amphora
         amp_for_lb_flow.link(allocate_and_associate_amp, create_amp,
                              decider=self._create_new_amp_for_lb_decider,
-                            decider_depth='flow')
+                             decider_depth='flow')
 
         return amp_for_lb_flow
+
+
 
     def _get_post_map_lb_subflow(self, prefix, role):
         """Set amphora type after mapped to lb."""
@@ -108,52 +103,6 @@ class VThunderFlows(object):
 
         return post_map_amp_to_lb
 
-    def get_create_amphora_flow(self):
-        """Creates a flow to create an amphora.
-
-        :returns: The flow for creating the amphora
-        """
-        create_amphora_flow = linear_flow.Flow(constants.CREATE_AMPHORA_FLOW)
-        create_amphora_flow.add(database_tasks.CreateAmphoraInDB(
-                                provides=constants.AMPHORA_ID))
-        create_amphora_flow.add(lifecycle_tasks.AmphoraIDToErrorOnRevertTask(
-            requires=constants.AMPHORA_ID))
-        if False:
-            create_amphora_flow.add(cert_task.GenerateServerPEMTask(
-                                    provides=constants.SERVER_PEM))
-
-            create_amphora_flow.add(
-                database_tasks.UpdateAmphoraDBCertExpiration(
-                    requires=(constants.AMPHORA_ID, constants.SERVER_PEM)))
-
-            create_amphora_flow.add(compute_tasks.CertComputeCreate(
-                requires=(constants.AMPHORA_ID, constants.SERVER_PEM,
-                          constants.BUILD_TYPE_PRIORITY),
-                provides=constants.COMPUTE_ID))
-        else:
-            create_amphora_flow.add(compute_tasks.ComputeCreate(
-                requires=(constants.AMPHORA_ID, constants.BUILD_TYPE_PRIORITY),
-                provides=constants.COMPUTE_ID))
-        create_amphora_flow.add(database_tasks.MarkAmphoraBootingInDB(
-            requires=(constants.AMPHORA_ID, constants.COMPUTE_ID)))
-        create_amphora_flow.add(compute_tasks.ComputeActiveWait(
-            requires=(constants.COMPUTE_ID, constants.AMPHORA_ID),
-            provides=constants.COMPUTE_OBJ))
-        create_amphora_flow.add(database_tasks.UpdateAmphoraInfo(
-            requires=(constants.AMPHORA_ID, constants.COMPUTE_OBJ),
-            provides=constants.AMPHORA))
-        #create_amphora_flow.add(
-        #    amphora_driver_tasks.AmphoraComputeConnectivityWait(
-        #        requires=constants.AMPHORA))
-        create_amphora_flow.add(database_tasks.ReloadAmphora(
-            requires=constants.AMPHORA_ID,
-            provides=constants.AMPHORA))
-        #create_amphora_flow.add(amphora_driver_tasks.AmphoraFinalize(
-        #    requires=constants.AMPHORA))
-        create_amphora_flow.add(database_tasks.MarkAmphoraReadyInDB(
-            requires=constants.AMPHORA))
-
-        return create_amphora_flow
 
     def _get_post_map_lb_subflow(self, prefix, role):
         """Set amphora type after mapped to lb."""
@@ -184,7 +133,6 @@ class VThunderFlows(object):
 
     def _get_create_amp_for_lb_subflow(self, prefix, role):
         """Create a new amphora for lb."""
-        LOG.info("NOW I AM INSIDE AMPHORA CREATE WORKFLOW...")
 
         sf_name = prefix + '-' + constants.CREATE_AMP_FOR_LB_SUBFLOW
         create_amp_for_lb_subflow = linear_flow.Flow(sf_name)

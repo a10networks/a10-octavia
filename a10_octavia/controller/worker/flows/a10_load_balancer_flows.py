@@ -55,6 +55,7 @@ class LoadBalancerFlows(object):
         :raises InvalidTopology: Invalid topology specified
         :return: The graph flow for creating a loadbalancer.
         """
+        #import pdb; pdb.set_trace()
         f_name = constants.CREATE_LOADBALANCER_FLOW
         lb_create_flow = linear_flow.Flow(f_name)
    
@@ -83,8 +84,7 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(vthunder_tasks.CreateVitualServerTask(
             requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER, constants.AMPHORA),
             provides=constants.STATUS))
-        lb_create_flow.add(a10_database_tasks.UpdateLBStatusTask(
-            requires=constants.STATUS))
+
         if listeners:
             lb_create_flow.add(*self._create_listeners_flow())
 
@@ -231,9 +231,19 @@ class LoadBalancerFlows(object):
         new_LB_net_subflow.add(network_tasks.GetAmphoraeNetworkConfigs(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORAE_NETWORK_CONFIG))
+        new_LB_net_subflow.add(database_tasks.GetAmphoraeFromLoadbalancer(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPHORA))
         #new_LB_net_subflow.add(amphora_driver_tasks.AmphoraePostVIPPlug(
         #    requires=(constants.LOADBALANCER,
         #              constants.AMPHORAE_NETWORK_CONFIG)))
+        new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
+            requires=(constants.LOADBALANCER,
+                      constants.AMPHORA)))
+        new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
+            requires=constants.AMPHORA))
+
+        LOG.info("AT the end of subflow")
 
         return new_LB_net_subflow
 

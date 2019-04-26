@@ -74,8 +74,8 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
         """Execute get_info routine for a vThunder until it responds."""
         try:
          
-            LOG.info("Trying to connect vThunder after 360 sec")
-            time.sleep(360)
+            LOG.info("Trying to connect vThunder after 180 sec")
+            time.sleep(180)
             c = acos_client.Client(amphora.lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
             amp_info = c.system.information()
             LOG.info(str(amp_info))
@@ -88,5 +88,36 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
                       "instance is not reachable via the lb-mgmt-net.")
             self.amphora_repo.update(db_apis.get_session(), amphora.id,
                                      status=constants.ERROR)
+            raise
+
+class AmphoraePostVIPPlug(BaseVThunderTask):
+    """"Task to reload and configure vThunder device"""
+
+    def execute(self, loadbalancer, amphora):
+        """Execute get_info routine for a vThunder until it responds."""
+        try:
+            #import rpdb; rpdb.set_trace()
+            c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+            amp_info = c.system.action.reload()
+            LOG.info("Reloaded vThunder successfully!")
+        except Exception as e:
+            LOG.error("Unable to reload vthunder device")
+            LOG.info(str(e))
+            raise
+
+class EnableInterface(BaseVThunderTask):
+    """"Task to configure vThunder ports"""
+
+    def execute(self, amphora):
+        """Execute get_info routine for a vThunder until it responds."""
+        try:
+            LOG.info("Waiting 120 sec after relaods")
+            time.sleep(120)
+            c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+            amp_info = c.system.action.setInterface(1)
+            LOG.info("Configured the devices")
+        except Exception as e:
+            LOG.error("Unable to configure vthunder interface")
+            LOG.info(str(e))
             raise
 
