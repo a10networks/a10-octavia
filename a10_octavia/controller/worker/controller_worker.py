@@ -32,6 +32,9 @@ from taskflow.listeners import logging as tf_logging
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 from a10_octavia.controller.worker.flows import a10_load_balancer_flows
+from a10_octavia.controller.worker.flows import a10_listener_flows
+from a10_octavia.controller.worker.flows import a10_pool_flows
+from a10_octavia.controller.worker.flows import a10_member_flows
 
 import acos_client
 import urllib3
@@ -45,10 +48,16 @@ LOG = logging.getLogger(__name__)
 class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
     def __init__(self):
-        self.c = acos_client.Client('138.197.107.20', acos_client.AXAPI_21, 'admin', 'a10')
         self._lb_repo = repo.LoadBalancerRepository()
+        self._listener_repo = repo.ListenerRepository()
+        self._pool_repo = repo.PoolRepository()
+        self._member_repo = repo.MemberRepository()
         self._octavia_driver_db = driver_lib.DriverLibrary()
         self._lb_flows = a10_load_balancer_flows.LoadBalancerFlows()
+        self._listener_flows = a10_listener_flows.ListenerFlows()
+        self._pool_flows = a10_pool_flows.PoolFlows()
+        self._member_flows = a10_member_flows.MemberFlows()
+        
         self._exclude_result_logging_tasks = ()
         super(A10ControllerWorker, self).__init__()
         
@@ -129,12 +138,25 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+        listener = self._listener_repo.get(db_apis.get_session(),
+                                           id=listener_id)
+        if not listener:
+            LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
+                        '60 seconds.', 'listener', listener_id)
+            raise db_exceptions.NoResultFound
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support creating '
-                              'listeners yet',
-            operator_fault_string='This provider does not support creating '
-                                  'listeners yet')
+        load_balancer = listener.load_balancer
+
+        create_listener_tf = self._taskflow_load(self._listener_flows.
+                                                 get_create_listener_flow(),
+                                                 store={constants.LOADBALANCER:
+                                                        load_balancer,
+                                                        constants.LISTENERS:
+                                                            [listener]})
+        with tf_logging.DynamicLoggingListener(create_listener_tf,
+                                               log=LOG):
+            create_listener_tf.run()
+
 
     def delete_listener(self, listener_id):
         """Deletes a listener.
@@ -143,12 +165,18 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises ListenerNotFound: The referenced listener was not found
         """
+        listener = self._listener_repo.get(db_apis.get_session(),
+                                           id=listener_id)
+        load_balancer = listener.load_balancer
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support deleting '
-                              'listeners yet',
-            operator_fault_string='This provider does not support deleting '
-                                  'listeners yet')
+        delete_listener_tf = self._taskflow_load(
+            self._listener_flows.get_delete_listener_flow(),
+            store={constants.LOADBALANCER: load_balancer,
+                   constants.LISTENER: listener})
+        with tf_logging.DynamicLoggingListener(delete_listener_tf,
+                                               log=LOG):
+            delete_listener_tf.run()
+
 
     def update_listener(self, listener_id, listener_updates):
         """Updates a listener.
@@ -251,7 +279,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         except Exception as e:
             r = str(e)
             status = { 'loadbalancers': [{"id": load_balancer_id,
-                       "provisioning_status": consts.ERROR }]}
+                       "provisioning_status": constants.ERROR }]}
         LOG.info("Updating db with this status: %s" % (status))
         lb.update(db_apis.get_session(), loadbalancer.id,
                                       **update_dict)
@@ -265,10 +293,30 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoSuitablePool: Unable to find the node pool
         """
+        member = self._member_repo.get(db_apis.get_session(),
+                                       id=member_id)
+        if not member:
+            LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
+                        '60 seconds.', 'member', member_id)
+            raise db_exceptions.NoResultFound
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support members yet',
-            operator_fault_string='This provider does not support members yet')
+        pool = member.pool
+        listeners = pool.listeners
+        load_balancer = pool.load_balancer
+
+        create_member_tf = self._taskflow_load(self._member_flows.
+                                               get_create_member_flow(),
+                                               store={constants.MEMBER: member,
+                                                      constants.LISTENERS:
+                                                          listeners,
+                                                      constants.LOADBALANCER:
+                                                          load_balancer,
+                                                      constants.POOL: pool})
+        with tf_logging.DynamicLoggingListener(create_member_tf,
+                                               log=LOG):
+            create_member_tf.run()
+
+
 
     def delete_member(self, member_id):
         """Deletes a pool member.
@@ -277,10 +325,22 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises MemberNotFound: The referenced member was not found
         """
+        member = self._member_repo.get(db_apis.get_session(),
+                                       id=member_id)
+        pool = member.pool
+        listeners = pool.listeners
+        load_balancer = pool.load_balancer
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support members yet',
-            operator_fault_string='This provider does not support members yet')
+        delete_member_tf = self._taskflow_load(
+            self._member_flows.get_delete_member_flow(),
+            store={constants.MEMBER: member, constants.LISTENERS: listeners,
+                   constants.LOADBALANCER: load_balancer, constants.POOL: pool}
+        )
+        with tf_logging.DynamicLoggingListener(delete_member_tf,
+                                               log=LOG):
+            delete_member_tf.run()
+
+
 
     def batch_update_members(self, old_member_ids, new_member_ids,
                              updated_members):
@@ -309,10 +369,27 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+        pool = self._pool_repo.get(db_apis.get_session(),
+                                   id=pool_id)
+        if not pool:
+            LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
+                        '60 seconds.', 'pool', pool_id)
+            raise db_exceptions.NoResultFound
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support pools yet',
-            operator_fault_string='This provider does not support pools yet')
+        listeners = pool.listeners
+        load_balancer = pool.load_balancer
+
+        create_pool_tf = self._taskflow_load(self._pool_flows.
+                                             get_create_pool_flow(),
+                                             store={constants.POOL: pool,
+                                                    constants.LISTENERS:
+                                                        listeners,
+                                                    constants.LOADBALANCER:
+                                                        load_balancer})
+        with tf_logging.DynamicLoggingListener(create_pool_tf,
+                                               log=LOG):
+            create_pool_tf.run()
+
 
     def delete_pool(self, pool_id):
         """Deletes a node pool.
@@ -321,10 +398,19 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises PoolNotFound: The referenced pool was not found
         """
+        pool = self._pool_repo.get(db_apis.get_session(),
+                                   id=pool_id)
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support pools yet',
-            operator_fault_string='This provider does not support pools yet')
+        load_balancer = pool.load_balancer
+        listeners = pool.listeners
+
+        delete_pool_tf = self._taskflow_load(
+            self._pool_flows.get_delete_pool_flow(),
+            store={constants.POOL: pool, constants.LISTENERS: listeners,
+                   constants.LOADBALANCER: load_balancer})
+        with tf_logging.DynamicLoggingListener(delete_pool_tf,
+                                               log=LOG):
+            delete_pool_tf.run()
 
     def update_pool(self, pool_id, pool_updates):
         """Updates a node pool.

@@ -23,7 +23,7 @@ class CreateVitualServerTask(BaseVThunderTask):
 
     def execute(self, loadbalancer_id, loadbalancer, amphora):
         try:
-            c = acos_client.Client(amphora.lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+            c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
             r = c.slb.virtual_server.create(loadbalancer_id, loadbalancer.vip.ip_address)
             status = { 'loadbalancers': [{"id": loadbalancer_id,
                        "provisioning_status": constants.ACTIVE }]}
@@ -120,4 +120,154 @@ class EnableInterface(BaseVThunderTask):
             LOG.error("Unable to configure vthunder interface")
             LOG.info(str(e))
             raise
+
+class ListenersCreate(BaseVThunderTask):
+    """Task to update amphora with all specified listeners' configurations."""
+
+    def execute(self, loadbalancer, listeners, amphora):
+        """Execute updates per listener for an amphora."""
+        for listener in listeners:
+            listener.load_balancer = loadbalancer
+            #self.amphora_driver.update(listener, loadbalancer.vip)
+            try:
+                c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+                name = loadbalancer.id + "_" + str(listener.protocol_port)
+                out = c.slb.virtual_server.vport.create(loadbalancer.id, name, listener.protocol, 
+                                                listener.protocol_port, listener.default_pool_id)
+                LOG.info("Listener created successfully.")
+            except Exception as e:
+                print(str(e))
+                LOG.info("Error occurred")
+            
+
+    def revert(self, loadbalancer, *args, **kwargs):
+        """Handle failed listeners updates."""
+
+        LOG.warning("Reverting listeners updates.")
+
+        for listener in loadbalancer.listeners:
+            self.task_utils.mark_listener_prov_status_error(listener.id)
+
+        return None
+
+
+class ListenersUpdate(BaseVThunderTask):
+    """Task to update amphora with all specified listeners' configurations."""
+
+    def execute(self, loadbalancer, listeners, amphora):
+        """Execute updates per listener for an amphora."""
+        for listener in listeners:
+            listener.load_balancer = loadbalancer
+            #self.amphora_driver.update(listener, loadbalancer.vip)
+            try:
+                c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+                name = loadbalancer.id + "_" + str(listener.protocol_port)
+                out = c.slb.virtual_server.vport.update(loadbalancer.id, name, listener.protocol,
+                                                listener.protocol_port, listener.default_pool_id)
+                LOG.info("Listener created successfully.")
+            except Exception as e:
+                print(str(e))
+                LOG.info("Error occurred")
+
+    def revert(self, loadbalancer, *args, **kwargs):
+        """Handle failed listeners updates."""
+
+        LOG.warning("Reverting listeners updates.")
+
+        for listener in loadbalancer.listeners:
+            self.task_utils.mark_listener_prov_status_error(listener.id)
+
+        return None
+
+class ListenerDelete(BaseVThunderTask):
+    """Task to delete the listener on the vip."""
+
+    def execute(self, loadbalancer, listener, amphora):
+        """Execute listener delete routines for an amphora."""
+        #self.amphora_driver.delete(listener, loadbalancer.vip)
+        try:
+            c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+            name = loadbalancer.id + "_" + str(listener.protocol_port)
+            out = c.slb.virtual_server.vport.delete(loadbalancer.id, name, listener.protocol,
+                                            listener.protocol_port)
+            LOG.info("Listener deleted successfully.")
+        except Exception as e:
+            print(str(e))
+            LOG.info("Error occurred")
+        LOG.debug("Deleted the listener on the vip")
+
+    def revert(self, listener, *args, **kwargs):
+        """Handle a failed listener delete."""
+
+        LOG.warning("Reverting listener delete.")
+
+        self.task_utils.mark_listener_prov_status_error(listener.id)
+
+
+class PoolCreate(BaseVThunderTask):
+    """Task to update amphora with all specified listeners' configurations."""
+
+    def execute(self, pool, amphora):
+        """Execute create pool for an amphora."""
+        try:
+            c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+            #need to put algorithm logic
+            out = c.slb.service_group.create(pool.id, pool.protocol)
+            LOG.info("Pool created successfully.")
+        except Exception as e:
+            print(str(e))
+            LOG.info("Error occurred")
+
+class PoolDelete(BaseVThunderTask):
+    """Task to update amphora with all specified listeners' configurations."""
+
+    def execute(self, pool, amphora):
+        """Execute create pool for an amphora."""
+        try:
+            c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+            #need to put algorithm logic
+            out = c.slb.service_group.delete(pool.id)
+            LOG.info("Pool deleted successfully.")
+        except Exception as e:
+            print(str(e))
+            LOG.info("Error occurred")
+
+
+class MemberCreate(BaseVThunderTask):
+    """Task to update amphora with all specified member configurations."""
+
+    def execute(self, member, amphora, pool):
+        """Execute create member for an amphora."""
+        try:
+            c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+            out = c.slb.server.create(member.id, member.ip_address)
+            LOG.info("Member created successfully.")
+        except Exception as e:
+            print(str(e))
+        try:
+            c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+            out = c.slb.service_group.member.create(pool.id, member.id, member.protocol_port)
+            LOG.info("Member associated to pool successfully.")
+        except Exception as e:
+            print(str(e))
+            LOG.info("Error occurred")
+
+class MemberDelete(BaseVThunderTask):
+    """Task to update amphora with all specified member configurations."""
+
+    def execute(self, member, amphora, pool):
+        """Execute delete member for an amphora."""
+        try:
+            c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+            out = c.slb.service_group.member.delete(pool.id, member.id, member.protocol_port)
+            LOG.info("Member de-associated to pool successfully.")
+        except Exception as e:
+            print(str(e))
+        try:
+            c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+            out = c.slb.server.delete(member.id)
+            LOG.info("Member deleted successfully.")
+        except Exception as e:
+            print(str(e))
+            LOG.info("Error occurred")
 
