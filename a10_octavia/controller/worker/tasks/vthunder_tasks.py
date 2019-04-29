@@ -133,7 +133,8 @@ class ListenersCreate(BaseVThunderTask):
                 c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 out = c.slb.virtual_server.vport.create(loadbalancer.id, name, listener.protocol, 
-                                                listener.protocol_port, listener.default_pool_id)
+                                                listener.protocol_port, listener.default_pool_id,
+                                                autosnat=True )
                 LOG.info("Listener created successfully.")
             except Exception as e:
                 print(str(e))
