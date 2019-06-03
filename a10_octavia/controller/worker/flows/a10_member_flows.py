@@ -8,6 +8,7 @@ from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import model_tasks
 from octavia.controller.worker.tasks import network_tasks
 from a10_octavia.controller.worker.tasks import vthunder_tasks
+from a10_octavia.controller.worker.tasks import a10_database_tasks
 
 class MemberFlows(object):
 
@@ -33,7 +34,6 @@ class MemberFlows(object):
         #create_member_flow.add(amphora_driver_tasks.AmphoraePostNetworkPlug(
         #    requires=(constants.LOADBALANCER, constants.ADDED_PORTS)
         #))
-        
         #create_member_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=(constants.LOADBALANCER, constants.LISTENERS)))
         create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
@@ -45,6 +45,11 @@ class MemberFlows(object):
             requires=constants.MEMBER))
         create_member_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
+        #testing vthunder db - to be removed
+        create_member_flow.add(a10_database_tasks.TestVThunderTask(
+            requires=constants.AMPHORA))
+        create_member_flow.add(a10_database_tasks.CreateVThunderinDBTask(
+            requires=constants.AMPHORA))
         create_member_flow.add(database_tasks.
                                MarkLBAndListenersActiveInDB(
                                    requires=(constants.LOADBALANCER,

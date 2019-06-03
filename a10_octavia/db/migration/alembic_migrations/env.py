@@ -6,7 +6,7 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
-
+from a10_octavia import a10_config
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -21,15 +21,15 @@ fileConfig(config.config_file_name)
 # target_metadata = mymodel.Base.metadata
 target_metadata = None
 
+if getattr(config, 'connection', None) is None:
+    a10_cfg = a10_config.A10Config()
+    config.set_main_option("sqlalchemy.url", a10_cfg.get('database_connection'))
+
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-import config as my_config
-config.set_main_option('sqlalchemy.url', my_config.DATABASE_URI)
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.

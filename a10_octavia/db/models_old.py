@@ -1,16 +1,8 @@
-from oslo_db.sqlalchemy import models
 import sqlalchemy as sa
-from sqlalchemy.ext import orderinglist
-from sqlalchemy import orm
-from sqlalchemy.orm import validates
-from sqlalchemy.sql import func
 
-from a10_octavia.common import data_models
-from a10_octavia.db import base_models
-from octavia.i18n import _
+from a10_octavia.db import model_base
 
-class VThunder(base_models.BASE):
-    __data_model__ = data_models.VThunder
+class VThunder(model_base.A10BaseMixin, model_base.A10Base):
     __tablename__ = 'vthunders'
 
     id = sa.Column(sa.Integer(), primary_key=True)
@@ -27,4 +19,3 @@ class VThunder(base_models.BASE):
     @classmethod
     def find_by_loadbalancer_id(cls, loadbalancer_id, db_session=None):
         return cls.find_by_attribute('loadbalancer_id', loadbalancer_id, db_session)
-

@@ -15,6 +15,7 @@ import octavia.common.tls_utils.cert_parser as cert_parser
 from octavia.controller.worker import task_utils as task_utilities
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
+from a10_octavia.db import repositories as repo2
 from octavia.api.drivers import driver_lib
 
 CONF = cfg.CONF
@@ -72,3 +73,21 @@ class UpdateLBStatusTask(BaseDatabaseTask):
         LOG.info("here comes the status")
         LOG.info(str(status))
         LOG.info("updated the DB status in here")
+
+class TestVThunderTask(BaseDatabaseTask):
+    """Test Vthunder entry"""
+    def execute(self, amphora):
+        vthunder_repo = repo2.VThunderRepository()
+        vthunder = vthunder_repo.get(db_apis.get_session(), id=123)
+        LOG.info("check this vthunder bro" ) 
+        return vthunder
+
+class CreateVThunderinDBTask(BaseDatabaseTask):
+    """ Create VThunder device entry in DB"""
+    def execute(self, amphora):
+        vthunder_repo = repo2.VThunderRepository()
+        vthunder = vthunder_repo.create(db_apis.get_session(), id="321", amphora_id="someid",
+                                        device_name="device1", username="uysername", 
+                                        password="pass", ip_address="10.43.2.122",
+                                        undercloud=False, axapi_version=30, loadbalancer_id="lbid")
+        LOG.info("successfully created vthunder entry in database.")

@@ -129,3 +129,7 @@ class A10Config(object):
 
         LOG.debug("using %s as db connect string", z)
         return z
+
+    def get(self, key):
+        return getattr(self._config, key)
+
