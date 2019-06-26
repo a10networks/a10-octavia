@@ -11,15 +11,14 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '8a404a606c4f'
-down_revision = '64e2eaba72d5'
+down_revision = ''
 branch_labels = None
 depends_on = None
-
 
 def upgrade():
     op.create_table(
     'vthunders',
-    sa.Column('id',sa.Integer(), primary_key=True),
+    sa.Column('id',sa.String(36), primary_key=True),
     sa.Column('amphora_id', sa.String(36), nullable=True),
     sa.Column('device_name', sa.String(1024), nullable=False),
     sa.Column('ip_address', sa.String(64), nullable=False),
@@ -30,8 +29,6 @@ def upgrade():
     sa.Column('loadbalancer_id', sa.String(36))
 
     )
-
-
 
 def downgrade():
     pass

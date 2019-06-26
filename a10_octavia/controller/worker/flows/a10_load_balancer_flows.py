@@ -33,7 +33,7 @@ from octavia.controller.worker.tasks import network_tasks
 
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
-
+from a10_octavia.common import a10constants
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -237,13 +237,17 @@ class LoadBalancerFlows(object):
         #new_LB_net_subflow.add(amphora_driver_tasks.AmphoraePostVIPPlug(
         #    requires=(constants.LOADBALANCER,
         #              constants.AMPHORAE_NETWORK_CONFIG)))
+
+        # Get VThunder details from database
+        new_LB_net_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
         new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
             requires=(constants.LOADBALANCER,
-                      constants.AMPHORA)))
+                      a10constants.VTHUNDER)))
         new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
-            requires=constants.AMPHORA))
+            requires=a10constants.VTHUNDER))
 
         LOG.info("AT the end of subflow")
 
-        return new_LB_net_subflow
-
+        return

@@ -172,3 +172,12 @@ class BaseRepository(object):
 
 class VThunderRepository(BaseRepository):
     model_class = models.VThunder
+
+    def getVThunderFromLB(self, session, lb_id):
+        model = session.query(self.model_class).filter(
+            self.model_class.loadbalancer_id == lb_id).first()
+
+        if not model:
+            return None
+
+        return model.to_data_model()

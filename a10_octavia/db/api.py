@@ -3,7 +3,7 @@ from contextlib import contextmanager
 import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
-
+from a10_octavia import a10_config
 #from a10_neutron_lbaas import a10_exceptions as ex
 
 A10_CFG = None
@@ -20,12 +20,11 @@ def get_engine(url=None):
 
     if url is None:
         if A10_CFG is None:
-            from a10_neutron_lbaas import a10_config
+            from a10_octavia import a10_config
             A10_CFG = a10_config.A10Config()
 
-        if not A10_CFG.get('use_database'):
-            raise ex.InternalError("attempted to use database when it is disabled")
         url = A10_CFG.get('database_connection')
+        print(url)
 
     return sqlalchemy.create_engine(url)
 
@@ -34,6 +33,11 @@ def get_session(url=None, **kwargs):
     DBSession = sqlalchemy.orm.sessionmaker(bind=get_engine(url=url))
     return DBSession(**kwargs)
 
+def close_session(session):
+    try:
+        session.commit()
+    finally:
+        session.close()
 
 @contextmanager
 def magic_session(db_session=None, url=None):

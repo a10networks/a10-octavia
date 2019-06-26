@@ -15,7 +15,7 @@ import octavia.common.tls_utils.cert_parser as cert_parser
 from octavia.controller.worker import task_utils as task_utilities
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
-from a10_octavia.db import repositories as repo2
+from a10_octavia.db import repositories as a10_repo
 from octavia.api.drivers import driver_lib
 
 CONF = cfg.CONF
@@ -27,67 +27,35 @@ class BaseDatabaseTask(task.Task):
 
     def __init__(self, **kwargs):
         self.repos = repo.Repositories()
-        self.amphora_repo = repo.AmphoraRepository()
-        self.task_utils = task_utilities.TaskUtils()
-        self._octavia_driver_db = driver_lib.DriverLibrary()
+        self.vthunder_repo = a10_repo.VThunderRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
-class CreateVThunderInDB(BaseDatabaseTask):
-    """Task to create an initial vthunder entry in the Database."""
-
-    def execute(self, load_balancer_ip, cached_zone, *args, **kwargs):
-        """Creates an pending create vthunder record in the database.
-
-        :returns: The created vthunder object id
-        """
-
-        amphora = self.amphora_repo.create(db_apis.get_session(),
-                                           id=uuidutils.generate_uuid(),
-                                           lb_network_ip=load_balancer_ip,
-                                           status=constants.PENDING_CREATE,
-                                           cert_busy=False,
-                                           cached_zone=cached_zone)
-
-        LOG.info("Created vThunder in DB with id %s", amphora.id)
-        return amphora.id
-
-class GetVThunderFromDB(BaseDatabaseTask):
-    """Get VThunder details from the database"""
-
-    def execute(self, vthuder_id):
-        """reads the entry from Amphora database for VThunder
-
-        :returns: The VThunder object molded as amphora
-        """
-
-        vthunder = self.amphora_repo.get(db_apis.get_session(), id=vthuder_id)
-
-        LOG.info("Get VThunder in DB with id %s", vthuder_id)
-        return vthunder
-
-class UpdateLBStatusTask(BaseDatabaseTask):
-    """ update loadbalancer status in database """
-    def execute(self, status):
-        self._octavia_driver_db.update_loadbalancer_status(status)
-        LOG.info("here comes the status")
-        LOG.info(str(status))
-        LOG.info("updated the DB status in here")
-
-class TestVThunderTask(BaseDatabaseTask):
+class GetVThunderTask(BaseDatabaseTask):
     """Test Vthunder entry"""
     def execute(self, amphora):
-        vthunder_repo = repo2.VThunderRepository()
-        vthunder = vthunder_repo.get(db_apis.get_session(), id=123)
+        vthunder = self.vthunder_repo.get(db_apis.get_session(), id=123)
         LOG.info("check this vthunder bro" ) 
         return vthunder
 
-class CreateVThunderinDBTask(BaseDatabaseTask):
+
+class CreteVthunderEntry(BaseDatabaseTask):
     """ Create VThunder device entry in DB"""
-    def execute(self, amphora):
-        vthunder_repo = repo2.VThunderRepository()
-        vthunder = vthunder_repo.create(db_apis.get_session(), id="321", amphora_id="someid",
-                                        device_name="device1", username="uysername", 
-                                        password="pass", ip_address="10.43.2.122",
-                                        undercloud=False, axapi_version=30, loadbalancer_id="lbid")
-        LOG.info("successfully created vthunder entry in database.")
+    def execute(self, amphora, loadbalancer_id): 
+        vthunder_id = uuidutils.generate_uuid()
+        vthunder = self.vthunder_repo.create(db_apis.get_session(), id=vthunder_id, 
+                                        amphora_id=amphora.id,
+                                        device_name=vthunder_id, username="admin", 
+                                        password="a10", ip_address=amphora.lb_network_ip,
+                                        undercloud=False, axapi_version=30, 
+                                        loadbalancer_id=loadbalancer_id)
+        LOG.info("Successfully created vthunder entry in database.")
+
+class GetVThunderByLoadBalancer(BaseDatabaseTask):
+    """ Get VThunder details from LoadBalancer ID """
+    def execute(self, loadbalancer):
+        loadbalancer_id = loadbalancer.id
+        vthunder = self.vthunder_repo.getVThunderFromLB(db_apis.get_session(), loadbalancer_id)
+        return vthunder
+        LOG.info("Successfully fetched vThunder details for LB")
+       

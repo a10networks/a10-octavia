@@ -11,6 +11,7 @@ from octavia.controller.worker.tasks import database_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import network_tasks
+from a10_octavia.common import a10constants
 
 CONF = cfg.CONF
 
@@ -206,10 +207,18 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.UPDATE_AMPHORA_INFO,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_OBJ),
             provides=constants.AMPHORA))
+        # create vThunder entry in custom DB
+        create_amp_for_lb_subflow.add(a10_database_tasks.CreteVthunderEntry(
+            name = sf_name + '-' + 'create_vThunder_entry_in_database',
+            requires=(constants.AMPHORA, constants.LOADBALANCER_ID)))
+        # Get VThunder details from database
+        create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
         create_amp_for_lb_subflow.add(
             vthunder_tasks.VThunderComputeConnectivityWait(
                 name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
-                requires=constants.AMPHORA))
+                requires=a10constants.VTHUNDER))
         #create_amp_for_lb_subflow.add(amphora_driver_tasks.AmphoraFinalize(
         #    name=sf_name + '-' + constants.AMPHORA_FINALIZE,
         #    requires=constants.AMPHORA))
@@ -221,7 +230,6 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.RELOAD_AMPHORA,
             requires=constants.AMPHORA_ID,
             provides=constants.AMPHORA))
-
         if role == constants.ROLE_MASTER:
             create_amp_for_lb_subflow.add(database_tasks.MarkAmphoraMasterInDB(
                 name=sf_name + '-' + constants.MARK_AMP_MASTER_INDB,
