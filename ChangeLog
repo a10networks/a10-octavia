@@ -1,6 +1,17 @@
 CHANGES
 =======
 
+* adding config and db files
+* demo1 code
+* completed one demo SLB flow
+* loadbalancer create flow
+* Plug VIP config
+* booting and configuring amphora succes
+* added flow for vthunder boot and delete(only boot)
+* added flow for delete LB
+*  part1 - updated flow to handle amphora details from DB
+* completed loadbalancer workflow with corrections
+* added taskflow for create loadbalancer
 * Removing stray .pyc files
 * Began adding loadbalancer\_update support, not complete
 * merged .gitignore

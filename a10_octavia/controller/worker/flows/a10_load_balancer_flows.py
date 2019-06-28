@@ -55,7 +55,6 @@ class LoadBalancerFlows(object):
         :raises InvalidTopology: Invalid topology specified
         :return: The graph flow for creating a loadbalancer.
         """
-        #import pdb; pdb.set_trace()
         f_name = constants.CREATE_LOADBALANCER_FLOW
         lb_create_flow = linear_flow.Flow(f_name)
    
@@ -80,9 +79,9 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(
             self.get_post_lb_vthunder_association_flow(
                 post_amp_prefix, topology, mark_active=(not listeners)))
-        
+
         lb_create_flow.add(vthunder_tasks.CreateVitualServerTask(
-            requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER, constants.AMPHORA),
+            requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=constants.STATUS))
 
         if listeners:
@@ -239,9 +238,9 @@ class LoadBalancerFlows(object):
         #              constants.AMPHORAE_NETWORK_CONFIG)))
 
         # Get VThunder details from database
-        new_LB_net_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-            requires=constants.LOADBALANCER,
-            provides=a10constants.VTHUNDER))
+        #new_LB_net_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+        #    requires=constants.LOADBALANCER,
+        #    provides=a10constants.VTHUNDER))
         new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
             requires=(constants.LOADBALANCER,
                       a10constants.VTHUNDER)))
@@ -250,4 +249,4 @@ class LoadBalancerFlows(object):
 
         LOG.info("AT the end of subflow")
 
-        return
+        return new_LB_net_subflow

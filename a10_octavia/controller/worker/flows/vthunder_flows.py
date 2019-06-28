@@ -63,7 +63,6 @@ class VThunderFlows(object):
         # Add them to the graph flow
         amp_for_lb_flow.add(allocate_and_associate_amp,
                             map_lb_to_amp, create_amp)
-
         # Setup the decider for the path if we can map an amphora
         amp_for_lb_flow.link(allocate_and_associate_amp, map_lb_to_amp,
                              decider=self._allocate_amp_to_lb_decider,
@@ -212,13 +211,13 @@ class VThunderFlows(object):
             name = sf_name + '-' + 'create_vThunder_entry_in_database',
             requires=(constants.AMPHORA, constants.LOADBALANCER_ID)))
         # Get VThunder details from database
-        create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-            requires=constants.LOADBALANCER,
+        create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancerID(
+            requires=constants.LOADBALANCER_ID,
             provides=a10constants.VTHUNDER))
         create_amp_for_lb_subflow.add(
             vthunder_tasks.VThunderComputeConnectivityWait(
                 name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
-                requires=a10constants.VTHUNDER))
+                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         #create_amp_for_lb_subflow.add(amphora_driver_tasks.AmphoraFinalize(
         #    name=sf_name + '-' + constants.AMPHORA_FINALIZE,
         #    requires=constants.AMPHORA))

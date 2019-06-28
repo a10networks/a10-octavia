@@ -31,7 +31,7 @@ class PoolFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         create_pool_flow.add(vthunder_tasks.PoolCreate(
-            requires=[constants.POOL, a10constants.AMPHORA]))
+            requires=[constants.POOL, a10constants.VTHUNDER]))
         create_pool_flow.add(vthunder_tasks.ListenersUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_pool_flow.add(database_tasks.MarkPoolActiveInDB(
@@ -62,9 +62,9 @@ class PoolFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         delete_pool_flow.add(vthunder_tasks.ListenersUpdate(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+            requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
         delete_pool_flow.add(vthunder_tasks.PoolDelete(
-            requires=[constants.POOL, a10onstants.VTHUNDER]))
+            requires=[constants.POOL, a10constants.VTHUNDER]))
         delete_pool_flow.add(database_tasks.DeletePoolInDB(
             requires=constants.POOL))
         delete_pool_flow.add(database_tasks.DecrementPoolQuota(

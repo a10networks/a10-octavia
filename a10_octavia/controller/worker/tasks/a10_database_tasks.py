@@ -17,6 +17,7 @@ from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 from a10_octavia.db import repositories as a10_repo
 from octavia.api.drivers import driver_lib
+from a10_octavia import a10_config
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -43,19 +44,30 @@ class CreteVthunderEntry(BaseDatabaseTask):
     """ Create VThunder device entry in DB"""
     def execute(self, amphora, loadbalancer_id): 
         vthunder_id = uuidutils.generate_uuid()
+        a10_cfg = a10_config.A10Config()
+        username = a10_cfg.get('DEFAULT_VTHUNDER_USERNAME')
+        password = a10_cfg.get('DEFAULT_VTHUNDER_PASSWORD')
+        axapi_version = int(a10_cfg.get('DEFAULT_AXAPI_VERSION'))
         vthunder = self.vthunder_repo.create(db_apis.get_session(), id=vthunder_id, 
                                         amphora_id=amphora.id,
-                                        device_name=vthunder_id, username="admin", 
-                                        password="a10", ip_address=amphora.lb_network_ip,
-                                        undercloud=False, axapi_version=30, 
+                                        device_name=vthunder_id, username=username, 
+                                        password=password, ip_address=amphora.lb_network_ip,
+                                        undercloud=False, axapi_version=axapi_version, 
                                         loadbalancer_id=loadbalancer_id)
         LOG.info("Successfully created vthunder entry in database.")
 
 class GetVThunderByLoadBalancer(BaseDatabaseTask):
-    """ Get VThunder details from LoadBalancer ID """
+    """ Get VThunder details from LoadBalancer"""
     def execute(self, loadbalancer):
         loadbalancer_id = loadbalancer.id
         vthunder = self.vthunder_repo.getVThunderFromLB(db_apis.get_session(), loadbalancer_id)
         return vthunder
         LOG.info("Successfully fetched vThunder details for LB")
-       
+
+class GetVThunderByLoadBalancerID(BaseDatabaseTask):
+    """ Get VThunder details from LoadBalancer ID """
+    def execute(self, loadbalancer_id):
+        vthunder = self.vthunder_repo.getVThunderFromLB(db_apis.get_session(), loadbalancer_id)
+        return vthunder
+        LOG.info("Successfully fetched vThunder details for LB")
+ 

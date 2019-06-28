@@ -23,13 +23,13 @@ class CreateVitualServerTask(BaseVThunderTask):
 
     def execute(self, loadbalancer_id, loadbalancer, vthunder):
         try:
+            print("i am here")
             axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
                                        vthunder.password)
             r = c.slb.virtual_server.create(loadbalancer_id, loadbalancer.vip.ip_address)
             status = { 'loadbalancers': [{"id": loadbalancer_id,
                        "provisioning_status": constants.ACTIVE }]}
-            LOG.info("amphora id is:" + str(amphora.id))
             #LOG.info("vthunder details:" + str(vthunder))
         except Exception as e:
             r = str(e)
@@ -51,13 +51,11 @@ class DeleteVitualServerTask(BaseVThunderTask):
         try:
             #IMP: update required
             
-            vthunder = amphora[0].cached_zone
             #c = acos_client.Client(vthunder.ip, vthunder.acos_version, vthunder.username, vthunder.password)
             #r = self.c.slb.virtual_server.delete(loadbalancer_id)
             status = { 'loadbalancers': [{"id": loadbalancer_id,
                        "provisioning_status": constants.DELETED }]}
             LOG.info(amphora[0].cached_zone)
-            LOG.info("amphora id is:" + str(amphora[0].id))
         except Exception as e:
             r = str(e)
             LOG.info(r)
@@ -72,7 +70,7 @@ class DeleteVitualServerTask(BaseVThunderTask):
 class VThunderComputeConnectivityWait(BaseVThunderTask):
     """"Task to wait for the compute instance to be up."""
 
-    def execute(self, vthunder):
+    def execute(self, vthunder, amphora):
         """Execute get_info routine for a vThunder until it responds."""
         try:
          
@@ -83,8 +81,6 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
                                        vthunder.password)
             amp_info = c.system.information()
             LOG.info(str(amp_info))
-            LOG.info('Successfuly connected to amphora %s: %s',
-                          amphora.id, amp_info)
         except driver_except.TimeOutException:
             LOG.error("Amphora compute instance failed to become reachable. "
                       "This either means the compute driver failed to fully "
@@ -114,11 +110,12 @@ class AmphoraePostVIPPlug(BaseVThunderTask):
 class EnableInterface(BaseVThunderTask):
     """"Task to configure vThunder ports"""
 
-    def execute(self, amphora):
+    def execute(self, vthunder):
         """Execute get_info routine for a vThunder until it responds."""
         try:
             LOG.info("Waiting 120 sec after relaods")
             time.sleep(120)
+            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
                                        vthunder.password)
             amp_info = c.system.action.setInterface(1)
@@ -164,13 +161,15 @@ class ListenersCreate(BaseVThunderTask):
 class ListenersUpdate(BaseVThunderTask):
     """Task to update amphora with all specified listeners' configurations."""
 
-    def execute(self, loadbalancer, listeners, amphora):
+    def execute(self, loadbalancer, listeners, vthunder):
         """Execute updates per listener for an amphora."""
         for listener in listeners:
             listener.load_balancer = loadbalancer
             #self.amphora_driver.update(listener, loadbalancer.vip)
             try:
-                c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+                axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+                c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
+                                       vthunder.password)
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 out = c.slb.virtual_server.vport.update(loadbalancer.id, name, listener.protocol,
                                                 listener.protocol_port, listener.default_pool_id)
@@ -263,7 +262,9 @@ class MemberCreate(BaseVThunderTask):
         except Exception as e:
             print(str(e))
         try:
-            c = acos_client.Client(amphora[0].lb_network_ip, acos_client.AXAPI_30, 'admin', 'a10')
+            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
+                                   vthunder.password)
             out = c.slb.service_group.member.create(pool.id, member.id, member.protocol_port)
             LOG.info("Member associated to pool successfully.")
         except Exception as e:

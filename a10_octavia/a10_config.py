@@ -12,11 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
 import os
 import sys
 import runpy
-
+from oslo_log import log as logging
 
 # This is ConfigParser pre-Python3
 if sys.version_info < (3,):
@@ -28,10 +27,8 @@ from debtcollector import removals
 from a10_octavia.etc import config as blank_config
 from a10_octavia.etc import defaults
 
-f_handler = logging.FileHandler('file.log')
+LOG = logging.getLogger(__name__)
 
-LOG = logging.getLogger('test')
-LOG.addHandler(f_handler)
 
 class ConfigModule(object):
     def __init__(self, d, provider=None):
@@ -87,7 +84,7 @@ class A10Config(object):
         elif has_prefix and os.path.exists(venv_d):
             d = venv_d
         else:
-            d = '/etc/a10-octavia'
+            d = '/etc/a10'
 
         return d
 

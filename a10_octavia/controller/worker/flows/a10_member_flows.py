@@ -77,7 +77,7 @@ class MemberFlows(object):
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
 
         # Get VThunder details from database
-        delet_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+        delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         delete_member_flow.add(vthunder_tasks.MemberDelete(
