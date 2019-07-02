@@ -119,10 +119,11 @@ class BaseDataModel(object):
 
 class VThunder(BaseDataModel):
 
-    def __init__(self, id=None, amphora_id=None, device_name=None, ip_address=None,
+    def __init__(self, id=None, vthunder_id=None, amphora_id=None, device_name=None, ip_address=None,
                  username=None, password=None, axapi_version=None, undercloud=None,
-                 loadbalancer_id=None):
+                 loadbalancer_id=None, project_id=None):
         self.id = id
+        self.vthunder_id = vthunder_id
         self.amphora_id = amphora_id
         self.device_name = device_name
         self.ip_address = ip_address
@@ -131,3 +132,4 @@ class VThunder(BaseDataModel):
         self.axapi_version = axapi_version
         self.undercloud = undercloud
         self.loadbalancer_id = loadbalancer_id
+        self.project_id = project_id

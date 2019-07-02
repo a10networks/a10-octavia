@@ -50,30 +50,32 @@ class VThunderFlows(object):
         amp_for_lb_flow = graph_flow.Flow(sf_name)
 
         # Setup the task that maps an amphora to a load balancer
-        allocate_and_associate_amp = database_tasks.MapLoadbalancerToAmphora(
+        allocate_and_associate_amp = a10_database_tasks.MapLoadbalancerToAmphora(
             name=sf_name + '-' + constants.MAP_LOADBALANCER_TO_AMPHORA,
-            requires=constants.LOADBALANCER_ID,
+            requires=constants.LOADBALANCER,
             provides=constants.AMPHORA_ID)
 
-        # Define a subflow for if we successfully map an amphora
-        map_lb_to_amp = self._get_post_map_lb_subflow(prefix, role)
+        # Define a subflow for amphora in existing vthunder
+        vthunder_amp = self._get_vthunder_for_amphora_subflow(prefix, role)
         # Define a subflow for if we can't map an amphora
         create_amp = self._get_create_amp_for_lb_subflow(prefix, role)
+        
 
         # Add them to the graph flow
         amp_for_lb_flow.add(allocate_and_associate_amp,
-                            map_lb_to_amp, create_amp)
-        # Setup the decider for the path if we can map an amphora
-        amp_for_lb_flow.link(allocate_and_associate_amp, map_lb_to_amp,
-                             decider=self._allocate_amp_to_lb_decider,
-                             decider_depth='flow')
+                            vthunder_amp, create_amp)
+
+        # Setup the decider for the path if we can map an amphora to vthunder
+        amp_for_lb_flow.link(allocate_and_associate_amp, vthunder_amp,
+                              decider=self._allocate_amp_to_lb_decider,
+                              decider_depth='flow')
+                             
         # Setup the decider for the path if we can't map an amphora
         amp_for_lb_flow.link(allocate_and_associate_amp, create_amp,
-                             decider=self._create_new_amp_for_lb_decider,
-                             decider_depth='flow')
-
+                              decider=self._create_vthunder_flow_decider,
+                              decider_depth='flow')                    
+        
         return amp_for_lb_flow
-
 
 
     def _get_post_map_lb_subflow(self, prefix, role):
@@ -207,9 +209,13 @@ class VThunderFlows(object):
             requires=(constants.AMPHORA_ID, constants.COMPUTE_OBJ),
             provides=constants.AMPHORA))
         # create vThunder entry in custom DB
+        create_amp_for_lb_subflow.add(database_tasks.ReloadLoadBalancer(
+            name=sf_name + '-' + 'reload_loadbalancer',
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
         create_amp_for_lb_subflow.add(a10_database_tasks.CreteVthunderEntry(
             name = sf_name + '-' + 'create_vThunder_entry_in_database',
-            requires=(constants.AMPHORA, constants.LOADBALANCER_ID)))
+            requires=(constants.AMPHORA, constants.LOADBALANCER)))
         # Get VThunder details from database
         create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancerID(
             requires=constants.LOADBALANCER_ID,
@@ -252,8 +258,8 @@ class VThunderFlows(object):
         """
 
         return list(history.values())[0] is not None
-
-    def _create_new_amp_for_lb_decider(self, history):
+        
+    def _create_vthunder_flow_decider(self, history):
         """decides if a new amphora must be created for the lb
 
         :return: True if there is no spare amphora
@@ -261,3 +267,69 @@ class VThunderFlows(object):
 
         return list(history.values())[0] is None
 
+    def _get_vthunder_for_amphora_subflow(self, prefix, role):
+        """Create amphora in existing vThunder."""
+
+        sf_name = prefix + '-' + 'VTHUNDER_TO_AMPHORA_SUBFLOW'
+        vthunder_for_amphora_subflow = linear_flow.Flow(sf_name)
+        vthunder_for_amphora_subflow.add(database_tasks.CreateAmphoraInDB(
+            name=sf_name + '-' + constants.CREATE_AMPHORA_INDB,
+            provides=constants.AMPHORA_ID))
+
+        require_server_group_id_condition = (
+            role in (constants.ROLE_BACKUP, constants.ROLE_MASTER) and
+            CONF.nova.enable_anti_affinity)
+        #Relaod LB
+        #vthunder_for_amphora_subflow.add(database_tasks.ReloadLoadBalancer(
+        #    name=sf_name + '-' + 'reload_loadbalancer',
+        #   requires=constants.LOADBALANCER_ID,
+        #   provides=constants.LOADBALANCER))
+        vthunder_for_amphora_subflow.add(a10_database_tasks.GetComputeForProject(
+            name=sf_name + '-' + 'get_compute_id',
+            requires = constants.LOADBALANCER,
+            provides = constants.COMPUTE_ID))
+        vthunder_for_amphora_subflow.add(database_tasks.UpdateAmphoraComputeId(
+            name=sf_name + '-' + constants.UPDATE_AMPHORA_COMPUTEID,
+            requires=(constants.AMPHORA_ID, constants.COMPUTE_ID)))
+        vthunder_for_amphora_subflow.add(compute_tasks.ComputeActiveWait(
+            name=sf_name + '-' + constants.COMPUTE_WAIT,
+            requires=(constants.COMPUTE_ID, constants.AMPHORA_ID),
+            provides=constants.COMPUTE_OBJ))
+        vthunder_for_amphora_subflow.add(database_tasks.UpdateAmphoraInfo(
+            name=sf_name + '-' + constants.UPDATE_AMPHORA_INFO,
+            requires=(constants.AMPHORA_ID, constants.COMPUTE_OBJ),
+            provides=constants.AMPHORA))
+        # create vThunder entry in custom DB
+        vthunder_for_amphora_subflow.add(a10_database_tasks.CreteVthunderEntry(
+            name = sf_name + '-' + 'create_vThunder_entry_in_database',
+            requires=(constants.AMPHORA, constants.LOADBALANCER)))
+        # Get VThunder details from database
+        vthunder_for_amphora_subflow.add(a10_database_tasks.GetVThunderByLoadBalancerID(
+            requires=constants.LOADBALANCER_ID,
+            provides=a10constants.VTHUNDER))
+        vthunder_for_amphora_subflow.add(
+            vthunder_tasks.VThunderComputeConnectivityWait(
+                name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
+                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        vthunder_for_amphora_subflow.add(
+            database_tasks.MarkAmphoraAllocatedInDB(
+                name=sf_name + '-' + constants.MARK_AMPHORA_ALLOCATED_INDB,
+                requires=(constants.AMPHORA, constants.LOADBALANCER_ID)))
+        vthunder_for_amphora_subflow.add(database_tasks.ReloadAmphora(
+            name=sf_name + '-' + constants.RELOAD_AMPHORA,
+            requires=constants.AMPHORA_ID,
+            provides=constants.AMPHORA))
+        if role == constants.ROLE_MASTER:
+            vthunder_for_amphora_subflow.add(database_tasks.MarkAmphoraMasterInDB(
+                name=sf_name + '-' + constants.MARK_AMP_MASTER_INDB,
+                requires=constants.AMPHORA))
+        elif role == constants.ROLE_BACKUP:
+            vthunder_for_amphora_subflow.add(database_tasks.MarkAmphoraBackupInDB(
+                name=sf_name + '-' + constants.MARK_AMP_BACKUP_INDB,
+                requires=constants.AMPHORA))
+        elif role == constants.ROLE_STANDALONE:
+            vthunder_for_amphora_subflow.add(
+                database_tasks.MarkAmphoraStandAloneInDB(
+                    name=sf_name + '-' + constants.MARK_AMP_STANDALONE_INDB,
+                    requires=constants.AMPHORA))
+        return vthunder_for_amphora_subflow

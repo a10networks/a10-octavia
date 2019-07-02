@@ -35,8 +35,3 @@ class VThunderDB():
 
     def delete_vthunder():
         print("Delete vThunder")
-    
-
-   
-         
-

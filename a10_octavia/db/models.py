@@ -13,7 +13,9 @@ class VThunder(base_models.BASE):
     __data_model__ = data_models.VThunder
     __tablename__ = 'vthunders'
 
-    id = sa.Column(sa.Integer(), primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True)
+    vthunder_id = sa.Column(sa.String(36), nullable=False)
+    project_id = sa.Column(sa.String(36))
     amphora_id = sa.Column(sa.String(36), nullable=True)
     device_name = sa.Column(sa.String(1024), nullable=False)
     ip_address = sa.Column('ip_address', sa.String(64), nullable=False)

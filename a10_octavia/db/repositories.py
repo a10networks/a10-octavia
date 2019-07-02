@@ -40,6 +40,7 @@ class BaseRepository(object):
         :param model_kwargs: Attributes of the model to insert.
         :returns: octavia.common.data_model
         """
+        import rpdb; rpdb.set_trace()
         with session.begin(subtransactions=True):
             model = self.model_class(**model_kwargs)
             session.add(model)
@@ -176,6 +177,16 @@ class VThunderRepository(BaseRepository):
     def getVThunderFromLB(self, session, lb_id):
         model = session.query(self.model_class).filter(
             self.model_class.loadbalancer_id == lb_id).first()
+
+        if not model:
+            return None
+
+        return model.to_data_model()
+
+    def getVThunderByProjectID(self, session, project_id):
+        model = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).first()
+
 
         if not model:
             return None
