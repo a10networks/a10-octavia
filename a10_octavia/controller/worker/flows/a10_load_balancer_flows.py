@@ -162,7 +162,7 @@ class LoadBalancerFlows(object):
                 requires=constants.LOADBALANCER))
         return post_create_LB_flow
 
-    def get_delete_load_balancer_flow(self, lb):
+    def get_delete_load_balancer_flow(self, lb, deleteCompute):
         """Creates a flow to delete a load balancer.
 
         :returns: The flow for deleting a load balancer
@@ -176,24 +176,27 @@ class LoadBalancerFlows(object):
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
             requires=constants.LOADBALANCER))
+        delete_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        delete_LB_flow.add(vthunder_tasks.DeleteVitualServerTask(
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+            provides=constants.STATUS))
         #delete_LB_flow.add(listeners_delete)
         #delete_LB_flow.add(network_tasks.UnplugVIP(
         #    requires=constants.LOADBALANCER))
         #delete_LB_flow.add(network_tasks.DeallocateVIP(
         #    requires=constants.LOADBALANCER))
-        delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
-            requires=constants.LOADBALANCER))
-        delete_LB_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER,
-            provides=constants.AMPHORA))
-        #delete_LB_flow.add(vthunder_tasks.DeleteVitualServerTask(
-        #    requires=(constants.LOADBALANCER, constants.AMPHORA),
-        #    provides=constants.STATUS))
+        if deleteCompute:
+            delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
+                requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeDeletedInDB(
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.DisableLBAmphoraeHealthMonitoring(
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.MarkLBDeletedInDB(
+            requires=constants.LOADBALANCER))
+        delete_LB_flow.add(a10_database_tasks.DeleteVthunderEntry(
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.DecrementLoadBalancerQuota(
             requires=constants.LOADBALANCER))

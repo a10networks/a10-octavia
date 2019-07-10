@@ -1,8 +1,8 @@
-"""upgrade2
+"""new_revision
 
-Revision ID: a058dc662cc4
-Revises: 2d0bd8e6648f
-Create Date: 2019-07-01 11:57:39.020218
+Revision ID: 8151f374ba74
+Revises: 
+Create Date: 2019-07-04 15:57:43.946347
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'a058dc662cc4'
-down_revision = '2d0bd8e6648f'
+revision = '8151f374ba74'
+down_revision = None
 branch_labels = None
 depends_on = None
 
@@ -19,7 +19,7 @@ depends_on = None
 def upgrade():
     op.create_table(
     'vthunders',
-    sa.Column('vid', sa.String(36), primary_key=True),
+    sa.Column('id', sa.Integer, primary_key=True),
     sa.Column('vthunder_id', sa.String(36), nullable=False),
     sa.Column('amphora_id', sa.String(36), nullable=True),
     sa.Column('device_name', sa.String(1024), nullable=False),
@@ -29,9 +29,9 @@ def upgrade():
     sa.Column('axapi_version', sa.Integer, default=30, nullable=False),
     sa.Column('undercloud', sa.Boolean(), default=False, nullable=False),
     sa.Column('loadbalancer_id', sa.String(36)),
-    sa.Column('project_id', sa.String(36))
+    sa.Column('project_id', sa.String(36)),
+    sa.Column('compute_id', sa.String(36))
     )
-
 
 def downgrade():
     pass

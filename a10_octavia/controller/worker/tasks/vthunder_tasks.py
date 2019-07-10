@@ -49,13 +49,12 @@ class DeleteVitualServerTask(BaseVThunderTask):
     def execute(self, loadbalancer, vthunder):
         loadbalancer_id = loadbalancer.id
         try:
-            #IMP: update required
-            
-            #c = acos_client.Client(vthunder.ip, vthunder.acos_version, vthunder.username, vthunder.password)
-            #r = self.c.slb.virtual_server.delete(loadbalancer_id)
+            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
+                                       vthunder.password)
+            r = c.slb.virtual_server.delete(loadbalancer_id)
             status = { 'loadbalancers': [{"id": loadbalancer_id,
                        "provisioning_status": constants.DELETED }]}
-            LOG.info(amphora[0].cached_zone)
         except Exception as e:
             r = str(e)
             LOG.info(r)
@@ -100,6 +99,7 @@ class AmphoraePostVIPPlug(BaseVThunderTask):
             axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
                                        vthunder.password)
+            save_config = c.system.action.write_memory()                         
             amp_info = c.system.action.reload()
             LOG.info("Reloaded vThunder successfully!")
         except Exception as e:

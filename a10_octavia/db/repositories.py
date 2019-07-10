@@ -40,7 +40,6 @@ class BaseRepository(object):
         :param model_kwargs: Attributes of the model to insert.
         :returns: octavia.common.data_model
         """
-        import rpdb; rpdb.set_trace()
         with session.begin(subtransactions=True):
             model = self.model_class(**model_kwargs)
             session.add(model)
@@ -192,3 +191,13 @@ class VThunderRepository(BaseRepository):
             return None
 
         return model.to_data_model()
+
+    def getDeleteComputeFlag(self, session, compute_id):
+        count = session.query(self.model_class).filter(
+            self.model_class.compute_id == compute_id).count()
+       
+        if count < 2:
+            return True
+
+        else:
+            return False          

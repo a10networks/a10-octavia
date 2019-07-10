@@ -24,6 +24,7 @@ class VThunder(base_models.BASE):
     axapi_version = sa.Column(sa.Integer, default=30, nullable=False)
     undercloud = sa.Column(sa.Boolean(), default=False, nullable=False)
     loadbalancer_id = sa.Column(sa.String(36))
+    compute_id = sa.Column(sa.String(36))
 
 
     @classmethod

@@ -31,6 +31,7 @@ from octavia.common import base_taskflow
 from taskflow.listeners import logging as tf_logging
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
+from a10_octavia.db import repositories as a10repo
 from a10_octavia.controller.worker.flows import a10_load_balancer_flows
 from a10_octavia.controller.worker.flows import a10_listener_flows
 from a10_octavia.controller.worker.flows import a10_pool_flows
@@ -57,6 +58,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._listener_flows = a10_listener_flows.ListenerFlows()
         self._pool_flows = a10_pool_flows.PoolFlows()
         self._member_flows = a10_member_flows.MemberFlows()
+        self._vthunder_repo = a10repo.VThunderRepository()
         
         self._exclude_result_logging_tasks = ()
         super(A10ControllerWorker, self).__init__()
@@ -237,7 +239,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         """
         lb = self._lb_repo.get(db_apis.get_session(),
                                id=load_balancer_id)
-        (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb)
+        vthunder = self._vthunder_repo.getVThunderFromLB(db_apis.get_session(),
+                               load_balancer_id)
+        deleteCompute = self._vthunder_repo.getDeleteComputeFlag(db_apis.get_session(),
+                               vthunder.compute_id)
+        (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute)
         store.update({constants.LOADBALANCER: lb,
                       constants.SERVER_GROUP_ID: lb.server_group_id})
 

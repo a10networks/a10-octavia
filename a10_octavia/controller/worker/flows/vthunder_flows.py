@@ -49,34 +49,38 @@ class VThunderFlows(object):
         # We need a graph flow here for a conditional flow
         amp_for_lb_flow = graph_flow.Flow(sf_name)
 
+        amp_for_lb_flow.add(database_tasks.ReloadLoadBalancer(
+            name=sf_name + '-' + 'reload_loadbalancer',
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
+
         # Setup the task that maps an amphora to a load balancer
         allocate_and_associate_amp = a10_database_tasks.MapLoadbalancerToAmphora(
             name=sf_name + '-' + constants.MAP_LOADBALANCER_TO_AMPHORA,
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA_ID)
 
-        # Define a subflow for amphora in existing vthunder
-        vthunder_amp = self._get_vthunder_for_amphora_subflow(prefix, role)
+        # Define a subflow for if we successfully map an amphora
+        map_lb_to_amp = self._get_post_map_lb_subflow(prefix, role)
         # Define a subflow for if we can't map an amphora
         create_amp = self._get_create_amp_for_lb_subflow(prefix, role)
-        
+
+        map_lb_to_vthunder = self._get_vthunder_for_amphora_subflow(prefix, role)
 
         # Add them to the graph flow
         amp_for_lb_flow.add(allocate_and_associate_amp,
-                            vthunder_amp, create_amp)
+                            map_lb_to_vthunder, create_amp)
 
-        # Setup the decider for the path if we can map an amphora to vthunder
-        amp_for_lb_flow.link(allocate_and_associate_amp, vthunder_amp,
-                              decider=self._allocate_amp_to_lb_decider,
-                              decider_depth='flow')
-                             
+        # Setup the decider for the path if we can map an amphora
+        amp_for_lb_flow.link(allocate_and_associate_amp, map_lb_to_vthunder,
+                             decider=self._allocate_amp_to_lb_decider,
+                             decider_depth='flow')
         # Setup the decider for the path if we can't map an amphora
         amp_for_lb_flow.link(allocate_and_associate_amp, create_amp,
-                              decider=self._create_vthunder_flow_decider,
-                              decider_depth='flow')                    
-        
-        return amp_for_lb_flow
+                             decider=self._create_new_amp_for_lb_decider,
+                             decider_depth='flow')
 
+        return amp_for_lb_flow
 
     def _get_post_map_lb_subflow(self, prefix, role):
         """Set amphora type after mapped to lb."""
@@ -259,7 +263,7 @@ class VThunderFlows(object):
 
         return list(history.values())[0] is not None
         
-    def _create_vthunder_flow_decider(self, history):
+    def _create_new_amp_for_lb_decider(self, history):
         """decides if a new amphora must be created for the lb
 
         :return: True if there is no spare amphora
@@ -304,13 +308,9 @@ class VThunderFlows(object):
             name = sf_name + '-' + 'create_vThunder_entry_in_database',
             requires=(constants.AMPHORA, constants.LOADBALANCER)))
         # Get VThunder details from database
-        vthunder_for_amphora_subflow.add(a10_database_tasks.GetVThunderByLoadBalancerID(
-            requires=constants.LOADBALANCER_ID,
-            provides=a10constants.VTHUNDER))
-        vthunder_for_amphora_subflow.add(
-            vthunder_tasks.VThunderComputeConnectivityWait(
-                name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
-                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        vthunder_for_amphora_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))        
         vthunder_for_amphora_subflow.add(
             database_tasks.MarkAmphoraAllocatedInDB(
                 name=sf_name + '-' + constants.MARK_AMPHORA_ALLOCATED_INDB,
