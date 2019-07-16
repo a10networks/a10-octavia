@@ -103,4 +103,13 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         member_id = member.member_id
         payload = {constants.MEMBER_ID: member_id}
         self.client.cast({}, 'delete_member', **payload)
- 
+
+    # Health Monitor
+    def health_monitor_create(self, healthmonitor):
+        payload = {constants.HEALTH_MONITOR_ID: healthmonitor.healthmonitor_id}
+        self.client.cast({}, 'create_health_monitor', **payload)
+
+    def health_monitor_delete(self, healthmonitor):
+        healthmonitor_id = healthmonitor.healthmonitor_id
+        payload = {constants.HEALTH_MONITOR_ID: healthmonitor_id}
+        self.client.cast({}, 'delete_health_monitor', **payload) 

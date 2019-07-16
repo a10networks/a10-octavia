@@ -36,6 +36,8 @@ from a10_octavia.controller.worker.flows import a10_load_balancer_flows
 from a10_octavia.controller.worker.flows import a10_listener_flows
 from a10_octavia.controller.worker.flows import a10_pool_flows
 from a10_octavia.controller.worker.flows import a10_member_flows
+from a10_octavia.controller.worker.flows import a10_health_monitor_flows
+
 
 import acos_client
 import urllib3
@@ -53,11 +55,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._listener_repo = repo.ListenerRepository()
         self._pool_repo = repo.PoolRepository()
         self._member_repo = repo.MemberRepository()
+        self._health_mon_repo = repo.HealthMonitorRepository()
         self._octavia_driver_db = driver_lib.DriverLibrary()
         self._lb_flows = a10_load_balancer_flows.LoadBalancerFlows()
         self._listener_flows = a10_listener_flows.ListenerFlows()
         self._pool_flows = a10_pool_flows.PoolFlows()
         self._member_flows = a10_member_flows.MemberFlows()
+        self._health_monitor_flows = a10_health_monitor_flows.HealthMonitorFlows()
         self._vthunder_repo = a10repo.VThunderRepository()
         
         self._exclude_result_logging_tasks = ()
@@ -99,11 +103,27 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support creating health'
-                              'monitors yet.',
-            operator_fault_string='This provider does not support creating '
-                                  'health monitor yet.')
+        health_mon = self._health_mon_repo.get(db_apis.get_session(),
+                                               id=health_monitor_id)
+        if not health_mon:
+            LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
+                        '60 seconds.', 'health_monitor', health_monitor_id)
+            raise db_exceptions.NoResultFound
+
+        pool = health_mon.pool
+        listeners = pool.listeners
+        pool.health_monitor = health_mon
+        load_balancer = pool.load_balancer
+
+        create_hm_tf = self._taskflow_load(
+            self._health_monitor_flows.get_create_health_monitor_flow(),
+            store={constants.HEALTH_MON: health_mon,
+                   constants.POOL: pool,
+                   constants.LISTENERS: listeners,
+                   constants.LOADBALANCER: load_balancer})
+        with tf_logging.DynamicLoggingListener(create_hm_tf,
+                                               log=LOG):
+            create_hm_tf.run()
 
     def delete_health_monitor(self, health_monitor_id):
         """Deletes a health monitor.
@@ -112,11 +132,22 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises HMNotFound: The referenced health monitor was not found
         """
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support deleting health'
-                              'monitors yet.',
-            operator_fault_string='This provider does not support deleting '
-                                  'health monitor yet.')
+        health_mon = self._health_mon_repo.get(db_apis.get_session(),
+                                               id=health_monitor_id)
+
+        pool = health_mon.pool
+        listeners = pool.listeners
+        load_balancer = pool.load_balancer
+
+        delete_hm_tf = self._taskflow_load(
+            self._health_monitor_flows.get_delete_health_monitor_flow(),
+            store={constants.HEALTH_MON: health_mon,
+                   constants.POOL: pool,
+                   constants.LISTENERS: listeners,
+                   constants.LOADBALANCER: load_balancer})
+        with tf_logging.DynamicLoggingListener(delete_hm_tf,
+                                               log=LOG):
+            delete_hm_tf.run()
 
     def update_health_monitor(self, health_monitor_id, health_monitor_updates):
         """Updates a health monitor.
@@ -126,12 +157,33 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises HMNotFound: The referenced health monitor was not found
         """
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support updating health'
-                              'monitors yet.',
-            operator_fault_string='This provider does not support updating '
-                                  'health monitor yet.')
+        health_mon = None
+        try:
+            health_mon = self._get_db_obj_until_pending_update(
+                self._health_mon_repo, health_monitor_id)
+        except tenacity.RetryError as e:
+            LOG.warning('Health monitor did not go into %s in 60 seconds. '
+                        'This either due to an in-progress Octavia upgrade '
+                        'or an overloaded and failing database. Assuming '
+                        'an upgrade is in progress and continuing.',
+                        constants.PENDING_UPDATE)
+            health_mon = e.last_attempt.result()
 
+        pool = health_mon.pool
+        listeners = pool.listeners
+        pool.health_monitor = health_mon
+        load_balancer = pool.load_balancer
+
+        update_hm_tf = self._taskflow_load(
+            self._health_monitor_flows.get_update_health_monitor_flow(),
+            store={constants.HEALTH_MON: health_mon,
+                   constants.POOL: pool,
+                   constants.LISTENERS: listeners,
+                   constants.LOADBALANCER: load_balancer,
+                   constants.UPDATE_DICT: health_monitor_updates})
+        with tf_logging.DynamicLoggingListener(update_hm_tf,
+                                               log=LOG):
+            update_hm_tf.run()
 
     def create_listener(self, listener_id):
         """Creates a listener.
