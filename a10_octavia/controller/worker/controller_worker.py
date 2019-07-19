@@ -37,6 +37,7 @@ from a10_octavia.controller.worker.flows import a10_listener_flows
 from a10_octavia.controller.worker.flows import a10_pool_flows
 from a10_octavia.controller.worker.flows import a10_member_flows
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows
+from a10_octavia.controller.worker.flows import a10_l7policy_flows
 
 
 import acos_client
@@ -56,12 +57,14 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._pool_repo = repo.PoolRepository()
         self._member_repo = repo.MemberRepository()
         self._health_mon_repo = repo.HealthMonitorRepository()
+        self._l7policy_repo = repo.L7PolicyRepository()
         self._octavia_driver_db = driver_lib.DriverLibrary()
         self._lb_flows = a10_load_balancer_flows.LoadBalancerFlows()
         self._listener_flows = a10_listener_flows.ListenerFlows()
         self._pool_flows = a10_pool_flows.PoolFlows()
         self._member_flows = a10_member_flows.MemberFlows()
         self._health_monitor_flows = a10_health_monitor_flows.HealthMonitorFlows()
+        self._l7policy_flows = a10_l7policy_flows.L7PolicyFlows()
         self._vthunder_repo = a10repo.VThunderRepository()
         
         self._exclude_result_logging_tasks = ()
@@ -490,22 +493,46 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+        l7policy = self._l7policy_repo.get(db_apis.get_session(),
+                                           id=l7policy_id)
+        if not l7policy:
+            LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
+                        '60 seconds.', 'l7policy', l7policy_id)
+            raise db_exceptions.NoResultFound
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support L7 yet',
-            operator_fault_string='This provider does not support L7 yet')
+        listeners = [l7policy.listener]
+        load_balancer = l7policy.listener.load_balancer
+
+        create_l7policy_tf = self._taskflow_load(
+            self._l7policy_flows.get_create_l7policy_flow(),
+            store={constants.L7POLICY: l7policy,
+                   constants.LISTENERS: listeners,
+                   constants.LOADBALANCER: load_balancer})
+        with tf_logging.DynamicLoggingListener(create_l7policy_tf,
+                                               log=LOG):
+            create_l7policy_tf.run()
+
 
     def delete_l7policy(self, l7policy_id):
         """Deletes an L7 policy.
-
         :param l7policy_id: ID of the l7policy to delete
         :returns: None
         :raises L7PolicyNotFound: The referenced l7policy was not found
         """
+        l7policy = self._l7policy_repo.get(db_apis.get_session(),
+                                           id=l7policy_id)
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support L7 yet',
-            operator_fault_string='This provider does not support L7 yet')
+        load_balancer = l7policy.listener.load_balancer
+        listeners = [l7policy.listener]
+
+        delete_l7policy_tf = self._taskflow_load(
+            self._l7policy_flows.get_delete_l7policy_flow(),
+            store={constants.L7POLICY: l7policy,
+                   constants.LISTENERS: listeners,
+                   constants.LOADBALANCER: load_balancer})
+        with tf_logging.DynamicLoggingListener(delete_l7policy_tf,
+                                               log=LOG):
+            delete_l7policy_tf.run()
 
     def update_l7policy(self, l7policy_id, l7policy_updates):
         """Updates an L7 policy.
@@ -527,10 +554,28 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+        l7rule = self._l7rule_repo.get(db_apis.get_session(),
+                                       id=l7rule_id)
+        if not l7rule:
+            LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
+                        '60 seconds.', 'l7rule', l7rule_id)
+            raise db_exceptions.NoResultFound
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support L7 yet',
-            operator_fault_string='This provider does not support L7 yet')
+        l7policy = l7rule.l7policy
+        listeners = [l7policy.listener]
+        load_balancer = l7policy.listener.load_balancer
+
+        create_l7rule_tf = self._taskflow_load(
+            self._l7rule_flows.get_create_l7rule_flow(),
+            store={constants.L7RULE: l7rule,
+                   constants.L7POLICY: l7policy,
+                   constants.LISTENERS: listeners,
+                   constants.LOADBALANCER: load_balancer})
+        with tf_logging.DynamicLoggingListener(create_l7rule_tf,
+                                               log=LOG):
+            create_l7rule_tf.run()
+
+
 
     def delete_l7rule(self, l7rule_id):
         """Deletes an L7 rule.
