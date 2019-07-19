@@ -74,7 +74,7 @@ class L7PolicyFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         delete_l7policy_flow.add(vthunder_tasks.DeleteL7Policy(
-            requires=[constants.L7POLICY, constants.LISTENERS, a10constants.VTHUNDER]))
+            requires=[constants.L7POLICY, a10constants.VTHUNDER]))
         delete_l7policy_flow.add(database_tasks.DeleteL7PolicyInDB(
             requires=constants.L7POLICY))
         delete_l7policy_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
