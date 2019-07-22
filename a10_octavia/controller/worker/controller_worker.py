@@ -38,6 +38,7 @@ from a10_octavia.controller.worker.flows import a10_pool_flows
 from a10_octavia.controller.worker.flows import a10_member_flows
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_l7policy_flows
+from a10_octavia.controller.worker.flows import a10_l7rule_flows
 
 
 import acos_client
@@ -58,6 +59,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._member_repo = repo.MemberRepository()
         self._health_mon_repo = repo.HealthMonitorRepository()
         self._l7policy_repo = repo.L7PolicyRepository()
+        self._l7rule_repo = repo.L7RuleRepository()
         self._octavia_driver_db = driver_lib.DriverLibrary()
         self._lb_flows = a10_load_balancer_flows.LoadBalancerFlows()
         self._listener_flows = a10_listener_flows.ListenerFlows()
@@ -65,6 +67,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._member_flows = a10_member_flows.MemberFlows()
         self._health_monitor_flows = a10_health_monitor_flows.HealthMonitorFlows()
         self._l7policy_flows = a10_l7policy_flows.L7PolicyFlows()
+        self._l7rule_flows = a10_l7rule_flows.L7RuleFlows()
         self._vthunder_repo = a10repo.VThunderRepository()
         
         self._exclude_result_logging_tasks = ()
@@ -575,19 +578,28 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                log=LOG):
             create_l7rule_tf.run()
 
-
-
     def delete_l7rule(self, l7rule_id):
         """Deletes an L7 rule.
-
         :param l7rule_id: ID of the l7rule to delete
         :returns: None
         :raises L7RuleNotFound: The referenced l7rule was not found
         """
+        l7rule = self._l7rule_repo.get(db_apis.get_session(),
+                                       id=l7rule_id)
+        l7policy = l7rule.l7policy
+        load_balancer = l7policy.listener.load_balancer
+        listeners = [l7policy.listener]
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support L7 yet',
-            operator_fault_string='This provider does not support L7 yet')
+        delete_l7rule_tf = self._taskflow_load(
+            self._l7rule_flows.get_delete_l7rule_flow(),
+            store={constants.L7RULE: l7rule,
+                   constants.L7POLICY: l7policy,
+                   constants.LISTENERS: listeners,
+                   constants.LOADBALANCER: load_balancer})
+        with tf_logging.DynamicLoggingListener(delete_l7rule_tf,
+                                               log=LOG):
+            delete_l7rule_tf.run()
+
 
     def update_l7rule(self, l7rule_id, l7rule_updates):
         """Updates an L7 rule.

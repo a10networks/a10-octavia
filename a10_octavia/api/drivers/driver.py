@@ -127,10 +127,10 @@ class A10ProviderDriver(driver_base.ProviderDriver):
 
     # L7 Rule
     def l7rule_create(self, l7rule):
-        payload = {consts.L7RULE_ID: l7rule.l7rule_id}
+        payload = {constants.L7RULE_ID: l7rule.l7rule_id}
         self.client.cast({}, 'create_l7rule', **payload)
 
     def l7rule_delete(self, l7rule):
         l7rule_id = l7rule.l7rule_id
-        payload = {consts.L7RULE_ID: l7rule_id}
+        payload = {constants.L7RULE_ID: l7rule_id}
         self.client.cast({}, 'delete_l7rule', **payload)
