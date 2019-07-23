@@ -84,7 +84,7 @@ class LoadBalancerFlows(object):
 
         lb_create_flow.add(handler_virtual_server.CreateVitualServerTask(
             requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER, a10constants.VTHUNDER),
-            provides=constants.STATUS))
+            provides=a10constants.STATUS))
 
         if listeners:
             lb_create_flow.add(*self._create_listeners_flow())
@@ -183,7 +183,7 @@ class LoadBalancerFlows(object):
             provides=a10constants.VTHUNDER))
         delete_LB_flow.add(handler_virtual_server.DeleteVitualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
-            provides=constants.STATUS))
+            provides=a10constants.STATUS))
         #delete_LB_flow.add(listeners_delete)
         #delete_LB_flow.add(network_tasks.UnplugVIP(
         #    requires=constants.LOADBALANCER))

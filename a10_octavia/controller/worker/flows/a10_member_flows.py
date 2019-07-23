@@ -7,7 +7,7 @@ from octavia.controller.worker.tasks import database_tasks
 from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import model_tasks
 from octavia.controller.worker.tasks import network_tasks
-#from a10_octavia.controller.worker.tasks import vthunder_tasks
+from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.controller.worker.tasks import handler_server
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.common import a10constants
@@ -43,6 +43,11 @@ class MemberFlows(object):
         create_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        # managing interface additions here
+        create_member_flow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
+            requires=(constants.LOADBALANCER, constants.ADDED_PORTS, a10constants.VTHUNDER)))
+        create_member_flow.add(vthunder_tasks.EnableInterfaceForMembers(
+            requires=[constants.ADDED_PORTS, constants.LOADBALANCER, a10constants.VTHUNDER]))
         create_member_flow.add(handler_server.MemberCreate(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
         create_member_flow.add(database_tasks.MarkMemberActiveInDB(

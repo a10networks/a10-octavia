@@ -7,6 +7,7 @@ from octavia.amphorae.driver_exceptions import exceptions as driver_except
 import time
 from oslo_log import log as logging
 from oslo_config import cfg
+from octavia.common import utils
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 from a10_octavia.controller.worker.tasks import persist
@@ -104,13 +105,35 @@ class AmphoraePostVIPPlug(BaseVThunderTask):
             LOG.info(str(e))
             raise
 
+
+class AmphoraePostMemberNetworkPlug(BaseVThunderTask):
+    """"Task to reload and configure vThunder device"""
+
+    def execute(self, added_ports, loadbalancer, vthunder):
+        """Execute get_info routine for a vThunder until it responds."""
+        try:
+            amphora_id = loadbalancer.amphorae[0].id
+            if len(added_ports[amphora_id]) > 0:
+                axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+                client = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
+                                       vthunder.password)
+                save_config = client.system.action.write_memory()
+                amp_info = client.system.action.reload()
+                LOG.info("Reloaded vThunder successfully!")
+            else:
+                LOG.info("vThunder reload is not required for member addition.")
+        except Exception as e:
+            LOG.error("Unable to reload vthunder device")
+            LOG.info(str(e))
+            raise
+
 class EnableInterface(BaseVThunderTask):
     """"Task to configure vThunder ports"""
 
     def execute(self, vthunder):
         """Execute get_info routine for a vThunder until it responds."""
         try:
-            LOG.info("Waiting 120 sec after relaods")
+            LOG.info("Waiting 120 sec for vThunder to reload.")
             time.sleep(120)
             axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
@@ -121,6 +144,34 @@ class EnableInterface(BaseVThunderTask):
             LOG.error("Unable to configure vthunder interface")
             LOG.info(str(e))
             raise
+
+class EnableInterfaceForMembers(BaseVThunderTask):
+    """ Task to enable an interface associated with a member """
+    
+    def execute(self, added_ports, loadbalancer, vthunder):
+        """ Enable specific interface of amphora """ 
+        try:
+            #TODO change if we go for active-passive infra
+            amphora_id = loadbalancer.amphorae[0].id
+            compute_id = loadbalancer.amphorae[0].compute_id
+            network_driver = utils.get_network_driver()
+            nics = network_driver.get_plugged_networks(compute_id)
+            if len(added_ports[amphora_id]) > 0:
+                LOG.info("Waiting 150 sec for vThunder to reload.")
+                time.sleep(150)
+                target_interface = len(nics)
+                axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+                c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
+                                       vthunder.password)
+                amp_info = c.system.action.setInterface(target_interface-1)
+                LOG.info("Configured the new interface required for member.")
+            else:
+                LOG.info("Configuration of new interface is not required for member.")            
+        except Exception as e:
+            LOG.error("Unable to configure vthunder interface")
+            LOG.info(str(e))
+            raise
+
 
 class ListenersCreate(BaseVThunderTask):
     """Task to update amphora with all specified listeners' configurations."""
@@ -508,7 +559,7 @@ class CreateL7Rule(BaseVThunderTask):
             LOG.info("Error occurred")
 
 
-class DeleteL7Rule (BaseVThunderTask):
+class DeleteL7Rule(BaseVThunderTask):
     """ Task to delete a l7rule and associate it with provided pool. """
 
     def execute(self, l7rule, listeners, vthunder):
