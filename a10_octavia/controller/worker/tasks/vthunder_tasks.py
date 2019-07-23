@@ -10,18 +10,10 @@ from oslo_config import cfg
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 from a10_octavia.controller.worker.tasks import persist
-
+from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
-
-
-class BaseVThunderTask(task.Task):
-    """Base task to instansiate common classes."""
-
-    def __init__(self, **kwargs):
-        self.task_utils = task_utilities.TaskUtils()
-        super(BaseVThunderTask, self).__init__(**kwargs)
 
 class CreateVitualServerTask(BaseVThunderTask):
     """Task to create a virtual server in vthunder device."""

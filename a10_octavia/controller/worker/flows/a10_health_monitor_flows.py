@@ -5,7 +5,9 @@ from octavia.controller.worker.tasks import database_tasks
 from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import model_tasks
 
-from a10_octavia.controller.worker.tasks import vthunder_tasks
+#from a10_octavia.controller.worker.tasks import vthunder_tasks
+from a10_octavia.controller.worker.tasks import handler_health_monitor
+
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.common import a10constants
 
@@ -29,7 +31,7 @@ class HealthMonitorFlows(object):
         create_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_hm_flow.add(vthunder_tasks.CreateAndAssociateHealthMonitor(
+        create_hm_flow.add(handler_health_monitor.CreateAndAssociateHealthMonitor(
             requires=[constants.HEALTH_MON, a10constants.VTHUNDER]))
         create_hm_flow.add(database_tasks.MarkHealthMonitorActiveInDB(
             requires=constants.HEALTH_MON))
@@ -58,7 +60,7 @@ class HealthMonitorFlows(object):
         delete_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_hm_flow.add(vthunder_tasks.DeleteHealthMonitor(
+        delete_hm_flow.add(handler_health_monitor.DeleteHealthMonitor(
             requires=[constants.HEALTH_MON, a10constants.VTHUNDER]))
         delete_hm_flow.add(database_tasks.DeleteHealthMonitorInDB(
             requires=constants.HEALTH_MON))

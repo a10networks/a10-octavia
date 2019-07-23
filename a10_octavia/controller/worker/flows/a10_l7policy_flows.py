@@ -21,7 +21,8 @@ from octavia.controller.worker.tasks import database_tasks
 from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import model_tasks
 
-from a10_octavia.controller.worker.tasks import vthunder_tasks
+#from a10_octavia.controller.worker.tasks import vthunder_tasks
+from a10_octavia.controller.worker.tasks import handler_l7policy
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.common import a10constants
 
@@ -45,7 +46,7 @@ class L7PolicyFlows(object):
         create_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_l7policy_flow.add(vthunder_tasks.CreateL7Policy(
+        create_l7policy_flow.add(handler_l7policy.CreateL7Policy(
             requires=[constants.L7POLICY, constants.LISTENERS, a10constants.VTHUNDER]))
         create_l7policy_flow.add(database_tasks.MarkL7PolicyActiveInDB(
             requires=constants.L7POLICY))
@@ -73,7 +74,7 @@ class L7PolicyFlows(object):
         delete_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_l7policy_flow.add(vthunder_tasks.DeleteL7Policy(
+        delete_l7policy_flow.add(handler_l7policy.DeleteL7Policy(
             requires=[constants.L7POLICY, a10constants.VTHUNDER]))
         delete_l7policy_flow.add(database_tasks.DeleteL7PolicyInDB(
             requires=constants.L7POLICY))

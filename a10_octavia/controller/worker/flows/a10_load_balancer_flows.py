@@ -31,7 +31,9 @@ from octavia.controller.worker.tasks import database_tasks
 from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import network_tasks
 
+from a10_octavia.controller.worker.tasks import handler_virtual_server
 from a10_octavia.controller.worker.tasks import vthunder_tasks
+
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.common import a10constants
 
@@ -80,7 +82,7 @@ class LoadBalancerFlows(object):
             self.get_post_lb_vthunder_association_flow(
                 post_amp_prefix, topology, mark_active=(not listeners)))
 
-        lb_create_flow.add(vthunder_tasks.CreateVitualServerTask(
+        lb_create_flow.add(handler_virtual_server.CreateVitualServerTask(
             requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=constants.STATUS))
 
@@ -179,7 +181,7 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_LB_flow.add(vthunder_tasks.DeleteVitualServerTask(
+        delete_LB_flow.add(handler_virtual_server.DeleteVitualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=constants.STATUS))
         #delete_LB_flow.add(listeners_delete)

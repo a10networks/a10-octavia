@@ -5,7 +5,8 @@ from octavia.controller.worker.tasks import amphora_driver_tasks
 from octavia.controller.worker.tasks import database_tasks
 from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import network_tasks
-from a10_octavia.controller.worker.tasks import vthunder_tasks
+#from a10_octavia.controller.worker.tasks import vthunder_tasks
+from a10_octavia.controller.worker.tasks import handler_virtual_port
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.common import a10constants
 
@@ -25,7 +26,7 @@ class ListenerFlows(object):
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_listener_flow.add(vthunder_tasks.ListenersCreate(
+        create_listener_flow.add(handler_virtual_port.ListenersCreate(
             requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
         create_listener_flow.add(network_tasks.UpdateVIP(
             requires=constants.LOADBALANCER))
@@ -68,7 +69,7 @@ class ListenerFlows(object):
         delete_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_listener_flow.add(vthunder_tasks.ListenerDelete(
+        delete_listener_flow.add(handler_virtual_port.ListenerDelete(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         delete_listener_flow.add(network_tasks.UpdateVIPForDelete(
             requires=constants.LOADBALANCER))

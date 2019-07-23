@@ -5,7 +5,9 @@ from octavia.controller.worker.tasks import amphora_driver_tasks
 from octavia.controller.worker.tasks import database_tasks
 from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import model_tasks
-from a10_octavia.controller.worker.tasks import vthunder_tasks
+#from a10_octavia.controller.worker.tasks import vthunder_tasks
+from a10_octavia.controller.worker.tasks import handler_service_group
+from a10_octavia.controller.worker.tasks import handler_virtual_port
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.common import a10constants
 
@@ -30,9 +32,9 @@ class PoolFlows(object):
         create_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_pool_flow.add(vthunder_tasks.PoolCreate(
+        create_pool_flow.add(handler_service_group.PoolCreate(
             requires=[constants.POOL, a10constants.VTHUNDER]))
-        create_pool_flow.add(vthunder_tasks.ListenersUpdate(
+        create_pool_flow.add(handler_virtual_port.ListenersUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_pool_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
@@ -61,9 +63,9 @@ class PoolFlows(object):
         delete_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_pool_flow.add(vthunder_tasks.ListenersUpdate(
+        delete_pool_flow.add(handler_virtual_port.ListenersUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
-        delete_pool_flow.add(vthunder_tasks.PoolDelete(
+        delete_pool_flow.add(handler_service_group.PoolDelete(
             requires=[constants.POOL, a10constants.VTHUNDER]))
         delete_pool_flow.add(database_tasks.DeletePoolInDB(
             requires=constants.POOL))
