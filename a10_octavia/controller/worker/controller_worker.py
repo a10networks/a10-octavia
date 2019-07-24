@@ -24,10 +24,12 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from sqlalchemy.orm import exc as db_exceptions
+import tenacity
 
 from octavia.api.drivers import driver_lib
 from octavia.common import constants
 from octavia.common import base_taskflow
+from octavia.common import exceptions
 from taskflow.listeners import logging as tf_logging
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
@@ -345,8 +347,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             status = { 'loadbalancers': [{"id": load_balancer_id,
                        "provisioning_status": constants.ERROR }]}
         LOG.info("Updating db with this status: %s" % (status))
-        lb.update(db_apis.get_session(), loadbalancer.id,
-                                      **update_dict)
+        lb.update(db_apis.get_session(), load_balancer_id,
+                                      **load_balancer_updates)
 
 
 
