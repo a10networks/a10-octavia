@@ -22,9 +22,7 @@ class PoolCreate(BaseVThunderTask):
     def execute(self, pool, vthunder):
         """Execute create pool for an amphora."""
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             #need to put algorithm logic
             out = c.slb.service_group.create(pool.id, pool.protocol)
             LOG.info("Pool created successfully.")
@@ -39,8 +37,7 @@ class PoolDelete(BaseVThunderTask):
         """Execute create pool for an amphora."""
         try:
             axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                   vthunder.password)
+            c = self.client_factory(vthunder)
             #need to put algorithm logic
             out = c.slb.service_group.delete(pool.id)
             LOG.info("Pool deleted successfully.")

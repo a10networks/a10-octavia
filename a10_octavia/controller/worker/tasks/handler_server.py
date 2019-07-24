@@ -21,17 +21,13 @@ class MemberCreate(BaseVThunderTask):
     def execute(self, member, vthunder, pool):
         """Execute create member for an amphora."""
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                   vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.server.create(member.id, member.ip_address)
             LOG.info("Member created successfully.")
         except Exception as e:
             print(str(e))
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                   vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.service_group.member.create(pool.id, member.id, member.protocol_port)
             LOG.info("Member associated to pool successfully.")
         except Exception as e:
@@ -46,15 +42,13 @@ class MemberDelete(BaseVThunderTask):
         """Execute delete member for an amphora."""
         axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
         try:
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.service_group.member.delete(pool.id, member.id, member.protocol_port)
             LOG.info("Member de-associated to pool successfully.")
         except Exception as e:
             print(str(e))
         try:
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.server.delete(member.id)
             LOG.info("Member deleted successfully.")
         except Exception as e:

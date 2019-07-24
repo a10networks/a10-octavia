@@ -25,8 +25,7 @@ class ListenersCreate(BaseVThunderTask):
             listener.load_balancer = loadbalancer
             #self.amphora_driver.update(listener, loadbalancer.vip)
             try:
-                c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+                c = self.client_factory(vthunder)
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 out = c.slb.virtual_server.vport.create(loadbalancer.id, name, listener.protocol,
                                                 listener.protocol_port, listener.default_pool_id,
@@ -55,9 +54,7 @@ class ListenersUpdate(BaseVThunderTask):
             listener.load_balancer = loadbalancer
             #self.amphora_driver.update(listener, loadbalancer.vip)
             try:
-                axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-                c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+                c = self.client_factory(vthunder)
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 out = c.slb.virtual_server.vport.update(loadbalancer.id, name, listener.protocol,
                                                 listener.protocol_port, listener.default_pool_id)
@@ -83,9 +80,7 @@ class ListenerDelete(BaseVThunderTask):
         """Execute listener delete routines for an amphora."""
         #self.amphora_driver.delete(listener, loadbalancer.vip)
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             name = loadbalancer.id + "_" + str(listener.protocol_port)
             out = c.slb.virtual_server.vport.delete(loadbalancer.id, name, listener.protocol,
                                             listener.protocol_port)

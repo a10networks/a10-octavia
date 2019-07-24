@@ -27,8 +27,7 @@ class CreateL7Policy(BaseVThunderTask):
             p = PolicyUtil()
             script = p.createPolicy(l7policy)
             size = len(script.encode('utf-8'))
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.aflex_policy.create(file=filename, script=script, size=size, action=action)
             LOG.info("aFlex policy created successfully.")
         except Exception as e:
@@ -39,8 +38,7 @@ class CreateL7Policy(BaseVThunderTask):
             listener = listeners[0]
 
             new_listener = listeners[0]
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
                                                 listener.protocol, listener.protocol_port)
 
@@ -76,8 +74,7 @@ class DeleteL7Policy(BaseVThunderTask):
         try:
             listener = l7policy.listener
             old_listener = l7policy.listener
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             get_listener = c.slb.virtual_server.vport.get(old_listener.load_balancer_id,
                                                                  old_listener.name,
                                                                  old_listener.protocol,
@@ -109,8 +106,7 @@ class DeleteL7Policy(BaseVThunderTask):
             LOG.info("Error occurred")
 
         try:
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.aflex_policy.delete(l7policy.id)
             LOG.info("aFlex policy deleted successfully.")
         except Exception as e:

@@ -20,9 +20,7 @@ class CreateVitualServerTask(BaseVThunderTask):
 
     def execute(self, loadbalancer_id, loadbalancer, vthunder):
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             r = c.slb.virtual_server.create(loadbalancer_id, loadbalancer.vip.ip_address)
             status = { 'loadbalancers': [{"id": loadbalancer_id,
                        "provisioning_status": constants.ACTIVE }]}
@@ -46,9 +44,7 @@ class DeleteVitualServerTask(BaseVThunderTask):
     def execute(self, loadbalancer, vthunder):
         loadbalancer_id = loadbalancer.id
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             r = c.slb.virtual_server.delete(loadbalancer_id)
             status = { 'loadbalancers': [{"id": loadbalancer_id,
                        "provisioning_status": constants.DELETED }]}
