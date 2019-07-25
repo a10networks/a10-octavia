@@ -21,7 +21,6 @@ class CreateVitualServerTask(BaseVThunderTask):
 
     def execute(self, loadbalancer_id, loadbalancer, vthunder):
         try:
-            print("i am here")
             axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
                                        vthunder.password)
