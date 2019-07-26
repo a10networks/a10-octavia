@@ -71,9 +71,8 @@ class ListenersCreate(BaseVThunderTask):
         cert_data["cert_filename"] = container.certificate.name
         cert_data["key_filename"] =  container.private_key.name
 
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-        c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+        c = self.client_factory(vthunder)
+        
         try:
             c.file.ssl_cert.create(file=cert_data["cert_filename"],
                         cert=cert_data["cert_content"],
