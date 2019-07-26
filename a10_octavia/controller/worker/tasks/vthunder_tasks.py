@@ -5,6 +5,7 @@ from octavia.common import constants
 import acos_client
 from octavia.amphorae.driver_exceptions import exceptions as driver_except
 import time
+from octavia.db import api as db_apis
 from oslo_log import log as logging
 from oslo_config import cfg
 from octavia.common import utils
@@ -21,9 +22,7 @@ class CreateVitualServerTask(BaseVThunderTask):
 
     def execute(self, loadbalancer_id, loadbalancer, vthunder):
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             r = c.slb.virtual_server.create(loadbalancer_id, loadbalancer.vip.ip_address)
             status = { 'loadbalancers': [{"id": loadbalancer_id,
                        "provisioning_status": constants.ACTIVE }]}
@@ -46,9 +45,7 @@ class DeleteVitualServerTask(BaseVThunderTask):
     def execute(self, loadbalancer, vthunder):
         loadbalancer_id = loadbalancer.id
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             r = c.slb.virtual_server.delete(loadbalancer_id)
             status = { 'loadbalancers': [{"id": loadbalancer_id,
                        "provisioning_status": constants.DELETED }]}
@@ -72,9 +69,7 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
          
             LOG.info("Trying to connect vThunder after 180 sec")
             time.sleep(180)
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             amp_info = c.system.information()
             LOG.info(str(amp_info))
         except driver_except.TimeOutException:
@@ -93,11 +88,9 @@ class AmphoraePostVIPPlug(BaseVThunderTask):
         """Execute get_info routine for a vThunder until it responds."""
         try:
             #import rpdb; rpdb.set_trace()
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            client = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
-            save_config = client.system.action.write_memory()
-            amp_info = client.system.action.reload()
+            c = self.client_factory(vthunder)
+            save_config = c.system.action.write_memory()
+            amp_info = c.system.action.reload()
             LOG.info("Reloaded vThunder successfully!")
         except Exception as e:
             LOG.error("Unable to reload vthunder device")
@@ -113,11 +106,9 @@ class AmphoraePostMemberNetworkPlug(BaseVThunderTask):
         try:
             amphora_id = loadbalancer.amphorae[0].id
             if len(added_ports[amphora_id]) > 0:
-                axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-                client = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
-                save_config = client.system.action.write_memory()
-                amp_info = client.system.action.reload()
+                c = self.client_factory(vthunder)
+                save_config = c.system.action.write_memory()
+                amp_info = c.system.action.reload()
                 LOG.info("Reloaded vThunder successfully!")
             else:
                 LOG.info("vThunder reload is not required for member addition.")
@@ -134,9 +125,7 @@ class EnableInterface(BaseVThunderTask):
         try:
             LOG.info("Waiting 120 sec for vThunder to reload.")
             time.sleep(120)
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             amp_info = c.system.action.setInterface(1)
             LOG.info("Configured the devices")
         except Exception as e:
@@ -159,9 +148,7 @@ class EnableInterfaceForMembers(BaseVThunderTask):
                 LOG.info("Waiting 150 sec for vThunder to reload.")
                 time.sleep(150)
                 target_interface = len(nics)
-                axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-                c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+                c = self.client_factory(vthunder)
                 amp_info = c.system.action.setInterface(target_interface-1)
                 LOG.info("Configured the new interface required for member.")
             else:
@@ -182,8 +169,7 @@ class ListenersCreate(BaseVThunderTask):
             listener.load_balancer = loadbalancer
             #self.amphora_driver.update(listener, loadbalancer.vip)
             try:
-                c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+                c = self.client_factory(vthunder)
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 out = c.slb.virtual_server.vport.create(loadbalancer.id, name, listener.protocol, 
                                                 listener.protocol_port, listener.default_pool_id,
@@ -214,9 +200,7 @@ class ListenersUpdate(BaseVThunderTask):
             listener.load_balancer = loadbalancer
             #self.amphora_driver.update(listener, loadbalancer.vip)
             try:
-                axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-                c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+                c = self.client_factory(vthunder)
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 out = c.slb.virtual_server.vport.update(loadbalancer.id, name, listener.protocol,
                                                 listener.protocol_port, listener.default_pool_id)
@@ -242,9 +226,7 @@ class ListenerDelete(BaseVThunderTask):
         """Execute listener delete routines for an amphora."""
         #self.amphora_driver.delete(listener, loadbalancer.vip)
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             name = loadbalancer.id + "_" + str(listener.protocol_port)
             out = c.slb.virtual_server.vport.delete(loadbalancer.id, name, listener.protocol,
                                             listener.protocol_port)
@@ -268,9 +250,7 @@ class PoolCreate(BaseVThunderTask):
     def execute(self, pool, vthunder):
         """Execute create pool for an amphora."""
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             #need to put algorithm logic
             out = c.slb.service_group.create(pool.id, pool.protocol)
             LOG.info("Pool created successfully.")
@@ -284,9 +264,7 @@ class PoolDelete(BaseVThunderTask):
     def execute(self, pool, vthunder):
         """Execute create pool for an amphora."""
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                   vthunder.password)
+            c = self.client_factory(vthunder)
             #need to put algorithm logic
             out = c.slb.service_group.delete(pool.id)
             LOG.info("Pool deleted successfully.")
@@ -301,17 +279,13 @@ class MemberCreate(BaseVThunderTask):
     def execute(self, member, vthunder, pool):
         """Execute create member for an amphora."""
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                   vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.server.create(member.id, member.ip_address)
             LOG.info("Member created successfully.")
         except Exception as e:
             print(str(e))
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                   vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.service_group.member.create(pool.id, member.id, member.protocol_port)
             LOG.info("Member associated to pool successfully.")
         except Exception as e:
@@ -325,15 +299,12 @@ class MemberDelete(BaseVThunderTask):
         """Execute delete member for an amphora."""
         axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
         try:
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
-            out = c.slb.service_group.member.delete(pool.id, member.id, member.protocol_port)
+            c = self.client_factory(vthunder)
             LOG.info("Member de-associated to pool successfully.")
         except Exception as e:
             print(str(e))
         try:
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.server.delete(member.id)
             LOG.info("Member deleted successfully.")
         except Exception as e:
@@ -356,9 +327,8 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
                 method = health_mon.http_method
                 url = health_mon.url_path
                 expect_code = health_mon.expected_codes
-            client = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
-            out = client.slb.hm.create(health_mon.id[0:5], openstack_mappings.hm_type(client, health_mon.type), 
+            c = self.client_factory(vthunder)
+            out = c.slb.hm.create(health_mon.id[0:5], openstack_mappings.hm_type(c, health_mon.type), 
                                          health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
                                          method=method, url=url, expect_code=expect_code, port=port
                                          ) 
@@ -366,9 +336,8 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
         except Exception as e:
             print(str(e))
         try:
-            client = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
-            out = client.slb.service_group.update(health_mon.pool_id,
+            c = self.client_factory(vthunder)
+            out = c.slb.service_group.update(health_mon.pool_id,
                                                     health_monitor=health_mon.id[0:5],
                                                     health_check_disable=0) 
             LOG.info("Heath Monitor associated to pool successfully.")
@@ -383,8 +352,7 @@ class DeleteHealthMonitor(BaseVThunderTask):
         """ Execute create health monitor for amphora """   
         axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
         try:
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.service_group.update(health_mon.pool_id,
                                                     health_monitor="",
                                                     health_check_disable=False) 
@@ -393,8 +361,7 @@ class DeleteHealthMonitor(BaseVThunderTask):
             print(str(e))
             LOG.info("Error occurred")
         try:
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.hm.delete(health_mon.id)
             LOG.info("Heath Monitor deleted successfully.")
         except Exception as e:
@@ -413,8 +380,7 @@ class CreateL7Policy(BaseVThunderTask):
             p = PolicyUtil()
             script = p.createPolicy(l7policy)
             size = len(script.encode('utf-8'))
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.aflex_policy.create(file=filename, script=script, size=size, action=action)
             LOG.info("aFlex policy created successfully.")
         except Exception as e:
@@ -425,8 +391,7 @@ class CreateL7Policy(BaseVThunderTask):
             listener = listeners[0]
             
             new_listener = listeners[0]
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
                                                 listener.protocol, listener.protocol_port)
             
@@ -462,8 +427,7 @@ class DeleteL7Policy(BaseVThunderTask):
         try:
             listener = l7policy.listener
             old_listener = l7policy.listener
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             get_listener = c.slb.virtual_server.vport.get(old_listener.load_balancer_id,
                                                                  old_listener.name,
                                                                  old_listener.protocol,
@@ -495,8 +459,7 @@ class DeleteL7Policy(BaseVThunderTask):
             LOG.info("Error occurred")  
 
         try:
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.aflex_policy.delete(l7policy.id)
             LOG.info("aFlex policy deleted successfully.")
         except Exception as e:
@@ -516,8 +479,7 @@ class CreateL7Rule(BaseVThunderTask):
             p = PolicyUtil()
             script = p.createPolicy(l7policy)
             size = len(script.encode('utf-8'))
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.aflex_policy.create(file=filename, script=script, size=size, action=action)
             LOG.info("aFlex policy created successfully.")
         except Exception as e:
@@ -528,8 +490,7 @@ class CreateL7Rule(BaseVThunderTask):
             listener = listeners[0]
 
             new_listener = listeners[0]
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
                                                 listener.protocol, listener.protocol_port)
 
@@ -580,8 +541,7 @@ class DeleteL7Rule(BaseVThunderTask):
             p = PolicyUtil()
             script = p.createPolicy(l7pol)
             size = len(script.encode('utf-8'))
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.aflex_policy.create(file=filename, script=script, size=size, action=action)
             LOG.info("aFlex policy created successfully.")
         except Exception as e:
@@ -592,8 +552,7 @@ class DeleteL7Rule(BaseVThunderTask):
             listener = listeners[0]
 
             new_listener = listeners[0]
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
                                                 listener.protocol, listener.protocol_port)
 

@@ -117,4 +117,6 @@ venv.bak/
 .DS_Store
 Vagrantfile
 .vagrant/
-*.swp
+*.sw[op]
+
+.vscode/

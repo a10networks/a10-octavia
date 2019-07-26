@@ -31,9 +31,8 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
                 method = health_mon.http_method
                 url = health_mon.url_path
                 expect_code = health_mon.expected_codes
-            client = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
-            out = client.slb.hm.create(health_mon.id[0:5], openstack_mappings.hm_type(client, health_mon.type),
+            c = self.client_factory(vthunder)
+            out = c.slb.hm.create(health_mon.id[0:5], openstack_mappings.hm_type(c, health_mon.type),
                                          health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
                                          method=method, url=url, expect_code=expect_code, port=port
                                          )
@@ -41,9 +40,8 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
         except Exception as e:
             print(str(e))
         try:
-            client = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
-            out = client.slb.service_group.update(health_mon.pool_id,
+            c = self.client_factory(vthunder)
+            out = c.slb.service_group.update(health_mon.pool_id,
                                                     health_monitor=health_mon.id[0:5],
                                                     health_check_disable=0)
             LOG.info("Heath Monitor associated to pool successfully.")
@@ -56,10 +54,8 @@ class DeleteHealthMonitor(BaseVThunderTask):
 
     def execute(self, health_mon, vthunder):
         """ Execute create health monitor for amphora """
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
         try:
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.service_group.update(health_mon.pool_id,
                                                     health_monitor="",
                                                     health_check_disable=False)
@@ -68,8 +64,7 @@ class DeleteHealthMonitor(BaseVThunderTask):
             print(str(e))
             LOG.info("Error occurred")
         try:
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.hm.delete(health_mon.id)
             LOG.info("Heath Monitor deleted successfully.")
         except Exception as e:

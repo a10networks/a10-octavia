@@ -28,8 +28,7 @@ class CreateL7Rule(BaseVThunderTask):
             p = PolicyUtil()
             script = p.createPolicy(l7policy)
             size = len(script.encode('utf-8'))
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.aflex_policy.create(file=filename, script=script, size=size, action=action)
             LOG.info("aFlex policy created successfully.")
         except Exception as e:
@@ -40,8 +39,7 @@ class CreateL7Rule(BaseVThunderTask):
             listener = listeners[0]
 
             new_listener = listeners[0]
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
                                                 listener.protocol, listener.protocol_port)
 
@@ -91,8 +89,7 @@ class DeleteL7Rule (BaseVThunderTask):
             p = PolicyUtil()
             script = p.createPolicy(l7pol)
             size = len(script.encode('utf-8'))
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             out = c.slb.aflex_policy.create(file=filename, script=script, size=size, action=action)
             LOG.info("aFlex policy created successfully.")
         except Exception as e:
@@ -103,8 +100,7 @@ class DeleteL7Rule (BaseVThunderTask):
             listener = listeners[0]
 
             new_listener = listeners[0]
-            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
-                                       vthunder.password)
+            c = self.client_factory(vthunder)
             get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
                                                 listener.protocol, listener.protocol_port)
 

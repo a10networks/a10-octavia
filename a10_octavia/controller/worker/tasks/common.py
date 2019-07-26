@@ -23,3 +23,7 @@ class BaseVThunderTask(task.Task):
         self.task_utils = task_utilities.TaskUtils()
         super(BaseVThunderTask, self).__init__(**kwargs)
 
+    def client_factory(self, vthunder):
+        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+        c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username, vthunder.password)
+        return c

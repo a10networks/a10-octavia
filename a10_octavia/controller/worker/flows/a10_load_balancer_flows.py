@@ -20,16 +20,37 @@ from taskflow.patterns import unordered_flow
 
 from octavia.common import constants
 from octavia.common import exceptions
-from octavia.controller.worker.flows import amphora_flows
-from octavia.controller.worker.flows import listener_flows
-from octavia.controller.worker.flows import member_flows
-from octavia.controller.worker.flows import pool_flows
+
 from a10_octavia.controller.worker.flows import vthunder_flows
-from octavia.controller.worker.tasks import amphora_driver_tasks
-from octavia.controller.worker.tasks import compute_tasks
-from octavia.controller.worker.tasks import database_tasks
-from octavia.controller.worker.tasks import lifecycle_tasks
-from octavia.controller.worker.tasks import network_tasks
+try:
+    from octavia.controller.worker.v2.flows import amphora_flows
+    from octavia.controller.worker.v2.flows import listener_flows
+    from octavia.controller.worker.v2.flows import member_flows
+    from octavia.controller.worker.v2.flows import pool_flows
+
+    from octavia.controller.worker.v2.tasks import amphora_driver_tasks
+    from octavia.controller.worker.v2.tasks import compute_tasks
+    from octavia.controller.worker.v2.tasks import database_tasks
+    from octavia.controller.worker.v2.tasks import lifecycle_tasks
+    from octavia.controller.worker.v2.tasks import model_tasks
+    from octavia.controller.worker.v2.tasks import network_tasks
+except (ImportError, AttributeError):
+    pass
+
+try:
+    # Stein and previous
+    from octavia.controller.worker.flows import amphora_flows
+    from octavia.controller.worker.flows import listener_flows
+    from octavia.controller.worker.flows import member_flows
+    from octavia.controller.worker.flows import pool_flows
+    from octavia.controller.worker.tasks import amphora_driver_tasks
+    from octavia.controller.worker.tasks import compute_tasks
+    from octavia.controller.worker.tasks import database_tasks
+    from octavia.controller.worker.tasks import lifecycle_tasks
+    from octavia.controller.worker.tasks import model_tasks
+    from octavia.controller.worker.tasks import network_tasks
+except (ImportError, AttributeError):
+    pass
 
 from a10_octavia.controller.worker.tasks import handler_virtual_server
 from a10_octavia.controller.worker.tasks import vthunder_tasks

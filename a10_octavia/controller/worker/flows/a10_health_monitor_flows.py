@@ -1,9 +1,20 @@
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
-from octavia.controller.worker.tasks import database_tasks
-from octavia.controller.worker.tasks import lifecycle_tasks
-from octavia.controller.worker.tasks import model_tasks
+
+
+try:
+    from octavia.controller.worker.v2.tasks import amphora_driver_tasks
+    from octavia.controller.worker.v2.tasks import database_tasks
+    from octavia.controller.worker.v2.tasks import lifecycle_tasks
+    from octavia.controller.worker.v2.tasks import model_tasks
+except ImportError as import_exc:
+    # Stein and previous
+    from octavia.controller.worker.tasks import amphora_driver_tasks
+    from octavia.controller.worker.tasks import database_tasks
+    from octavia.controller.worker.tasks import lifecycle_tasks
+    from octavia.controller.worker.tasks import model_tasks
+
 
 #from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.controller.worker.tasks import handler_health_monitor
@@ -26,7 +37,7 @@ class HealthMonitorFlows(object):
                       constants.LOADBALANCER]))
         create_hm_flow.add(database_tasks.MarkHealthMonitorPendingCreateInDB(
             requires=constants.HEALTH_MON))
-        #create_hm_flow.add(amphora_driver_tasks.ListenersUpdate(
+        # create_hm_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
