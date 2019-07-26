@@ -107,8 +107,6 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.STATUS))
 
-        if listeners:
-            lb_create_flow.add(*self._create_listeners_flow())
 
         return lb_create_flow
 

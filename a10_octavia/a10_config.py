@@ -67,6 +67,7 @@ class A10Config(object):
             LOG.error("A10Config could not find %s", self._config_path)
             self._config = blank_config
 
+        self._config.octavia_conf_dir = '/etc/octavia/'
         self._load_config()
 
     def _find_config_dir(self, config_dir):
@@ -117,6 +118,10 @@ class A10Config(object):
                 return n.get(section, option)
             except (ini.NoSectionError, ini.NoOptionError):
                 pass
+        
+        else:
+            raise Exception('FatalError: Octavia config directoty could not be found.')
+            LOG.error("A10Config could not find %s", self._config_path)
 
     def _get_octavia_db_string(self):
         z = self._get_octavia_conf('database', 'connection')
