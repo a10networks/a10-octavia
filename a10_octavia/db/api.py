@@ -24,7 +24,6 @@ def get_engine(url=None):
             A10_CFG = a10_config.A10Config()
 
         url = A10_CFG.get('database_connection')
-        print(url)
 
     return sqlalchemy.create_engine(url)
 
