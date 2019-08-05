@@ -5,6 +5,7 @@ from octavia.common import constants
 import acos_client
 from octavia.amphorae.driver_exceptions import exceptions as driver_except
 import time
+import requests
 from octavia.db import api as db_apis
 from oslo_log import log as logging
 from oslo_config import cfg
@@ -66,12 +67,25 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
     def execute(self, vthunder, amphora):
         """Execute get_info routine for a vThunder until it responds."""
         try:
-         
-            LOG.info("Trying to connect vThunder after 180 sec")
-            time.sleep(180)
-            c = self.client_factory(vthunder)
-            amp_info = c.system.information()
-            LOG.info(str(amp_info))
+            
+            LOG.info("Attempting to connect vThunder device for connection.")
+            attempts = 10
+            while attempts >= 0:
+                try:
+                    attempts = attempts - 1
+                    c = self.client_factory(vthunder)
+                    amp_info = c.system.information()
+                    LOG.info(str(amp_info))
+                    break
+                except requests.exceptions.ConnectionError:
+                    attemptid = 11 - attempts
+                    time.sleep(20)
+                    LOG.info("VThunder connection attempt - "+ str(attemptid))
+                    pass
+            if attempts < 0:
+               LOG.error("Failed to connect vThunder in expected amount of boot time.")
+               raise requests.exceptions.ConnectionError
+            
         except driver_except.TimeOutException:
             LOG.error("Amphora compute instance failed to become reachable. "
                       "This either means the compute driver failed to fully "
@@ -91,6 +105,8 @@ class AmphoraePostVIPPlug(BaseVThunderTask):
             c = self.client_factory(vthunder)
             save_config = c.system.action.write_memory()
             amp_info = c.system.action.reload()
+            LOG.info("Waiting for 30 seconds to reload vThunder device.")
+            time.sleep(30)
             LOG.info("Reloaded vThunder successfully!")
         except Exception as e:
             LOG.error("Unable to reload vthunder device")
@@ -109,6 +125,7 @@ class AmphoraePostMemberNetworkPlug(BaseVThunderTask):
                 c = self.client_factory(vthunder)
                 save_config = c.system.action.write_memory()
                 amp_info = c.system.action.reload()
+                time.sleep(30)
                 LOG.info("Reloaded vThunder successfully!")
             else:
                 LOG.info("vThunder reload is not required for member addition.")
@@ -123,8 +140,6 @@ class EnableInterface(BaseVThunderTask):
     def execute(self, vthunder):
         """Execute get_info routine for a vThunder until it responds."""
         try:
-            LOG.info("Waiting 120 sec for vThunder to reload.")
-            time.sleep(120)
             c = self.client_factory(vthunder)
             amp_info = c.system.action.setInterface(1)
             LOG.info("Configured the devices")
@@ -145,8 +160,6 @@ class EnableInterfaceForMembers(BaseVThunderTask):
             network_driver = utils.get_network_driver()
             nics = network_driver.get_plugged_networks(compute_id)
             if len(added_ports[amphora_id]) > 0:
-                LOG.info("Waiting 150 sec for vThunder to reload.")
-                time.sleep(150)
                 target_interface = len(nics)
                 c = self.client_factory(vthunder)
                 amp_info = c.system.action.setInterface(target_interface-1)

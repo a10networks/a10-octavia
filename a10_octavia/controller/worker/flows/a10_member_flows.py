@@ -65,12 +65,17 @@ class MemberFlows(object):
         #create_member_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=(constants.LOADBALANCER, constants.LISTENERS)))
         # Get VThunder details from database
+        create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPHORA))
         create_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         # managing interface additions here
         create_member_flow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
             requires=(constants.LOADBALANCER, constants.ADDED_PORTS, a10constants.VTHUNDER)))
+        create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         create_member_flow.add(vthunder_tasks.EnableInterfaceForMembers(
             requires=[constants.ADDED_PORTS, constants.LOADBALANCER, a10constants.VTHUNDER]))
         create_member_flow.add(handler_server.MemberCreate(

@@ -268,6 +268,8 @@ class LoadBalancerFlows(object):
         new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
             requires=(constants.LOADBALANCER,
                       a10constants.VTHUNDER)))
+        new_LB_net_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
             requires=a10constants.VTHUNDER))
 

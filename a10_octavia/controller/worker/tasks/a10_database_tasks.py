@@ -8,6 +8,7 @@ import sqlalchemy
 from sqlalchemy.orm import exc
 from taskflow import task
 from taskflow.types import failure
+from sqlalchemy.orm.exc import NoResultFound
 
 from octavia.common import constants
 from octavia.common import data_models
@@ -49,7 +50,14 @@ class CreteVthunderEntry(BaseDatabaseTask):
         username = a10_cfg.get('DEFAULT_VTHUNDER_USERNAME')
         password = a10_cfg.get('DEFAULT_VTHUNDER_PASSWORD')
         axapi_version = int(a10_cfg.get('DEFAULT_AXAPI_VERSION'))
-        compute_id = amphora.compute_id
+        compute_id = None
+        undercloud = True
+        if amphora.compute_id:
+            compute_id = amphora.compute_id
+            undercloud = False
+        else:
+            undercloud = None
+            undercloud = True
         vthunder = self.vthunder_repo.create(db_apis.get_session(), vthunder_id=vthunder_id, 
                                         amphora_id = amphora.id,
                                         device_name = vthunder_id, username = username, 
@@ -62,8 +70,11 @@ class CreteVthunderEntry(BaseDatabaseTask):
 
 class DeleteVthunderEntry(BaseDatabaseTask):
     """ Delete VThunder device entry in DB  """
-    def execute(self, loadbalancer): 
-        self.vthunder_repo.delete(db_apis.get_session(), loadbalancer_id=loadbalancer.id)
+    def execute(self, loadbalancer):
+        try: 
+            self.vthunder_repo.delete(db_apis.get_session(), loadbalancer_id=loadbalancer.id)
+        except NoResultFound:
+            pass
         LOG.info("Successfully deleted vthunder entry in database.")
 
 class GetVThunderByLoadBalancer(BaseDatabaseTask):

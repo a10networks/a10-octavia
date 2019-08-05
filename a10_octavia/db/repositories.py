@@ -193,11 +193,14 @@ class VThunderRepository(BaseRepository):
         return model.to_data_model()
 
     def getDeleteComputeFlag(self, session, compute_id):
-        count = session.query(self.model_class).filter(
-            self.model_class.compute_id == compute_id).count()
+        if compute_id:
+            count = session.query(self.model_class).filter(
+                self.model_class.compute_id == compute_id).count()
        
-        if count < 2:
-            return True
+            if count < 2:
+                return True
 
+            else:
+                return False
         else:
-            return False          
+            return False

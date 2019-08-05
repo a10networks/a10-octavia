@@ -301,7 +301,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                id=load_balancer_id)
         vthunder = self._vthunder_repo.getVThunderFromLB(db_apis.get_session(),
                                load_balancer_id)
-        deleteCompute = self._vthunder_repo.getDeleteComputeFlag(db_apis.get_session(),
+        deleteCompute = False
+        if vthunder:
+            deleteCompute = self._vthunder_repo.getDeleteComputeFlag(db_apis.get_session(),
                                vthunder.compute_id)
         (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute)
         store.update({constants.LOADBALANCER: lb,
