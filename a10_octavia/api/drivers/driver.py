@@ -74,4 +74,63 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                    constants.LOAD_BALANCER_UPDATES: lb_dict}
         self.client.cast({}, 'update_load_balancer', **payload)
 
-    # Many other methods may be inheritted from Amphora 
+    # Many other methods may be inheritted from Amphora
+
+    def listener_create(self, listener):
+        LOG.info('A10 provider load_balancer loadbalancer: %s.', listener.__dict__)
+        payload = {constants.LISTENER_ID: listener.listener_id}
+        self.client.cast({}, 'create_listener', **payload)
+
+    def listener_delete(self, listener):
+        listener_id = listener.listener_id
+        payload = {constants.LISTENER_ID: listener_id}
+        self.client.cast({}, 'delete_listener', **payload)
+
+    def pool_create(self, pool):
+        payload = {constants.POOL_ID: pool.pool_id}
+        self.client.cast({}, 'create_pool', **payload)
+
+    def pool_delete(self, pool):
+        pool_id = pool.pool_id
+        payload = {constants.POOL_ID: pool_id}
+        self.client.cast({}, 'delete_pool', **payload)
+
+    def member_create(self, member):
+        payload = {constants.MEMBER_ID: member.member_id}
+        self.client.cast({}, 'create_member', **payload)
+
+    def member_delete(self, member):
+        member_id = member.member_id
+        payload = {constants.MEMBER_ID: member_id}
+        self.client.cast({}, 'delete_member', **payload)
+
+    # Health Monitor
+    def health_monitor_create(self, healthmonitor):
+        payload = {constants.HEALTH_MONITOR_ID: healthmonitor.healthmonitor_id}
+        self.client.cast({}, 'create_health_monitor', **payload)
+
+    def health_monitor_delete(self, healthmonitor):
+        healthmonitor_id = healthmonitor.healthmonitor_id
+        payload = {constants.HEALTH_MONITOR_ID: healthmonitor_id}
+        self.client.cast({}, 'delete_health_monitor', **payload) 
+
+    #L7Policy 
+
+    def l7policy_create(self, l7policy):
+        payload = {constants.L7POLICY_ID: l7policy.l7policy_id}
+        self.client.cast({}, 'create_l7policy', **payload)
+
+    def l7policy_delete(self, l7policy):
+        l7policy_id = l7policy.l7policy_id
+        payload = {constants.L7POLICY_ID: l7policy_id}
+        self.client.cast({}, 'delete_l7policy', **payload)
+
+    # L7 Rule
+    def l7rule_create(self, l7rule):
+        payload = {constants.L7RULE_ID: l7rule.l7rule_id}
+        self.client.cast({}, 'create_l7rule', **payload)
+
+    def l7rule_delete(self, l7rule):
+        l7rule_id = l7rule.l7rule_id
+        payload = {constants.L7RULE_ID: l7rule_id}
+        self.client.cast({}, 'delete_l7rule', **payload)

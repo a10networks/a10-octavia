@@ -1,0 +1,114 @@
+from taskflow.patterns import linear_flow
+
+from octavia.common import constants
+
+
+try:
+    from octavia.controller.worker.v2.tasks import amphora_driver_tasks
+    from octavia.controller.worker.v2.tasks import database_tasks
+    from octavia.controller.worker.v2.tasks import lifecycle_tasks
+    from octavia.controller.worker.v2.tasks import model_tasks
+except ImportError as import_exc:
+    # Stein and previous
+    from octavia.controller.worker.tasks import amphora_driver_tasks
+    from octavia.controller.worker.tasks import database_tasks
+    from octavia.controller.worker.tasks import lifecycle_tasks
+    from octavia.controller.worker.tasks import model_tasks
+
+
+#from a10_octavia.controller.worker.tasks import vthunder_tasks
+from a10_octavia.controller.worker.tasks import handler_health_monitor
+
+from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.common import a10constants
+
+
+class HealthMonitorFlows(object):
+
+    def get_create_health_monitor_flow(self):
+        """Create a flow to create a health monitor
+
+        :returns: The flow for creating a health monitor
+        """
+        create_hm_flow = linear_flow.Flow(constants.CREATE_HEALTH_MONITOR_FLOW)
+        create_hm_flow.add(lifecycle_tasks.HealthMonitorToErrorOnRevertTask(
+            requires=[constants.HEALTH_MON,
+                      constants.LISTENERS,
+                      constants.LOADBALANCER]))
+        create_hm_flow.add(database_tasks.MarkHealthMonitorPendingCreateInDB(
+            requires=constants.HEALTH_MON))
+        # create_hm_flow.add(amphora_driver_tasks.ListenersUpdate(
+        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        create_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        create_hm_flow.add(handler_health_monitor.CreateAndAssociateHealthMonitor(
+            requires=[constants.HEALTH_MON, a10constants.VTHUNDER]))
+        create_hm_flow.add(database_tasks.MarkHealthMonitorActiveInDB(
+            requires=constants.HEALTH_MON))
+        create_hm_flow.add(database_tasks.MarkPoolActiveInDB(
+            requires=constants.POOL))
+        create_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
+            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+
+        return create_hm_flow
+
+    def get_delete_health_monitor_flow(self):
+        """Create a flow to delete a health monitor
+
+        :returns: The flow for deleting a health monitor
+        """
+        delete_hm_flow = linear_flow.Flow(constants.DELETE_HEALTH_MONITOR_FLOW)
+        delete_hm_flow.add(lifecycle_tasks.HealthMonitorToErrorOnRevertTask(
+            requires=[constants.HEALTH_MON,
+                      constants.LISTENERS,
+                      constants.LOADBALANCER]))
+        delete_hm_flow.add(database_tasks.MarkHealthMonitorPendingDeleteInDB(
+            requires=constants.HEALTH_MON))
+        delete_hm_flow.add(model_tasks.
+                           DeleteModelObject(rebind={constants.OBJECT:
+                                                     constants.HEALTH_MON}))
+        delete_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        delete_hm_flow.add(handler_health_monitor.DeleteHealthMonitor(
+            requires=[constants.HEALTH_MON, a10constants.VTHUNDER]))
+        delete_hm_flow.add(database_tasks.DeleteHealthMonitorInDB(
+            requires=constants.HEALTH_MON))
+        delete_hm_flow.add(database_tasks.DecrementHealthMonitorQuota(
+            requires=constants.HEALTH_MON))
+        delete_hm_flow.add(
+            database_tasks.UpdatePoolMembersOperatingStatusInDB(
+                requires=constants.POOL,
+                inject={constants.OPERATING_STATUS: constants.NO_MONITOR}))
+        delete_hm_flow.add(database_tasks.MarkPoolActiveInDB(
+            requires=constants.POOL))
+        delete_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
+            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+
+        return delete_hm_flow
+
+    def get_update_health_monitor_flow(self):
+        """Create a flow to update a health monitor
+
+        :returns: The flow for updating a health monitor
+        """
+        update_hm_flow = linear_flow.Flow(constants.UPDATE_HEALTH_MONITOR_FLOW)
+        update_hm_flow.add(lifecycle_tasks.HealthMonitorToErrorOnRevertTask(
+            requires=[constants.HEALTH_MON,
+                      constants.LISTENERS,
+                      constants.LOADBALANCER]))
+        update_hm_flow.add(database_tasks.MarkHealthMonitorPendingUpdateInDB(
+            requires=constants.HEALTH_MON))
+        update_hm_flow.add(amphora_driver_tasks.ListenersUpdate(
+            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        update_hm_flow.add(database_tasks.UpdateHealthMonInDB(
+            requires=[constants.HEALTH_MON, constants.UPDATE_DICT]))
+        update_hm_flow.add(database_tasks.MarkHealthMonitorActiveInDB(
+            requires=constants.HEALTH_MON))
+        update_hm_flow.add(database_tasks.MarkPoolActiveInDB(
+            requires=constants.POOL))
+        update_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
+            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+
+        return update_hm_flow
