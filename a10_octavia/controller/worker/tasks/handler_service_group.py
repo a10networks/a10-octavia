@@ -16,6 +16,16 @@ from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
+
+PROTOCOL_MAP = {
+    constants.PROTOCOL_HTTP: constants.PROTOCOL_TCP,
+    constants.PROTOCOL_HTTPS: constants.PROTOCOL_TCP,
+    constants.PROTOCOL_TERMINATED_HTTPS: constants.PROTOCOL_TCP,
+    constants.PROTOCOL_PROXY: constants.PROTOCOL_TCP
+}
+
+VALID_SG_PROTOCOLS = ["TCP", "UDP"]
+
 class PoolCreate(BaseVThunderTask):
     """Task to update amphora with all specified listeners' configurations."""
 
@@ -24,7 +34,12 @@ class PoolCreate(BaseVThunderTask):
         try:
             c = self.client_factory(vthunder)
             #need to put algorithm logic
-            out = c.slb.service_group.create(pool.id, pool.protocol)
+            # If it exists in our dictionary, map the correct type
+            # Else, use what we're given
+            protocol = PROTOCOL_MAP.get(pool.protocol, pool.protocol)
+            if not protocol in VALID_SG_PROTOCOLS:
+                raise Exception("{protocol} is not a valid service group protocol. Must be one of ({protocols})".format(protocol=protocol, protocols=",".join(VALID_SG_PROTOCOLS))
+            out = c.slb.service_group.create(pool.id, protocol)
             LOG.info("Pool created successfully.")
         except Exception as e:
             print(str(e))
