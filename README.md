@@ -84,6 +84,8 @@ if older migrations not found, trucate `alembic_migrations` table from ocatvia d
 As `admin` OpenStack user, update security group `lb-mgmt-sec-grp` and allow `PORT 80` and `PORT 443` ingress traffic to allow AXAPI communication with vThunder instances.
 
 ## STEP7: Restart Related Octavia Services
-
+### devstack development environment
 `sudo systemctl restart devstack@o-api.service devstack@o-cw.service devstack@o-hk.service devstack@o-hm.service devstack@q-svc.service`
 
+## other environments
+Use `systemctl` or similar function to restart Octavia controller and health services. 
