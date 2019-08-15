@@ -24,4 +24,4 @@ class TestLoadBalancerFlows(TestBase):
     def test_create_lb_flows(self, mock_net_driver):
         target = self.flows.get_create_load_balancer_flow(constants.TOPOLOGY_SINGLE)
         self.assertIsInstance(target, flow.Flow)
-        import pdb; pdb.set_trace()
+        self.assertIn("vthunder", target.provides)
