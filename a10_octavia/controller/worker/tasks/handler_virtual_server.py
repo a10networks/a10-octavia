@@ -33,7 +33,6 @@ class CreateVitualServerTask(BaseVThunderTask):
         LOG.info(str(status))
         return status
 
-
     def revert(self, loadbalancer_id, *args, **kwargs):
         pass
 

@@ -25,12 +25,54 @@ class ListenersCreate(BaseVThunderTask):
     def execute(self, loadbalancer, listeners, vthunder):
         """Execute updates per listener for an amphora."""
         axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+        ipinip = self.config.getboolean('LISTENER','ipinip')
+        no_dest_nat = self.config.getboolean('LISTENER','no_dest_nat')
+        ha_conn_mirror = self.config.getboolean('LISTENER','ha_conn_mirror')
+
+
+        virtual_port_temp = self.config.get('LISTENER','virtual_port_templates')
+        tcp_template = self.config.get('LISTENER','tcp_template')
+        http_template = self.config.get('LISTENER','http_template')
+        template_policy = self.config.get('LISTENER','template_policy')
+        autosnat=self.config.getboolean('LISTENER','autosnat')
+        conn_limit = self.config.get('LISTENER', 'conn-limit')
+
+        virtual_port_templates={}
+        virtual_port_templates['virtual_port_templates'] = virtual_port_temp
+        virtual_port_templates['tcp_template']=tcp_template
+        virtual_port_templates['http_template']=http_template
+
+        c = self.client_factory(vthunder)
+
+
+
+        
         template_args = {}
+
         for listener in listeners:
             listener.load_balancer = loadbalancer
             #self.amphora_driver.update(listener, loadbalancer.vip)
             try:
+                if conn_limit is not None:
+                    if int(conn_limit) < 1 or int(conn_limit) > 8000000:
+                        LOG.warning("The specified member server connection limit " +
+                                "(configuration setting: conn-limit) is out of " +
+                                "bounds with value {0}. Please set to between " +
+                                "1-8000000. Defaulting to 8000000".format(conn_limit))
+
+                persistence = persist.PersistHandler(c, listener.default_pool)
+
+                s_pers = persistence.s_persistence()
+                c_pers = persistence.c_persistence()
+
+                status = c.slb.UP
+
+                if not listener.provisioning_status:
+                    status = c.slb.DOWN
+
+                templates = self.meta(listener, "template", {})
                 cert_data = dict()
+
                 if listener.protocol == "TERMINATED_HTTPS":
                     listener.protocol = 'HTTPS'
                     template_args["template_client_ssl"] = self.cert_handler(loadbalancer, listener, vthunder)
@@ -39,7 +81,13 @@ class ListenersCreate(BaseVThunderTask):
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 out = c.slb.virtual_server.vport.create(loadbalancer.id, name, listener.protocol,
                                                 listener.protocol_port, listener.default_pool_id,
-                                                autosnat=True, **template_args)
+                                                s_pers_name=s_pers, c_pers_name=c_pers,
+                                                status=status, autosnat=autosnat, ipinip=ipinip,
+                                                no_dest_nat=no_dest_nat, ha_conn_mirror=ha_conn_mirror,
+                                                conn_limit=int(conn_limit),
+                                                virtual_port_templates=virtual_port_templates,
+                                                **template_args)
+
                 LOG.info("Listener created successfully.")
             except Exception as e:
                 print(str(e))

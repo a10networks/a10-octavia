@@ -20,9 +20,46 @@ class MemberCreate(BaseVThunderTask):
 
     def execute(self, member, vthunder, pool):
         """Execute create member for an amphora."""
+        conn_limit = self.config.get('SERVER', 'conn-limit')
+        conn_resume = self.config.get('SERVER', 'conn-resume')
+        LOG.info(conn_limit)
+        LOG.info(conn_resume)
+        server_args = self.meta(member, 'server', {})
+
         try:
+            if not member.provisioning_status:
+               status = c.slb.DOWN
+            else:
+                status = c.slb.UP
+            
+            if conn_limit is not None:
+                if int(conn_limit) < 1 or int(conn_limit) > 8000000:
+                    LOG.warning("The specified member server connection limit " +
+                                "(configuration setting: conn-limit) is out of " +
+                                "bounds with value {0}. Please set to between " +
+                                "1-8000000. Defaulting to 8000000".format(conn_limit))
+                else:
+                    server_args['conn-limit'] = int(conn_limit)
+
+            if conn_resume is not None:
+                if int(conn_resume) < 1 or int(conn_resume) > 1000000:
+                    LOG.warning("The specified conn_resume value is invalid. \
+                    The value should be either 0 or 1")
+                else:
+                    server_args['conn-resume'] = int(conn_resume)
+
+            server_args = {'server': server_args}
+            try:
+               conf_templates = self.config.get('SERVER','templates')
+               conf_templates = conf_templates.replace('"', '')
+               server_temp = {}
+               server_temp['template-server'] = conf_templates
+            except:
+               server_temp = None
+
+
             c = self.client_factory(vthunder)
-            out = c.slb.server.create(member.id, member.ip_address)
+            out = c.slb.server.create(member.id, member.ip_address, status=status, server_templates=server_temp, axapi_args=server_args)
             LOG.info("Member created successfully.")
         except Exception as e:
             print(str(e))

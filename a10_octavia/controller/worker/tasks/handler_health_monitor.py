@@ -34,9 +34,8 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
             c = self.client_factory(vthunder)
             out = c.slb.hm.create(health_mon.id[0:5], openstack_mappings.hm_type(c, health_mon.type),
                                          health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
-                                         method=method, url=url, expect_code=expect_code, port=port
-                                         )
-            LOG.info("Heath Monitor created successfully.")
+                                         method=method, url=url, expect_code=expect_code, port=port, axapi_args=args)
+            LOG.info("Health Monitor created successfully.")
         except Exception as e:
             print(str(e))
         try:
@@ -44,7 +43,7 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
             out = c.slb.service_group.update(health_mon.pool_id,
                                                     health_monitor=health_mon.id[0:5],
                                                     health_check_disable=0)
-            LOG.info("Heath Monitor associated to pool successfully.")
+            LOG.info("Health Monitor associated to pool successfully.")
         except Exception as e:
             print(str(e))
             LOG.info("Error occurred")
@@ -59,14 +58,14 @@ class DeleteHealthMonitor(BaseVThunderTask):
             out = c.slb.service_group.update(health_mon.pool_id,
                                                     health_monitor="",
                                                     health_check_disable=False)
-            LOG.info("Heath Monitor disassociated to pool successfully.")
+            LOG.info("Health Monitor disassociated to pool successfully.")
         except Exception as e:
             print(str(e))
             LOG.info("Error occurred")
         try:
             c = self.client_factory(vthunder)
             out = c.slb.hm.delete(health_mon.id)
-            LOG.info("Heath Monitor deleted successfully.")
+            LOG.info("Health Monitor deleted successfully.")
         except Exception as e:
             print(str(e))
 
