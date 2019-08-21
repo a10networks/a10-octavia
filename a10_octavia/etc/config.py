@@ -6,10 +6,11 @@ DEFAULT_AXAPI_VERSION = 30
 [SLB]
 a="10"
 arp_disable=False
-default_virtual_server_vrid=1
+default_virtual_server_vrid="10"
 logging_template="Logging_temp1"
 policy_template="policy_temp1"
 template-virtual-server="virtual_server_template1"
+default_virtual_server_vrid=0
 
 
 [LISTENER]
