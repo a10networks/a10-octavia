@@ -19,13 +19,8 @@ class CreateVitualServerTask(BaseVThunderTask):
     """Task to create a virtual server in vthunder device."""
 
     def execute(self, loadbalancer_id, loadbalancer, vthunder):
-        c = self.client_factory(vthunder)
-        status = c.slb.UP
-        if not loadbalancer.provisioning_status:
-            status = c.slb.DOWN
-
         try:
-            conf_templates = self.config.get('SLB','template-virtual-server')
+            conf_templates = self.config.get('SLB','template_virtual_server')
             conf_templates = conf_templates.replace('"', '')
             virtual_server_templates = {}
             virtual_server_templates['template-server'] = conf_templates
@@ -33,14 +28,20 @@ class CreateVitualServerTask(BaseVThunderTask):
             virtual_server_templates = None
 
         try:
-            vip_meta = self.meta(loadbalancer, 'virtual_server', {})
-            arp_disable=self.config.getboolean('SLB','arp_disable')
-            vrid=self.config.getint('SLB','default_virtual_server_vrid')
-
             c = self.client_factory(vthunder)
-            r = c.slb.virtual_server.create(loadbalancer_id, loadbalancer.vip.ip_address, arp_disable=arp_disable, status=status, vrid=vrid,
-                                            virtual_server_templates=virtual_server_templates, axapi_body=vip_meta)
+            status = c.slb.UP
+            if not loadbalancer.provisioning_status:
+                status = c.slb.DOWN
+            vip_meta = self.meta(loadbalancer, 'virtual_server', {})
+            arp_disable=self.config.getboolean('SLB','arp_disable', fallback=True)
+            vrid=self.config.getint('SLB','default_virtual_server_vrid', fallback=0)
 
+            r = c.slb.virtual_server.create(loadbalancer_id, 
+                                            loadbalancer.vip.ip_address,
+                                            arp_disable=arp_disable,
+                                            status=status, vrid=vrid,
+                                            virtual_server_templates=virtual_server_templates,
+                                            axapi_body=vip_meta)
             status = { 'loadbalancers': [{"id": loadbalancer_id,
                        "provisioning_status": constants.ACTIVE }]}
             #LOG.info("vthunder details:" + str(vthunder))

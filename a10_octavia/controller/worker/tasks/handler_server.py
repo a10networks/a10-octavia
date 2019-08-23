@@ -20,20 +20,19 @@ class MemberCreate(BaseVThunderTask):
 
     def execute(self, member, vthunder, pool):
         """Execute create member for an amphora."""
-        conn_limit = self.config.get('SERVER', 'conn-limit')
-        conn_resume = self.config.get('SERVER', 'conn-resume')
-        LOG.info(conn_limit)
-        LOG.info(conn_resume)
+        conn_limit = self.config.getint('SERVER', 'conn_limit', fallback=500)
+        conn_resume = self.config.getint('SERVER', 'conn_resume', fallback=0)
         server_args = self.meta(member, 'server', {})
 
         try:
+            c = self.client_factory(vthunder)
             if not member.provisioning_status:
                status = c.slb.DOWN
             else:
                 status = c.slb.UP
             
             if conn_limit is not None:
-                if int(conn_limit) < 1 or int(conn_limit) > 8000000:
+                if conn_limit < 1 or conn_limit > 8000000:
                     LOG.warning("The specified member server connection limit " +
                                 "(configuration setting: conn-limit) is out of " +
                                 "bounds with value {0}. Please set to between " +
@@ -50,15 +49,13 @@ class MemberCreate(BaseVThunderTask):
 
             server_args = {'server': server_args}
             try:
-               conf_templates = self.config.get('SERVER','templates')
-               conf_templates = conf_templates.replace('"', '')
+               conf_templates = self.config.get('SERVER','templates').replace('"', '')
                server_temp = {}
                server_temp['template-server'] = conf_templates
             except:
                server_temp = None
 
 
-            c = self.client_factory(vthunder)
             out = c.slb.server.create(member.id, member.ip_address, status=status, server_templates=server_temp, axapi_args=server_args)
             LOG.info("Member created successfully.")
         except Exception as e:
