@@ -33,8 +33,8 @@ class CreateVitualServerTask(BaseVThunderTask):
             if not loadbalancer.provisioning_status:
                 status = c.slb.DOWN
             vip_meta = self.meta(loadbalancer, 'virtual_server', {})
-            arp_disable=self.config.getboolean('SLB','arp_disable', fallback=True)
-            vrid=self.config.getint('SLB','default_virtual_server_vrid', fallback=0)
+            arp_disable=self.config.getboolean('SLB','arp_disable')
+            vrid=self.config.getint('SLB','default_virtual_server_vrid')
 
             r = c.slb.virtual_server.create(loadbalancer_id, 
                                             loadbalancer.vip.ip_address,

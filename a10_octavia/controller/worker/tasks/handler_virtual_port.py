@@ -22,11 +22,12 @@ class ListenersCreate(BaseVThunderTask):
     """Task to update amphora with all specified listeners' configurations."""
     def execute(self, loadbalancer, listeners, vthunder):
         """Execute updates per listener for an amphora."""
-        ipinip = self.config.getboolean('LISTENER','ipinip')
-        no_dest_nat = self.config.getboolean('LISTENER','no_dest_nat')
-        ha_conn_mirror = self.config.getboolean('LISTENER','ha_conn_mirror')
+        #ipinip = self.config.getboolean('LISTENER','ipinip')
+        ipinip = bool(self.config.get('LISTENER','ipinip'))
+        no_dest_nat = bool(self.config.get('LISTENER','no_dest_nat'))
+        ha_conn_mirror = bool(self.config.get('LISTENER','ha_conn_mirror'))
         template_policy = self.config.get('LISTENER','template_policy')
-        autosnat=self.config.getboolean('LISTENER','autosnat')
+        autosnat=bool(self.config.get('LISTENER','autosnat'))
         conn_limit = self.config.getint('LISTENER', 'conn_limit')
         virtual_port_templates={}
         try:
@@ -51,7 +52,6 @@ class ListenersCreate(BaseVThunderTask):
                             "(configuration setting: conn-limit) is out of " +
                             "bounds with value {0}. Please set to between " +
                             "1-8000000. Defaulting to 8000000".format(conn_limit))
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
         for listener in listeners:
             listener.load_balancer = loadbalancer
             #self.amphora_driver.update(listener, loadbalancer.vip)

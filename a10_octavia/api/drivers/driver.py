@@ -57,11 +57,12 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.LOAD_BALANCER_ID: loadbalancer.loadbalancer_id, 'cascade': cascade}
         self.client.cast({}, 'delete_load_balancer', **payload)
 
-    def loadbalancer_update(self, old_loadbalancer, new_loadbalancer):
+    '''def loadbalancer_update(self, old_loadbalancer, new_loadbalancer):
         # Adapt the provider data model to the queue schema
         lb_dict = new_loadbalancer.to_dict()
-        if 'admin_state_up' in lb_dict:
-            lb_dict['enabled'] = lb_dict.pop('admin_state_up')
+        #if 'admin_state_up' in lb_dict:
+        if 'provisioning_status' in lb_dict:
+            lb_dict['enabled'] = lb_dict.pop('provisioning_status')
         lb_id = lb_dict.pop('loadbalancer_id')
         # Put the qos_policy_id back under the vip element the controller
         # expects
@@ -72,7 +73,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
 
         payload = {constants.LOAD_BALANCER_ID: lb_id,
                    constants.LOAD_BALANCER_UPDATES: lb_dict}
-        self.client.cast({}, 'update_load_balancer', **payload)
+        self.client.cast({}, 'update_load_balancer', **payload)'''
 
     # Many other methods may be inheritted from Amphora
 
@@ -85,6 +86,25 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         listener_id = listener.listener_id
         payload = {constants.LISTENER_ID: listener_id}
         self.client.cast({}, 'delete_listener', **payload)
+
+    '''def listener_update(self, old_listener, new_listener):
+        listener_dict = new_listener.to_dict()
+        if 'admin_state_up' in listener_dict:
+            listener_dict['enabled'] = listener_dict.pop('admin_state_up')
+        listener_id = listener_dict.pop('listener_id')
+        if 'client_ca_tls_container_ref' in listener_dict:
+            listener_dict['client_ca_tls_container_id'] = listener_dict.pop(
+                'client_ca_tls_container_ref')
+        listener_dict.pop('client_ca_tls_container_data', None)
+        if 'client_crl_container_ref' in listener_dict:
+            listener_dict['client_crl_container_id'] = listener_dict.pop(
+                'client_crl_container_ref')
+        listener_dict.pop('client_crl_container_data', None)
+
+        payload = {constants.LISTENER_ID: listener_id,
+                   constants.LISTENER_UPDATES: listener_dict}
+        self.client.cast({}, 'update_listener', **payload)'''
+
 
     def pool_create(self, pool):
         payload = {constants.POOL_ID: pool.pool_id}
