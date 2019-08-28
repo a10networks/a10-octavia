@@ -20,8 +20,7 @@ class CreateVitualServerTask(BaseVThunderTask):
 
     def execute(self, loadbalancer_id, loadbalancer, vthunder):
         try:
-            conf_templates = self.config.get('SLB','template_virtual_server')
-            conf_templates = conf_templates.replace('"', '')
+            conf_templates = self.config.get('SLB','template_virtual_server').replace('"', '')
             virtual_server_templates = {}
             virtual_server_templates['template-server'] = conf_templates
         except:
@@ -33,8 +32,8 @@ class CreateVitualServerTask(BaseVThunderTask):
             if not loadbalancer.provisioning_status:
                 status = c.slb.DOWN
             vip_meta = self.meta(loadbalancer, 'virtual_server', {})
-            arp_disable=self.config.getboolean('SLB','arp_disable')
-            vrid=self.config.getint('SLB','default_virtual_server_vrid')
+            arp_disable = self.config.getboolean('SLB','arp_disable')
+            vrid = self.config.getint('SLB','default_virtual_server_vrid')
 
             r = c.slb.virtual_server.create(loadbalancer_id, 
                                             loadbalancer.vip.ip_address,

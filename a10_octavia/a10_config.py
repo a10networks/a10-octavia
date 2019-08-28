@@ -65,12 +65,12 @@ class A10Config(object):
 
         try:
             self._config = ConfigModule.load(self._config_path, provider=provider)
-            n = ini.ConfigParser(defaults = DEFAULT)
+            n = ini.ConfigParser(defaults=DEFAULT)
             n.read(self._config_path)
             self._conf = n
         except IOError:
             LOG.error("A10Config could not find %s", self._config_path)
-            self._config = blank_config
+            self._conf = ini.ConfigParser(defaults=DEFAULT)
 
         self._config.octavia_conf_dir = '/etc/octavia/'
         self._load_config()
@@ -120,10 +120,7 @@ class A10Config(object):
 
         if os.path.exists(octavia_conf):
             LOG.debug("found octavia.conf file in /etc")
-            DEFAULTS = {
-            'A' : 'omkar'
-            }
-            n = ini.ConfigParser(defaults=DEFAULTS)
+            n = ini.ConfigParser()
             n.read(octavia_conf)
             try:
                 return n.get(section, option)

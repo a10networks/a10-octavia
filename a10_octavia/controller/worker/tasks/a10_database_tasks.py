@@ -46,9 +46,6 @@ class CreteVthunderEntry(BaseDatabaseTask):
     """ Create VThunder device entry in DB"""
     def execute(self, amphora, loadbalancer):
         vthunder_id = uuidutils.generate_uuid()
-        '''a10_cfg = a10_config.A10Config()
-        username = a10_cfg.get('DEFAULT_VTHUNDER_USERNAME')
-        password = a10_cfg.get('DEFAULT_VTHUNDER_PASSWORD')'''
         a10_conf =a10_config.A10Config()
         self.config = a10_conf.get_conf()
 
@@ -57,7 +54,6 @@ class CreteVthunderEntry(BaseDatabaseTask):
 
         axapi_version = int(self.config.get('DEFAULT','DEFAULT_AXAPI_VERSION'))
 
-        #axapi_version = int(a10_cfg.get('DEFAULT_AXAPI_VERSION'))
         compute_id = None
         undercloud = True
         if amphora.compute_id:

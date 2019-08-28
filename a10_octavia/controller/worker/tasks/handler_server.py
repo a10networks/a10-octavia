@@ -20,8 +20,9 @@ class MemberCreate(BaseVThunderTask):
 
     def execute(self, member, vthunder, pool):
         """Execute create member for an amphora."""
-        conn_limit = self.config.getint('SERVER', 'conn_limit', fallback=500)
-        conn_resume = self.config.getint('SERVER', 'conn_resume', fallback=0)
+
+        conn_limit = self.config.getint('SERVER', 'conn_limit')
+        conn_resume = self.config.getint('SERVER', 'conn_resume')
         server_args = self.meta(member, 'server', {})
 
         try:
@@ -56,10 +57,13 @@ class MemberCreate(BaseVThunderTask):
                server_temp = None
 
 
-            out = c.slb.server.create(member.id, member.ip_address, status=status, server_templates=server_temp, axapi_args=server_args)
+            out = c.slb.server.create(member.id, member.ip_address, status=status,
+                                      server_templates=server_temp,
+                                      axapi_args=server_args)
             LOG.info("Member created successfully.")
         except Exception as e:
             print(str(e))
+
         try:
             c = self.client_factory(vthunder)
             out = c.slb.service_group.member.create(pool.id, member.id, member.protocol_port)
@@ -88,4 +92,3 @@ class MemberDelete(BaseVThunderTask):
         except Exception as e:
             print(str(e))
             LOG.info("Error occurred")
-

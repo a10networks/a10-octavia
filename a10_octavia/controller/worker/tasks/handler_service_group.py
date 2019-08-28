@@ -16,20 +16,24 @@ LOG = logging.getLogger(__name__)
 
 class PoolCreate(BaseVThunderTask):
     """Task to update amphora with all specified listeners' configurations."""
+
     def execute(self, pool, vthunder):
         """Execute create pool for an amphora."""
+
         args = {'service_group': self.meta(pool, 'service_group', {})}
         try:
-            try:
-               conf_templates = self.config.get('SERVICE_GROUP','templates').replace('"', '')
-               service_group_temp = {}
-               service_group_temp['template-server'] = conf_templates
-            except:
-               service_group_temp = None
+           conf_templates = self.config.get('SERVICE_GROUP','templates').replace('"', '')
+           service_group_temp = {}
+           service_group_temp['template-server'] = conf_templates
+        except:
+           service_group_temp = None
+
+        try:
             c = self.client_factory(vthunder)
             lb_method=openstack_mappings.service_group_lb_method(c,pool.lb_algorithm)
 
-            out = c.slb.service_group.create(pool.id, pool.protocol,lb_method,service_group_temp,axapi_args=args)
+            out = c.slb.service_group.create(pool.id, pool.protocol, lb_method,
+                                             service_group_temp, axapi_args=args)
             LOG.info("Pool created successfully.")
         except Exception as e:
             print(str(e))
