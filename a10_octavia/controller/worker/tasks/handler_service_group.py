@@ -22,7 +22,7 @@ class PoolCreate(BaseVThunderTask):
 
         args = {'service_group': self.meta(pool, 'service_group', {})}
         try:
-           conf_templates = self.config.get('SERVICE_GROUP','templates').replace('"', '')
+           conf_templates = self.readConf('SERVICE_GROUP','templates').strip('"')
            service_group_temp = {}
            service_group_temp['template-server'] = conf_templates
         except:
@@ -31,7 +31,6 @@ class PoolCreate(BaseVThunderTask):
         try:
             c = self.client_factory(vthunder)
             lb_method=openstack_mappings.service_group_lb_method(c,pool.lb_algorithm)
-
             out = c.slb.service_group.create(pool.id, pool.protocol, lb_method,
                                              service_group_temp, axapi_args=args)
             LOG.info("Pool created successfully.")

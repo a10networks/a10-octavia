@@ -54,6 +54,7 @@ class ConfigModule(object):
 class A10Config(object):
 
     def __init__(self, config_dir=None, config=None, provider=None):
+        #import rpdb; rpdb.Rpdb().set_trace()
         if config is not None:
             self._config = config
             self._load_config()
@@ -71,6 +72,7 @@ class A10Config(object):
         except IOError:
             LOG.error("A10Config could not find %s", self._config_path)
             self._conf = ini.ConfigParser(defaults=DEFAULT)
+            self._config = blank_config
 
         self._config.octavia_conf_dir = '/etc/octavia/'
         self._load_config()

@@ -13,6 +13,7 @@ from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 from a10_octavia.controller.worker.tasks import persist
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+import json
 
 
 CONF = cfg.CONF
@@ -22,26 +23,33 @@ class ListenersCreate(BaseVThunderTask):
     """Task to update amphora with all specified listeners' configurations."""
     def execute(self, loadbalancer, listeners, vthunder):
         """Execute updates per listener for an amphora."""
-         
-        ipinip = self.config.getboolean('LISTENER','ipinip')
-        no_dest_nat = self.config.getboolean('LISTENER','no_dest_nat')
-        if not no_dest_nat:
-            no_dest_nat = None
-        ha_conn_mirror = self.config.getboolean('LISTENER','ha_conn_mirror')
-        template_policy = self.config.get('LISTENER','template_policy')
-        autosnat=self.config.getboolean('LISTENER','autosnat')
-        conn_limit = self.config.getint('LISTENER', 'conn_limit')
+        ipinip = self.readConf('LISTENER','ipinip')
+        if ipinip is not None:
+            ipinip=json.loads(ipinip.lower())
+        else:
+            ipinip=False 
+
+        no_dest_nat = self.readConf('LISTENER','no_dest_nat')
+        if no_dest_nat is not None:
+            no_dest_nat=json.loads(no_dest_nat.lower())
+        else:
+            no_dest_nat=False
+
+        ha_conn_mirror = self.readConf('LISTENER','ha_conn_mirror')
+        if ha_conn_mirror is not None:
+            ha_conn_mirror = json.loads(ha_conn_mirror.lower())
+        else:
+            ha_conn_mirror = False
+
+        template_policy = self.readConf('LISTENER','template_policy')
+        autosnat = bool(self.readConf('LISTENER','autosnat'))
+        conn_limit = self.readConf('LISTENER', 'conn_limit')
         virtual_port_templates={}
-        try:
-            virtual_port_templates['virtual_port_templates'] = self.config.get('LISTENER','virtual_port_templates').replace('"', '')
-            virtual_port_templates['tcp_template'] = self.config.get('LISTENER','tcp_template').replace('"', '')
-            virtual_port_templates['http_template'] = self.config.get('LISTENER','http_template').replace('"', '')
-        except:
-            virtual_port_templates['virtual_port_templates'] = None
-            virtual_port_templates['tcp_template'] = None
-            virtual_port_templates['http_template'] = None
+        virtual_port_templates['template-virtual-port'] = self.readConf('LISTENER','template_virtual_port').strip('"')
+
         template_args = {}
         if conn_limit is not None:
+            conn_limit = int(conn_limit)
             if conn_limit < 1 or conn_limit > 8000000:
                 LOG.warning("The specified member server connection limit " +
                             "(configuration setting: conn-limit) is out of " +
@@ -64,6 +72,14 @@ class ListenersCreate(BaseVThunderTask):
                 if listener.protocol == "TERMINATED_HTTPS":
                     listener.protocol = 'HTTPS'
                     template_args["template_client_ssl"] = self.cert_handler(loadbalancer, listener, vthunder)
+
+                if listener.protocol.lower() == 'http':
+                    # TODO work around for issue in acos client
+                    listener.protocol = listener.protocol.lower()
+                    virtual_port_templates['template-http'] = self.readConf('LISTENER','template_http').strip('"')
+                else:
+                    virtual_port_templates['template-tcp'] = self.readConf('LISTENER','template_tcp').strip('"')
+
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 out = c.slb.virtual_server.vport.create(loadbalancer.id, name, 
                                                 listener.protocol,
@@ -72,10 +88,12 @@ class ListenersCreate(BaseVThunderTask):
                                                 s_pers_name=s_pers, c_pers_name=c_pers,
                                                 status=status, no_dest_nat=no_dest_nat,
                                                 autosnat=autosnat, ipinip=ipinip,
-                                                ha_conn_mirror=ha_conn_mirror,
+                                                #TODO resolve in acos client
+                                                #ha_conn_mirror=ha_conn_mirror,
                                                 conn_limit=conn_limit,
                                                 virtual_port_templates=virtual_port_templates,
                                                 **template_args)
+                
                 LOG.info("Listener created successfully.")
         except Exception as e:
             print(str(e))
