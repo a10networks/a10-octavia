@@ -25,6 +25,7 @@ from oslo_utils import uuidutils
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import noload
 from sqlalchemy.orm import subqueryload
+from sqlalchemy import or_
 
 from octavia.common import constants as consts
 from octavia.common import data_models
@@ -61,17 +62,18 @@ class BaseRepository(object):
         return model.to_data_model()
 
     def delete(self, session, **filters):
-        """Deletes an entity from the database.
+        """Deletes entities from the database.
 
         :param session: A Sql Alchemy database session.
         :param filters: Filters to decide which entity should be deleted.
         :returns: None
         :raises: sqlalchemy.orm.exc.NoResultFound
         """
-        model = session.query(self.model_class).filter_by(**filters).one()
-        with session.begin(subtransactions=True):
-            session.delete(model)
-            session.flush()
+        models = session.query(self.model_class).filter_by(**filters).all()
+        for model in models:
+            with session.begin(subtransactions=True):
+                session.delete(model)
+                session.flush()
 
     def delete_batch(self, session, ids=None):
         """Batch deletes by entity ids."""
@@ -190,7 +192,20 @@ class VThunderRepository(BaseRepository):
 
     def getVThunderFromLB(self, session, lb_id):
         model = session.query(self.model_class).filter(
-            self.model_class.loadbalancer_id == lb_id).first()
+            self.model_class.loadbalancer_id == lb_id).filter(
+            or_(self.model_class.role == "STANDALONE",
+                self.model_class.role == "MASTER")).first()
+
+        if not model:
+            return None
+
+        return model.to_data_model()
+
+    def getBackupVThunderFromLB(self, session, lb_id):
+        model = session.query(self.model_class).filter(
+            self.model_class.loadbalancer_id == lb_id).filter(
+            or_(self.model_class.role == "STANDALONE",
+                self.model_class.role == "BACKUP")).first()
 
         if not model:
             return None
@@ -199,8 +214,9 @@ class VThunderRepository(BaseRepository):
 
     def getVThunderByProjectID(self, session, project_id):
         model = session.query(self.model_class).filter(
-            self.model_class.project_id == project_id).first()
-
+            self.model_class.project_id == project_id).filter(
+            or_(self.model_class.role == "STANDALONE",
+                self.model_class.role == "MASTER")).first()
 
         if not model:
             return None

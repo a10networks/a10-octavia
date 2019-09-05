@@ -59,7 +59,7 @@ class GetVThunderTask(BaseDatabaseTask):
 
 class CreteVthunderEntry(BaseDatabaseTask):
     """ Create VThunder device entry in DB"""
-    def execute(self, amphora, loadbalancer):
+    def execute(self, amphora, loadbalancer, role):
         vthunder_id = uuidutils.generate_uuid()
         a10_conf =a10_config.A10Config()
         self.config = a10_conf.get_conf()
@@ -77,6 +77,17 @@ class CreteVthunderEntry(BaseDatabaseTask):
         else:
             undercloud = None
             undercloud = True
+
+        if role == constants.ROLE_MASTER:
+            topology = "ACTIVE_STANDBY"
+            role = "MASTER"
+        elif role == constants.ROLE_BACKUP:
+            topology = "ACTIVE_STANDBY"
+            role = "BACKUP"
+        else:
+            topology = "STANDALONE"
+            role = "MASTER"
+
         vthunder = self.vthunder_repo.create(db_apis.get_session(), vthunder_id=vthunder_id, 
                                         amphora_id = amphora.id,
                                         device_name = vthunder_id, username = username, 
@@ -84,7 +95,9 @@ class CreteVthunderEntry(BaseDatabaseTask):
                                         undercloud = False, axapi_version = axapi_version, 
                                         loadbalancer_id = loadbalancer.id, 
                                         project_id = loadbalancer.project_id,
-                                        compute_id = compute_id)
+                                        compute_id = compute_id, 
+                                        topology = topology,
+                                        role = role)
         LOG.info("Successfully created vthunder entry in database.")
 
 class DeleteVthunderEntry(BaseDatabaseTask):
@@ -104,12 +117,20 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
         return vthunder
         LOG.info("Successfully fetched vThunder details for LB")
 
-class GetVThunderByLoadBalancerID(BaseDatabaseTask):
-    """ Get VThunder details from LoadBalancer ID """
-    def execute(self, loadbalancer_id):
-        vthunder = self.vthunder_repo.getVThunderFromLB(db_apis.get_session(), loadbalancer_id)
+class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
+    """ Get VThunder details from LoadBalancer"""
+    def execute(self, loadbalancer):
+        loadbalancer_id = loadbalancer.id
+        vthunder = self.vthunder_repo.getBackupVThunderFromLB(db_apis.get_session(), loadbalancer_id)
         return vthunder
         LOG.info("Successfully fetched vThunder details for LB")
+
+# class GetVThunderByLoadBalancerID(BaseDatabaseTask):
+#     """ Get VThunder details from LoadBalancer ID """
+#     def execute(self, loadbalancer_id):
+#         vthunder = self.vthunder_repo.getVThunderFromLB(db_apis.get_session(), loadbalancer_id)
+#         return vthunder
+#         LOG.info("Successfully fetched vThunder details for LB")
 
 
 class GetComputeForProject(BaseDatabaseTask):
@@ -132,8 +153,6 @@ class MapLoadbalancerToAmphora(BaseDatabaseTask):
         :returns: Amphora ID if one was allocated, None if it was
                   unable to allocate an Amphora
         """
-
-        
 
         if server_group_id is not None:
             LOG.debug("Load balancer is using anti-affinity. Skipping spares "

@@ -186,6 +186,68 @@ class EnableInterfaceForMembers(BaseVThunderTask):
             LOG.info(str(e))
             raise
 
+class ConfigureVRRP(BaseVThunderTask):
+    """"Task to configure vThunder VRRP """
+
+    def execute(self, vthunder, backup_vthunder):
+        """Execute to configure vrrp in two vThunder devices."""
+        try:
+            c = self.client_factory(vthunder)
+            amp_info = c.system.action.configureVRRP(1,1)
+            LOG.info("Configured the master vThunder for VRRP")
+        except Exception as e:
+            LOG.error("Unable to configure master vThunder VRRP")
+            LOG.info(str(e))
+            raise
+        
+        try:
+            c = self.client_factory(backup_vthunder)
+            amp_info = c.system.action.configureVRRP(2,1)
+            LOG.info("Configured the backup vThunder for VRRP")
+        except Exception as e:
+            LOG.error("Unable to configure backup vThunder VRRP")
+            LOG.info(str(e))
+            raise
+
+
+class ConfigureVRID(BaseVThunderTask):
+    """"Task to configure vThunder VRRP """
+
+    def execute(self, vthunder, backup_vthunder):
+        """Execute to configure vrrp in two vThunder devices."""
+        try:
+            c = self.client_factory(vthunder)
+            amp_info = c.system.action.configureVRID(1)
+            LOG.info("Configured the master vThunder for VRID")
+        except Exception as e:
+            LOG.error("Unable to configure master vThunder VRRP")
+            LOG.info(str(e))
+            raise
+        
+        try:
+            c = self.client_factory(backup_vthunder)
+            amp_info = c.system.action.configureVRID(1)
+            LOG.info("Configured the backup vThunder for VRID")
+        except Exception as e:
+            LOG.error("Unable to configure backup vThunder VRRP")
+            LOG.info(str(e))
+            raise
+
+class ConfigureVRRPSync(BaseVThunderTask):
+    """"Task to sync vThunder VRRP """
+
+    def execute(self, vthunder, backup_vthunder):
+        """Execute to sync up vrrp in two vThunder devices."""
+        try:
+            c = self.client_factory(vthunder)
+            amp_info = c.system.action.configSynch(backup_vthunder.ip_address, backup_vthunder.username,
+                                                   backup_vthunder.password)
+            LOG.info("Sync up for vThunder master")
+        except Exception as e:
+            LOG.error("Unable to sync master vThunder VRRP")
+            LOG.info(str(e))
+            raise
+
 
 class ListenersCreate(BaseVThunderTask):
     """Task to update amphora with all specified listeners' configurations."""
