@@ -143,10 +143,10 @@ class LoadBalancerFlows(object):
 
         f_name = constants.CREATE_LOADBALANCER_FLOW
         amps_flow = unordered_flow.Flow(f_name)
-        master_amp_sf = self.amp_flows.get_amphora_for_lb_subflow(
+        master_amp_sf = self.vthunder_flows.get_vthunder_for_lb_subflow(
             prefix=constants.ROLE_MASTER, role=constants.ROLE_MASTER)
 
-        backup_amp_sf = self.amp_flows.get_amphora_for_lb_subflow(
+        backup_amp_sf = self.vthunder_flows.get_vthunder_for_lb_subflow(
             prefix=constants.ROLE_BACKUP, role=constants.ROLE_BACKUP)
         amps_flow.add(master_amp_sf, backup_amp_sf)
 
@@ -172,7 +172,7 @@ class LoadBalancerFlows(object):
         post_create_LB_flow.add(new_LB_net_subflow)
 
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
-            vrrp_subflow = self.amp_flows.get_vrrp_subflow(prefix)
+            vrrp_subflow = self.vthunder_flows.get_vrrp_subflow(prefix)
             post_create_LB_flow.add(vrrp_subflow)
 
         post_create_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(

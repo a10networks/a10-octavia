@@ -121,7 +121,9 @@ class VThunder(BaseDataModel):
 
     def __init__(self, id=None, vthunder_id=None, amphora_id=None, device_name=None, ip_address=None,
                  username=None, password=None, axapi_version=None, undercloud=None,
-                 loadbalancer_id=None, project_id=None, compute_id=None):
+                 loadbalancer_id=None, project_id=None, compute_id=None,
+                 topology="STANDALONE", role="MASTER"):
+                 
         self.id = id
         self.vthunder_id = vthunder_id
         self.amphora_id = amphora_id
@@ -134,3 +136,5 @@ class VThunder(BaseDataModel):
         self.loadbalancer_id = loadbalancer_id
         self.project_id = project_id
         self.compute_id = compute_id
+        self.topology = topology
+        self.role = role
