@@ -26,6 +26,7 @@ else:
 from debtcollector import removals
 from a10_octavia.etc import config as blank_config
 from a10_octavia.etc import defaults
+from a10_octavia.common.defaults import DEFAULT
 
 LOG = logging.getLogger(__name__)
 
@@ -47,28 +48,37 @@ class ConfigModule(object):
 
     @classmethod
     def load(cls, path, provider=None):
-        d = runpy.run_path(path)
+        d = dict()
         return ConfigModule(d, provider=provider)
 
 class A10Config(object):
 
     def __init__(self, config_dir=None, config=None, provider=None):
+        #import rpdb; rpdb.Rpdb().set_trace()
         if config is not None:
             self._config = config
             self._load_config()
             return
 
+        self._conf = None
         self._config_dir = self._find_config_dir(config_dir)
         self._config_path = os.path.join(self._config_dir, "config.py")
 
         try:
             self._config = ConfigModule.load(self._config_path, provider=provider)
+            n = ini.ConfigParser(defaults=DEFAULT)
+            n.read(self._config_path)
+            self._conf = n
         except IOError:
             LOG.error("A10Config could not find %s", self._config_path)
+            self._conf = ini.ConfigParser(defaults=DEFAULT)
             self._config = blank_config
 
         self._config.octavia_conf_dir = '/etc/octavia/'
         self._load_config()
+
+    def get_conf(self):
+        return self._conf
 
     def _find_config_dir(self, config_dir):
         # Look for config in the virtual environment

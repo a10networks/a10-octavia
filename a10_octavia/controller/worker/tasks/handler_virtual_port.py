@@ -14,7 +14,6 @@
 
 
 from taskflow import task
-
 from octavia.controller.worker import task_utils as task_utilities
 from octavia.common import constants
 import acos_client
@@ -29,6 +28,7 @@ from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 from a10_octavia.controller.worker.tasks import persist
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+import json
 
 
 CONF = cfg.CONF
@@ -36,29 +36,83 @@ LOG = logging.getLogger(__name__)
 
 class ListenersCreate(BaseVThunderTask):
     """Task to update amphora with all specified listeners' configurations."""
-
     def execute(self, loadbalancer, listeners, vthunder):
         """Execute updates per listener for an amphora."""
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+        ipinip = self.readConf('LISTENER','ipinip')
+        if ipinip is not None:
+            ipinip=json.loads(ipinip.lower())
+        else:
+            ipinip=False 
+
+        no_dest_nat = self.readConf('LISTENER','no_dest_nat')
+        if no_dest_nat is not None:
+            no_dest_nat=json.loads(no_dest_nat.lower())
+        else:
+            no_dest_nat=False
+
+        ha_conn_mirror = self.readConf('LISTENER','ha_conn_mirror')
+        if ha_conn_mirror is not None:
+            ha_conn_mirror = json.loads(ha_conn_mirror.lower())
+        else:
+            ha_conn_mirror = False
+
+        template_policy = self.readConf('LISTENER','template_policy')
+        autosnat = bool(self.readConf('LISTENER','autosnat'))
+        conn_limit = self.readConf('LISTENER', 'conn_limit')
+        virtual_port_templates={}
+        virtual_port_templates['template-virtual-port'] = self.readConf('LISTENER','template_virtual_port').strip('"')
+
         template_args = {}
-        for listener in listeners:
-            listener.load_balancer = loadbalancer
-            #self.amphora_driver.update(listener, loadbalancer.vip)
-            try:
+        if conn_limit is not None:
+            conn_limit = int(conn_limit)
+            if conn_limit < 1 or conn_limit > 8000000:
+                LOG.warning("The specified member server connection limit " +
+                            "(configuration setting: conn-limit) is out of " +
+                            "bounds with value {0}. Please set to between " +
+                            "1-8000000. Defaulting to 8000000".format(conn_limit))
+
+        try:
+            c = self.client_factory(vthunder)
+            status = c.slb.UP
+
+            for listener in listeners:
+                listener.load_balancer = loadbalancer
+                if not listener.provisioning_status:
+                    status = c.slb.DOWN
+                templates = self.meta(listener, "template", {})
+                persistence = persist.PersistHandler(c, listener.default_pool)
+                s_pers = persistence.s_persistence()
+                c_pers = persistence.c_persistence()
                 cert_data = dict()
                 if listener.protocol == "TERMINATED_HTTPS":
                     listener.protocol = 'HTTPS'
                     template_args["template_client_ssl"] = self.cert_handler(loadbalancer, listener, vthunder)
 
-                c = self.client_factory(vthunder)
+                if listener.protocol.lower() == 'http':
+                    # TODO work around for issue in acos client
+                    listener.protocol = listener.protocol.lower()
+                    virtual_port_templates['template-http'] = self.readConf('LISTENER','template_http').strip('"')
+                else:
+                    virtual_port_templates['template-tcp'] = self.readConf('LISTENER','template_tcp').strip('"')
+
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
-                out = c.slb.virtual_server.vport.create(loadbalancer.id, name, listener.protocol,
-                                                listener.protocol_port, listener.default_pool_id,
-                                                autosnat=True, **template_args)
+                out = c.slb.virtual_server.vport.create(loadbalancer.id, name, 
+                                                listener.protocol,
+                                                listener.protocol_port,
+                                                listener.default_pool_id,
+                                                s_pers_name=s_pers, c_pers_name=c_pers,
+                                                status=status, no_dest_nat=no_dest_nat,
+                                                autosnat=autosnat, ipinip=ipinip,
+                                                #TODO resolve in acos client
+                                                #ha_conn_mirror=ha_conn_mirror,
+                                                conn_limit=conn_limit,
+                                                virtual_port_templates=virtual_port_templates,
+                                                **template_args)
+                
                 LOG.info("Listener created successfully.")
-            except Exception as e:
-                print(str(e))
-                LOG.info("Error occurred")
+        except Exception as e:
+            print(str(e))
+            LOG.info("Error occurred")
 
     def revert(self, loadbalancer, *args, **kwargs):
         """Handle failed listeners updates."""
@@ -90,9 +144,9 @@ class ListenersCreate(BaseVThunderTask):
         
         try:
             c.file.ssl_cert.create(file=cert_data["cert_filename"],
-                        cert=cert_data["cert_content"],
-                        size=len(cert_data["cert_content"]),
-                        action="import", certificate_type="pem")
+                                   cert=cert_data["cert_content"],
+                                   size=len(cert_data["cert_content"]),
+                                   action="import", certificate_type="pem")
         except acos_errors.Exists:
             c.file.ssl_cert.update(file=cert_data["cert_filename"],
                         cert=cert_data["cert_content"],
@@ -178,9 +232,3 @@ class ListenerDelete(BaseVThunderTask):
         LOG.warning("Reverting listener delete.")
 
         self.task_utils.mark_listener_prov_status_error(listener.id)
-
-
-
-    
-
-

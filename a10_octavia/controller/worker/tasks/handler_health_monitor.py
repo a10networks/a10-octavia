@@ -35,8 +35,8 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
 
     def execute(self, health_mon, vthunder):
         """ Execute create health monitor for amphora """
+
         # TODO : Length of name of healthmonitor for older vThunder devices
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
         try:
             method = None
             url = None
@@ -46,20 +46,23 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
                 method = health_mon.http_method
                 url = health_mon.url_path
                 expect_code = health_mon.expected_codes
+            args = self.meta(health_mon, 'hm', {})
             c = self.client_factory(vthunder)
-            out = c.slb.hm.create(health_mon.id[0:5], openstack_mappings.hm_type(c, health_mon.type),
-                                         health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
-                                         method=method, url=url, expect_code=expect_code, port=port
-                                         )
-            LOG.info("Heath Monitor created successfully.")
+            out = c.slb.hm.create(health_mon.id[0:5],
+                                  openstack_mappings.hm_type(c, health_mon.type),
+                                  health_mon.delay, health_mon.timeout,
+                                  health_mon.rise_threshold, method=method, url=url,
+                                  expect_code=expect_code, port=port, axapi_args=args)
+            LOG.info("Health Monitor created successfully.")
         except Exception as e:
             print(str(e))
+
         try:
             c = self.client_factory(vthunder)
             out = c.slb.service_group.update(health_mon.pool_id,
-                                                    health_monitor=health_mon.id[0:5],
-                                                    health_check_disable=0)
-            LOG.info("Heath Monitor associated to pool successfully.")
+                                             health_monitor=health_mon.id[0:5],
+                                             health_check_disable=0)
+            LOG.info("Health Monitor associated to pool successfully.")
         except Exception as e:
             print(str(e))
             LOG.info("Error occurred")
@@ -74,15 +77,13 @@ class DeleteHealthMonitor(BaseVThunderTask):
             out = c.slb.service_group.update(health_mon.pool_id,
                                                     health_monitor="",
                                                     health_check_disable=False)
-            LOG.info("Heath Monitor disassociated to pool successfully.")
+            LOG.info("Health Monitor disassociated to pool successfully.")
         except Exception as e:
             print(str(e))
             LOG.info("Error occurred")
         try:
             c = self.client_factory(vthunder)
             out = c.slb.hm.delete(health_mon.id)
-            LOG.info("Heath Monitor deleted successfully.")
+            LOG.info("Health Monitor deleted successfully.")
         except Exception as e:
             print(str(e))
-
-

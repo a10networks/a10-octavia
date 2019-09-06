@@ -247,12 +247,45 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises ListenerNotFound: The referenced listener was not found
         """
+        '''listener = None
+        try:
+            listener = self._get_db_obj_until_pending_update(
+                self._listener_repo, listener_id)
+        except tenacity.RetryError as e:
+            LOG.warning('Listener did not go into %s in 60 seconds. '
+                        'This either due to an in-progress Octavia upgrade '
+                        'or an overloaded and failing database. Assuming '
+                        'an upgrade is in progress and continuing.',
+                        constants.PENDING_UPDATE)
+            listener = e.last_attempt.result()
+
+        load_balancer = listener.load_balancer
+
+        update_listener_tf = self._taskflow_load(self._listener_flows.
+                                                 get_update_listener_flow(),
+                                                 store={constants.LISTENER:
+                                                        listener,
+                                                        constants.LOADBALANCER:
+                                                            load_balancer,
+                                                        constants.UPDATE_DICT:
+                                                            listener_updates,
+                                                        constants.LISTENERS:
+                                                            [listener]})
+        with tf_logging.DynamicLoggingListener(update_listener_tf, log=LOG):
+            update_listener_tf.run()
+
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
+        wait=tenacity.wait_incrementing(
+            RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
+        stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
+
 
         raise exceptions.NotImplementedError(
             user_fault_string='This provider does not support updating '
                               'listeners yet',
             operator_fault_string='This provider does not support updating '
-                                  'listeners yet')
+                                  'listeners yet')'''
 
     def create_load_balancer(self, load_balancer_id):
         """Creates a load balancer by allocating Amphorae.

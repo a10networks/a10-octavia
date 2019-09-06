@@ -142,8 +142,14 @@ class ListenerFlows(object):
         update_listener_flow = linear_flow.Flow(constants.UPDATE_LISTENER_FLOW)
         update_listener_flow.add(lifecycle_tasks.ListenersToErrorOnRevertTask(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        update_listener_flow.add(amphora_driver_tasks.ListenersUpdate(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        #update_listener_flow.add(amphora_driver_tasks.ListenersUpdate(
+        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        update_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        update_listener_flow.add(handler_virtual_port.ListenersUpdate(
+            requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
+
         update_listener_flow.add(database_tasks.UpdateListenerInDB(
             requires=[constants.LISTENER, constants.UPDATE_DICT]))
         update_listener_flow.add(database_tasks.
