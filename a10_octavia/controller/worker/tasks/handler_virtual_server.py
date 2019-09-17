@@ -51,7 +51,7 @@ class CreateVitualServerTask(BaseVThunderTask):
                 status = c.slb.DOWN
             vip_meta = self.meta(loadbalancer, 'virtual_server', {})
             arp_disable = self.readConf('SLB','arp_disable')
-            if arp_disable is not None:
+            if isinstance(arp_disable, str):
                 arp_disable=json.loads(arp_disable.lower())
             else:
                 arp_disable=False

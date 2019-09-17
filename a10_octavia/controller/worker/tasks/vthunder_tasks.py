@@ -18,9 +18,11 @@ from taskflow import task
 from octavia.controller.worker import task_utils as task_utilities
 from octavia.common import constants
 import acos_client
+from acos_client.errors import ACOSException 
 from octavia.amphorae.driver_exceptions import exceptions as driver_except
 import time
-import requests
+from requests.exceptions import ConnectionError 
+from httplib import BadStatusLine
 from octavia.db import api as db_apis
 from oslo_log import log as logging
 from oslo_config import cfg
@@ -84,7 +86,7 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
         try:
             
             LOG.info("Attempting to connect vThunder device for connection.")
-            attempts = 10
+            attempts = 20
             while attempts >= 0:
                 try:
                     attempts = attempts - 1
@@ -92,14 +94,14 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
                     amp_info = c.system.information()
                     LOG.info(str(amp_info))
                     break
-                except requests.exceptions.ConnectionError:
-                    attemptid = 11 - attempts
+                except (ConnectionError, ACOSException, BadStatusLine):
+                    attemptid = 21 - attempts
                     time.sleep(20)
                     LOG.info("VThunder connection attempt - "+ str(attemptid))
                     pass
             if attempts < 0:
                LOG.error("Failed to connect vThunder in expected amount of boot time.")
-               raise requests.exceptions.ConnectionError
+               raise ConnectionError
             
         except driver_except.TimeOutException:
             LOG.error("Amphora compute instance failed to become reachable. "
@@ -111,7 +113,7 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
             raise
 
 class AmphoraePostVIPPlug(BaseVThunderTask):
-    """"Task to reload and configure vThunder device"""
+    """"Task to reboot and configure vThunder device"""
 
     def execute(self, loadbalancer, vthunder):
         """Execute get_info routine for a vThunder until it responds."""
@@ -119,18 +121,18 @@ class AmphoraePostVIPPlug(BaseVThunderTask):
             #import rpdb; rpdb.set_trace()
             c = self.client_factory(vthunder)
             save_config = c.system.action.write_memory()
-            amp_info = c.system.action.reload()
-            LOG.info("Waiting for 30 seconds to reload vThunder device.")
+            amp_info = c.system.action.reboot()
+            LOG.info("Waiting for 30 seconds to trigger vThunder reboot.")
             time.sleep(30)
-            LOG.info("Reloaded vThunder successfully!")
+            LOG.info("Rebooted vThunder successfully!")
         except Exception as e:
-            LOG.error("Unable to reload vthunder device")
+            LOG.error("Unable to reboot vthunder device")
             LOG.info(str(e))
             raise
 
 
 class AmphoraePostMemberNetworkPlug(BaseVThunderTask):
-    """"Task to reload and configure vThunder device"""
+    """"Task to reboot and configure vThunder device"""
 
     def execute(self, added_ports, loadbalancer, vthunder):
         """Execute get_info routine for a vThunder until it responds."""
@@ -139,11 +141,11 @@ class AmphoraePostMemberNetworkPlug(BaseVThunderTask):
             if len(added_ports[amphora_id]) > 0:
                 c = self.client_factory(vthunder)
                 save_config = c.system.action.write_memory()
-                amp_info = c.system.action.reload()
+                amp_info = c.system.action.reboot()
                 time.sleep(30)
-                LOG.info("Reloaded vThunder successfully!")
+                LOG.info("Rebooted vThunder successfully!")
             else:
-                LOG.info("vThunder reload is not required for member addition.")
+                LOG.info("vThunder reboot is not required for member addition.")
         except Exception as e:
             LOG.error("Unable to reload vthunder device")
             LOG.info(str(e))
@@ -161,7 +163,7 @@ class EnableInterface(BaseVThunderTask):
         except Exception as e:
             LOG.error("Unable to configure vthunder interface")
             LOG.info(str(e))
-            raise
+            #raise
 
 class EnableInterfaceForMembers(BaseVThunderTask):
     """ Task to enable an interface associated with a member """
@@ -242,11 +244,13 @@ class ConfigureVRRPSync(BaseVThunderTask):
             c = self.client_factory(vthunder)
             amp_info = c.system.action.configSynch(backup_vthunder.ip_address, backup_vthunder.username,
                                                    backup_vthunder.password)
+            LOG.info("Waiting 30 seconds for config synch.")
+            time.sleep(30)
             LOG.info("Sync up for vThunder master")
         except Exception as e:
             LOG.error("Unable to sync master vThunder VRRP")
             LOG.info(str(e))
-            raise
+            #raise
 
 
 class ListenersCreate(BaseVThunderTask):
