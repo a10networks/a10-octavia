@@ -167,7 +167,7 @@ class LoadBalancerFlows(object):
                 requires=constants.LOADBALANCER_ID,
                 provides=constants.LOADBALANCER))
         #IMP: here we will inject network flow
-        new_LB_net_subflow = self.get_new_LB_networking_subflow()
+        new_LB_net_subflow = self.get_new_LB_networking_subflow(topology)
         post_create_LB_flow.add(new_LB_net_subflow)
 
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
@@ -223,7 +223,7 @@ class LoadBalancerFlows(object):
 
         return (delete_LB_flow, store)
 
-    def get_new_LB_networking_subflow(self):
+    def get_new_LB_networking_subflow(self, topology):
         """Create a sub-flow to setup networking.
 
         :returns: The flow to setup networking for a new amphora
@@ -271,6 +271,24 @@ class LoadBalancerFlows(object):
                 requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
             requires=a10constants.VTHUNDER))
+
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            new_LB_net_subflow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                name="get_backup_vThunder",
+                requires=constants.LOADBALANCER,
+                provides=a10constants.BACKUP_VTHUNDER))
+            new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
+                name="Backup_amphora_plug",
+                rebind=[constants.LOADBALANCER,
+                    a10constants.BACKUP_VTHUNDER]))
+            new_LB_net_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+                name="backup_connectivity_wait",
+                rebind=[a10constants.BACKUP_VTHUNDER, constants.AMPHORA]))
+            new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
+                name="backup_enable_interface",
+                rebind=[a10constants.BACKUP_VTHUNDER]))
+
+
 
         LOG.info("AT the end of subflow")
 

@@ -22,6 +22,7 @@ from acos_client.errors import ACOSException
 from octavia.amphorae.driver_exceptions import exceptions as driver_except
 import time
 from requests.exceptions import ConnectionError 
+from requests.exceptions import ReadTimeout
 from httplib import BadStatusLine
 from octavia.db import api as db_apis
 from oslo_log import log as logging
@@ -94,7 +95,7 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
                     amp_info = c.system.information()
                     LOG.info(str(amp_info))
                     break
-                except (ConnectionError, ACOSException, BadStatusLine):
+                except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
                     attemptid = 21 - attempts
                     time.sleep(20)
                     LOG.info("VThunder connection attempt - "+ str(attemptid))
@@ -209,7 +210,7 @@ class ConfigureVRRP(BaseVThunderTask):
         except Exception as e:
             LOG.error("Unable to configure backup vThunder VRRP")
             LOG.info(str(e))
-            raise
+            #raise
 
 
 class ConfigureVRID(BaseVThunderTask):
@@ -233,7 +234,7 @@ class ConfigureVRID(BaseVThunderTask):
         except Exception as e:
             LOG.error("Unable to configure backup vThunder VRRP")
             LOG.info(str(e))
-            raise
+            #raise
 
 class ConfigureVRRPSync(BaseVThunderTask):
     """"Task to sync vThunder VRRP """

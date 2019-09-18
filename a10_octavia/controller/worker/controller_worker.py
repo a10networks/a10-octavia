@@ -404,8 +404,10 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = pool.listeners
         load_balancer = pool.load_balancer
 
+        topology = CONF.controller_worker.loadbalancer_topology
+
         create_member_tf = self._taskflow_load(self._member_flows.
-                                               get_create_member_flow(),
+                                               get_create_member_flow(topology=topology),
                                                store={constants.MEMBER: member,
                                                       constants.LISTENERS:
                                                           listeners,
