@@ -254,6 +254,36 @@ class ConfigureVRRPSync(BaseVThunderTask):
             #raise
 
 
+class ConfigureaVCS(BaseVThunderTask):
+    """"Task to configure aVCS """
+
+    def execute(self, vthunder, backup_vthunder):
+        """Execute to configure aVCS in two vThunder devices."""
+        try:
+            c = self.client_factory(vthunder)
+            c.system.action.set_vcs_device(1, 200)
+            c.system.action.set_vcs_para("192.168.0.100", "255.255.255.0")
+            c.system.action.vcs_enable()
+            c.system.action.vcs_reload()
+            LOG.info("Configured the master vThunder for aVCS")
+        except Exception as e:
+            LOG.error("Unable to configure master vThunder aVCS")
+            LOG.info(str(e))
+            raise
+
+        try:
+            bc = self.client_factory(backup_vthunder)
+            bc.system.action.set_vcs_device(2, 100)
+            bc.system.action.set_vcs_para("192.168.0.100", "255.255.255.0")
+            bc.system.action.vcs_enable()
+            bc.system.action.vcs_reload()
+            LOG.info("Configured the backup vThunder for aVCS")
+        except Exception as e:
+            LOG.error("Unable to configure backup vThunder aVCS")
+            LOG.info(str(e))
+            raise
+
+
 class ListenersCreate(BaseVThunderTask):
     """Task to update amphora with all specified listeners' configurations."""
 

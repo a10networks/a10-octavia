@@ -360,4 +360,7 @@ class VThunderFlows(object):
         vrrp_subflow.add(vthunder_tasks.ConfigureVRRPSync(
             name=sf_name + '-' + 'configure_vrrp_sync',
             requires=(a10constants.VTHUNDER, a10constants.BACKUP_VTHUNDER)))
+        vrrp_subflow.add(vthunder_tasks.ConfigureaVCS(
+            name=sf_name + '-' + 'configure_avcs_sync',
+            requires=(a10constants.VTHUNDER, a10constants.BACKUP_VTHUNDER)))
         return vrrp_subflow
