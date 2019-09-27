@@ -28,7 +28,6 @@ try:
     from octavia.controller.worker.v2.flows import pool_flows
 
     from octavia.controller.worker.v2.tasks import amphora_driver_tasks
-    from octavia.controller.worker.v2.tasks import compute_tasks
     from octavia.controller.worker.v2.tasks import database_tasks
     from octavia.controller.worker.v2.tasks import lifecycle_tasks
     from octavia.controller.worker.v2.tasks import model_tasks
@@ -43,7 +42,6 @@ try:
     from octavia.controller.worker.flows import member_flows
     from octavia.controller.worker.flows import pool_flows
     from octavia.controller.worker.tasks import amphora_driver_tasks
-    from octavia.controller.worker.tasks import compute_tasks
     from octavia.controller.worker.tasks import database_tasks
     from octavia.controller.worker.tasks import lifecycle_tasks
     from octavia.controller.worker.tasks import model_tasks
@@ -53,7 +51,7 @@ except (ImportError, AttributeError):
 
 from a10_octavia.controller.worker.tasks import handler_virtual_server
 from a10_octavia.controller.worker.tasks import vthunder_tasks
-
+from a10_octavia.controller.worker.tasks import a10_compute_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.common import a10constants
 
@@ -126,7 +124,7 @@ class LoadBalancerFlows(object):
         if anti_affinity:
             # we need to create a server group first
             flows.append(
-                compute_tasks.NovaServerGroupCreate(
+                a10_compute_tasks.NovaServerGroupCreate(
                     name=lf_name + '-' +
                     constants.CREATE_SERVER_GROUP_FLOW,
                     requires=(constants.LOADBALANCER_ID),
@@ -192,7 +190,7 @@ class LoadBalancerFlows(object):
         delete_LB_flow = linear_flow.Flow(constants.DELETE_LOADBALANCER_FLOW)
         delete_LB_flow.add(lifecycle_tasks.LoadBalancerToErrorOnRevertTask(
             requires=constants.LOADBALANCER))
-        delete_LB_flow.add(compute_tasks.NovaServerGroupDelete(
+        delete_LB_flow.add(a10_compute_tasks.NovaServerGroupDelete(
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
             requires=constants.LOADBALANCER))
@@ -208,7 +206,7 @@ class LoadBalancerFlows(object):
         #delete_LB_flow.add(network_tasks.DeallocateVIP(
         #    requires=constants.LOADBALANCER))
         if deleteCompute:
-            delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
+            delete_LB_flow.add(a10_compute_tasks.DeleteAmphoraeOnLoadBalancer(
                 requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeDeletedInDB(
             requires=constants.LOADBALANCER))

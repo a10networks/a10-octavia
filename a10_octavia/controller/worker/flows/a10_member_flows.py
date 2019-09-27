@@ -24,7 +24,6 @@ try:
     from octavia.controller.worker.v2.flows import pool_flows
 
     from octavia.controller.worker.v2.tasks import amphora_driver_tasks
-    from octavia.controller.worker.v2.tasks import compute_tasks
     from octavia.controller.worker.v2.tasks import database_tasks
     from octavia.controller.worker.v2.tasks import lifecycle_tasks
     from octavia.controller.worker.v2.tasks import model_tasks
@@ -39,7 +38,6 @@ try:
     from octavia.controller.worker.flows import member_flows
     from octavia.controller.worker.flows import pool_flows
     from octavia.controller.worker.tasks import amphora_driver_tasks
-    from octavia.controller.worker.tasks import compute_tasks
     from octavia.controller.worker.tasks import database_tasks
     from octavia.controller.worker.tasks import lifecycle_tasks
     from octavia.controller.worker.tasks import model_tasks
