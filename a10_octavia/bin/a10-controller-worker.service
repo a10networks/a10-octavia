@@ -1,0 +1,12 @@
+[Unit]
+Description = Devstack devstack@o-a10cw.service
+
+[Service]
+ExecReload = /bin/kill -HUP $MAINPID
+TimeoutStopSec = 300
+KillMode = process
+ExecStart = /usr/local/bin/a10-octavia-worker  --config-file /etc/octavia/octavia.conf
+User = stack
+
+[Install]
+WantedBy = multi-user.target
