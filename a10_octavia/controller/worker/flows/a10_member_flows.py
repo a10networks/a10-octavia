@@ -24,7 +24,6 @@ try:
     from octavia.controller.worker.v2.flows import pool_flows
 
     from octavia.controller.worker.v2.tasks import amphora_driver_tasks
-    from octavia.controller.worker.v2.tasks import compute_tasks
     from octavia.controller.worker.v2.tasks import database_tasks
     from octavia.controller.worker.v2.tasks import lifecycle_tasks
     from octavia.controller.worker.v2.tasks import model_tasks
@@ -39,7 +38,6 @@ try:
     from octavia.controller.worker.flows import member_flows
     from octavia.controller.worker.flows import pool_flows
     from octavia.controller.worker.tasks import amphora_driver_tasks
-    from octavia.controller.worker.tasks import compute_tasks
     from octavia.controller.worker.tasks import database_tasks
     from octavia.controller.worker.tasks import lifecycle_tasks
     from octavia.controller.worker.tasks import model_tasks
@@ -55,7 +53,7 @@ from a10_octavia.common import a10constants
 
 class MemberFlows(object):
 
-    def get_create_member_flow(self):
+    def get_create_member_flow(self, topology):
         """Create a flow to create a member
 
         :returns: The flow for creating a member
@@ -93,6 +91,22 @@ class MemberFlows(object):
                 requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         create_member_flow.add(vthunder_tasks.EnableInterfaceForMembers(
             requires=[constants.ADDED_PORTS, constants.LOADBALANCER, a10constants.VTHUNDER]))
+        # configure member flow for HA
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            create_member_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                name="get_backup_vThunder",
+                requires=constants.LOADBALANCER,
+                provides=a10constants.BACKUP_VTHUNDER))
+            create_member_flow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
+                name="backup_amphora_network_plug",
+                rebind=[constants.ADDED_PORTS, constants.LOADBALANCER, a10constants.BACKUP_VTHUNDER]))
+            create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+                name="backup_compute_conn_wait",
+                rebind=[a10constants.BACKUP_VTHUNDER, constants.AMPHORA]))
+            create_member_flow.add(vthunder_tasks.EnableInterfaceForMembers(
+                name="backup_enable_interface",
+                rebind=[constants.ADDED_PORTS, constants.LOADBALANCER, a10constants.BACKUP_VTHUNDER]))
+
         create_member_flow.add(handler_server.MemberCreate(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
         create_member_flow.add(database_tasks.MarkMemberActiveInDB(

@@ -1,6 +1,30 @@
 CHANGES
 =======
 
+* Updated setup.cfg to use our DB migration tool
+* Added environment info to readme
+* Removal of constant wait and issue resolution of error - computeid is missing
+* updated readme.md for installation steps
+* added support for vThunder CLI
+* Partial code review imersion
+* replaced Client call w/ factory
+* TLS termination feature
+* Added barbican/glance/novaclient/taskflow requirements
+* Added octavia, taskflow, tenacity reqs
+* Backwards compatibility for Stein
+* Moved client construction to factory method, called factory method in tasks
+* Added swo and .vscode to gitignore
+* added multi-subnet support in octavia plugin
+* code re-organization for incuding multi-component handlers
+* l7rule delete flows
+* delete l7policy code
+* L7Policy create code
+* Health Monitor base code
+* basic logic of scheduling algorithm
+* added dual flow
+* working A10 config file
+* added functionality to read vThunder details from DB
+* added demo DB repository
 * adding config and db files
 * demo1 code
 * completed one demo SLB flow

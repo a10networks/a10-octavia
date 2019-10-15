@@ -60,7 +60,11 @@ class ListenersCreate(BaseVThunderTask):
         autosnat = bool(self.readConf('LISTENER','autosnat'))
         conn_limit = self.readConf('LISTENER', 'conn_limit')
         virtual_port_templates={}
-        virtual_port_templates['template-virtual-port'] = self.readConf('LISTENER','template_virtual_port').strip('"')
+        template_virtual_port = self.readConf('LISTENER','template_virtual_port')
+        if template_virtual_port is not None:
+             virtual_port_templates['template-virtual-port'] = template_virtual_port.strip('"')
+        else:
+             virtual_port_templates['template-virtual-port'] = None
 
         template_args = {}
         if conn_limit is not None:
@@ -91,9 +95,17 @@ class ListenersCreate(BaseVThunderTask):
                 if listener.protocol.lower() == 'http':
                     # TODO work around for issue in acos client
                     listener.protocol = listener.protocol.lower()
-                    virtual_port_templates['template-http'] = self.readConf('LISTENER','template_http').strip('"')
+                    virtual_port_template = self.readConf('LISTENER','template_http')
+                    if virtual_port_template is not None:
+                         virtual_port_templates['template-http'] = virtual_port_template.strip('"')
+                    else:
+                         virtual_port_templates['template-http'] = None
                 else:
-                    virtual_port_templates['template-tcp'] = self.readConf('LISTENER','template_tcp').strip('"')
+                    virtual_port_template = self.readConf('LISTENER','template_tcp')
+                    if virtual_port_template is not None:
+                        virtual_port_templates['template-tcp'] = virtual_port_template.strip('"')
+                    else:
+                        virtual_port_templates['template-tcp'] = None
 
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 out = c.slb.virtual_server.vport.create(loadbalancer.id, name, 

@@ -36,7 +36,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         super(A10ProviderDriver, self).__init__()
         self._args = {}
         self.namespace = constants.RPC_NAMESPACE_CONTROLLER_AGENT
-        self.topic = CONF.oslo_messaging.topic
+        self.topic = "a10_octavia"
         self.version = '1.0'
         self.transport = messaging.get_rpc_transport(cfg.CONF)
         self._args['fanout'] = False

@@ -53,13 +53,25 @@ enabled_provider_drivers = a10:     'The A10 Octavia driver.',
 default_provider_driver = a10
 ```
 
-In `[controller_worker]` section add following entries:
+Create [a10_octavia] section and add following details in /etc/octavia/octavia.conf file
 
+```shell
+[a10_octavia]
+amp_image_owner_id = <admin_project_id>
+amp_secgroup_list = lb-mgmt-sec-grp <or_you_can_create_custom> 
+amp_flavor_id = <flavor_id_for_amphora>
+amp_boot_network_list = <netword_id_for_amphora_in_admin_project>
+amp_ssh_key_name = <ssh_key_for_amphora>
+network_driver = allowed_address_pairs_driver
+compute_driver = compute_nova_driver
+amphora_driver = amphora_haproxy_rest_driver
+workers = 2
+amp_active_retries = 100
+amp_active_wait_sec = 2
+amp_image_id = <vthunder_amphora_image_id>
+amp_image_tag = amphora
+user_data_config_drive = False
 ```
-amp_flavor_id = [`ID of vThunder flavor`]
-amp_image_id = [`ID of vThunder Image`]
-```
-comment any `amp_image_tag` entry if exists.
 
 ## STEP4: Add A10 config file 
 
@@ -67,6 +79,7 @@ create `/etc/a10/config.py` with proper access for octavia/stack user.
 add following entries as default.
 
 ```shell
+[DEFAULT]
 DEFAULT_VTHUNDER_USERNAME = "admin"
 DEFAULT_VTHUNDER_PASSWORD = "a10"
 DEFAULT_AXAPI_VERSION = "30"
@@ -74,7 +87,7 @@ DEFAULT_AXAPI_VERSION = "30"
 
 ## STEP5: Run database migrations
 
-from `a10-octavia/a10_octavia/db/migrations` folder run 
+from `a10-octavia/a10_octavia/db/migration` folder run 
 
 ```shell
 alembic upgrade head
@@ -84,7 +97,7 @@ if older migrations not found, trucate `alembic_migrations` table from ocatvia d
 
 ## STEP6: Allow security group to access vThunder AXAPIs port
 
-As `admin` OpenStack user, update security group `lb-mgmt-sec-grp` and allow `PORT 80` and `PORT 443` ingress traffic to allow AXAPI communication with vThunder instances.
+As `admin` OpenStack user, update security group `lb-mgmt-sec-grp` (security group of which ID is provided in octavia.conf) and allow `PORT 80` and `PORT 443` ingress traffic to allow AXAPI communication with vThunder instances.
 
 ## STEP7: Restart Related Octavia Services
 ### devstack development environment
@@ -92,3 +105,16 @@ As `admin` OpenStack user, update security group `lb-mgmt-sec-grp` and allow `PO
 
 ## other environments
 Use `systemctl` or similar function to restart Octavia controller and health services. 
+
+## STEP 8: [FOR ROCKY AND STEIN RELEASE] Create octavia service worker
+From a10-octavia/a10_octavia/install folder run `install_service.sh` file.
+```shell
+chmod +X install_service.sh
+./install_service.sh
+```
+This will install systemd service with name - 'a10-controller-worker'.
+You can start/stop service using systemctl/service commands.
+You can check logs of service using following command:
+```shell
+journalctl -af --unit a10-controller-worker.service
+```

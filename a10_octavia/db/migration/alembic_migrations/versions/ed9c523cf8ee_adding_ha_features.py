@@ -1,8 +1,8 @@
-"""new_revision
+"""adding HA features
 
-Revision ID: 8151f374ba74
-Revises: 
-Create Date: 2019-07-04 15:57:43.946347
+Revision ID: ed9c523cf8ee
+Revises: 8151f374ba74
+Create Date: 2019-09-03 12:19:44.353070
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '8151f374ba74'
+revision = "ed9c523cf8ee"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -30,7 +30,9 @@ def upgrade():
     sa.Column('undercloud', sa.Boolean(), default=False, nullable=False),
     sa.Column('loadbalancer_id', sa.String(36)),
     sa.Column('project_id', sa.String(36)),
-    sa.Column('compute_id', sa.String(36))
+    sa.Column('compute_id', sa.String(36)),
+    sa.Column('topology', sa.String(50)),
+    sa.Column('role', sa.String(50))
     )
 
 def downgrade():

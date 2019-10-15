@@ -113,10 +113,10 @@ class A10Config(object):
             self._config.database_connection = self._get_octavia_db_string()
 
         if self._config.keystone_auth_url is None:
-            self._config.keystone_auth_url = self._get_octavia_conf(
+            self._config.keystone_auth_url = self.get_octavia_conf(
                 'keystone_authtoken', 'auth_uri')
 
-    def _get_octavia_conf(self, section, option):
+    def get_octavia_conf(self, section, option):
         octavia_conf_dir = os.environ.get('OCTAVIA_CONF_DIR', self._config.octavia_conf_dir)
         octavia_conf = '%s/octavia.conf' % octavia_conf_dir
 
@@ -134,7 +134,7 @@ class A10Config(object):
             LOG.error("A10Config could not find %s", self._config_path)
 
     def _get_octavia_db_string(self):
-        z = self._get_octavia_conf('database', 'connection')
+        z = self.get_octavia_conf('database', 'connection')
 
         if z is None:
             raise a10_ex.NoDatabaseURL('must set db connection url or octavia dir in config.py')
