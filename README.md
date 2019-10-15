@@ -1,6 +1,9 @@
 # A10 Networks Openstack Octavia Driver
 ===========================================
 
+# This is currently in development. Official release slated for Nov 6 2019.
+# As this is currently in development, support is limited until official release. 
+
 A10 Networks Octavia Driver for Thunder, vThunder and AX Series Appliances 
 Supported releases:
 
