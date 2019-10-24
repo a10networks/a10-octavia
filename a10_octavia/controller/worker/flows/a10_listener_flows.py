@@ -36,7 +36,6 @@ from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.common import a10constants
 
 
-
 class ListenerFlows(object):
 
     def get_create_listener_flow(self):

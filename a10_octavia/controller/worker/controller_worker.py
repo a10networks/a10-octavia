@@ -44,7 +44,6 @@ from a10_octavia.controller.worker.flows import a10_pool_flows
 from a10_octavia.controller.worker.flows import vthunder_flows
 from a10_octavia.db import repositories as a10repo
 
-
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 RETRY_ATTEMPTS = 15
@@ -218,6 +217,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                             constants.LISTENERS:
                                                                 [listener]})
 
+
         with tf_logging.DynamicLoggingListener(create_listener_tf,
                                                log=LOG):
             create_listener_tf.run()
@@ -294,6 +294,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+        a10_conf = a10_config.A10Config()
+        self.config = a10_conf.get_conf()
         lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
         if not lb:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
