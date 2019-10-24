@@ -50,6 +50,8 @@ from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_l7policy_flows
 from a10_octavia.controller.worker.flows import a10_l7rule_flows
 from a10_octavia.db import repositories as a10repo
+from a10_octavia import a10_config
+from a10_octavia.common import data_models
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -210,7 +212,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
         if not listener:
@@ -234,6 +235,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                             load_balancer,
                                                             constants.LISTENERS:
                                                                 [listener]})
+
 
         with tf_logging.DynamicLoggingListener(create_listener_tf,
                                                log=LOG):
@@ -312,6 +314,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+        a10_conf = a10_config.A10Config()
+        self.config = a10_conf.get_conf()
         lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
         if not lb:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
@@ -327,6 +331,42 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         store[constants.UPDATE_DICT] = {
             constants.TOPOLOGY: topology
         }
+        validation_flag=False
+        flag=False
+        if self.config.has_option("RACK_VTHUNDER","devices") and self.config.has_section("RACK_VTHUNDER"):
+            project_conf = self.config.get('RACK_VTHUNDER', 'devices')
+            rack_conf = eval(project_conf.strip('"'))
+            for i in range(len((rack_conf["device_list"]))):
+                project_id = rack_conf["device_list"][i]["project_id"]
+                if  project_id == lb.project_id:
+                    flag=True
+                    ip_address = rack_conf["device_list"][i]["ip_address"]
+                    undercloud = bool(rack_conf["device_list"][i]["undercloud"])
+                    username = rack_conf["device_list"][i]["username"]
+                    password = rack_conf["device_list"][i]["password"]
+                    device_name = rack_conf["device_list"][i]["device_name"]
+                    axapi_version = rack_conf["device_list"][i]["axapi_version"]
+                    role = rack_conf["device_list"][i]["role"]
+                    topology = rack_conf["device_list"][i]["topology"]
+                    vthunder_conf = data_models.VThunder(project_id=project_id, ip_address=ip_address, undercloud=undercloud, 
+                                                         username=username, role=role, topology=topology,
+                                                         password=password,device_name=device_name, axapi_version=axapi_version)
+                    validation_flag = self.validate(vthunder_conf)
+                    break
+
+        if flag:
+            if validation_flag:
+                LOG.info("A10ControllerWorker.create_load_balancer fetched project_id : %s from config file for Rack Vthunder" % (project_id))
+                create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
+                    vthunder_conf=vthunder_conf, topology=topology, listeners=lb.listeners)
+                create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
+            else:
+                LOG.info("Validations Failed")
+        else:
+            create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
+                topology=topology, listeners=lb.listeners)
+            create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
+
 
         if lb.project_id in self.rack_dict:
             LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'
