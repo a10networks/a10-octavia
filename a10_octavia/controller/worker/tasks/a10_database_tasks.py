@@ -169,3 +169,33 @@ class MapLoadbalancerToAmphora(BaseDatabaseTask):
             return None
 
         return vthunder.id
+
+class CreateRackVthunderEntry(BaseDatabaseTask):
+    """ Create VThunder device entry in DB"""
+    def execute(self, loadbalancer, vthunder_config):
+        vthunder_conf = vthunder_config
+        vthunder_id = uuidutils.generate_uuid()
+        a10_conf =a10_config.A10Config()
+        self.config = a10_conf.get_conf()
+
+        project_id = vthunder_conf.project_id
+        ip_address = vthunder_conf.ip_address
+        undercloud = vthunder_conf.undercloud
+        username = vthunder_conf.username
+        password = vthunder_conf.password
+        device_name = vthunder_conf.device_name
+        axapi_version = vthunder_conf.axapi_version
+        topology = "STANDALONE"
+        role = "MASTER"
+
+
+        vthunder = self.vthunder_repo.create(db_apis.get_session(), topology=topology, 
+                                        role=role, vthunder_id=vthunder_id,
+                                        device_name = device_name, username = username,
+                                        password = password, ip_address = ip_address,
+                                        undercloud = undercloud,
+                                        loadbalancer_id = loadbalancer.id,
+                                        project_id = project_id,
+                                        axapi_version = axapi_version)
+        LOG.info("Successfully created vthunder entry in database.")
+                                                                             

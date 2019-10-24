@@ -13,17 +13,18 @@
 #    under the License.
 
 
-#from oslo_config import cfg
-#from oslo_log import log as logging
+# from oslo_config import cfg
+# from oslo_log import log as logging
 
-#from octavia.common import base_taskflow
-#from octavia.api.drivers import exceptions
+# from octavia.common import base_taskflow
+# from octavia.api.drivers import exceptions
 
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from sqlalchemy.orm import exc as db_exceptions
 import tenacity
+import socket
 
 from octavia.api.drivers import driver_lib
 from octavia.common import constants
@@ -40,6 +41,8 @@ from a10_octavia.controller.worker.flows import a10_member_flows
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_l7policy_flows
 from a10_octavia.controller.worker.flows import a10_l7rule_flows
+from a10_octavia import a10_config
+from a10_octavia.common import data_models
 
 
 import acos_client
@@ -69,11 +72,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._health_monitor_flows = a10_health_monitor_flows.HealthMonitorFlows()
         self._l7policy_flows = a10_l7policy_flows.L7PolicyFlows()
         self._l7rule_flows = a10_l7rule_flows.L7RuleFlows()
-        self._vthunder_repo = a10repo.VThunderRepository()
-        
+        self._vthunder_repo = a10repo.VThunderRepository() 
         self._exclude_result_logging_tasks = ()
-        super(A10ControllerWorker, self).__init__()
-        
+        super(A10ControllerWorker, self).__init__()    
 
     def create_amphora(self):
         """Creates an Amphora.
@@ -199,6 +200,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+        a10_conf = a10_config.A10Config()
+        self.config = a10_conf.get_conf()
+
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
         if not listener:
@@ -208,12 +212,31 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         load_balancer = listener.load_balancer
 
-        create_listener_tf = self._taskflow_load(self._listener_flows.
-                                                 get_create_listener_flow(),
-                                                 store={constants.LOADBALANCER:
-                                                        load_balancer,
-                                                        constants.LISTENERS:
-                                                            [listener]})
+        project_id = None
+        if self.config.has_option("RACK_VTHUNDER","devices") and self.config.has_section("RACK_VTHUNDER"):
+            project_conf = self.config.get('RACK_VTHUNDER', 'devices')
+            rack_conf = eval(project_conf.strip('"'))
+            for i in range(len((rack_conf["device_list"]))):
+                project_id = rack_conf["device_list"][i]["project_id"]
+                if  project_id == listener.project_id:
+                    break
+
+        if project_id is not None:
+            create_listener_tf = self._taskflow_load(self._listener_flows.
+                                                     get_rack_vthunder_create_listener_flow(project_id),
+                                                     store={constants.LOADBALANCER:
+                                                            load_balancer,
+                                                            constants.LISTENERS:
+                                                                [listener]})
+        else:
+            create_listener_tf = self._taskflow_load(self._listener_flows.
+                                                     get_create_listener_flow(),
+                                                     store={constants.LOADBALANCER:
+                                                            load_balancer,
+                                                            constants.LISTENERS:
+                                                                [listener]})
+
+
         with tf_logging.DynamicLoggingListener(create_listener_tf,
                                                log=LOG):
             create_listener_tf.run()
@@ -226,14 +249,31 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises ListenerNotFound: The referenced listener was not found
         """
+        a10_conf = a10_config.A10Config()
+        self.config = a10_conf.get_conf()
+
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
         load_balancer = listener.load_balancer
+        project_id = None
+        if self.config.has_option("RACK_VTHUNDER","devices") and self.config.has_section("RACK_VTHUNDER"):
+            project_conf = self.config.get('RACK_VTHUNDER', 'devices')
+            rack_conf = eval(project_conf.strip('"'))
+            for i in range(len((rack_conf["device_list"]))):
+                project_id = rack_conf["device_list"][i]["project_id"]
+                if  project_id == listener.project_id:
+                    break
 
-        delete_listener_tf = self._taskflow_load(
-            self._listener_flows.get_delete_listener_flow(),
-            store={constants.LOADBALANCER: load_balancer,
-                   constants.LISTENER: listener})
+        if project_id is not None:
+            delete_listener_tf = self._taskflow_load(
+                self._listener_flows.get_delete_rack_listener_flow(),
+                store={constants.LOADBALANCER: load_balancer,
+                       constants.LISTENER: listener})
+        else:
+            delete_listener_tf = self._taskflow_load(
+                self._listener_flows.get_delete_listener_flow(),
+                store={constants.LOADBALANCER: load_balancer,
+                       constants.LISTENER: listener})
         with tf_logging.DynamicLoggingListener(delete_listener_tf,
                                                log=LOG):
             delete_listener_tf.run()
@@ -294,6 +334,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+        a10_conf = a10_config.A10Config()
+        self.config = a10_conf.get_conf()
         lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
         if not lb:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
@@ -312,10 +354,42 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         store[constants.UPDATE_DICT] = {
             constants.LOADBALANCER_TOPOLOGY: topology
         }
+        validation_flag=False
+        flag=False
+        if self.config.has_option("RACK_VTHUNDER","devices") and self.config.has_section("RACK_VTHUNDER"):
+            project_conf = self.config.get('RACK_VTHUNDER', 'devices')
+            rack_conf = eval(project_conf.strip('"'))
+            for i in range(len((rack_conf["device_list"]))):
+                project_id = rack_conf["device_list"][i]["project_id"]
+                if  project_id == lb.project_id:
+                    flag=True
+                    ip_address = rack_conf["device_list"][i]["ip_address"]
+                    undercloud = bool(rack_conf["device_list"][i]["undercloud"])
+                    username = rack_conf["device_list"][i]["username"]
+                    password = rack_conf["device_list"][i]["password"]
+                    device_name = rack_conf["device_list"][i]["device_name"]
+                    axapi_version = rack_conf["device_list"][i]["axapi_version"]
+                    role = rack_conf["device_list"][i]["role"]
+                    topology = rack_conf["device_list"][i]["topology"]
+                    vthunder_conf = data_models.VThunder(project_id=project_id, ip_address=ip_address, undercloud=undercloud, 
+                                                         username=username, role=role, topology=topology,
+                                                         password=password,device_name=device_name, axapi_version=axapi_version)
+                    validation_flag = self.validate(vthunder_conf)
+                    break
 
-        create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
-            topology=topology, listeners=lb.listeners)
-        create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
+        if flag:
+            if validation_flag:
+                LOG.info("A10ControllerWorker.create_load_balancer fetched project_id : %s from config file for Rack Vthunder" % (project_id))
+                create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
+                    vthunder_conf=vthunder_conf, topology=topology, listeners=lb.listeners)
+                create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
+            else:
+                LOG.info("Validations Failed")
+        else:
+            create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
+                topology=topology, listeners=lb.listeners)
+            create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
+
         with tf_logging.DynamicLoggingListener(
                 create_lb_tf, log=LOG,
                 hide_inputs_outputs_of=self._exclude_result_logging_tasks):
@@ -393,6 +467,10 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoSuitablePool: Unable to find the node pool
         """
+
+        a10_conf = a10_config.A10Config()
+        self.config = a10_conf.get_conf()
+
         member = self._member_repo.get(db_apis.get_session(),
                                        id=member_id)
         if not member:
@@ -405,15 +483,34 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = pool.load_balancer
 
         topology = CONF.controller_worker.loadbalancer_topology
+        project_id = None
+        if self.config.has_option("RACK_VTHUNDER","devices") and self.config.has_section("RACK_VTHUNDER"):
+            project_conf = self.config.get('RACK_VTHUNDER', 'devices')
+            rack_conf = eval(project_conf.strip('"'))
+            for i in range(len((rack_conf["device_list"]))):
+                project_id = rack_conf["device_list"][i]["project_id"]
+                if  project_id == member.project_id:
+                    break
 
-        create_member_tf = self._taskflow_load(self._member_flows.
-                                               get_create_member_flow(topology=topology),
-                                               store={constants.MEMBER: member,
-                                                      constants.LISTENERS:
-                                                          listeners,
-                                                      constants.LOADBALANCER:
-                                                          load_balancer,
-                                                      constants.POOL: pool})
+        if project_id is not None:
+            create_member_tf = self._taskflow_load(self._member_flows.get_rack_vthunder_create_member_flow(),
+                                                store={constants.MEMBER: member,
+                                                        constants.LISTENERS:
+                                                            listeners,
+                                                        constants.LOADBALANCER:
+                                                            load_balancer,
+                                                        constants.POOL: pool})
+        else:
+            create_member_tf = self._taskflow_load(self._member_flows.
+                                                get_create_member_flow(topology=topology),
+                                                store={constants.MEMBER: member,
+                                                        constants.LISTENERS:
+                                                            listeners,
+                                                        constants.LOADBALANCER:
+                                                            load_balancer,
+                                                        constants.POOL: pool})
+
+
         with tf_logging.DynamicLoggingListener(create_member_tf,
                                                log=LOG):
             create_member_tf.run()
@@ -694,3 +791,39 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             operator_fault_string='This provider does not support rotating '
                                   'Amphora certs. We will use preconfigured '
                                   'devices.')
+
+    def validate(self, vthunder_conf):
+
+        '''project_id = rack_conf["device_list1"][0][i]["project_id"]
+        ip_address = rack_conf["device_list1"][0][i]["ip_address"]
+        undercloud = rack_conf["device_list1"][0][i]["undercloud"]'''
+        project_id = vthunder_conf.project_id
+        username = vthunder_conf.username
+        password = vthunder_conf.password
+        axapi_version = vthunder_conf.axapi_version
+        ip_address = vthunder_conf.ip_address
+        ip_validator = self.is_valid_ipv4_address(ip_address)
+
+        if project_id is not None and ip_address is not None and username is not None and password is not None and axapi_version is not None:
+            if ip_validator:
+                return True
+            else:
+                return False
+        '''
+        return
+        #all(x != None for x in l.values())'''
+
+    def is_valid_ipv4_address(self, address):
+        try:
+            socket.inet_pton(socket.AF_INET, address)
+        except AttributeError:  # no inet_pton here, sorry
+            try:
+                socket.inet_aton(address)
+            except socket.error:
+                return False
+            return address.count('.') == 3
+        except socket.error:  # not a valid address
+            return False
+
+        return True
+                                                   

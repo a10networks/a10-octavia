@@ -363,3 +363,26 @@ class VThunderFlows(object):
             name=sf_name + '-' + 'configure_avcs_sync',
             requires=(a10constants.VTHUNDER, a10constants.BACKUP_VTHUNDER)))
         return vrrp_subflow
+  
+    def get_rack_vthunder_for_lb_subflow(
+            self, vthunder_conf, prefix, role=constants.ROLE_STANDALONE):
+        """ reload the loadbalancer and make entry in database"""
+
+        sf_name = prefix + '-' + constants.GET_AMPHORA_FOR_LB_SUBFLOW
+
+        amp_for_lb_flow = linear_flow.Flow(sf_name)
+
+        amp_for_lb_flow.add(database_tasks.ReloadLoadBalancer(
+            name=sf_name + '-' + 'reload_loadbalancer',
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
+
+        amp_for_lb_flow.add(a10_database_tasks.CreateRackVthunderEntry(
+            name = sf_name + '-' + 'create_rack_vThunder_entry_in_database',
+            inject={a10constants.VTHUNDER_CONFIG:vthunder_conf},
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG)))
+        amp_for_lb_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        
+        return amp_for_lb_flow

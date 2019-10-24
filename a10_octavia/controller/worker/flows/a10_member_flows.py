@@ -274,3 +274,32 @@ class MemberFlows(object):
                           constants.LISTENERS)))
 
         return batch_update_members_flow
+
+    def get_rack_vthunder_create_member_flow(self):
+        """Create a flow to create a rack vthunder member
+
+        :returns: The flow for creating a rack vthunder member
+        """
+        create_member_flow = linear_flow.Flow(constants.CREATE_MEMBER_FLOW)
+        create_member_flow.add(lifecycle_tasks.MemberToErrorOnRevertTask(
+            requires=[constants.MEMBER,
+                      constants.LISTENERS,
+                      constants.LOADBALANCER,
+                      constants.POOL]))
+        create_member_flow.add(database_tasks.MarkMemberPendingCreateInDB(
+            requires=constants.MEMBER))
+        create_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        create_member_flow.add(handler_server.MemberCreate(
+            requires=(constants.MEMBER, constants.POOL)))
+        create_member_flow.add(database_tasks.MarkMemberActiveInDB(
+            requires=constants.MEMBER))
+        create_member_flow.add(database_tasks.MarkPoolActiveInDB(
+            requires=constants.POOL))
+        create_member_flow.add(database_tasks.
+                               MarkLBAndListenersActiveInDB(
+                                   requires=(constants.LOADBALANCER,
+                                             constants.LISTENERS)))
+        return create_member_flow
+

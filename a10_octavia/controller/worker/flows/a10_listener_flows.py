@@ -38,6 +38,7 @@ except (ImportError, AttributeError):
 from a10_octavia.controller.worker.tasks import handler_virtual_port
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.common import a10constants
+from a10_octavia.common import data_models
 
 class ListenerFlows(object):
 
@@ -111,6 +112,28 @@ class ListenerFlows(object):
 
         return delete_listener_flow
 
+    def get_delete_rack_listener_flow(self):
+        """Create a flow to delete a rack listener
+
+        :returns: The flow for deleting a rack listener
+        """
+        delete_listener_flow = linear_flow.Flow(constants.DELETE_LISTENER_FLOW)
+        delete_listener_flow.add(lifecycle_tasks.ListenerToErrorOnRevertTask(
+            requires=constants.LISTENER))
+        delete_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        delete_listener_flow.add(handler_virtual_port.ListenerDelete(
+            requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
+        delete_listener_flow.add(database_tasks.DeleteListenerInDB(
+            requires=constants.LISTENER))
+        delete_listener_flow.add(database_tasks.DecrementListenerQuota(
+            requires=constants.LISTENER))
+        delete_listener_flow.add(database_tasks.MarkLBActiveInDB(
+            requires=constants.LOADBALANCER))
+
+        return delete_listener_flow
+
     def get_delete_listener_internal_flow(self, listener_name):
         """Create a flow to delete a listener and l7policies internally
 
@@ -158,3 +181,26 @@ class ListenerFlows(object):
                                                constants.LISTENERS]))
 
         return update_listener_flow
+
+    def get_rack_vthunder_create_listener_flow(self, project_id):
+        """Create a flow to create a rack listener
+
+        :returns: The flow for creating a rack listener
+        """
+        create_listener_flow = linear_flow.Flow(constants.CREATE_LISTENER_FLOW)
+        create_listener_flow.add(lifecycle_tasks.ListenersToErrorOnRevertTask(
+            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        create_listener_flow.add(handler_virtual_port.ListenersCreate(
+            requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
+        if project_id is None:
+            create_listener_flow.add(network_tasks.UpdateVIP(
+               requires=constants.LOADBALANCER))
+        create_listener_flow.add(database_tasks.
+                                 MarkLBAndListenersActiveInDB(
+                                     requires=[constants.LOADBALANCER,
+                                               constants.LISTENERS]))
+        return create_listener_flow
+
