@@ -37,7 +37,6 @@ from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
 
 
-
 class ListenerFlows(object):
 
     def get_create_listener_flow(self):
