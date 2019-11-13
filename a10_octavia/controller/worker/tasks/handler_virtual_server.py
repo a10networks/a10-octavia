@@ -98,6 +98,3 @@ class DeleteVitualServerTask(BaseVThunderTask):
 
     def revert(self, loadbalancer, *args, **kwargs):
         pass
-
-
-
