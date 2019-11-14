@@ -41,7 +41,7 @@ conn_resume=1
 templates="server1"                            
 
 [RACK_VTHUNDER]
-devices="{
+devices="""{
              "device_list" :
              [
                     {
@@ -65,4 +65,4 @@ devices="{
                      "topology":"STANDALONE"
                      }
              ]
-       }"
+       }"""
