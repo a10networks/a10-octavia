@@ -217,7 +217,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                             constants.LISTENERS:
                                                                 [listener]})
 
-
         with tf_logging.DynamicLoggingListener(create_listener_tf,
                                                log=LOG):
             create_listener_tf.run()
