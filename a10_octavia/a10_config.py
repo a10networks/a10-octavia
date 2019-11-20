@@ -78,14 +78,18 @@ class A10Config(object):
             self._conf = ini.ConfigParser(defaults=DEFAULT)
             self._config = blank_config
 
-        if self._conf.has_option("RACK_VTHUNDER","devices") and self._conf.has_section("RACK_VTHUNDER"):
+        self._config.octavia_conf_dir = '/etc/octavia/'
+        self._load_config()
+
+    def get_rack_dict(self):
+        rack_dict = {}
+        if self._conf.has_section("RACK_VTHUNDER") and self._conf.has_option("RACK_VTHUNDER", "devices"):
             project_conf = self._conf.get('RACK_VTHUNDER', 'devices')
             rack_conf = ast.literal_eval(project_conf.strip('"'))
-            self.rack_dict = {}
-            self.validation_flag = False
+            validation_flag = False
             try:
                 for i in range(len(rack_conf["device_list"])):
-		    project_id = rack_conf["device_list"][i]["project_id"]
+                    project_id = rack_conf["device_list"][i]["project_id"]
                     ip_address = rack_conf["device_list"][i]["ip_address"]
                     undercloud = bool(rack_conf["device_list"][i]["undercloud"])
                     username = rack_conf["device_list"][i]["username"]
@@ -108,15 +112,16 @@ class A10Config(object):
                                                              password=password,
                                                              device_name=device_name,
                                                              axapi_version=axapi_version)
-                        self.rack_dict[project_id] = vthunder_conf
+                        rack_dict[project_id] = vthunder_conf
                     else:
                         LOG.warning('Invalid definition of rack device for'
-                                     'project ' + project_id)
-            except KeyError as e:
-                LOG.error("Invalid definition of rack device in config." + str(e))
+                                    'project ' + project_id)
 
-        self._config.octavia_conf_dir = '/etc/octavia/'
-        self._load_config()
+            except KeyError as e:
+                LOG.error("Invalid definition of rack device in A10 config file."
+                          "The Loadbalancer you create shall boot as overcloud."
+                          "Check attribute: " + str(e))
+        return rack_dict
 
     def get_rack_dict(self):
         rack_dict = {}
