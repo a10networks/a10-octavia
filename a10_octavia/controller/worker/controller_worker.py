@@ -72,10 +72,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._health_monitor_flows = a10_health_monitor_flows.HealthMonitorFlows()
         self._l7policy_flows = a10_l7policy_flows.L7PolicyFlows()
         self._l7rule_flows = a10_l7rule_flows.L7RuleFlows()
-        self._vthunder_repo = a10repo.VThunderRepository() 
+        self._vthunder_repo = a10repo.VThunderRepository()
         self._exclude_result_logging_tasks = ()
-        self.a10_conf = a10_config.A10Config()
-        super(A10ControllerWorker, self).__init__()    
+        a10_conf = a10_config.A10Config()
+        self.rack_dict = a10_conf.get_rack_dict()
+        super(A10ControllerWorker, self).__init__()
 
     def create_amphora(self):
         """Creates an Amphora.
@@ -211,7 +212,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         load_balancer = listener.load_balancer
 
-        if listener.project_id in self.a10_conf.rack_dict:
+        if listener.project_id in self.rack_dict:
             create_listener_tf = self._taskflow_load(self._listener_flows.
                                                      get_rack_vthunder_create_listener_flow(listener.project_id),
                                                      store={constants.LOADBALANCER:
@@ -226,11 +227,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                             constants.LISTENERS:
                                                                 [listener]})
 
-
         with tf_logging.DynamicLoggingListener(create_listener_tf,
                                                log=LOG):
             create_listener_tf.run()
-
 
     def delete_listener(self, listener_id):
         """Deletes a listener.
@@ -243,7 +242,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
         load_balancer = listener.load_balancer
-        if listener.project_id in self.a10_conf.rack_dict:
+        if listener.project_id in self.rack_dict:
             delete_listener_tf = self._taskflow_load(
                 self._listener_flows.get_delete_rack_listener_flow(),
                 store={constants.LOADBALANCER: load_balancer,
@@ -256,7 +255,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(delete_listener_tf,
                                                log=LOG):
             delete_listener_tf.run()
-
 
     def update_listener(self, listener_id, listener_updates):
         """Updates a listener.
@@ -319,9 +317,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                         '60 seconds.', 'load_balancer', load_balancer_id)
             raise db_exceptions.NoResultFound
 
-        LOG.info("A10ControllerWorker.create_load_balancer called. self: %s load_balancer_id: %s lb: %s vip: %s" % (self.__dict__, load_balancer_id, lb.__dict__, lb.vip.__dict__))
-        LOG.info("A10ControllerWorker.create_load_balancer called. lb name: %s lb id: %s vip ip: %s" % (lb.name, load_balancer_id, lb.vip.ip_address))
-
         store = {constants.LOADBALANCER_ID: load_balancer_id,
                  constants.BUILD_TYPE_PRIORITY:
                  constants.LB_CREATE_NORMAL_PRIORITY}
@@ -332,11 +327,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             constants.LOADBALANCER_TOPOLOGY: topology
         }
 
-        if lb.project_id in self.a10_conf.rack_dict:
+        if lb.project_id in self.rack_dict:
             LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'
                      'from config file for Rack Vthunder' % (lb.project_id))
             create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
-                     vthunder_conf=self.a10_conf.rack_dict[lb.project_id], topology=topology, listeners=lb.listeners)
+                vthunder_conf=self.rack_dict[lb.project_id], topology=topology, listeners=lb.listeners)
             create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
         else:
             create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
@@ -347,7 +342,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 create_lb_tf, log=LOG,
                 hide_inputs_outputs_of=self._exclude_result_logging_tasks):
             create_lb_tf.run()
-        
 
     def delete_load_balancer(self, load_balancer_id, cascade=False):
         """Deletes a load balancer by de-allocating Amphorae.
@@ -359,11 +353,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         lb = self._lb_repo.get(db_apis.get_session(),
                                id=load_balancer_id)
         vthunder = self._vthunder_repo.getVThunderFromLB(db_apis.get_session(),
-                               load_balancer_id)
+                                                         load_balancer_id)
         deleteCompute = False
         if vthunder:
             deleteCompute = self._vthunder_repo.getDeleteComputeFlag(db_apis.get_session(),
-                               vthunder.compute_id)
+                                                                     vthunder.compute_id)
         (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute)
         store.update({constants.LOADBALANCER: lb,
                       constants.SERVER_GROUP_ID: lb.server_group_id})
@@ -374,20 +368,19 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                log=LOG):
             delete_lb_tf.run()
 
-
-        #IMP: Jacobs code
+        # IMP: Jacobs code
         # No exception even when acos fails...
-        #try:
+        # try:
         #    r = self.c.slb.virtual_server.delete(load_balancer_id)
         #    status = { 'loadbalancers': [{"id": load_balancer_id,
         #               "provisioning_status": constants.DELETED}]}
-        #except Exception as e:
+        # except Exception as e:
         #    r = str(e)
         #    status = { 'loadbalancers': [{"id": load_balancer_id,
         #               "provisioning_status": consts.ERROR }]}
-        #LOG.info("vThunder response: %s" % (r))
-        #LOG.info("Updating db with this status: %s" % (status))
-        #self._octavia_driver_db.update_loadbalancer_status(status)
+        # LOG.info("vThunder response: %s" % (r))
+        # LOG.info("Updating db with this status: %s" % (status))
+        # self._octavia_driver_db.update_loadbalancer_status(status)
 
     def update_load_balancer(self, load_balancer_id, load_balancer_updates):
         """Updates a load balancer.
@@ -399,18 +392,16 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         """
 
         try:
-            #r = self.c.slb.virtual_server.update(load_balancer_id, lb.vip.ip_address)
-            status = { 'loadbalancers': [{"id": load_balancer_id,
-                       "provisioning_status": constants.ACTIVE }]}
+            # r = self.c.slb.virtual_server.update(load_balancer_id, lb.vip.ip_address)
+            status = {'loadbalancers': [{"id": load_balancer_id,
+                                         "provisioning_status": constants.ACTIVE}]}
         except Exception as e:
             r = str(e)
-            status = { 'loadbalancers': [{"id": load_balancer_id,
-                       "provisioning_status": constants.ERROR }]}
+            status = {'loadbalancers': [{"id": load_balancer_id,
+                                         "provisioning_status": constants.ERROR}]}
         LOG.info("Updating db with this status: %s" % (status))
         lb.update(db_apis.get_session(), load_balancer_id,
-                                      **load_balancer_updates)
-
-
+                  **load_balancer_updates)
 
     def create_member(self, member_id):
         """Creates a pool member.
@@ -419,7 +410,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoSuitablePool: Unable to find the node pool
         """
-
 
         member = self._member_repo.get(db_apis.get_session(),
                                        id=member_id)
@@ -433,30 +423,27 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = pool.load_balancer
 
         topology = CONF.controller_worker.loadbalancer_topology
-        if member.project_id in self.a10_conf.rack_dict:
+        if member.project_id in self.rack_dict:
             create_member_tf = self._taskflow_load(self._member_flows.get_rack_vthunder_create_member_flow(),
-                                                store={constants.MEMBER: member,
-                                                        constants.LISTENERS:
-                                                            listeners,
-                                                        constants.LOADBALANCER:
-                                                            load_balancer,
-                                                        constants.POOL: pool})
+                                                   store={constants.MEMBER: member,
+                                                          constants.LISTENERS:
+                                                          listeners,
+                                                          constants.LOADBALANCER:
+                                                          load_balancer,
+                                                          constants.POOL: pool})
         else:
             create_member_tf = self._taskflow_load(self._member_flows.
-                                                get_create_member_flow(topology=topology),
-                                                store={constants.MEMBER: member,
-                                                        constants.LISTENERS:
-                                                            listeners,
-                                                        constants.LOADBALANCER:
-                                                            load_balancer,
-                                                        constants.POOL: pool})
-
+                                                   get_create_member_flow(topology=topology),
+                                                   store={constants.MEMBER: member,
+                                                          constants.LISTENERS:
+                                                          listeners,
+                                                          constants.LOADBALANCER:
+                                                          load_balancer,
+                                                          constants.POOL: pool})
 
         with tf_logging.DynamicLoggingListener(create_member_tf,
                                                log=LOG):
             create_member_tf.run()
-
-
 
     def delete_member(self, member_id):
         """Deletes a pool member.
@@ -479,8 +466,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(delete_member_tf,
                                                log=LOG):
             delete_member_tf.run()
-
-
 
     def batch_update_members(self, old_member_ids, new_member_ids,
                              updated_members):
@@ -529,7 +514,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(create_pool_tf,
                                                log=LOG):
             create_pool_tf.run()
-
 
     def delete_pool(self, pool_id):
         """Deletes a node pool.
@@ -590,7 +574,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(create_l7policy_tf,
                                                log=LOG):
             create_l7policy_tf.run()
-
 
     def delete_l7policy(self, l7policy_id):
         """Deletes an L7 policy.
@@ -676,7 +659,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                log=LOG):
             delete_l7rule_tf.run()
 
-
     def update_l7rule(self, l7rule_id, l7rule_updates):
         """Updates an L7 rule.
 
@@ -732,39 +714,3 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             operator_fault_string='This provider does not support rotating '
                                   'Amphora certs. We will use preconfigured '
                                   'devices.')
-
-    def validate(self, vthunder_conf):
-
-        '''project_id = rack_conf["device_list1"][0][i]["project_id"]
-        ip_address = rack_conf["device_list1"][0][i]["ip_address"]
-        undercloud = rack_conf["device_list1"][0][i]["undercloud"]'''
-        project_id = vthunder_conf.project_id
-        username = vthunder_conf.username
-        password = vthunder_conf.password
-        axapi_version = vthunder_conf.axapi_version
-        ip_address = vthunder_conf.ip_address
-        ip_validator = self.is_valid_ipv4_address(ip_address)
-
-        if project_id is not None and ip_address is not None and username is not None and password is not None and axapi_version is not None:
-            if ip_validator:
-                return True
-            else:
-                return False
-        '''
-        return
-        #all(x != None for x in l.values())'''
-
-    def is_valid_ipv4_address(self, address):
-        try:
-            socket.inet_pton(socket.AF_INET, address)
-        except AttributeError:  # no inet_pton here, sorry
-            try:
-                socket.inet_aton(address)
-            except socket.error:
-                return False
-            return address.count('.') == 3
-        except socket.error:  # not a valid address
-            return False
-
-        return True
-                                                   

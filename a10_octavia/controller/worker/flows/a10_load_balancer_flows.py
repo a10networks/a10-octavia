@@ -158,27 +158,27 @@ class LoadBalancerFlows(object):
         """
 
         sf_name = prefix + '-' + constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
-        post_create_LB_flow = linear_flow.Flow(sf_name)
-        post_create_LB_flow.add(
+        post_create_lb_flow = linear_flow.Flow(sf_name)
+        post_create_lb_flow.add(
             database_tasks.ReloadLoadBalancer(
                 name=sf_name + '-' + constants.RELOAD_LB_AFTER_AMP_ASSOC,
                 requires=constants.LOADBALANCER_ID,
                 provides=constants.LOADBALANCER))
         #IMP: here we will inject network flow
-        new_LB_net_subflow = self.get_new_LB_networking_subflow(topology)
-        post_create_LB_flow.add(new_LB_net_subflow)
+        new_lb_net_subflow = self.get_new_LB_networking_subflow(topology)
+        post_create_lb_flow.add(new_lb_net_subflow)
 
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             vrrp_subflow = self.vthunder_flows.get_vrrp_subflow(prefix)
-            post_create_LB_flow.add(vrrp_subflow)
+            post_create_lb_flow.add(vrrp_subflow)
 
-        post_create_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
+        post_create_lb_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         if mark_active:
-            post_create_LB_flow.add(database_tasks.MarkLBActiveInDB(
+            post_create_lb_flow.add(database_tasks.MarkLBActiveInDB(
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
                 requires=constants.LOADBALANCER))
-        return post_create_LB_flow
+        return post_create_lb_flow
 
     def get_delete_load_balancer_flow(self, lb, deleteCompute):
         """Creates a flow to delete a load balancer.

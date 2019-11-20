@@ -46,6 +46,7 @@ class BaseDatabaseTask(task.Task):
         self.repos = repo.Repositories()
         self.vthunder_repo = a10_repo.VThunderRepository()
         self.amphora_repo = repo.AmphoraRepository()
+        self.a10_conf = a10_config.A10Config()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -61,8 +62,7 @@ class CreteVthunderEntry(BaseDatabaseTask):
     """ Create VThunder device entry in DB"""
     def execute(self, amphora, loadbalancer, role):
         vthunder_id = uuidutils.generate_uuid()
-        a10_conf =a10_config.A10Config()
-        self.config = a10_conf.get_conf()
+        self.config = self.a10_conf.get_conf()
 
         username = self.config.get('DEFAULT','DEFAULT_VTHUNDER_USERNAME').replace('"', '')
         password = self.config.get('DEFAULT','DEFAULT_VTHUNDER_PASSWORD').replace('"', '')
@@ -175,8 +175,7 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
     def execute(self, loadbalancer, vthunder_config):
         vthunder_conf = vthunder_config
         vthunder_id = uuidutils.generate_uuid()
-        a10_conf =a10_config.A10Config()
-        self.config = a10_conf.get_conf()
+        self.config = self.a10_conf.get_conf()
 
         project_id = vthunder_conf.project_id
         ip_address = vthunder_conf.ip_address

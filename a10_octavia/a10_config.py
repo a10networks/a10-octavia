@@ -55,6 +55,7 @@ class ConfigModule(object):
         d = dict()
         return ConfigModule(d, provider=provider)
 
+
 class A10Config(object):
 
     def __init__(self, config_dir=None, config=None, provider=None):
@@ -77,14 +78,18 @@ class A10Config(object):
             self._conf = ini.ConfigParser(defaults=DEFAULT)
             self._config = blank_config
 
-        if self._conf.has_option("RACK_VTHUNDER","devices") and self._conf.has_section("RACK_VTHUNDER"):
+        self._config.octavia_conf_dir = '/etc/octavia/'
+        self._load_config()
+
+    def get_rack_dict(self):
+        rack_dict = {}
+        if self._conf.has_section("RACK_VTHUNDER") and self._conf.has_option("RACK_VTHUNDER", "devices"):
             project_conf = self._conf.get('RACK_VTHUNDER', 'devices')
             rack_conf = ast.literal_eval(project_conf.strip('"'))
-            self.rack_dict = {}
-            self.validation_flag = False
+            validation_flag = False
             try:
                 for i in range(len(rack_conf["device_list"])):
-		    project_id = rack_conf["device_list"][i]["project_id"]
+                    project_id = rack_conf["device_list"][i]["project_id"]
                     ip_address = rack_conf["device_list"][i]["ip_address"]
                     undercloud = bool(rack_conf["device_list"][i]["undercloud"])
                     username = rack_conf["device_list"][i]["username"]
@@ -107,15 +112,16 @@ class A10Config(object):
                                                              password=password,
                                                              device_name=device_name,
                                                              axapi_version=axapi_version)
-                        self.rack_dict[project_id] = vthunder_conf
+                        rack_dict[project_id] = vthunder_conf
                     else:
                         LOG.warning('Invalid definition of rack device for'
-                                     'project ' + project_id)
-            except KeyError as e:
-                LOG.error("Invalid definition of rack device in config." + str(e))
+                                    'project ' + project_id)
 
-        self._config.octavia_conf_dir = '/etc/octavia/'
-        self._load_config()
+            except KeyError as e:
+                LOG.error("Invalid definition of rack device in A10 config file."
+                          "The Loadbalancer you create shall boot as overcloud."
+                          "Check attribute: " + str(e))
+        return rack_dict
 
     def get_conf(self):
         return self._conf
@@ -168,7 +174,6 @@ class A10Config(object):
                 return n.get(section, option)
             except (ini.NoSectionError, ini.NoOptionError):
                 pass
-        
         else:
             raise Exception('FatalError: Octavia config directoty could not be found.')
             LOG.error("A10Config could not find %s", self._config_path)
@@ -185,10 +190,11 @@ class A10Config(object):
     def get(self, key):
         return getattr(self._config, key)
 
-    def validate(self, project_id, ip_address, username, password, axapi_version, undercloud, device_name, role, topology):
+    def validate(self, project_id, ip_address, username, password,
+                 axapi_version, undercloud, device_name, role, topology):
         ip_validator = self.is_valid_ipv4_address(ip_address)
         if(project_id is not None and ip_address is not None and username is not None
-               and password is not None and axapi_version is not None):
+           and password is not None and axapi_version is not None):
             if ip_validator:
                 return True
             else:
