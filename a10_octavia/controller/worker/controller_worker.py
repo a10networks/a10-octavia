@@ -74,6 +74,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._l7rule_flows = a10_l7rule_flows.L7RuleFlows()
         self._vthunder_repo = a10repo.VThunderRepository() 
         self._exclude_result_logging_tasks = ()
+        self.a10_conf = a10_config.A10Config()
         super(A10ControllerWorker, self).__init__()    
 
     def create_amphora(self):
@@ -200,8 +201,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        a10_conf = a10_config.A10Config()
-        self.config = a10_conf.get_conf()
 
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
@@ -212,18 +211,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         load_balancer = listener.load_balancer
 
-        project_id = None
-        if self.config.has_option("RACK_VTHUNDER","devices") and self.config.has_section("RACK_VTHUNDER"):
-            project_conf = self.config.get('RACK_VTHUNDER', 'devices')
-            rack_conf = eval(project_conf.strip('"'))
-            for i in range(len((rack_conf["device_list"]))):
-                project_id = rack_conf["device_list"][i]["project_id"]
-                if  project_id == listener.project_id:
-                    break
-
-        if project_id is not None:
+        if listener.project_id in self.a10_conf.rack_dict:
             create_listener_tf = self._taskflow_load(self._listener_flows.
-                                                     get_rack_vthunder_create_listener_flow(project_id),
+                                                     get_rack_vthunder_create_listener_flow(listener.project_id),
                                                      store={constants.LOADBALANCER:
                                                             load_balancer,
                                                             constants.LISTENERS:
@@ -249,22 +239,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises ListenerNotFound: The referenced listener was not found
         """
-        a10_conf = a10_config.A10Config()
-        self.config = a10_conf.get_conf()
 
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
         load_balancer = listener.load_balancer
-        project_id = None
-        if self.config.has_option("RACK_VTHUNDER","devices") and self.config.has_section("RACK_VTHUNDER"):
-            project_conf = self.config.get('RACK_VTHUNDER', 'devices')
-            rack_conf = eval(project_conf.strip('"'))
-            for i in range(len((rack_conf["device_list"]))):
-                project_id = rack_conf["device_list"][i]["project_id"]
-                if  project_id == listener.project_id:
-                    break
-
-        if project_id is not None:
+        if listener.project_id in self.a10_conf.rack_dict:
             delete_listener_tf = self._taskflow_load(
                 self._listener_flows.get_delete_rack_listener_flow(),
                 store={constants.LOADBALANCER: load_balancer,
@@ -334,8 +313,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        a10_conf = a10_config.A10Config()
-        self.config = a10_conf.get_conf()
         lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
         if not lb:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
@@ -354,37 +331,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         store[constants.UPDATE_DICT] = {
             constants.LOADBALANCER_TOPOLOGY: topology
         }
-        validation_flag=False
-        flag=False
-        if self.config.has_option("RACK_VTHUNDER","devices") and self.config.has_section("RACK_VTHUNDER"):
-            project_conf = self.config.get('RACK_VTHUNDER', 'devices')
-            rack_conf = eval(project_conf.strip('"'))
-            for i in range(len((rack_conf["device_list"]))):
-                project_id = rack_conf["device_list"][i]["project_id"]
-                if  project_id == lb.project_id:
-                    flag=True
-                    ip_address = rack_conf["device_list"][i]["ip_address"]
-                    undercloud = bool(rack_conf["device_list"][i]["undercloud"])
-                    username = rack_conf["device_list"][i]["username"]
-                    password = rack_conf["device_list"][i]["password"]
-                    device_name = rack_conf["device_list"][i]["device_name"]
-                    axapi_version = rack_conf["device_list"][i]["axapi_version"]
-                    role = rack_conf["device_list"][i]["role"]
-                    topology = rack_conf["device_list"][i]["topology"]
-                    vthunder_conf = data_models.VThunder(project_id=project_id, ip_address=ip_address, undercloud=undercloud, 
-                                                         username=username, role=role, topology=topology,
-                                                         password=password,device_name=device_name, axapi_version=axapi_version)
-                    validation_flag = self.validate(vthunder_conf)
-                    break
 
-        if flag:
-            if validation_flag:
-                LOG.info("A10ControllerWorker.create_load_balancer fetched project_id : %s from config file for Rack Vthunder" % (project_id))
-                create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
-                    vthunder_conf=vthunder_conf, topology=topology, listeners=lb.listeners)
-                create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
-            else:
-                LOG.info("Validations Failed")
+        if lb.project_id in self.a10_conf.rack_dict:
+            LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'
+                     'from config file for Rack Vthunder' % (lb.project_id))
+            create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
+                     vthunder_conf=self.a10_conf.rack_dict[lb.project_id], topology=topology, listeners=lb.listeners)
+            create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
         else:
             create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
                 topology=topology, listeners=lb.listeners)
@@ -444,7 +397,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises LBNotFound: The referenced load balancer was not found
         """
-        LOG.info("A10ControllerWorker.update_load_balancer called. self: %s load_balancer_id: %s load_balancer_updates: %s" % (self.__dict__, load_balancer_id, load_balancer_updates))
 
         try:
             #r = self.c.slb.virtual_server.update(load_balancer_id, lb.vip.ip_address)
@@ -468,8 +420,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :raises NoSuitablePool: Unable to find the node pool
         """
 
-        a10_conf = a10_config.A10Config()
-        self.config = a10_conf.get_conf()
 
         member = self._member_repo.get(db_apis.get_session(),
                                        id=member_id)
@@ -483,16 +433,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = pool.load_balancer
 
         topology = CONF.controller_worker.loadbalancer_topology
-        project_id = None
-        if self.config.has_option("RACK_VTHUNDER","devices") and self.config.has_section("RACK_VTHUNDER"):
-            project_conf = self.config.get('RACK_VTHUNDER', 'devices')
-            rack_conf = eval(project_conf.strip('"'))
-            for i in range(len((rack_conf["device_list"]))):
-                project_id = rack_conf["device_list"][i]["project_id"]
-                if  project_id == member.project_id:
-                    break
-
-        if project_id is not None:
+        if member.project_id in self.a10_conf.rack_dict:
             create_member_tf = self._taskflow_load(self._member_flows.get_rack_vthunder_create_member_flow(),
                                                 store={constants.MEMBER: member,
                                                         constants.LISTENERS:

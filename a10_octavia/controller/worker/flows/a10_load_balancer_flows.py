@@ -324,19 +324,19 @@ class LoadBalancerFlows(object):
         """Reload the loadbalancer and update loadbalancer in database."""
 
         sf_name = prefix + '-' + constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
-        post_create_LB_flow = linear_flow.Flow(sf_name)
-        post_create_LB_flow.add(
+        post_create_lb_flow = linear_flow.Flow(sf_name)
+        post_create_lb_flow.add(
             database_tasks.ReloadLoadBalancer(
                 name=sf_name + '-' + constants.RELOAD_LB_AFTER_AMP_ASSOC,
                 requires=constants.LOADBALANCER_ID,
                 provides=constants.LOADBALANCER))
 
-        post_create_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
+        post_create_lb_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         if mark_active:
-            post_create_LB_flow.add(database_tasks.MarkLBActiveInDB(
+            post_create_lb_flow.add(database_tasks.MarkLBActiveInDB(
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
                 requires=constants.LOADBALANCER))
-        return post_create_LB_flow
+        return post_create_lb_flow
 
 

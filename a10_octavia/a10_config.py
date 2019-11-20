@@ -15,6 +15,8 @@
 import os
 import sys
 import runpy
+import socket
+import ast
 from oslo_log import log as logging
 
 # This is ConfigParser pre-Python3
@@ -27,6 +29,8 @@ from debtcollector import removals
 from a10_octavia.etc import config as blank_config
 from a10_octavia.etc import defaults
 from a10_octavia.common.defaults import DEFAULT
+from a10_octavia.common import data_models
+from octavia.db import repositories as repo
 
 LOG = logging.getLogger(__name__)
 
@@ -54,7 +58,6 @@ class ConfigModule(object):
 class A10Config(object):
 
     def __init__(self, config_dir=None, config=None, provider=None):
-        #import rpdb; rpdb.Rpdb().set_trace()
         if config is not None:
             self._config = config
             self._load_config()
@@ -73,6 +76,43 @@ class A10Config(object):
             LOG.error("A10Config could not find %s", self._config_path)
             self._conf = ini.ConfigParser(defaults=DEFAULT)
             self._config = blank_config
+
+        if self._conf.has_option("RACK_VTHUNDER","devices") and self._conf.has_section("RACK_VTHUNDER"):
+            project_conf = self._conf.get('RACK_VTHUNDER', 'devices')
+            rack_conf = ast.literal_eval(project_conf.strip('"'))
+            self.rack_dict = {}
+            self.validation_flag = False
+            try:
+                for i in range(len(rack_conf["device_list"])):
+		    project_id = rack_conf["device_list"][i]["project_id"]
+                    ip_address = rack_conf["device_list"][i]["ip_address"]
+                    undercloud = bool(rack_conf["device_list"][i]["undercloud"])
+                    username = rack_conf["device_list"][i]["username"]
+                    password = rack_conf["device_list"][i]["password"]
+                    device_name = rack_conf["device_list"][i]["device_name"]
+                    axapi_version = rack_conf["device_list"][i]["axapi_version"]
+                    role = rack_conf["device_list"][i]["role"]
+                    topology = rack_conf["device_list"][i]["topology"]
+                    validation_flag = self.validate(project_id, ip_address, username,
+                                                    password, axapi_version,
+                                                    undercloud, device_name,
+                                                    role, topology)
+
+                    if validation_flag:
+                        vthunder_conf = data_models.VThunder(project_id=project_id,
+                                                             ip_address=ip_address,
+                                                             undercloud=undercloud,
+                                                             username=username, role=role,
+                                                             topology=topology,
+                                                             password=password,
+                                                             device_name=device_name,
+                                                             axapi_version=axapi_version)
+                        self.rack_dict[project_id] = vthunder_conf
+                    else:
+                        LOG.warning('Invalid definition of rack device for'
+                                     'project ' + project_id)
+            except KeyError as e:
+                LOG.error("Invalid definition of rack device in config." + str(e))
 
         self._config.octavia_conf_dir = '/etc/octavia/'
         self._load_config()
@@ -145,3 +185,25 @@ class A10Config(object):
     def get(self, key):
         return getattr(self._config, key)
 
+    def validate(self, project_id, ip_address, username, password, axapi_version, undercloud, device_name, role, topology):
+        ip_validator = self.is_valid_ipv4_address(ip_address)
+        if(project_id is not None and ip_address is not None and username is not None
+               and password is not None and axapi_version is not None):
+            if ip_validator:
+                return True
+            else:
+                return False
+
+    def is_valid_ipv4_address(self, address):
+        try:
+            socket.inet_pton(socket.AF_INET, address)
+        except AttributeError:
+            try:
+                socket.inet_aton(address)
+            except socket.error:
+                return False
+            return address.count('.') == 3
+        except socket.error:
+            return False
+
+        return True
