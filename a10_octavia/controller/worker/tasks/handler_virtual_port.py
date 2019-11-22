@@ -38,12 +38,7 @@ class ListenersCreate(BaseVThunderTask):
     """Task to update amphora with all specified listeners' configurations."""
     def execute(self, loadbalancer, listeners, vthunder):
         """Execute updates per listener for an amphora."""
-        ipinip = self.readConf('LISTENER','ipinip')
-        if ipinip is not None:
-            ipinip=json.loads(ipinip.lower())
-        else:
-            ipinip=False 
-
+        ipinip = bool(self.readConf('LISTENER','ipinip'))
         no_dest_nat = self.readConf('LISTENER','no_dest_nat')
         if no_dest_nat is not None:
             no_dest_nat=json.loads(no_dest_nat.lower())
