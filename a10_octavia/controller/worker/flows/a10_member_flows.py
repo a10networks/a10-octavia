@@ -40,6 +40,12 @@ try:
 except (ImportError, AttributeError):
     pass
 
+from a10_octavia.controller.worker.tasks import vthunder_tasks
+from a10_octavia.controller.worker.tasks import handler_server
+from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.controller.worker.tasks import a10_network_tasks
+from a10_octavia.common import a10constants
+
 
 class MemberFlows(object):
 
@@ -61,6 +67,7 @@ class MemberFlows(object):
             provides=constants.DELTAS))
         create_member_flow.add(a10_network_tasks.HandleNetworkDeltas(
             requires=constants.DELTAS, provides=constants.ADDED_PORTS))
+        # Get VThunder details from database
         create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
@@ -121,6 +128,7 @@ class MemberFlows(object):
                                                          constants.MEMBER}))
         delete_member_flow.add(database_tasks.DeleteMemberInDB(
             requires=constants.MEMBER))
+        # Get VThunder details from database
         delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
