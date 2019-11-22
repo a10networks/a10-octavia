@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import logging
 from oslo_config import cfg
 from taskflow.patterns import graph_flow
@@ -52,7 +53,8 @@ class VThunderFlows(object):
 
         :returns: The flow for creating the amphora
         """
-        create_vthunder_flow = linear_flow.Flow(constants.CREATE_AMPHORA_FLOW)
+        create_vthunder_flow = linear_flow.Flow(
+            constants.CREATE_AMPHORA_FLOW)
         create_vthunder_flow.add(a10_database_tasks.CreateVThunderInDB(
             provides=constants.AMPHORA_ID))
 
