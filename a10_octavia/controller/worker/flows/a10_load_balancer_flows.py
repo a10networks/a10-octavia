@@ -88,6 +88,7 @@ class LoadBalancerFlows(object):
                       topology)
             raise exceptions.InvalidTopology(topology=topology)
 
+        LOG.info("printing vthunder info" + str())
         # IMP: Now creating vThunder config here
         post_amp_prefix = constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
         lb_create_flow.add(
