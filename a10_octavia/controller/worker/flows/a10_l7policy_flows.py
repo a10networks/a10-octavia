@@ -98,7 +98,6 @@ class L7PolicyFlows(object):
 
     def get_update_l7policy_flow(self):
         """Create a flow to update an L7 policy
-
         :returns: The flow for updating an L7 policy
         """
         update_l7policy_flow = linear_flow.Flow(constants.UPDATE_L7POLICY_FLOW)
@@ -108,8 +107,14 @@ class L7PolicyFlows(object):
                       constants.LOADBALANCER]))
         update_l7policy_flow.add(database_tasks.MarkL7PolicyPendingUpdateInDB(
             requires=constants.L7POLICY))
-        update_l7policy_flow.add(amphora_driver_tasks.ListenersUpdate(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        #update_l7policy_flow.add(amphora_driver_tasks.ListenersUpdate(
+        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        update_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        update_l7policy_flow.add(handler_l7policy.UpdateL7Policy(
+            requires=[constants.L7POLICY, a10constants.VTHUNDER]))
+
         update_l7policy_flow.add(database_tasks.UpdateL7PolicyInDB(
             requires=[constants.L7POLICY, constants.UPDATE_DICT]))
         update_l7policy_flow.add(database_tasks.MarkL7PolicyActiveInDB(

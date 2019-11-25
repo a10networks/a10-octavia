@@ -171,8 +171,13 @@ class MemberFlows(object):
                       constants.POOL]))
         update_member_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
             requires=constants.MEMBER))
-        update_member_flow.add(amphora_driver_tasks.ListenersUpdate(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        #update_member_flow.add(amphora_driver_tasks.ListenersUpdate(
+        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        update_member_flow.add(handler_server.MemberUpdate(
+            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
         update_member_flow.add(database_tasks.UpdateMemberInDB(
             requires=[constants.MEMBER, constants.UPDATE_DICT]))
         update_member_flow.add(database_tasks.MarkMemberActiveInDB(

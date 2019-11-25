@@ -46,6 +46,10 @@ import acos_client
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+RETRY_ATTEMPTS = 15
+RETRY_INITIAL_DELAY = 1
+RETRY_BACKOFF = 1
+RETRY_MAX = 5
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -191,7 +195,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(update_hm_tf,
                                                log=LOG):
             update_hm_tf.run()
-
+  
     def create_listener(self, listener_id):
         """Creates a listener.
 
@@ -247,7 +251,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises ListenerNotFound: The referenced listener was not found
         """
-        '''listener = None
+        listener = None
         try:
             listener = self._get_db_obj_until_pending_update(
                 self._listener_repo, listener_id)
@@ -280,12 +284,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
 
-
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support updating '
-                              'listeners yet',
-            operator_fault_string='This provider does not support updating '
-                                  'listeners yet')'''
 
     def create_load_balancer(self, load_balancer_id):
         """Creates a load balancer by allocating Amphorae.
@@ -361,7 +359,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         #LOG.info("vThunder response: %s" % (r))
         #LOG.info("Updating db with this status: %s" % (status))
         #self._octavia_driver_db.update_loadbalancer_status(status)
-
+  
     def update_load_balancer(self, load_balancer_id, load_balancer_updates):
         """Updates a load balancer.
 
@@ -370,20 +368,38 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises LBNotFound: The referenced load balancer was not found
         """
-        LOG.info("A10ControllerWorker.update_load_balancer called. self: %s load_balancer_id: %s load_balancer_updates: %s" % (self.__dict__, load_balancer_id, load_balancer_updates))
 
+        lb = None
         try:
-            #r = self.c.slb.virtual_server.update(load_balancer_id, lb.vip.ip_address)
-            status = { 'loadbalancers': [{"id": load_balancer_id,
-                       "provisioning_status": constants.ACTIVE }]}
-        except Exception as e:
-            r = str(e)
-            status = { 'loadbalancers': [{"id": load_balancer_id,
-                       "provisioning_status": constants.ERROR }]}
-        LOG.info("Updating db with this status: %s" % (status))
-        lb.update(db_apis.get_session(), load_balancer_id,
-                                      **load_balancer_updates)
+            lb = self._get_db_obj_until_pending_update(
+                self._lb_repo, load_balancer_id)
+        except tenacity.RetryError as e:
+            LOG.warning('Load balancer did not go into %s in 60 seconds. '
+                        'This either due to an in-progress Octavia upgrade '
+                        'or an overloaded and failing database. Assuming '
+                        'an upgrade is in progress and continuing.',
+                        constants.PENDING_UPDATE)
+            lb = e.last_attempt.result()
 
+        listeners, _ = self._listener_repo.get_all(
+            db_apis.get_session(),
+            load_balancer_id=load_balancer_id)
+
+        update_lb_tf = self._taskflow_load(
+            self._lb_flows.get_update_load_balancer_flow(),
+            store={constants.LOADBALANCER: lb,
+                   constants.LISTENERS: listeners,
+                   constants.UPDATE_DICT: load_balancer_updates})
+
+        with tf_logging.DynamicLoggingListener(update_lb_tf,
+                                               log=LOG):
+            update_lb_tf.run()
+
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
+        wait=tenacity.wait_incrementing(
+            RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
+        stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
 
 
     def create_member(self, member_id):
@@ -459,11 +475,44 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises MemberNotFound: The referenced member was not found
         """
+        member = None
+        try:
+            member = self._get_db_obj_until_pending_update(
+                self._member_repo, member_id)
+        except tenacity.RetryError as e:
+            LOG.warning('Member did not go into %s in 60 seconds. '
+                        'This either due to an in-progress Octavia upgrade '
+                        'or an overloaded and failing database. Assuming '
+                        'an upgrade is in progress and continuing.',
+                        constants.PENDING_UPDATE)
+            member = e.last_attempt.result()
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support members yet',
-            operator_fault_string='This provider does not support members yet')
+        pool = member.pool
+        listeners = pool.listeners
+        load_balancer = pool.load_balancer
 
+        update_member_tf = self._taskflow_load(self._member_flows.
+                                               get_update_member_flow(),
+                                               store={constants.MEMBER: member,
+                                                      constants.LISTENERS:
+                                                          listeners,
+                                                      constants.LOADBALANCER:
+                                                          load_balancer,
+                                                      constants.POOL:
+                                                          pool,
+                                                      constants.UPDATE_DICT:
+                                                          member_updates})
+        with tf_logging.DynamicLoggingListener(update_member_tf,
+                                               log=LOG):
+            update_member_tf.run()
+
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
+        wait=tenacity.wait_incrementing(
+            RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
+        stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
+
+    
     def create_pool(self, pool_id):
         """Creates a node pool.
 
@@ -523,9 +572,40 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :raises PoolNotFound: The referenced pool was not found
         """
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support pools yet',
-            operator_fault_string='This provider does not support pools yet')
+        pool = None
+        try:
+            pool = self._get_db_obj_until_pending_update(
+                self._pool_repo, pool_id)
+        except tenacity.RetryError as e:
+            LOG.warning('Pool did not go into %s in 60 seconds. '
+                        'This either due to an in-progress Octavia upgrade '
+                        'or an overloaded and failing database. Assuming '
+                        'an upgrade is in progress and continuing.',
+                        constants.PENDING_UPDATE)
+            pool = e.last_attempt.result()
+
+        listeners = pool.listeners
+        load_balancer = pool.load_balancer
+
+        update_pool_tf = self._taskflow_load(self._pool_flows.
+                                             get_update_pool_flow(),
+                                             store={constants.POOL: pool,
+                                                    constants.LISTENERS:
+                                                        listeners,
+                                                    constants.LOADBALANCER:
+                                                        load_balancer,
+                                                    constants.UPDATE_DICT:
+                                                        pool_updates})
+        with tf_logging.DynamicLoggingListener(update_pool_tf,
+                                               log=LOG):
+            update_pool_tf.run()
+
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
+        wait=tenacity.wait_incrementing(
+            RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
+        stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
+
 
     def create_l7policy(self, l7policy_id):
         """Creates an L7 Policy.
@@ -584,9 +664,37 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :raises L7PolicyNotFound: The referenced l7policy was not found
         """
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support L7 yet',
-            operator_fault_string='This provider does not support L7 yet')
+        l7policy = None
+        try:
+            l7policy = self._get_db_obj_until_pending_update(
+                self._l7policy_repo, l7policy_id)
+        except tenacity.RetryError as e:
+            LOG.warning('L7 policy did not go into %s in 60 seconds. '
+                        'This either due to an in-progress Octavia upgrade '
+                        'or an overloaded and failing database. Assuming '
+                        'an upgrade is in progress and continuing.',
+                        constants.PENDING_UPDATE)
+            l7policy = e.last_attempt.result()
+
+        listeners = [l7policy.listener]
+        load_balancer = l7policy.listener.load_balancer
+
+        update_l7policy_tf = self._taskflow_load(
+            self._l7policy_flows.get_update_l7policy_flow(),
+            store={constants.L7POLICY: l7policy,
+                   constants.LISTENERS: listeners,
+                   constants.LOADBALANCER: load_balancer,
+                   constants.UPDATE_DICT: l7policy_updates})
+        with tf_logging.DynamicLoggingListener(update_l7policy_tf,
+                                               log=LOG):
+            update_l7policy_tf.run()
+
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
+        wait=tenacity.wait_incrementing(
+            RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
+        stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
+
 
     def create_l7rule(self, l7rule_id):
         """Creates an L7 Rule.
@@ -647,18 +755,41 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises L7RuleNotFound: The referenced l7rule was not found
         """
+        l7rule = None
+        try:
+            l7rule = self._get_db_obj_until_pending_update(
+                self._l7rule_repo, l7rule_id)
+        except tenacity.RetryError as e:
+            LOG.warning('L7 rule did not go into %s in 60 seconds. '
+                        'This either due to an in-progress Octavia upgrade '
+                        'or an overloaded and failing database. Assuming '
+                        'an upgrade is in progress and continuing.',
+                        constants.PENDING_UPDATE)
+            l7rule = e.last_attempt.result()
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support L7 yet',
-            operator_fault_string='This provider does not support L7 yet')
+        l7policy = l7rule.l7policy
+        listeners = [l7policy.listener]
+        load_balancer = l7policy.listener.load_balancer
 
+        update_l7rule_tf = self._taskflow_load(
+            self._l7rule_flows.get_update_l7rule_flow(),
+            store={constants.L7RULE: l7rule,
+                   constants.L7POLICY: l7policy,
+                   constants.LISTENERS: listeners,
+                   constants.LOADBALANCER: load_balancer,
+                   constants.UPDATE_DICT: l7rule_updates})
+        with tf_logging.DynamicLoggingListener(update_l7rule_tf,
+                                               log=LOG):
+            update_l7rule_tf.run()
+
+ 
     def failover_amphora(self, amphora_id):
         """Perform failover operations for an amphora.
 
         :param amphora_id: ID for amphora to failover
         :returns: None
         :raises AmphoraNotFound: The referenced amphora was not found
-        """
+`        """
 
         raise exceptions.NotImplementedError(
             user_fault_string='This provider does not support Amphora '
@@ -694,3 +825,5 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             operator_fault_string='This provider does not support rotating '
                                   'Amphora certs. We will use preconfigured '
                                   'devices.')
+    def _get_db_obj_until_pending_update(self, repo, id):
+        return repo.get(db_apis.get_session(), id=id)

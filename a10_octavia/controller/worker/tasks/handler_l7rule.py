@@ -143,7 +143,56 @@ class DeleteL7Rule (BaseVThunderTask):
             print(str(e))
             LOG.info("Error occurred")
 
+class UpdateL7Rule(BaseVThunderTask):
+    """ Task to create a healthmonitor and associate it with provided pool. """
 
+    def execute(self, l7rule, listeners, vthunder):
+        """ Execute create health monitor for amphora """
+        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+        try:
+            l7policy = l7rule.l7policy
+            filename = l7policy.id
+            action = "import"
+            p = PolicyUtil()
+            script = p.createPolicy(l7policy)
+            size = len(script.encode('utf-8'))
+            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
+                                       vthunder.password)
+            out = c.slb.aflex_policy.create(file=filename, script=script, size=size, action=action)
+            LOG.info("aFlex policy created successfully.")
+        except Exception as e:
+            print(str(e))
+            LOG.info("Error occurred")
+        try:
+            # get SLB vPort
+            listener = listeners[0]
 
+            new_listener = listeners[0]
+            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
+                                       vthunder.password)
+            get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
+                                                listener.protocol, listener.protocol_port)
 
+            aflex_scripts = []
+            if 'aflex-scripts' in get_listener['port']:
+                aflex_scripts = get_listener['port']['aflex-scripts']
+                aflex_scripts.append({"aflex": filename})
+            else:
+                aflex_scripts = [{"aflex": filename}]
 
+            persistence = persist.PersistHandler(
+            c, listener.default_pool)
+ 
+            s_pers = persistence.s_persistence()
+            c_pers = persistence.c_persistence()
+
+            kargs = {}
+            kargs["aflex-scripts"] = aflex_scripts
+
+            update_listener = c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
+                                                                listener.protocol, listener.protocol_port, listener.default_pool_id,
+                                                                s_pers, c_pers, 1, **kargs)
+            LOG.info("Listener updated successfully.")
+        except Exception as e:
+            print(str(e))
+            LOG.info("Error occurred")

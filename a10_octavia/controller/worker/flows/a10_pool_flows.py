@@ -149,7 +149,14 @@ class PoolFlows(object):
                       constants.LOADBALANCER]))
         update_pool_flow.add(database_tasks.MarkPoolPendingUpdateInDB(
             requires=constants.POOL))
-        update_pool_flow.add(amphora_driver_tasks.ListenersUpdate(
+        #update_pool_flow.add(amphora_driver_tasks.ListenersUpdate(
+        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        update_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        update_pool_flow.add(handler_service_group.PoolUpdate(
+            requires=[constants.POOL, a10constants.VTHUNDER]))
+        update_pool_flow.add(handler_virtual_port.ListenersUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_pool_flow.add(database_tasks.UpdatePoolInDB(
             requires=[constants.POOL, constants.UPDATE_DICT]))
@@ -159,3 +166,4 @@ class PoolFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
 
         return update_pool_flow
+

@@ -66,3 +66,29 @@ class PoolDelete(BaseVThunderTask):
         except Exception as e:
             print(str(e))
             LOG.info("Error occurred")
+
+
+class PoolUpdate(BaseVThunderTask):
+
+    def execute(self, pool, vthunder):
+        """Execute update pool for an amphora."""
+        args = {'service_group': self.meta(pool, 'service_group', {})}
+        try:
+           conf_templates = self.readConf('SERVICE_GROUP','templates').strip('"')
+           service_group_temp = {}
+           service_group_temp['template-server'] = conf_templates
+        except:
+           service_group_temp = None
+
+        try:
+            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+            c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
+                                       vthunder.password)
+            lb_method=openstack_mappings.service_group_lb_method(c,pool.lb_algorithm)
+            out = c.slb.service_group.update(pool.id, pool.protocol, lb_method,
+                                             service_group_temp, axapi_args=args)
+            LOG.info("Pool updated successfully.")
+        except Exception as e:
+            print(str(e))
+            LOG.info("Error occurred")
+

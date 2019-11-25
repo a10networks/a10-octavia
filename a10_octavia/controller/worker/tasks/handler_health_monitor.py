@@ -87,3 +87,31 @@ class DeleteHealthMonitor(BaseVThunderTask):
             LOG.info("Health Monitor deleted successfully.")
         except Exception as e:
             print(str(e))
+
+class UpdateHealthMonitor(BaseVThunderTask):
+
+     def execute(self, health_mon, vthunder):
+        """ Execute create health monitor for amphora """
+        # TODO : Length of name of healthmonitor for older vThunder devices
+        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+        try:
+            method = None
+            url = None
+            expect_code = None
+            port = None
+            update=True
+            if health_mon.type in ['HTTP', 'HTTPS']:
+                method = health_mon.http_method
+                url = health_mon.url_path
+                expect_code = health_mon.expected_codes
+            client = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username,
+                                       vthunder.password)
+            out = client.slb.hm.create(health_mon.id[0:5], openstack_mappings.hm_type(client, health_mon.type),
+                                         health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
+                                         method=method, url=url, expect_code=expect_code, port=port, update=update
+                                         )
+            LOG.info("Heath Monitor created successfully.")
+        except Exception as e:
+            print(str(e))
+            LOG.info("Error occurred")
+

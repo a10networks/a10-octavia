@@ -87,7 +87,7 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
         try:
             
             LOG.info("Attempting to connect vThunder device for connection.")
-            attempts = 20
+            attempts = 30
             while attempts >= 0:
                 try:
                     attempts = attempts - 1
@@ -96,13 +96,13 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
                     LOG.info(str(amp_info))
                     break
                 except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
-                    attemptid = 21 - attempts
+                    attemptid = 31 - attempts
                     time.sleep(20)
                     LOG.info("VThunder connection attempt - "+ str(attemptid))
                     pass
             if attempts < 0:
                LOG.error("Failed to connect vThunder in expected amount of boot time.")
-               raise ConnectionError
+               #raise ConnectionError
             
         except driver_except.TimeOutException:
             LOG.error("Amphora compute instance failed to become reachable. "
@@ -119,7 +119,6 @@ class AmphoraePostVIPPlug(BaseVThunderTask):
     def execute(self, loadbalancer, vthunder):
         """Execute get_info routine for a vThunder until it responds."""
         try:
-            #import rpdb; rpdb.set_trace()
             c = self.client_factory(vthunder)
             save_config = c.system.action.write_memory()
             amp_info = c.system.action.reboot()

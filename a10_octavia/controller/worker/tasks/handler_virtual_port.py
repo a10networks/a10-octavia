@@ -34,37 +34,145 @@ import json
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
-class ListenersCreate(BaseVThunderTask):
-    """Task to update amphora with all specified listeners' configurations."""
-    def execute(self, loadbalancer, listeners, vthunder):
-        """Execute updates per listener for an amphora."""
-        ipinip = self.readConf('LISTENER','ipinip')
+
+class ListenersParent:
+
+    def set():
+        ipinip = self.readConf('LISTENER', 'ipinip')
         if ipinip is not None:
-            ipinip=json.loads(ipinip.lower())
+            ipinip = json.loads(ipinip.lower())
         else:
-            ipinip=False 
+            ipinip = False
 
-        no_dest_nat = self.readConf('LISTENER','no_dest_nat')
+        no_dest_nat = self.readConf('LISTENER', 'no_dest_nat')
         if no_dest_nat is not None:
-            no_dest_nat=json.loads(no_dest_nat.lower())
+            no_dest_nat = json.loads(no_dest_nat.lower())
         else:
-            no_dest_nat=False
+            no_dest_nat = False
 
-        ha_conn_mirror = self.readConf('LISTENER','ha_conn_mirror')
+        ha_conn_mirror = self.readConf('LISTENER', 'ha_conn_mirror')
         if ha_conn_mirror is not None:
             ha_conn_mirror = json.loads(ha_conn_mirror.lower())
         else:
             ha_conn_mirror = False
 
-        template_policy = self.readConf('LISTENER','template_policy')
-        autosnat = bool(self.readConf('LISTENER','autosnat'))
+        template_policy = self.readConf('LISTENER', 'template_policy')
+        autosnat = bool(self.readConf('LISTENER', 'autosnat'))
         conn_limit = self.readConf('LISTENER', 'conn_limit')
-        virtual_port_templates={}
-        template_virtual_port = self.readConf('LISTENER','template_virtual_port')
+        virtual_port_templates = {}
+        template_virtual_port = self.readConf('LISTENER', 'template_virtual_port')
         if template_virtual_port is not None:
-             virtual_port_templates['template-virtual-port'] = template_virtual_port.strip('"')
+            virtual_port_templates['template-virtual-port'] = template_virtual_port.strip('"')
         else:
-             virtual_port_templates['template-virtual-port'] = None
+            virtual_port_templates['template-virtual-port'] = None
+
+        template_args = {}
+        if conn_limit is not None:
+            conn_limit = int(conn_limit)
+            if conn_limit < 1 or conn_limit > 8000000:
+                LOG.warning("The specified member server connection limit " +
+                            "(configuration setting: conn-limit) is out of " +
+                            "bounds with value {0}. Please set to between " +
+                            "1-8000000. Defaulting to 8000000".format(conn_limit))
+
+        try:
+            c = self.client_factory(vthunder)
+            status = c.slb.UP
+               
+            for listener in listeners:
+                listener.load_balancer = loadbalancer
+                if not listener.provisioning_status:
+                    status = c.slb.DOWN
+                templates = self.meta(listener, "template", {})
+                persistence = persist.PersistHandler(c, listener.default_pool)
+                s_pers = persistence.s_persistence()
+                c_pers = persistence.c_persistence()
+                cert_data = dict()
+                if listener.protocol == "TERMINATED_HTTPS":
+                    listener.protocol = 'HTTPS'
+                    template_args["template_client_ssl"] = self.cert_handler(loadbalancer, listener, vthunder)
+
+                if listener.protocol.lower() == 'http':
+                    # TODO work around for issue in acos client
+                    listener.protocol = listener.protocol.lower()
+                    virtual_port_template = self.readConf('LISTENER', 'template_http')
+                    if virtual_port_template is not None:
+                        virtual_port_templates['template-http'] = virtual_port_template.strip('"')
+                    else:
+                        virtual_port_templates['template-http'] = None
+                else:
+                    virtual_port_template = self.readConf('LISTENER', 'template_tcp')
+                    if virtual_port_template is not None:
+                        virtual_port_templates['template-tcp'] = virtual_port_template.strip('"')
+                    else:
+                        virtual_port_templates['template-tcp'] = None
+
+                name = loadbalancer.id + "_" + str(listener.protocol_port)
+                out = c.slb.virtual_server.vport.create(loadbalancer.id, name,
+                                                listener.protocol,
+                                                listener.protocol_port,
+                                                listener.default_pool_id,
+                                                s_pers_name=s_pers, c_pers_name=c_pers,
+                                                status=status, no_dest_nat=no_dest_nat,
+                                                autosnat=autosnat, ipinip=ipinip,
+                                                #TODO resolve in acos client
+                                                #ha_conn_mirror=ha_conn_mirror,
+                                                conn_limit=conn_limit,
+                                                virtual_port_templates=virtual_port_templates,
+                                                **template_args)
+                
+                 LOG.info("Listener created successfully.")
+        except Exception as e:
+            print(str(e))
+            LOG.info("Error occurred")
+
+    def revert(self, loadbalancer, *args, **kwargs):
+        """Handle failed listeners updates."""
+
+        LOG.warning("Reverting listeners updates.")
+
+        for listener in loadbalancer.listeners:
+            self.task_utils.mark_listener_prov_status_error(listener.id)
+
+        return None
+
+
+        
+
+
+
+
+class ListenersCreate(BaseVThunderTask):
+    """Task to update amphora with all specified listeners' configurations."""
+    def execute(self, loadbalancer, listeners, vthunder):
+        """Execute updates per listener for an amphora."""
+        '''ipinip = self.readConf('LISTENER', 'ipinip')
+        if ipinip is not None:
+            ipinip = json.loads(ipinip.lower())
+        else:
+            ipinip = False 
+
+        no_dest_nat = self.readConf('LISTENER', 'no_dest_nat')
+        if no_dest_nat is not None:
+            no_dest_nat = json.loads(no_dest_nat.lower())
+        else:
+            no_dest_nat = False
+
+        ha_conn_mirror = self.readConf('LISTENER', 'ha_conn_mirror')
+        if ha_conn_mirror is not None:
+            ha_conn_mirror = json.loads(ha_conn_mirror.lower())
+        else:
+            ha_conn_mirror = False
+
+        template_policy = self.readConf('LISTENER', 'template_policy')
+        autosnat = bool(self.readConf('LISTENER', 'autosnat'))
+        conn_limit = self.readConf('LISTENER', 'conn_limit')
+        virtual_port_templates = {}
+        template_virtual_port = self.readConf('LISTENER', 'template_virtual_port')
+        if template_virtual_port is not None:
+            virtual_port_templates['template-virtual-port'] = template_virtual_port.strip('"')
+        else:
+            virtual_port_templates['template-virtual-port'] = None
 
         template_args = {}
         if conn_limit is not None:
@@ -95,20 +203,20 @@ class ListenersCreate(BaseVThunderTask):
                 if listener.protocol.lower() == 'http':
                     # TODO work around for issue in acos client
                     listener.protocol = listener.protocol.lower()
-                    virtual_port_template = self.readConf('LISTENER','template_http')
+                    virtual_port_template = self.readConf('LISTENER', 'template_http')
                     if virtual_port_template is not None:
-                         virtual_port_templates['template-http'] = virtual_port_template.strip('"')
+                        virtual_port_templates['template-http'] = virtual_port_template.strip('"')
                     else:
-                         virtual_port_templates['template-http'] = None
+                        virtual_port_templates['template-http'] = None
                 else:
-                    virtual_port_template = self.readConf('LISTENER','template_tcp')
+                    virtual_port_template = self.readConf('LISTENER', 'template_tcp')
                     if virtual_port_template is not None:
                         virtual_port_templates['template-tcp'] = virtual_port_template.strip('"')
                     else:
                         virtual_port_templates['template-tcp'] = None
 
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
-                out = c.slb.virtual_server.vport.create(loadbalancer.id, name, 
+                out = c.slb.virtual_server.vport.create(loadbalancer.id, name,
                                                 listener.protocol,
                                                 listener.protocol_port,
                                                 listener.default_pool_id,
@@ -124,7 +232,7 @@ class ListenersCreate(BaseVThunderTask):
                 LOG.info("Listener created successfully.")
         except Exception as e:
             print(str(e))
-            LOG.info("Error occurred")
+            LOG.info("Error occurred")'''
 
     def revert(self, loadbalancer, *args, **kwargs):
         """Handle failed listeners updates."""
@@ -196,16 +304,90 @@ class ListenersUpdate(BaseVThunderTask):
 
     def execute(self, loadbalancer, listeners, vthunder):
         """Execute updates per listener for an amphora."""
+        ipinip = self.readConf('LISTENER', 'ipinip')
+        if ipinip is not None:
+            ipinip = json.loads(ipinip.lower())
+        else:
+            ipinip = False
+
+        no_dest_nat = self.readConf('LISTENER', 'no_dest_nat')
+        if no_dest_nat is not None:
+            no_dest_nat = json.loads(no_dest_nat.lower())
+        else:
+            no_dest_nat = False
+
+        ha_conn_mirror = self.readConf('LISTENER', 'ha_conn_mirror')
+        if ha_conn_mirror is not None:
+            ha_conn_mirror = json.loads(ha_conn_mirror.lower())
+        else:
+            ha_conn_mirror = False
+
+        template_policy = self.readConf('LISTENER', 'template_policy')
+        autosnat = bool(self.readConf('LISTENER', 'autosnat'))
+        conn_limit = self.readConf('LISTENER', 'conn_limit')
+        virtual_port_templates={}
+        template_virtual_port = self.readConf('LISTENER', 'template_virtual_port')
+        if template_virtual_port is not None:
+             virtual_port_templates['template-virtual-port'] = template_virtual_port.strip('"')
+        else:
+             virtual_port_templates['template-virtual-port'] = None
+
+        template_args = {}
+        if conn_limit is not None:
+            conn_limit = int(conn_limit)
+            if conn_limit < 1 or conn_limit > 8000000:
+                LOG.warning("The specified member server connection limit " +
+                            "(configuration setting: conn-limit) is out of " +
+                            "bounds with value {0}. Please set to between " +
+                            "1-8000000. Defaulting to 8000000".format(conn_limit))
+
         for listener in listeners:
             listener.load_balancer = loadbalancer
             #self.amphora_driver.update(listener, loadbalancer.vip)
             try:
                 c = self.client_factory(vthunder)
+                status = c.slb.UP
+                if not listener.provisioning_status:
+                    status = c.slb.DOWN
+                templates = self.meta(listener, "template", {})
+                persistence = persist.PersistHandler(c, listener.default_pool)
+                s_pers = persistence.s_persistence()
+                c_pers = persistence.c_persistence()
+                cert_data = dict()
+                if listener.protocol == "TERMINATED_HTTPS":
+                    listener.protocol = 'HTTPS'
+                    template_args["template_client_ssl"] = self.cert_handler(loadbalancer, listener, vthunder)
+
+                if listener.protocol.lower() == 'http':
+                    # TODO work around for issue in acos client
+                    listener.protocol = listener.protocol.lower()
+                    virtual_port_template = self.readConf('LISTENER', 'template_http')
+                    if virtual_port_template is not None:
+                         virtual_port_templates['template-http'] = virtual_port_template.strip('"')
+                    else:
+                         virtual_port_templates['template-http'] = None
+                else:
+                    virtual_port_template = self.readConf('LISTENER', 'template_tcp')
+                    if virtual_port_template is not None:
+                        virtual_port_templates['template-tcp'] = virtual_port_template.strip('"')
+                    else:
+                        virtual_port_templates['template-tcp'] = None
+
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 if listener.protocol == "TERMINATED_HTTPS":
                     listener.protocol = 'HTTPS'
-                out = c.slb.virtual_server.vport.update(loadbalancer.id, name, listener.protocol,
-                                                listener.protocol_port, listener.default_pool_id)
+                out = c.slb.virtual_server.vport.update(loadbalancer.id, name,
+                                                listener.protocol,
+                                                listener.protocol_port,
+                                                listener.default_pool_id,
+                                                s_pers_name=s_pers, c_pers_name=c_pers,
+                                                status=status, no_dest_nat=no_dest_nat,
+                                                autosnat=autosnat, ipinip=ipinip,
+                                                #TODO resolve in acos client
+                                                #ha_conn_mirror=ha_conn_mirror,
+                                                conn_limit=conn_limit,
+                                                virtual_port_templates=virtual_port_templates,
+                                                **template_args)
                 LOG.info("Listener created successfully.")
             except Exception as e:
                 print(str(e))
@@ -221,17 +403,18 @@ class ListenersUpdate(BaseVThunderTask):
 
         return None
 
+
 class ListenerDelete(BaseVThunderTask):
     """Task to delete the listener on the vip."""
 
     def execute(self, loadbalancer, listener, vthunder):
         """Execute listener delete routines for an amphora."""
-        #self.amphora_driver.delete(listener, loadbalancer.vip)
+        # self.amphora_driver.delete(listener, loadbalancer.vip)
         try:
             c = self.client_factory(vthunder)
             name = loadbalancer.id + "_" + str(listener.protocol_port)
             out = c.slb.virtual_server.vport.delete(loadbalancer.id, name, listener.protocol,
-                                            listener.protocol_port)
+                                                    listener.protocol_port)
             LOG.info("Listener deleted successfully.")
         except Exception as e:
             print(str(e))

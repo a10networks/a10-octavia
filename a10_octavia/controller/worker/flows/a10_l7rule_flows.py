@@ -110,8 +110,14 @@ class L7RuleFlows(object):
                       constants.LOADBALANCER]))
         update_l7rule_flow.add(database_tasks.MarkL7RulePendingUpdateInDB(
             requires=constants.L7RULE))
-        update_l7rule_flow.add(amphora_driver_tasks.ListenersUpdate(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        #update_l7rule_flow.add(amphora_driver_tasks.ListenersUpdate(
+        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        update_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        update_l7rule_flow.add(handler_l7rule.UpdateL7Rule(
+            requires=[constants.L7RULE, constants.LISTENERS, a10constants.VTHUNDER]))
+
         update_l7rule_flow.add(database_tasks.UpdateL7RuleInDB(
             requires=[constants.L7RULE, constants.UPDATE_DICT]))
         update_l7rule_flow.add(database_tasks.MarkL7RuleActiveInDB(
