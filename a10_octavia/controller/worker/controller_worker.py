@@ -204,7 +204,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(update_hm_tf,
                                                log=LOG):
             update_hm_tf.run()
-
+  
     def create_listener(self, listener_id):
         """Creates a listener.
 
@@ -305,7 +305,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
+<<<<<<< HEAD
     
+=======
+
+
+>>>>>>> Added update functions
     def create_load_balancer(self, load_balancer_id):
         """Creates a load balancer by allocating Amphorae.
 
@@ -381,10 +386,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(delete_lb_tf,
                                                log=LOG):
             delete_lb_tf.run()
-<<<<<<< HEAD
-=======
 
->>>>>>> Review comments update 2
         # IMP: Jacobs code
         # No exception even when acos fails...
         # try:
@@ -399,6 +401,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         # LOG.info("Updating db with this status: %s" % (status))
         # self._octavia_driver_db.update_loadbalancer_status(status)
 
+  
     def update_load_balancer(self, load_balancer_id, load_balancer_updates):
         """Updates a load balancer.
 
@@ -439,7 +442,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-    
     def create_member(self, member_id):
         """Creates a pool member.
 
@@ -817,6 +819,18 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                log=LOG):
             update_l7rule_tf.run()
 
+        update_l7rule_tf = self._taskflow_load(
+            self._l7rule_flows.get_update_l7rule_flow(),
+            store={constants.L7RULE: l7rule,
+                   constants.L7POLICY: l7policy,
+                   constants.LISTENERS: listeners,
+                   constants.LOADBALANCER: load_balancer,
+                   constants.UPDATE_DICT: l7rule_updates})
+        with tf_logging.DynamicLoggingListener(update_l7rule_tf,
+                                               log=LOG):
+            update_l7rule_tf.run()
+
+ 
     def failover_amphora(self, amphora_id):
         """Perform failover operations for an amphora.
 
