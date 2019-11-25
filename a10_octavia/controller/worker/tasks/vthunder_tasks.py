@@ -104,9 +104,9 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
                     LOG.info("VThunder connection attempt - " + str(attemptid))
                     pass
             if attempts < 0:
-                LOG.error("Failed to connect vThunder in expected amount of boot time.")
-                raise ConnectionError
-
+               LOG.error("Failed to connect vThunder in expected amount of boot time.")
+               #raise ConnectionError
+            
         except driver_except.TimeOutException:
             LOG.error("Amphora compute instance failed to become reachable. "
                       "This either means the compute driver failed to fully "

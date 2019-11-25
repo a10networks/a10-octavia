@@ -25,7 +25,7 @@ LOG = logging.getLogger(__name__)
 class LoadBalancerParent(object):
     def set(self, set_method, loadbalancer_id, loadbalancer, vthunder):
         conf_templates = self.readConf('SLB', 'template_virtual_server')
-        virtual_server_templates = {}
+       virtual_server_templates = {}
         try:
             if conf_templates is not None:
                 conf_templates = conf_templates.strip('"')

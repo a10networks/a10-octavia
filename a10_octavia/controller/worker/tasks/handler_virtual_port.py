@@ -35,7 +35,7 @@ class ListenersParent(object):
             ipinip = False
 
         no_dest_nat = self.readConf('LISTENER', 'no_dest_nat')
-        ha_conn_mirror = self.readConf('LISTENER', 'ha_conn_mirror')
+       ha_conn_mirror = self.readConf('LISTENER', 'ha_conn_mirror')
         if ha_conn_mirror is not None:
             ha_conn_mirror = json.loads(ha_conn_mirror.lower())
         else:
@@ -204,7 +204,7 @@ class ListenerDelete(BaseVThunderTask):
             name = loadbalancer.id + "_" + str(listener.protocol_port)
             c.slb.virtual_server.vport.delete(loadbalancer.id, name, listener.protocol,
                                               listener.protocol_port)
-            LOG.info("Listener deleted successfully.")
+           LOG.info("Listener deleted successfully.")
         except Exception as e:
             LOG.error(str(e))
             LOG.debug("Deleted the listener on the vip")

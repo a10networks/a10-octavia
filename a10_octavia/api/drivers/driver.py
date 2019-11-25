@@ -70,6 +70,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                    constants.LOAD_BALANCER_UPDATES: lb_dict}
         self.client.cast({}, 'update_load_balancer', **payload)
 
+
     # Many other methods may be inheritted from Amphora
 
     def listener_create(self, listener):
