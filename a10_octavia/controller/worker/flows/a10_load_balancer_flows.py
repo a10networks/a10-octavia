@@ -368,3 +368,27 @@ class LoadBalancerFlows(object):
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
                 requires=constants.LOADBALANCER))
         return post_create_lb_flow
+
+    def get_update_load_balancer_flow(self):
+        """Creates a flow to update a load balancer.
+        :returns: The flow for update a load balancer
+        """
+        update_LB_flow = linear_flow.Flow(constants.UPDATE_LOADBALANCER_FLOW)
+        update_LB_flow.add(lifecycle_tasks.LoadBalancerToErrorOnRevertTask(
+            requires=constants.LOADBALANCER))
+        update_LB_flow.add(network_tasks.ApplyQos(
+            requires=(constants.LOADBALANCER, constants.UPDATE_DICT)))
+        #update_LB_flow.add(amphora_driver_tasks.ListenersUpdate(
+        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        update_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        update_LB_flow.add(handler_virtual_server.UpdateVitualServerTask(
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+            provides=constants.STATUS))
+        update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
+            requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
+        update_LB_flow.add(database_tasks.MarkLBActiveInDB(
+            requires=constants.LOADBALANCER))
+
+        return update_LB_flow
