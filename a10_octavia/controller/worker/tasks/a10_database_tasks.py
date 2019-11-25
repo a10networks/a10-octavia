@@ -66,8 +66,7 @@ class CreteVthunderEntry(BaseDatabaseTask):
 
         username = self.config.get('DEFAULT','DEFAULT_VTHUNDER_USERNAME').replace('"', '')
         password = self.config.get('DEFAULT','DEFAULT_VTHUNDER_PASSWORD').replace('"', '')
-
-        axapi_version = int(self.config.get('DEFAULT','DEFAULT_AXAPI_VERSION'))
+        axapi_version = int(self.config.get('DEFAULT','DEFAULT_AXAPI_VERSION').replace('"', ''))
 
         compute_id = None
         undercloud = True
