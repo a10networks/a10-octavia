@@ -88,31 +88,17 @@ class A10Config(object):
             rack_conf = ast.literal_eval(project_conf.strip('"'))
             validation_flag = False
             try:
-                for i in range(len(rack_conf["device_list"])):
-                    project_id = rack_conf["device_list"][i]["project_id"]
-                    ip_address = rack_conf["device_list"][i]["ip_address"]
-                    undercloud = bool(rack_conf["device_list"][i]["undercloud"])
-                    username = rack_conf["device_list"][i]["username"]
-                    password = rack_conf["device_list"][i]["password"]
-                    device_name = rack_conf["device_list"][i]["device_name"]
-                    axapi_version = rack_conf["device_list"][i]["axapi_version"]
-                    role = rack_conf["device_list"][i]["role"]
-                    topology = rack_conf["device_list"][i]["topology"]
-                    validation_flag = self.validate(project_id, ip_address, username,
-                                                    password, axapi_version,
-                                                    undercloud, device_name,
-                                                    role, topology)
-
+                for rack_device in rack_conf["device_list"]:
+                    validation_flag = self.validate(rack_device["project_id"],
+                                                    rack_device["ip_address"],
+                                                    rack_device["username"],
+                                                    rack_device["password"],
+                                                    rack_device["axapi_version"],
+                                                    rack_device["device_name"])
                     if validation_flag:
-                        vthunder_conf = data_models.VThunder(project_id=project_id,
-                                                             ip_address=ip_address,
-                                                             undercloud=undercloud,
-                                                             username=username, role=role,
-                                                             topology=topology,
-                                                             password=password,
-                                                             device_name=device_name,
-                                                             axapi_version=axapi_version)
-                        rack_dict[project_id] = vthunder_conf
+                        rack_device["undercloud"] = True
+                        vthunder_conf = data_models.VThunder(**rack_device)
+                        rack_dict[rack_device["project_id"]] = vthunder_conf
                     else:
                         LOG.warning('Invalid definition of rack device for'
                                     'project ' + project_id)
@@ -191,9 +177,9 @@ class A10Config(object):
         return getattr(self._config, key)
 
     def validate(self, project_id, ip_address, username, password,
-                 axapi_version, undercloud, device_name, role, topology):
+                 axapi_version, device_name):
         ip_validator = self.is_valid_ipv4_address(ip_address)
-        if(project_id is not None and ip_address is not None and username is not None
+        if (project_id is not None and ip_address is not None and username is not None
            and password is not None and axapi_version is not None):
             if ip_validator:
                 return True
