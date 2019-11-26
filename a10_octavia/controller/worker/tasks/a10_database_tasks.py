@@ -57,7 +57,6 @@ class GetVThunderTask(BaseDatabaseTask):
 
     def execute(self, amphora):
         vthunder = self.vthunder_repo.get(db_apis.get_session(), id=123)
-        LOG.info("check this vthunder bro")
         return vthunder
 
 
