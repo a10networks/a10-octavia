@@ -41,9 +41,7 @@ conn_resume=1
 templates="server1"                            
 
 [RACK_VTHUNDER]
-devices="""{
-             "device_list" :
-             [
+devices="""[
                     {
                      "project_id":"a0e57f9fcdfa47d18fe9ec9f80d63851",
                      "ip_address":"10.43.82.155",
@@ -65,4 +63,4 @@ devices="""{
                      "topology":"STANDALONE"
                      }
              ]
-       }"""
+       """

@@ -85,10 +85,10 @@ class A10Config(object):
         rack_dict = {}
         if self._conf.has_section("RACK_VTHUNDER") and self._conf.has_option("RACK_VTHUNDER", "devices"):
             project_conf = self._conf.get('RACK_VTHUNDER', 'devices')
-            rack_conf = ast.literal_eval(project_conf.strip('"'))
+            rack_list = ast.literal_eval(project_conf.strip('"'))
             validation_flag = False
             try:
-                for rack_device in rack_conf["device_list"]:
+                for rack_device in rack_list:
                     validation_flag = self.validate(rack_device["project_id"],
                                                     rack_device["ip_address"],
                                                     rack_device["username"],
