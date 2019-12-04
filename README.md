@@ -1,7 +1,7 @@
 # A10 Networks Openstack Octavia Driver
 ===========================================
 
-**This is currently in development. Official release slated for Nov 6 2019.**
+**This is currently in beta stage with limited support. Our next dev release is 11/6/2019**
 **As this is currently in development, support is limited until official release.** 
 
 A10 Networks Octavia Driver for Thunder, vThunder and AX Series Appliances 
@@ -43,8 +43,6 @@ Note down the `image ID` and `flavor ID` of created resources.
 Update the /etc/octavia/octavia.conf file with the following parameters:
 
 ```shell
-octavia_plugins = a10_hot_plug_plugin
-
 enabled_provider_drivers = a10:     'The A10 Octavia driver.',
                            noop_driver: 'The no-op driver.',
                            amphora: 'The Octavia Amphora driver.',
@@ -112,7 +110,7 @@ From a10-octavia/a10_octavia/install folder run `install_service.sh` file.
 chmod +X install_service.sh
 ./install_service.sh
 ```
-This will install systemd service with name - 'a10-controller-worker'.
+This will install systemd service with name - 'a10-controller-worker'. Make sure service is up and running.
 You can start/stop service using systemctl/service commands.
 You can check logs of service using following command:
 ```shell

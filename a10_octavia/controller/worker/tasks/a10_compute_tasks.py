@@ -39,11 +39,11 @@ class BaseComputeTask(task.Task):
     """Base task to load drivers common to the tasks."""
 
     def __init__(self, **kwargs):
-        a10_conf = a10_config.A10Config()
+        self.a10_conf = a10_config.A10Config()
         super(BaseComputeTask, self).__init__(**kwargs)
         self.compute = stevedore_driver.DriverManager(
             namespace='octavia.compute.drivers',
-            name=a10_conf.get_octavia_conf('a10_octavia','compute_driver'),
+            name=self.a10_conf.get_octavia_conf('a10_octavia','compute_driver'),
             invoke_on_load=True
         ).driver
         self.rate_limit = amphora_rate_limit.AmphoraBuildRateLimit()
@@ -59,20 +59,19 @@ class ComputeCreate(BaseComputeTask):
 
         :returns: an amphora
         """
-        a10_conf = a10_config.A10Config()
         ports = ports or []
         #network_ids = CONF.a10_octavia.amp_boot_network_list[:]
         network_ids = []
-        network_ids.append(a10_conf.get_octavia_conf('a10_octavia','amp_boot_network_list'))
+        network_ids.append(self.a10_conf.get_octavia_conf('a10_octavia','amp_boot_network_list'))
         config_drive_files = config_drive_files or {}
         user_data = None
-        LOG.debug("Compute create execute for amphora with id %s", amphora_id)
+        LOG.debug("Compute create execute for amphora with id ", amphora_id)
 
         #user_data_config_drive = CONF.a10_octavia.user_data_config_drive
-        user_data_config_drive = a10_conf.get_octavia_conf('a10_octavia','user_data_config_drive')
+        user_data_config_drive = self.a10_conf.get_octavia_conf('a10_octavia','user_data_config_drive')
 
         #key_name = CONF.a10_octavia.amp_ssh_key_name
-        key_name = a10_conf.get_octavia_conf('a10_octavia','amp_ssh_key_name')
+        key_name = self.a10_conf.get_octavia_conf('a10_octavia','amp_ssh_key_name')
         # TODO(rm_work): amp_ssh_access_allowed is deprecated in Pike.
         # Remove the following two lines in the S release.
         ssh_access = CONF.controller_worker.amp_ssh_access_allowed
@@ -95,28 +94,28 @@ class ComputeCreate(BaseComputeTask):
             compute_id = self.compute.build(
                 name="amphora-" + amphora_id,
                 #amphora_flavor=CONF.a10_octavia.amp_flavor_id,
-                amphora_flavor=a10_conf.get_octavia_conf('a10_octavia','amp_flavor_id'),
+                amphora_flavor=self.a10_conf.get_octavia_conf('a10_octavia','amp_flavor_id'),
                 #image_id=CONF.a10_octavia.amp_image_id,
-                image_id=a10_conf.get_octavia_conf('a10_octavia','amp_image_id'),
+                image_id=self.a10_conf.get_octavia_conf('a10_octavia','amp_image_id'),
                 #image_tag=CONF.a10_octavia.amp_image_tag,
-                image_tag=a10_conf.get_octavia_conf('a10_octavia','amp_image_tag'),
+                image_tag=self.a10_conf.get_octavia_conf('a10_octavia','amp_image_tag'),
                 #image_owner=CONF.a10_octavia.amp_image_owner_id,
-                image_owner=a10_conf.get_octavia_conf('a10_octavia','amp_image_owner_id'),
+                image_owner=self.a10_conf.get_octavia_conf('a10_octavia','amp_image_owner_id'),
                 key_name=key_name,
                 #sec_groups=CONF.a10_octavia.amp_secgroup_list,
-                sec_groups=[a10_conf.get_octavia_conf('a10_octavia','amp_secgroup_list')],
+                sec_groups=[self.a10_conf.get_octavia_conf('a10_octavia','amp_secgroup_list')],
                 network_ids=network_ids,
                 port_ids=[port.id for port in ports],
                 config_drive_files=config_drive_files,
                 user_data=user_data,
                 server_group_id=server_group_id)
 
-            LOG.debug("Server created with id: %s for amphora id: %s",
+            LOG.debug("Server created with id:  for amphora id: %s",
                       compute_id, amphora_id)
             return compute_id
 
         except Exception:
-            LOG.exception("Compute create for amphora id: %s failed",
+            LOG.exception("Compute create for amphora id:  failed",
                           amphora_id)
             raise
 
@@ -173,19 +172,19 @@ class DeleteAmphoraeOnLoadBalancer(BaseComputeTask):
             try:
                 self.compute.delete(amp.compute_id)
             except Exception:
-                LOG.exception("Compute delete for amphora id: %s failed",
+                LOG.exception("Compute delete for amphora id:  failed",
                               amp.id)
                 raise
 
 
 class ComputeDelete(BaseComputeTask):
     def execute(self, amphora):
-        LOG.debug("Compute Delete execute for amphora with id %s", amphora.id)
+        LOG.debug("Compute Delete execute for amphora with id ", amphora.id)
 
         try:
             self.compute.delete(amphora.compute_id)
         except Exception:
-            LOG.exception("Compute delete for amphora id: %s failed",
+            LOG.exception("Compute delete for amphora id:  failed",
                           amphora.id)
             raise
 
@@ -225,8 +224,8 @@ class NovaServerGroupCreate(BaseComputeTask):
         name = 'octavia-lb-' + loadbalancer_id
         server_group = self.compute.create_server_group(
             name, CONF.nova.anti_affinity_policy)
-        LOG.debug("Server Group created with id: %s for load balancer id: "
-                  "%s", server_group.id, loadbalancer_id)
+        LOG.debug("Server Group created with id:  for load balancer id: "
+                  "", server_group.id, loadbalancer_id)
         return server_group.id
 
     def revert(self, result, *args, **kwargs):
@@ -235,7 +234,7 @@ class NovaServerGroupCreate(BaseComputeTask):
         :param result: here it refers to server group id
         """
         server_group_id = result
-        LOG.warning("Reverting server group create with id:%s",
+        LOG.warning("Reverting server group create with id:",
                     server_group_id)
         try:
             self.compute.delete_server_group(server_group_id)
