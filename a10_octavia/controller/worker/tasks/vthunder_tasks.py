@@ -46,7 +46,7 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
         try:
 
             LOG.info("Attempting to connect vThunder device for connection.")
-            attempts = 30
+            attempts = 20
             while attempts >= 0:
                 try:
                     attempts = attempts - 1
@@ -55,7 +55,7 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
                     LOG.info(str(amp_info))
                     break
                 except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
-                    attemptid = 31 - attempts
+                    attemptid = 21 - attempts
                     time.sleep(20)
                     LOG.info("VThunder connection attempt - " + str(attemptid))
                     pass
