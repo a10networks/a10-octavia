@@ -35,19 +35,15 @@ class A10ProviderDriver(driver_base.ProviderDriver):
     def __init__(self):
         super(A10ProviderDriver, self).__init__()
         self._args = {}
-        self.namespace = constants.RPC_NAMESPACE_CONTROLLER_AGENT
-        self.topic = "a10_octavia"
-        self.version = '1.0'
         self.transport = messaging.get_rpc_transport(cfg.CONF)
         self._args['fanout'] = False
-        self._args['namespace'] = self.namespace
-        self._args['topic'] = self.topic
-        self._args['version'] = self.version
+        self._args['namespace'] = constants.RPC_NAMESPACE_CONTROLLER_AGENT
+        self._args['topic'] = "a10_octavia"
+        self._args['version'] = '1.0'
         self.target = messaging.Target(**self._args)
         self.client = messaging.RPCClient(self.transport, target=self.target)
 
     # Load Balancer
-    # loadbalancer_create needs to be implemented
     def loadbalancer_create(self, loadbalancer):
         LOG.info('A10 provider load balancer loadbalancer: %s.', loadbalancer.__dict__)
         payload = {constants.LOAD_BALANCER_ID: loadbalancer.loadbalancer_id}
@@ -60,7 +56,6 @@ class A10ProviderDriver(driver_base.ProviderDriver):
     def loadbalancer_update(self, old_loadbalancer, new_loadbalancer):
         # Adapt the provider data model to the queue schema
         lb_dict = new_loadbalancer.to_dict()
-        import rpdb; rpdb.set_trace()
         if 'admin_state_up' in lb_dict:
             lb_dict['enabled'] = lb_dict.pop('admin_state_up')
         lb_id = lb_dict.pop('loadbalancer_id')
@@ -74,7 +69,6 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.LOAD_BALANCER_ID: lb_id,
                    constants.LOAD_BALANCER_UPDATES: lb_dict}
         self.client.cast({}, 'update_load_balancer', **payload)
-
 
     # Many other methods may be inheritted from Amphora
 
@@ -105,7 +99,6 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.LISTENER_ID: listener_id,
                    constants.LISTENER_UPDATES: listener_dict}
         self.client.cast({}, 'update_listener', **payload)
-
 
     def pool_create(self, pool):
         payload = {constants.POOL_ID: pool.pool_id}

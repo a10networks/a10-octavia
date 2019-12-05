@@ -13,25 +13,17 @@
 #    under the License.
 
 
-#from oslo_config import cfg
-#from oslo_log import log as logging
+# from oslo_config import cfg
+# from oslo_log import log as logging
 
-#from octavia.common import base_taskflow
-#from octavia.api.drivers import exceptions
+# from octavia.common import base_taskflow
+# from octavia.api.drivers import exceptions
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_utils import excutils
 from sqlalchemy.orm import exc as db_exceptions
 import tenacity
-
-from octavia.api.drivers import driver_lib
-from octavia.common import constants
-from octavia.common import base_taskflow
-from octavia.common import exceptions
-from taskflow.listeners import logging as tf_logging
-from octavia.db import api as db_apis
-from octavia.db import repositories as repo
+import urllib3
 from a10_octavia.db import repositories as a10repo
 from a10_octavia.controller.worker.flows import a10_load_balancer_flows
 from a10_octavia.controller.worker.flows import a10_listener_flows
@@ -40,10 +32,15 @@ from a10_octavia.controller.worker.flows import a10_member_flows
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_l7policy_flows
 from a10_octavia.controller.worker.flows import a10_l7rule_flows
+from a10_octavia.db import repositories as a10repo
+from taskflow.listeners import logging as tf_logging
+from octavia.api.drivers import driver_lib
+from octavia.common import constants
+from octavia.common import base_taskflow
+from octavia.common import exceptions
+from octavia.db import api as db_apis
+from octavia.db import repositories as repo
 
-
-import acos_client
-import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 RETRY_ATTEMPTS = 15
@@ -74,10 +71,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._l7policy_flows = a10_l7policy_flows.L7PolicyFlows()
         self._l7rule_flows = a10_l7rule_flows.L7RuleFlows()
         self._vthunder_repo = a10repo.VThunderRepository()
-        
         self._exclude_result_logging_tasks = ()
         super(A10ControllerWorker, self).__init__()
-        
 
     def create_amphora(self):
         """Creates an Amphora.
@@ -195,7 +190,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(update_hm_tf,
                                                log=LOG):
             update_hm_tf.run()
-  
+
     def create_listener(self, listener_id):
         """Creates a listener.
 
@@ -222,7 +217,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                log=LOG):
             create_listener_tf.run()
 
-
     def delete_listener(self, listener_id):
         """Deletes a listener.
 
@@ -241,7 +235,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(delete_listener_tf,
                                                log=LOG):
             delete_listener_tf.run()
-
 
     def update_listener(self, listener_id, listener_updates):
         """Updates a listener.
@@ -283,8 +276,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-
-
     def create_load_balancer(self, load_balancer_id):
         """Creates a load balancer by allocating Amphorae.
 
@@ -318,7 +309,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 create_lb_tf, log=LOG,
                 hide_inputs_outputs_of=self._exclude_result_logging_tasks):
             create_lb_tf.run()
-        
 
     def delete_load_balancer(self, load_balancer_id, cascade=False):
         """Deletes a load balancer by de-allocating Amphorae.
@@ -330,11 +320,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         lb = self._lb_repo.get(db_apis.get_session(),
                                id=load_balancer_id)
         vthunder = self._vthunder_repo.getVThunderFromLB(db_apis.get_session(),
-                               load_balancer_id)
+                                                         load_balancer_id)
         deleteCompute = False
         if vthunder:
             deleteCompute = self._vthunder_repo.getDeleteComputeFlag(db_apis.get_session(),
-                               vthunder.compute_id)
+                                                                     vthunder.compute_id)
         (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute)
         store.update({constants.LOADBALANCER: lb,
                       constants.SERVER_GROUP_ID: lb.server_group_id})
@@ -344,22 +334,20 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(delete_lb_tf,
                                                log=LOG):
             delete_lb_tf.run()
-
-
-        #IMP: Jacobs code
+        # IMP: Jacobs code
         # No exception even when acos fails...
-        #try:
+        # try:
         #    r = self.c.slb.virtual_server.delete(load_balancer_id)
         #    status = { 'loadbalancers': [{"id": load_balancer_id,
         #               "provisioning_status": constants.DELETED}]}
-        #except Exception as e:
+        # except Exception as e:
         #    r = str(e)
         #    status = { 'loadbalancers': [{"id": load_balancer_id,
         #               "provisioning_status": consts.ERROR }]}
-        #LOG.info("vThunder response: %s" % (r))
-        #LOG.info("Updating db with this status: %s" % (status))
-        #self._octavia_driver_db.update_loadbalancer_status(status)
-  
+        # LOG.info("vThunder response: %s" % (r))
+        # LOG.info("Updating db with this status: %s" % (status))
+        # self._octavia_driver_db.update_loadbalancer_status(status)
+
     def update_load_balancer(self, load_balancer_id, load_balancer_updates):
         """Updates a load balancer.
 
@@ -400,8 +388,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-
-
     def create_member(self, member_id):
         """Creates a pool member.
 
@@ -434,8 +420,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                log=LOG):
             create_member_tf.run()
 
-
-
     def delete_member(self, member_id):
         """Deletes a pool member.
 
@@ -457,8 +441,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(delete_member_tf,
                                                log=LOG):
             delete_member_tf.run()
-
-
 
     def batch_update_members(self, old_member_ids, new_member_ids,
                              updated_members):
@@ -511,8 +493,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-
-    
     def create_pool(self, pool_id):
         """Creates a node pool.
 
@@ -540,7 +520,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(create_pool_tf,
                                                log=LOG):
             create_pool_tf.run()
-
 
     def delete_pool(self, pool_id):
         """Deletes a node pool.
@@ -605,8 +584,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-
-
     def create_l7policy(self, l7policy_id):
         """Creates an L7 Policy.
 
@@ -632,7 +609,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(create_l7policy_tf,
                                                log=LOG):
             create_l7policy_tf.run()
-
 
     def delete_l7policy(self, l7policy_id):
         """Deletes an L7 policy.
@@ -694,8 +670,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-
-
     def create_l7rule(self, l7rule_id):
         """Creates an L7 Rule.
 
@@ -746,7 +720,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                log=LOG):
             delete_l7rule_tf.run()
 
-
     def update_l7rule(self, l7rule_id, l7rule_updates):
         """Updates an L7 rule.
 
@@ -782,7 +755,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                log=LOG):
             update_l7rule_tf.run()
 
- 
     def failover_amphora(self, amphora_id):
         """Perform failover operations for an amphora.
 
@@ -825,5 +797,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             operator_fault_string='This provider does not support rotating '
                                   'Amphora certs. We will use preconfigured '
                                   'devices.')
+
     def _get_db_obj_until_pending_update(self, repo, id):
         return repo.get(db_apis.get_session(), id=id)

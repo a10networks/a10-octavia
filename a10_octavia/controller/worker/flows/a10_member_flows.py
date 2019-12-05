@@ -15,14 +15,12 @@
 
 from taskflow.patterns import linear_flow
 from taskflow.patterns import unordered_flow
-
+from a10_octavia.controller.worker.tasks import vthunder_tasks
+from a10_octavia.controller.worker.tasks import handler_server
+from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.common import a10constants
 from octavia.common import constants
 try:
-    from octavia.controller.worker.v2.flows import amphora_flows
-    from octavia.controller.worker.v2.flows import listener_flows
-    from octavia.controller.worker.v2.flows import member_flows
-    from octavia.controller.worker.v2.flows import pool_flows
-
     from octavia.controller.worker.v2.tasks import amphora_driver_tasks
     from octavia.controller.worker.v2.tasks import database_tasks
     from octavia.controller.worker.v2.tasks import lifecycle_tasks
@@ -33,10 +31,6 @@ except (ImportError, AttributeError):
 
 try:
     # Stein and previous
-    from octavia.controller.worker.flows import amphora_flows
-    from octavia.controller.worker.flows import listener_flows
-    from octavia.controller.worker.flows import member_flows
-    from octavia.controller.worker.flows import pool_flows
     from octavia.controller.worker.tasks import amphora_driver_tasks
     from octavia.controller.worker.tasks import database_tasks
     from octavia.controller.worker.tasks import lifecycle_tasks
@@ -44,11 +38,6 @@ try:
     from octavia.controller.worker.tasks import network_tasks
 except (ImportError, AttributeError):
     pass
-
-from a10_octavia.controller.worker.tasks import vthunder_tasks
-from a10_octavia.controller.worker.tasks import handler_server
-from a10_octavia.controller.worker.tasks import a10_database_tasks
-from a10_octavia.common import a10constants
 
 
 class MemberFlows(object):
@@ -72,10 +61,10 @@ class MemberFlows(object):
         create_member_flow.add(network_tasks.HandleNetworkDeltas(
             requires=constants.DELTAS, provides=constants.ADDED_PORTS))
         # Need to add relaod vThunder logic here
-        #create_member_flow.add(amphora_driver_tasks.AmphoraePostNetworkPlug(
+        # create_member_flow.add(amphora_driver_tasks.AmphoraePostNetworkPlug(
         #    requires=(constants.LOADBALANCER, constants.ADDED_PORTS)
-        #))
-        #create_member_flow.add(amphora_driver_tasks.ListenersUpdate(
+        # ))
+        # create_member_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=(constants.LOADBALANCER, constants.LISTENERS)))
         # Get VThunder details from database
         create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
@@ -88,7 +77,7 @@ class MemberFlows(object):
         create_member_flow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
             requires=(constants.LOADBALANCER, constants.ADDED_PORTS, a10constants.VTHUNDER)))
         create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+            requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         create_member_flow.add(vthunder_tasks.EnableInterfaceForMembers(
             requires=[constants.ADDED_PORTS, constants.LOADBALANCER, a10constants.VTHUNDER]))
         # configure member flow for HA
@@ -138,7 +127,7 @@ class MemberFlows(object):
                                                          constants.MEMBER}))
         delete_member_flow.add(database_tasks.DeleteMemberInDB(
             requires=constants.MEMBER))
-        #delete_member_flow.add(amphora_driver_tasks.ListenersUpdate(
+        # delete_member_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
 
         # Get VThunder details from database
@@ -171,7 +160,7 @@ class MemberFlows(object):
                       constants.POOL]))
         update_member_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
             requires=constants.MEMBER))
-        #update_member_flow.add(amphora_driver_tasks.ListenersUpdate(
+        # update_member_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,

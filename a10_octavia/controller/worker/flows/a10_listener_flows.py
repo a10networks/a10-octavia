@@ -13,31 +13,28 @@
 #    under the License.
 
 from taskflow.patterns import linear_flow
+from a10_octavia.controller.worker.tasks import handler_virtual_port
+from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.common import a10constants
 
 from octavia.common import constants
 try:
-    from octavia.controller.worker.v2.tasks import amphora_driver_tasks
     from octavia.controller.worker.v2.tasks import database_tasks
     from octavia.controller.worker.v2.tasks import lifecycle_tasks
-    from octavia.controller.worker.v2.tasks import model_tasks
     from octavia.controller.worker.v2.tasks import network_tasks
 except (ImportError, AttributeError):
     pass
 
 try:
     # Stein and previous
-    from octavia.controller.worker.tasks import amphora_driver_tasks
     from octavia.controller.worker.tasks import database_tasks
     from octavia.controller.worker.tasks import lifecycle_tasks
-    from octavia.controller.worker.tasks import model_tasks
     from octavia.controller.worker.tasks import network_tasks
 except (ImportError, AttributeError):
     pass
 
-#from a10_octavia.controller.worker.tasks import vthunder_tasks
-from a10_octavia.controller.worker.tasks import handler_virtual_port
-from a10_octavia.controller.worker.tasks import a10_database_tasks
-from a10_octavia.common import a10constants
+# from a10_octavia.controller.worker.tasks import vthunder_tasks
+
 
 class ListenerFlows(object):
 
@@ -49,7 +46,7 @@ class ListenerFlows(object):
         create_listener_flow = linear_flow.Flow(constants.CREATE_LISTENER_FLOW)
         create_listener_flow.add(lifecycle_tasks.ListenersToErrorOnRevertTask(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        #create_listener_flow.add(amphora_driver_tasks.ListenersUpdate(
+        # create_listener_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         # Get VThunder details from database
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
@@ -142,7 +139,7 @@ class ListenerFlows(object):
         update_listener_flow = linear_flow.Flow(constants.UPDATE_LISTENER_FLOW)
         update_listener_flow.add(lifecycle_tasks.ListenersToErrorOnRevertTask(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        #update_listener_flow.add(amphora_driver_tasks.ListenersUpdate(
+        # update_listener_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
