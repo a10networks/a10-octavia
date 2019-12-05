@@ -275,9 +275,6 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.CREATE_AMPHORA_INDB,
             provides=constants.AMPHORA_ID))
 
-        require_server_group_id_condition = (
-            role in (constants.ROLE_BACKUP, constants.ROLE_MASTER) and
-            CONF.nova.enable_anti_affinity)
         # Relaod LB
         # vthunder_for_amphora_subflow.add(database_tasks.ReloadLoadBalancer(
         #    name=sf_name + '-' + 'reload_loadbalancer',

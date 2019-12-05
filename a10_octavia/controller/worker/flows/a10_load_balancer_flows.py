@@ -49,6 +49,7 @@ try:
 except (ImportError, AttributeError):
     pass
 
+
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
@@ -86,7 +87,6 @@ class LoadBalancerFlows(object):
                       topology)
             raise exceptions.InvalidTopology(topology=topology)
 
-        LOG.info("printing vthunder info" + str())
         # IMP: Now creating vThunder config here
         post_amp_prefix = constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
         lb_create_flow.add(
@@ -363,14 +363,14 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         update_LB_flow.add(network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.UPDATE_DICT)))
-        #update_LB_flow.add(amphora_driver_tasks.ListenersUpdate(
+        # update_LB_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_LB_flow.add(handler_virtual_server.UpdateVitualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
-            provides=constants.STATUS))
+            provides=a10constants.STATUS))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         update_LB_flow.add(database_tasks.MarkLBActiveInDB(

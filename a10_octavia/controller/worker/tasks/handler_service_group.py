@@ -26,6 +26,14 @@ class PoolParent(object):
 
     def set(self, set_method, pool, vthunder):
         args = {'service_group': self.meta(pool, 'service_group', {})}
+        PROTOCOL_MAP = {
+                        'TCP' : 'TCP',
+                        'UDP' : 'UDP',
+                        'HTTP' : 'TCP',
+                        'HTTPS' : 'TCP',
+                        'TERMINATED_HTTPS' : 'TCP',
+                        'PROXY' : 'TCP'
+                       }
         try:
             conf_templates = self.readConf('SERVICE_GROUP', 'templates').strip('"')
             service_group_temp = {}

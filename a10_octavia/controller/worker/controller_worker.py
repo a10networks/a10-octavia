@@ -52,6 +52,14 @@ from a10_octavia.controller.worker.flows import a10_l7rule_flows
 from a10_octavia.db import repositories as a10repo
 from a10_octavia import a10_config
 from a10_octavia.common import data_models
+from a10_octavia.db import repositories as a10repo
+from taskflow.listeners import logging as tf_logging
+from octavia.api.drivers import driver_lib
+from octavia.common import constants
+from octavia.common import base_taskflow
+from octavia.common import exceptions
+from octavia.db import api as db_apis
+from octavia.db import repositories as repo
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -204,7 +212,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(update_hm_tf,
                                                log=LOG):
             update_hm_tf.run()
-  
+
     def create_listener(self, listener_id):
         """Creates a listener.
 
@@ -305,12 +313,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-<<<<<<< HEAD
-    
-=======
-
-
->>>>>>> Added update functions
     def create_load_balancer(self, load_balancer_id):
         """Creates a load balancer by allocating Amphorae.
 
@@ -401,7 +403,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         # LOG.info("Updating db with this status: %s" % (status))
         # self._octavia_driver_db.update_loadbalancer_status(status)
 
-  
     def update_load_balancer(self, load_balancer_id, load_balancer_updates):
         """Updates a load balancer.
 
@@ -819,18 +820,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                log=LOG):
             update_l7rule_tf.run()
 
-        update_l7rule_tf = self._taskflow_load(
-            self._l7rule_flows.get_update_l7rule_flow(),
-            store={constants.L7RULE: l7rule,
-                   constants.L7POLICY: l7policy,
-                   constants.LISTENERS: listeners,
-                   constants.LOADBALANCER: load_balancer,
-                   constants.UPDATE_DICT: l7rule_updates})
-        with tf_logging.DynamicLoggingListener(update_l7rule_tf,
-                                               log=LOG):
-            update_l7rule_tf.run()
-
- 
     def failover_amphora(self, amphora_id):
         """Perform failover operations for an amphora.
 
