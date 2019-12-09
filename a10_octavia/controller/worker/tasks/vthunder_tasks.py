@@ -272,7 +272,7 @@ class ConfigureaVCS(BaseVThunderTask):
 
         try:
             bc = self.client_factory(backup_vthunder)
-            bc.system.action.set_vcs_device(2, 100)
+            bc.system.action.set_vcs_device(2, 200)
             bc.system.action.set_vcs_para("192.168.0.100", "255.255.255.0")
             bc.system.action.vcs_enable()
             bc.system.action.vcs_reload()

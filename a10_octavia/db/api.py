@@ -35,7 +35,6 @@ def get_engine(url=None):
 
     if url is None:
         if A10_CFG is None:
-            from a10_octavia import a10_config
             A10_CFG = a10_config.A10Config()
 
         url = A10_CFG.get('database_connection')

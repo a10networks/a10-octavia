@@ -24,7 +24,24 @@ from oslo_log import log as logging
 from sqlalchemy.orm import exc as db_exceptions
 import tenacity
 import urllib3
-from a10_octavia.db import repositories as a10repo
+import socket
+from taskflow.listeners import logging as tf_logging
+
+from octavia.api.drivers import driver_lib
+from octavia.common import constants
+from octavia.common import base_taskflow
+from octavia.common import exceptions
+from octavia.db import api as db_apis
+from octavia.db import repositories as repo
+from octavia.api.drivers import driver_lib
+from octavia.common import constants
+from octavia.common import base_taskflow
+from octavia.common import exceptions
+from octavia.db import api as db_apis
+from octavia.db import repositories as repo
+
+from a10_octavia import a10_config
+from a10_octavia.common import data_models
 from a10_octavia.controller.worker.flows import a10_load_balancer_flows
 from a10_octavia.controller.worker.flows import a10_listener_flows
 from a10_octavia.controller.worker.flows import a10_pool_flows
@@ -33,13 +50,6 @@ from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_l7policy_flows
 from a10_octavia.controller.worker.flows import a10_l7rule_flows
 from a10_octavia.db import repositories as a10repo
-from taskflow.listeners import logging as tf_logging
-from octavia.api.drivers import driver_lib
-from octavia.common import constants
-from octavia.common import base_taskflow
-from octavia.common import exceptions
-from octavia.db import api as db_apis
-from octavia.db import repositories as repo
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -72,6 +82,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._l7rule_flows = a10_l7rule_flows.L7RuleFlows()
         self._vthunder_repo = a10repo.VThunderRepository()
         self._exclude_result_logging_tasks = ()
+        a10_conf = a10_config.A10Config()
+        self.rack_dict = a10_conf.get_rack_dict()
         super(A10ControllerWorker, self).__init__()
 
     def create_amphora(self):
@@ -198,6 +210,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
         if not listener:
@@ -207,12 +220,21 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         load_balancer = listener.load_balancer
 
-        create_listener_tf = self._taskflow_load(self._listener_flows.
-                                                 get_create_listener_flow(),
-                                                 store={constants.LOADBALANCER:
-                                                        load_balancer,
-                                                        constants.LISTENERS:
-                                                            [listener]})
+        if listener.project_id in self.rack_dict:
+            create_listener_tf = self._taskflow_load(self._listener_flows.
+                                                     get_rack_vthunder_create_listener_flow(listener.project_id),
+                                                     store={constants.LOADBALANCER:
+                                                            load_balancer,
+                                                            constants.LISTENERS:
+                                                                [listener]})
+        else:
+            create_listener_tf = self._taskflow_load(self._listener_flows.
+                                                     get_create_listener_flow(),
+                                                     store={constants.LOADBALANCER:
+                                                            load_balancer,
+                                                            constants.LISTENERS:
+                                                                [listener]})
+
         with tf_logging.DynamicLoggingListener(create_listener_tf,
                                                log=LOG):
             create_listener_tf.run()
@@ -224,14 +246,20 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises ListenerNotFound: The referenced listener was not found
         """
+
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
         load_balancer = listener.load_balancer
-
-        delete_listener_tf = self._taskflow_load(
-            self._listener_flows.get_delete_listener_flow(),
-            store={constants.LOADBALANCER: load_balancer,
-                   constants.LISTENER: listener})
+        if listener.project_id in self.rack_dict:
+            delete_listener_tf = self._taskflow_load(
+                self._listener_flows.get_delete_rack_listener_flow(),
+                store={constants.LOADBALANCER: load_balancer,
+                       constants.LISTENER: listener})
+        else:
+            delete_listener_tf = self._taskflow_load(
+                self._listener_flows.get_delete_listener_flow(),
+                store={constants.LOADBALANCER: load_balancer,
+                       constants.LISTENER: listener})
         with tf_logging.DynamicLoggingListener(delete_listener_tf,
                                                log=LOG):
             delete_listener_tf.run()
@@ -276,6 +304,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
+    
     def create_load_balancer(self, load_balancer_id):
         """Creates a load balancer by allocating Amphorae.
 
@@ -289,9 +318,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                         '60 seconds.', 'load_balancer', load_balancer_id)
             raise db_exceptions.NoResultFound
 
-        LOG.info("A10ControllerWorker.create_load_balancer called. self: %s load_balancer_id: %s lb: %s vip: %s" % (self.__dict__, load_balancer_id, lb.__dict__, lb.vip.__dict__))
-        LOG.info("A10ControllerWorker.create_load_balancer called. lb name: %s lb id: %s vip ip: %s" % (lb.name, load_balancer_id, lb.vip.ip_address))
-
         store = {constants.LOADBALANCER_ID: load_balancer_id,
                  constants.BUILD_TYPE_PRIORITY:
                  constants.LB_CREATE_NORMAL_PRIORITY}
@@ -302,9 +328,17 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             constants.TOPOLOGY: topology
         }
 
-        create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
-            topology=topology, listeners=lb.listeners)
-        create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
+        if lb.project_id in self.rack_dict:
+            LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'
+                     'from config file for Rack Vthunder' % (lb.project_id))
+            create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
+                vthunder_conf=self.rack_dict[lb.project_id], topology=topology, listeners=lb.listeners)
+            create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
+        else:
+            create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
+                topology=topology, listeners=lb.listeners)
+            create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
+
         with tf_logging.DynamicLoggingListener(
                 create_lb_tf, log=LOG,
                 hide_inputs_outputs_of=self._exclude_result_logging_tasks):
@@ -382,12 +416,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(update_lb_tf,
                                                log=LOG):
             update_lb_tf.run()
-
+            
     @tenacity.retry(
         retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
+    
     def create_member(self, member_id):
         """Creates a pool member.
 
@@ -395,6 +430,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoSuitablePool: Unable to find the node pool
         """
+
         member = self._member_repo.get(db_apis.get_session(),
                                        id=member_id)
         if not member:
@@ -407,15 +443,24 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = pool.load_balancer
 
         topology = CONF.controller_worker.loadbalancer_topology
-
-        create_member_tf = self._taskflow_load(self._member_flows.
-                                               get_create_member_flow(topology=topology),
-                                               store={constants.MEMBER: member,
-                                                      constants.LISTENERS:
+        if member.project_id in self.rack_dict:
+            create_member_tf = self._taskflow_load(self._member_flows.get_rack_vthunder_create_member_flow(),
+                                                   store={constants.MEMBER: member,
+                                                          constants.LISTENERS:
                                                           listeners,
-                                                      constants.LOADBALANCER:
+                                                          constants.LOADBALANCER:
                                                           load_balancer,
-                                                      constants.POOL: pool})
+                                                          constants.POOL: pool})
+        else:
+            create_member_tf = self._taskflow_load(self._member_flows.
+                                                   get_create_member_flow(topology=topology),
+                                                   store={constants.MEMBER: member,
+                                                          constants.LISTENERS:
+                                                          listeners,
+                                                          constants.LOADBALANCER:
+                                                          load_balancer,
+                                                          constants.POOL: pool})
+
         with tf_logging.DynamicLoggingListener(create_member_tf,
                                                log=LOG):
             create_member_tf.run()

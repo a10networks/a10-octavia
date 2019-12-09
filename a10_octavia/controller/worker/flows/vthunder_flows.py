@@ -40,6 +40,7 @@ LOG = logging.getLogger(__name__)
 
 
 class VThunderFlows(object):
+
     def __init__(self):
         # for some reason only this has the values from the config file
         # self.REST_AMPHORA_DRIVER = (CONF.controller_worker.amphora_driver ==
@@ -85,7 +86,8 @@ class VThunderFlows(object):
         # Define a subflow for if we can't map an amphora
         create_amp = self._get_create_amp_for_lb_subflow(prefix, role)
 
-        map_lb_to_vthunder = self._get_vthunder_for_amphora_subflow(prefix, role)
+        map_lb_to_vthunder = self._get_vthunder_for_amphora_subflow(
+            prefix, role)
 
         # Add them to the graph flow
         amp_for_lb_flow.add(allocate_and_associate_amp,
@@ -271,6 +273,9 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.CREATE_AMPHORA_INDB,
             provides=constants.AMPHORA_ID))
 
+        require_server_group_id_condition = (
+            role in (constants.ROLE_BACKUP, constants.ROLE_MASTER) and
+            CONF.nova.enable_anti_affinity)
         # Relaod LB
         # vthunder_for_amphora_subflow.add(database_tasks.ReloadLoadBalancer(
         #    name=sf_name + '-' + 'reload_loadbalancer',
@@ -349,3 +354,25 @@ class VThunderFlows(object):
             name=sf_name + '-' + 'configure_avcs_sync',
             requires=(a10constants.VTHUNDER, a10constants.BACKUP_VTHUNDER)))
         return vrrp_subflow
+
+    def get_rack_vthunder_for_lb_subflow(
+            self, vthunder_conf, prefix, role=constants.ROLE_STANDALONE):
+        """ reload the loadbalancer and make entry in database"""
+
+        sf_name = prefix + '-' + constants.GET_AMPHORA_FOR_LB_SUBFLOW
+
+        amp_for_lb_flow = linear_flow.Flow(sf_name)
+
+        amp_for_lb_flow.add(database_tasks.ReloadLoadBalancer(
+            name=sf_name + '-' + 'reload_loadbalancer',
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
+        amp_for_lb_flow.add(a10_database_tasks.CreateRackVthunderEntry(
+            name=sf_name + '-' + 'create_rack_vThunder_entry_in_database',
+            inject={a10constants.VTHUNDER_CONFIG: vthunder_conf},
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG)))
+        amp_for_lb_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+
+        return amp_for_lb_flow
