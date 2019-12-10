@@ -157,7 +157,7 @@ class LoadBalancerFlows(object):
         
         # IMP: here we will inject network flow
         new_LB_net_subflow = self.get_new_LB_networking_subflow(topology)
-        post_create_LB_flow.add(new_LB_net_subflow)
+        post_create_lb_flow.add(new_LB_net_subflow)
 
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             vrrp_subflow = self.vthunder_flows.get_vrrp_subflow(prefix)
@@ -232,7 +232,7 @@ class LoadBalancerFlows(object):
         new_LB_net_subflow.add(network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.AMPS_DATA,
                       constants.UPDATE_DICT)))
-        new_LB_net_subflow.add(database_tasks.UpdateAmphoraeVIPData(
+        new_LB_net_subflow.add(database_tasks.UpdateAmphoraVIPData(
             requires=constants.AMPS_DATA))
         new_LB_net_subflow.add(database_tasks.ReloadLoadBalancer(
             name=constants.RELOAD_LB_AFTER_PLUG_VIP,

@@ -46,9 +46,9 @@ class PoolParent(object):
             protocol = PROTOCOL_MAP.get(pool.protocol, 'TCP')
             lb_method = openstack_mappings.service_group_lb_method(c, pool.lb_algorithm)
             set_method(pool.id,
-                       protocol,
-                       lb_method,
-                       service_group_temp,
+                       protocol=protocol,
+                       lb_method=lb_method,
+                       service_group_templates=service_group_temp,
                        axapi_args=args)
             LOG.info("Pool created successfully.")
         except Exception as e:
