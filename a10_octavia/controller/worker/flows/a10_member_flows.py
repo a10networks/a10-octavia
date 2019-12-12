@@ -60,13 +60,6 @@ class MemberFlows(object):
             provides=constants.DELTAS))
         create_member_flow.add(network_tasks.HandleNetworkDeltas(
             requires=constants.DELTAS, provides=constants.ADDED_PORTS))
-        # Need to add relaod vThunder logic here
-        # create_member_flow.add(amphora_driver_tasks.AmphoraePostNetworkPlug(
-        #    requires=(constants.LOADBALANCER, constants.ADDED_PORTS)
-        # ))
-        # create_member_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=(constants.LOADBALANCER, constants.LISTENERS)))
-        # Get VThunder details from database
         create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
@@ -127,10 +120,6 @@ class MemberFlows(object):
                                                          constants.MEMBER}))
         delete_member_flow.add(database_tasks.DeleteMemberInDB(
             requires=constants.MEMBER))
-        # delete_member_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
-
-        # Get VThunder details from database
         delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -160,8 +149,6 @@ class MemberFlows(object):
                       constants.POOL]))
         update_member_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
             requires=constants.MEMBER))
-        # update_member_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))

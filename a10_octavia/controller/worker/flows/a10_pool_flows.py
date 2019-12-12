@@ -34,8 +34,6 @@ try:
 except (ImportError, AttributeError):
     pass
 
-# from a10_octavia.controller.worker.tasks import vthunder_tasks
-
 
 class PoolFlows(object):
 
@@ -51,9 +49,6 @@ class PoolFlows(object):
                       constants.LOADBALANCER]))
         create_pool_flow.add(database_tasks.MarkPoolPendingCreateInDB(
             requires=constants.POOL))
-        # create_pool_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        # Get VThunder details from database
         create_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -144,8 +139,6 @@ class PoolFlows(object):
                       constants.LOADBALANCER]))
         update_pool_flow.add(database_tasks.MarkPoolPendingUpdateInDB(
             requires=constants.POOL))
-        # update_pool_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))

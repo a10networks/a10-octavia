@@ -26,14 +26,6 @@ class PoolParent(object):
 
     def set(self, set_method, pool, vthunder):
         args = {'service_group': self.meta(pool, 'service_group', {})}
-        PROTOCOL_MAP = {
-                        'TCP' : 'TCP',
-                        'UDP' : 'UDP',
-                        'HTTP' : 'TCP',
-                        'HTTPS' : 'TCP',
-                        'TERMINATED_HTTPS' : 'TCP',
-                        'PROXY' : 'TCP'
-                       }
         try:
             conf_templates = self.readConf('SERVICE_GROUP', 'templates').strip('"')
             service_group_temp = {}
@@ -43,7 +35,7 @@ class PoolParent(object):
 
         try:
             c = self.client_factory(vthunder)
-            protocol = PROTOCOL_MAP.get(pool.protocol, 'TCP')
+            protocol = openstack_mappings.service_group_protocol(c, pool.protocol)
             lb_method = openstack_mappings.service_group_lb_method(c, pool.lb_algorithm)
             set_method(pool.id,
                        protocol=protocol,

@@ -33,9 +33,6 @@ except (ImportError, AttributeError):
     pass
 
 
-# from a10_octavia.controller.worker.tasks import vthunder_tasks
-
-
 class L7RuleFlows(object):
 
     def get_create_l7rule_flow(self):
@@ -49,8 +46,6 @@ class L7RuleFlows(object):
                       constants.LOADBALANCER]))
         create_l7rule_flow.add(database_tasks.MarkL7RulePendingCreateInDB(
             requires=constants.L7RULE))
-        # create_l7rule_flow.add(amphora_driver_tasks.ListenersUpdate(
-        # requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -78,8 +73,6 @@ class L7RuleFlows(object):
             requires=constants.L7RULE))
         delete_l7rule_flow.add(model_tasks.DeleteModelObject(
             rebind={constants.OBJECT: constants.L7RULE}))
-        # delete_l7rule_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
 	delete_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER, provides=a10constants.VTHUNDER))
         delete_l7rule_flow.add(handler_l7rule.DeleteL7Rule(
@@ -104,8 +97,6 @@ class L7RuleFlows(object):
                       constants.LOADBALANCER]))
         update_l7rule_flow.add(database_tasks.MarkL7RulePendingUpdateInDB(
             requires=constants.L7RULE))
-        # update_l7rule_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))

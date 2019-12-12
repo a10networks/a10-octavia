@@ -108,7 +108,7 @@ class ListenersParent(object):
                            **template_args)
                 LOG.info("Listener created successfully.")
         except Exception as e:
-            print(str(e))
+            LOG.error(str(e))
             LOG.info("Error occurred")
 
     def cert_handler(self, loadbalancer, listener, vthunder):
@@ -204,7 +204,6 @@ class ListenerDelete(BaseVThunderTask):
 
     def execute(self, loadbalancer, listener, vthunder):
         """Execute listener delete routines for an amphora."""
-        # self.amphora_driver.delete(listener, loadbalancer.vip)
         try:
             c = self.client_factory(vthunder)
             name = loadbalancer.id + "_" + str(listener.protocol_port)
@@ -213,7 +212,7 @@ class ListenerDelete(BaseVThunderTask):
             LOG.info("Listener deleted successfully.")
         except Exception as e:
             LOG.error(str(e))
-        LOG.debug("Deleted the listener on the vip")
+            LOG.debug("Deleted the listener on the vip")
 
     def revert(self, listener, *args, **kwargs):
         """Handle a failed listener delete."""

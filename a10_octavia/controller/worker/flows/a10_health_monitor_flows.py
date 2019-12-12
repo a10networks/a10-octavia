@@ -45,8 +45,6 @@ class HealthMonitorFlows(object):
                       constants.LOADBALANCER]))
         create_hm_flow.add(database_tasks.MarkHealthMonitorPendingCreateInDB(
             requires=constants.HEALTH_MON))
-        # create_hm_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -108,8 +106,6 @@ class HealthMonitorFlows(object):
                       constants.LOADBALANCER]))
         update_hm_flow.add(database_tasks.MarkHealthMonitorPendingUpdateInDB(
             requires=constants.HEALTH_MON))
-        # update_hm_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))

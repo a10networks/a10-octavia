@@ -48,19 +48,18 @@ class MemberCreate(BaseVThunderTask):
                                 "bounds with value {0}. Please set to between " +
                                 "1-8000000. Defaulting to 8000000".format(conn_limit))
                 else:
-                    server_args['conn-limit'] = int(conn_limit)
+                    server_args['conn-limit'] = conn_limit
             if conn_resume is not None:
-                if int(conn_resume) < 1 or int(conn_resume) > 1000000:
+                if conn_resume < 1 or conn_resume > 1000000:
                     LOG.warning("The specified conn_resume value is invalid. The value should be either 0 or 1")
                 else:
-                    server_args['conn-resume'] = int(conn_resume)
+                    server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}
             try:
                 conf_templates = self.readConf('SERVER', 'templates')
                 server_temp = {}
                 if conf_templates is not None:
                     conf_templates = conf_templates.strip('"')
-                    # server_temp = {}
                     server_temp['template-server'] = conf_templates
             except:
                 server_temp = None
@@ -117,12 +116,12 @@ class MemberUpdate(BaseVThunderTask):
                                 "bounds with value {0}. Please set to between " +
                                 "1-8000000. Defaulting to 8000000".format(conn_limit))
                 else:
-                    server_args['conn-limit'] = int(conn_limit)
+                    server_args['conn-limit'] = conn_limit
             if conn_resume is not None:
-                if int(conn_resume) < 1 or int(conn_resume) > 1000000:
+                if conn_resume < 1 or conn_resume > 1000000:
                     LOG.warning("The specified conn_resume value is invalid. The value should be either 0 or 1")
                 else:
-                    server_args['conn-resume'] = int(conn_resume)
+                    server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}
             try:
                 conf_templates = self.readConf('SERVER', 'templates')
