@@ -45,3 +45,14 @@ def service_group_lb_method(c,os_method):
             z.STATELESS_PER_PACKET_ROUND_ROBIN,
     }
     return lb_methods[os_method]
+
+def service_group_protocol(c, os_protocol):
+    z = c.slb.service_group
+    protocols = {
+        'HTTP': z.TCP,
+        'HTTPS': z.TCP,
+        'TERMINATED_HTTPS': z.TCP,
+        'TCP': z.TCP,
+        'UDP': z.UDP
+    }
+    return protocols[os_protocol]

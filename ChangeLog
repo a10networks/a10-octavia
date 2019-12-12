@@ -1,6 +1,34 @@
 CHANGES
 =======
 
+* Removal of plugin creation part
+* Update README.md
+* Fixed bolding per PM request
+* Added Nov 6th release date, in development blurb
+* updated readme.md for new service part
+* updated the install service file
+* reorganize the install script
+* partial code for daemon auto-install
+* conversion process of octavia plugin to provider agent
+* aVCS configuration automation
+* added VRRP flow and member network port configuration logic
+* adding support for vThunder 414
+* rebase for repositories.py
+* rebase
+* changes for HA flows
+* changes for HA flows
+* last commit with all required changes of config parameters
+* Final code review
+* Added appropriate headers
+* changes for default section
+* args phase1
+* added SLB config parameters
+* added few config parameters to SLB nouns
+* Moved tests to unit dir
+* Actual assertions in tests
+* Added mock to test requirements \* Brief sketch of flow/task testing I'm adding more to next commit
+* Added alembic.ini,include\_package\_data to python package setup
+* Added tox.ini/unit test execution
 * Updated setup.cfg to use our DB migration tool
 * Added environment info to readme
 * Removal of constant wait and issue resolution of error - computeid is missing

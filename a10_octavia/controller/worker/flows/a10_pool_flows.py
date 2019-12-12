@@ -14,32 +14,25 @@
 
 
 from taskflow.patterns import linear_flow
-
+from a10_octavia.controller.worker.tasks import handler_service_group
+from a10_octavia.controller.worker.tasks import handler_virtual_port
+from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.common import a10constants
 from octavia.common import constants
 try:
-    from octavia.controller.worker.v2.tasks import amphora_driver_tasks
     from octavia.controller.worker.v2.tasks import database_tasks
     from octavia.controller.worker.v2.tasks import lifecycle_tasks
     from octavia.controller.worker.v2.tasks import model_tasks
-    from octavia.controller.worker.v2.tasks import network_tasks
 except (ImportError, AttributeError):
     pass
 
 try:
     # Stein and previous
-    from octavia.controller.worker.tasks import amphora_driver_tasks
     from octavia.controller.worker.tasks import database_tasks
     from octavia.controller.worker.tasks import lifecycle_tasks
     from octavia.controller.worker.tasks import model_tasks
-    from octavia.controller.worker.tasks import network_tasks
 except (ImportError, AttributeError):
     pass
-
-#from a10_octavia.controller.worker.tasks import vthunder_tasks
-from a10_octavia.controller.worker.tasks import handler_service_group
-from a10_octavia.controller.worker.tasks import handler_virtual_port
-from a10_octavia.controller.worker.tasks import a10_database_tasks
-from a10_octavia.common import a10constants
 
 
 class PoolFlows(object):
@@ -56,9 +49,6 @@ class PoolFlows(object):
                       constants.LOADBALANCER]))
         create_pool_flow.add(database_tasks.MarkPoolPendingCreateInDB(
             requires=constants.POOL))
-        #create_pool_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        # Get VThunder details from database
         create_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -149,7 +139,12 @@ class PoolFlows(object):
                       constants.LOADBALANCER]))
         update_pool_flow.add(database_tasks.MarkPoolPendingUpdateInDB(
             requires=constants.POOL))
-        update_pool_flow.add(amphora_driver_tasks.ListenersUpdate(
+        update_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        update_pool_flow.add(handler_service_group.PoolUpdate(
+            requires=[constants.POOL, a10constants.VTHUNDER]))
+        update_pool_flow.add(handler_virtual_port.ListenersUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_pool_flow.add(database_tasks.UpdatePoolInDB(
             requires=[constants.POOL, constants.UPDATE_DICT]))

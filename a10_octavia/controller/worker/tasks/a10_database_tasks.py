@@ -72,7 +72,6 @@ class CreteVthunderEntry(BaseDatabaseTask):
             'DEFAULT', 'DEFAULT_VTHUNDER_USERNAME').replace('"', '')
         password = self.config.get(
             'DEFAULT', 'DEFAULT_VTHUNDER_PASSWORD').replace('"', '')
-
         axapi_version = int(
             self.config.get('DEFAULT', 'DEFAULT_AXAPI_VERSION'))
 

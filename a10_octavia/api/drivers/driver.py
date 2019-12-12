@@ -35,19 +35,15 @@ class A10ProviderDriver(driver_base.ProviderDriver):
     def __init__(self):
         super(A10ProviderDriver, self).__init__()
         self._args = {}
-        self.namespace = constants.RPC_NAMESPACE_CONTROLLER_AGENT
-        self.topic = "a10_octavia"
-        self.version = '1.0'
         self.transport = messaging.get_rpc_transport(cfg.CONF)
         self._args['fanout'] = False
-        self._args['namespace'] = self.namespace
-        self._args['topic'] = self.topic
-        self._args['version'] = self.version
+        self._args['namespace'] = constants.RPC_NAMESPACE_CONTROLLER_AGENT
+        self._args['topic'] = "a10_octavia"
+        self._args['version'] = '1.0'
         self.target = messaging.Target(**self._args)
         self.client = messaging.RPCClient(self.transport, target=self.target)
 
     # Load Balancer
-    # loadbalancer_create needs to be implemented
     def loadbalancer_create(self, loadbalancer):
         LOG.info('A10 provider load balancer loadbalancer: %s.', loadbalancer.__dict__)
         payload = {constants.LOAD_BALANCER_ID: loadbalancer.loadbalancer_id}
@@ -57,12 +53,11 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.LOAD_BALANCER_ID: loadbalancer.loadbalancer_id, 'cascade': cascade}
         self.client.cast({}, 'delete_load_balancer', **payload)
 
-    '''def loadbalancer_update(self, old_loadbalancer, new_loadbalancer):
+    def loadbalancer_update(self, old_loadbalancer, new_loadbalancer):
         # Adapt the provider data model to the queue schema
         lb_dict = new_loadbalancer.to_dict()
-        #if 'admin_state_up' in lb_dict:
-        if 'provisioning_status' in lb_dict:
-            lb_dict['enabled'] = lb_dict.pop('provisioning_status')
+        if 'admin_state_up' in lb_dict:
+            lb_dict['enabled'] = lb_dict.pop('admin_state_up')
         lb_id = lb_dict.pop('loadbalancer_id')
         # Put the qos_policy_id back under the vip element the controller
         # expects
@@ -73,7 +68,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
 
         payload = {constants.LOAD_BALANCER_ID: lb_id,
                    constants.LOAD_BALANCER_UPDATES: lb_dict}
-        self.client.cast({}, 'update_load_balancer', **payload)'''
+        self.client.cast({}, 'update_load_balancer', **payload)
 
     # Many other methods may be inheritted from Amphora
 
@@ -87,7 +82,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.LISTENER_ID: listener_id}
         self.client.cast({}, 'delete_listener', **payload)
 
-    '''def listener_update(self, old_listener, new_listener):
+    def listener_update(self, old_listener, new_listener):
         listener_dict = new_listener.to_dict()
         if 'admin_state_up' in listener_dict:
             listener_dict['enabled'] = listener_dict.pop('admin_state_up')
@@ -103,8 +98,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
 
         payload = {constants.LISTENER_ID: listener_id,
                    constants.LISTENER_UPDATES: listener_dict}
-        self.client.cast({}, 'update_listener', **payload)'''
-
+        self.client.cast({}, 'update_listener', **payload)
 
     def pool_create(self, pool):
         payload = {constants.POOL_ID: pool.pool_id}
@@ -115,6 +109,27 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.POOL_ID: pool_id}
         self.client.cast({}, 'delete_pool', **payload)
 
+    def pool_update(self, old_pool, new_pool):
+        pool_dict = new_pool.to_dict()
+        if 'admin_state_up' in pool_dict:
+            pool_dict['enabled'] = pool_dict.pop('admin_state_up')
+        pool_id = pool_dict.pop('pool_id')
+        if 'tls_container_ref' in pool_dict:
+            pool_dict['tls_container_id'] = pool_dict.pop('tls_container_ref')
+        pool_dict.pop('tls_container_data', None)
+        if 'ca_tls_container_ref' in pool_dict:
+            pool_dict['ca_tls_certificate_id'] = pool_dict.pop(
+                'ca_tls_container_ref')
+        pool_dict.pop('ca_tls_container_data', None)
+        if 'client_crl_container_ref' in pool_dict:
+            pool_dict['client_crl_container_id'] = pool_dict.pop(
+                'client_crl_container_ref')
+        pool_dict.pop('client_crl_container_data', None)
+
+        payload = {constants.POOL_ID: pool_id,
+                   constants.POOL_UPDATES: pool_dict}
+        self.client.cast({}, 'update_pool', **payload)  
+  
     def member_create(self, member):
         payload = {constants.MEMBER_ID: member.member_id}
         self.client.cast({}, 'create_member', **payload)
@@ -123,6 +138,16 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         member_id = member.member_id
         payload = {constants.MEMBER_ID: member_id}
         self.client.cast({}, 'delete_member', **payload)
+    
+    def member_update(self, old_member, new_member):
+        member_dict = new_member.to_dict()
+        if 'admin_state_up' in member_dict:
+            member_dict['enabled'] = member_dict.pop('admin_state_up')
+        member_id = member_dict.pop('member_id')
+
+        payload = {constants.MEMBER_ID: member_id,
+                   constants.MEMBER_UPDATES: member_dict}
+        self.client.cast({}, 'update_member', **payload)
 
     # Health Monitor
     def health_monitor_create(self, healthmonitor):
@@ -133,6 +158,23 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         healthmonitor_id = healthmonitor.healthmonitor_id
         payload = {constants.HEALTH_MONITOR_ID: healthmonitor_id}
         self.client.cast({}, 'delete_health_monitor', **payload) 
+    
+    def health_monitor_update(self, old_healthmonitor, new_healthmonitor):
+        healthmon_dict = new_healthmonitor.to_dict()
+        if 'admin_state_up' in healthmon_dict:
+            healthmon_dict['enabled'] = healthmon_dict.pop('admin_state_up')
+        if 'max_retries_down' in healthmon_dict:
+            healthmon_dict['fall_threshold'] = healthmon_dict.pop(
+                'max_retries_down')
+        if 'max_retries' in healthmon_dict:
+            healthmon_dict['rise_threshold'] = healthmon_dict.pop(
+                'max_retries')
+        healthmon_id = healthmon_dict.pop('healthmonitor_id')
+
+        payload = {constants.HEALTH_MONITOR_ID: healthmon_id,
+                   constants.HEALTH_MONITOR_UPDATES: healthmon_dict}
+        self.client.cast({}, 'update_health_monitor', **payload)
+ 
 
     #L7Policy 
 
@@ -145,6 +187,17 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.L7POLICY_ID: l7policy_id}
         self.client.cast({}, 'delete_l7policy', **payload)
 
+    def l7policy_update(self, old_l7policy, new_l7policy):
+        l7policy_dict = new_l7policy.to_dict()
+        if 'admin_state_up' in l7policy_dict:
+            l7policy_dict['enabled'] = l7policy_dict.pop('admin_state_up')
+        l7policy_id = l7policy_dict.pop('l7policy_id')
+
+        payload = {constants.L7POLICY_ID: l7policy_id,
+                   constants.L7POLICY_UPDATES: l7policy_dict}
+        self.client.cast({}, 'update_l7policy', **payload)
+
+
     # L7 Rule
     def l7rule_create(self, l7rule):
         payload = {constants.L7RULE_ID: l7rule.l7rule_id}
@@ -154,3 +207,14 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         l7rule_id = l7rule.l7rule_id
         payload = {constants.L7RULE_ID: l7rule_id}
         self.client.cast({}, 'delete_l7rule', **payload)
+    
+    def l7rule_update(self, old_l7rule, new_l7rule):
+        l7rule_dict = new_l7rule.to_dict()
+        if 'admin_state_up' in l7rule_dict:
+            l7rule_dict['enabled'] = l7rule_dict.pop('admin_state_up')
+        l7rule_id = l7rule_dict.pop('l7rule_id')
+
+        payload = {constants.L7RULE_ID: l7rule_id,
+                   constants.L7RULE_UPDATES: l7rule_dict}
+        self.client.cast({}, 'update_l7rule', **payload)
+
