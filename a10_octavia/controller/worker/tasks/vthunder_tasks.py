@@ -33,6 +33,7 @@ from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 from a10_octavia.controller.worker.tasks import persist
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 
+
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
@@ -119,7 +120,6 @@ class AmphoraePostVIPPlug(BaseVThunderTask):
     def execute(self, loadbalancer, vthunder):
         """Execute get_info routine for a vThunder until it responds."""
         try:
-            #import rpdb; rpdb.set_trace()
             c = self.client_factory(vthunder)
             save_config = c.system.action.write_memory()
             amp_info = c.system.action.reboot()
@@ -194,94 +194,101 @@ class ConfigureVRRP(BaseVThunderTask):
 
     def execute(self, vthunder, backup_vthunder):
         """Execute to configure vrrp in two vThunder devices."""
-        try:
-            c = self.client_factory(vthunder)
-            amp_info = c.system.action.configureVRRP(1,1)
-            LOG.info("Configured the master vThunder for VRRP")
-        except Exception as e:
-            LOG.error("Unable to configure master vThunder VRRP")
-            LOG.info(str(e))
-            raise
+        c = self.client_factory(vthunder)
+        status = c.system.action.check_vrrp_status()
+        if not status:
+            try:
+                c = self.client_factory(vthunder)
+                amp_info = c.system.action.configureVRRP(1,1)
+                LOG.info("Configured the master vThunder for VRRP")
+            except Exception as e:
+                LOG.error("Unable to configure master vThunder VRRP")
+                LOG.info(str(e))
+                raise
         
-        try:
-            c = self.client_factory(backup_vthunder)
-            amp_info = c.system.action.configureVRRP(2,1)
-            LOG.info("Configured the backup vThunder for VRRP")
-        except Exception as e:
-            LOG.error("Unable to configure backup vThunder VRRP")
-            LOG.info(str(e))
-            #raise
+            try:
+                c = self.client_factory(backup_vthunder)
+                amp_info = c.system.action.configureVRRP(2,1)
+                LOG.info("Configured the backup vThunder for VRRP")
+            except Exception as e:
+                LOG.error("Unable to configure backup vThunder VRRP")
+                LOG.info(str(e))
+                #raise
+        return status     
 
 
 class ConfigureVRID(BaseVThunderTask):
     """"Task to configure vThunder VRRP """
 
-    def execute(self, vthunder, backup_vthunder):
+    def execute(self, vthunder, backup_vthunder, vrrp_status ):
         """Execute to configure vrrp in two vThunder devices."""
-        try:
-            c = self.client_factory(vthunder)
-            amp_info = c.system.action.configureVRID(1)
-            LOG.info("Configured the master vThunder for VRID")
-        except Exception as e:
-            LOG.error("Unable to configure master vThunder VRRP")
-            LOG.info(str(e))
-            raise
+        if not vrrp_status:
+            try:
+                c = self.client_factory(vthunder)
+                amp_info = c.system.action.configureVRID(1)
+                LOG.info("Configured the master vThunder for VRID")
+            except Exception as e:
+                LOG.error("Unable to configure master vThunder VRRP")
+                LOG.info(str(e))
+                raise
         
-        try:
-            c = self.client_factory(backup_vthunder)
-            amp_info = c.system.action.configureVRID(1)
-            LOG.info("Configured the backup vThunder for VRID")
-        except Exception as e:
-            LOG.error("Unable to configure backup vThunder VRRP")
-            LOG.info(str(e))
-            #raise
+            try:
+                c = self.client_factory(backup_vthunder)
+                amp_info = c.system.action.configureVRID(1)
+                LOG.info("Configured the backup vThunder for VRID")
+            except Exception as e:
+                LOG.error("Unable to configure backup vThunder VRRP")
+                LOG.info(str(e))
+                #raise
 
 class ConfigureVRRPSync(BaseVThunderTask):
     """"Task to sync vThunder VRRP """
 
-    def execute(self, vthunder, backup_vthunder):
+    def execute(self, vthunder, backup_vthunder, vrrp_status):
         """Execute to sync up vrrp in two vThunder devices."""
-        try:
-            c = self.client_factory(vthunder)
-            amp_info = c.system.action.configSynch(backup_vthunder.ip_address, backup_vthunder.username,
-                                                   backup_vthunder.password)
-            LOG.info("Waiting 30 seconds for config synch.")
-            time.sleep(30)
-            LOG.info("Sync up for vThunder master")
-        except Exception as e:
-            LOG.error("Unable to sync master vThunder VRRP")
-            LOG.info(str(e))
-            #raise
+        if not vrrp_status:
+            try:
+                c = self.client_factory(vthunder)
+                amp_info = c.system.action.configSynch(backup_vthunder.ip_address, backup_vthunder.username,
+                                                       backup_vthunder.password)
+                LOG.info("Waiting 30 seconds for config synch.")
+                time.sleep(30)
+                LOG.info("Sync up for vThunder master")
+            except Exception as e:
+                LOG.error("Unable to sync master vThunder VRRP")
+                LOG.info(str(e))
+                #raise
 
 
 class ConfigureaVCS(BaseVThunderTask):
     """"Task to configure aVCS """
 
-    def execute(self, vthunder, backup_vthunder):
+    def execute(self, vthunder, backup_vthunder, vrrp_status):
         """Execute to configure aVCS in two vThunder devices."""
-        try:
-            c = self.client_factory(vthunder)
-            c.system.action.set_vcs_device(1, 200)
-            c.system.action.set_vcs_para("192.168.0.100", "255.255.255.0")
-            c.system.action.vcs_enable()
-            c.system.action.vcs_reload()
-            LOG.info("Configured the master vThunder for aVCS")
-        except Exception as e:
-            LOG.error("Unable to configure master vThunder aVCS")
-            LOG.info(str(e))
-            raise
+        if not vrrp_status:
+            try:
+                c = self.client_factory(vthunder)
+                c.system.action.set_vcs_device(1, 200)
+                c.system.action.set_vcs_para("192.168.0.100", "255.255.255.0")
+                c.system.action.vcs_enable()
+                c.system.action.vcs_reload()
+                LOG.info("Configured the master vThunder for aVCS")
+            except Exception as e:
+                LOG.error("Unable to configure master vThunder aVCS")
+                LOG.info(str(e))
+                raise
 
-        try:
-            bc = self.client_factory(backup_vthunder)
-            bc.system.action.set_vcs_device(2, 200)
-            bc.system.action.set_vcs_para("192.168.0.100", "255.255.255.0")
-            bc.system.action.vcs_enable()
-            bc.system.action.vcs_reload()
-            LOG.info("Configured the backup vThunder for aVCS")
-        except Exception as e:
-            LOG.error("Unable to configure backup vThunder aVCS")
-            LOG.info(str(e))
-            raise
+            try:
+                bc = self.client_factory(backup_vthunder)
+                bc.system.action.set_vcs_device(2, 100)
+                bc.system.action.set_vcs_para("192.168.0.100", "255.255.255.0")
+                bc.system.action.vcs_enable()
+                bc.system.action.vcs_reload()
+                LOG.info("Configured the backup vThunder for aVCS")
+            except Exception as e:
+                LOG.error("Unable to configure backup vThunder aVCS")
+                LOG.info(str(e))
+                raise
 
 
 class ListenersCreate(BaseVThunderTask):
@@ -704,4 +711,13 @@ class DeleteL7Rule(BaseVThunderTask):
         except Exception as e:
             print(str(e))
             LOG.info("Error occurred")
+
+class CheckVRRPStatus(BaseVThunderTask):
+    """"Task to check VRRP status"""
+    def execute(self, vthunder):
+        """Execute to configure vrrp in two vThunder devices."""
+        c = self.client_factory(vthunder)
+        status = c.system.action.check_vrrp_status()
+        return status
+
 

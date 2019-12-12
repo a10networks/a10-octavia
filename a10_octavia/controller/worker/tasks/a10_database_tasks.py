@@ -130,8 +130,8 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
         loadbalancer_id = loadbalancer.id
         vthunder = self.vthunder_repo.getVThunderFromLB(
             db_apis.get_session(), loadbalancer_id)
-        return vthunder
         LOG.info("Successfully fetched vThunder details for LB")
+        return vthunder
 
 
 class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
