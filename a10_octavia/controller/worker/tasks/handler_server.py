@@ -60,10 +60,6 @@ class MemberCreate(BaseVThunderTask):
                 server_temp = {}
                 if conf_templates is not None:
                     conf_templates = conf_templates.strip('"')
-<<<<<<< HEAD
-=======
-                    # server_temp = {}
->>>>>>> Added update functions
                     server_temp['template-server'] = conf_templates
             except:
                 server_temp = None
@@ -90,7 +86,6 @@ class MemberDelete(BaseVThunderTask):
             LOG.info("Member de-associated to pool successfully.")
             c.slb.server.delete(member.id)
             LOG.info("Member deleted successfully.")
-<<<<<<< HEAD
         except Exception as e:
             LOG.error(str(e))
             LOG.info("Error occurred")
@@ -127,59 +122,6 @@ class MemberUpdate(BaseVThunderTask):
                     LOG.warning("The specified conn_resume value is invalid. The value should be either 0 or 1")
                 else:
                     server_args['conn-resume'] = conn_resume
-            server_args = {'server': server_args}
-            try:
-                conf_templates = self.readConf('SERVER', 'templates')
-                server_temp = {}
-                if conf_templates is not None:
-                    conf_templates = conf_templates.strip('"')
-                    server_temp['template-server'] = conf_templates
-            except:
-                server_temp = None
-                LOG.error("Invalid definition of A10 config in Member section.")
-
-            c.slb.server.update(member.id, member.ip_address, status=status,
-                                server_templates=server_temp,
-                                axapi_args=server_args)
-            LOG.info("Member updated successfully.")
-=======
->>>>>>> Added update functions
-        except Exception as e:
-            LOG.error(str(e))
-            LOG.info("Error occurred")
-
-
-class MemberUpdate(BaseVThunderTask):
-
-    def execute(self, member, vthunder, pool):
-        """Execute create member for an amphora."""
-        conn_limit = self.readConf('SERVER', 'conn_limit')
-        if conn_limit is not None:
-            conn_limit = int(conn_limit)
-        conn_resume = self.readConf('SERVER', 'conn_resume')
-        if conn_resume is not None:
-            conn_resume = int(conn_resume)
-        server_args = self.meta(member, 'server', {})
-
-        try:
-            c = self.client_factory(vthunder)
-            if not member.provisioning_status:
-                status = c.slb.DOWN
-            else:
-                status = c.slb.UP
-            if conn_limit is not None:
-                if conn_limit < 1 or conn_limit > 8000000:
-                    LOG.warning("The specified member server connection limit " +
-                                "(configuration setting: conn-limit) is out of " +
-                                "bounds with value {0}. Please set to between " +
-                                "1-8000000. Defaulting to 8000000".format(conn_limit))
-                else:
-                    server_args['conn-limit'] = int(conn_limit)
-            if conn_resume is not None:
-                if int(conn_resume) < 1 or int(conn_resume) > 1000000:
-                    LOG.warning("The specified conn_resume value is invalid. The value should be either 0 or 1")
-                else:
-                    server_args['conn-resume'] = int(conn_resume)
             server_args = {'server': server_args}
             try:
                 conf_templates = self.readConf('SERVER', 'templates')
