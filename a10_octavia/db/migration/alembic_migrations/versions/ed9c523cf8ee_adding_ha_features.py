@@ -32,7 +32,8 @@ def upgrade():
     sa.Column('project_id', sa.String(36)),
     sa.Column('compute_id', sa.String(36)),
     sa.Column('topology', sa.String(50)),
-    sa.Column('role', sa.String(50))
+    sa.Column('role', sa.String(50)),
+    sa.Column('status', sa.String(36), default='ACTIVE', nullable=False)
     )
 
 def downgrade():

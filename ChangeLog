@@ -1,6 +1,23 @@
 CHANGES
 =======
 
+* Review changes for Afrin
+* update functions corrections for stein
+* Added update functions
+* correction in data structure
+* removed non-required comment line
+* Rack device code review 3
+* Added update functions
+* removed changes in attempts
+* Review comments update 2
+* Adding VRRP synch correctin part
+* Review comments inclusion
+* Removal of swo file
+* Implemented stein support
+* added example config file
+* added example config
+* tested the RACK devices
+* support for rack vThunder devices
 * Removal of plugin creation part
 * Update README.md
 * Fixed bolding per PM request

@@ -104,7 +104,8 @@ class CreteVthunderEntry(BaseDatabaseTask):
             project_id=loadbalancer.project_id,
             compute_id=compute_id,
             topology=topology,
-            role=role)
+            role=role,
+            status = "ACTIVE")
         LOG.info("Successfully created vthunder entry in database.")
 
 
@@ -211,5 +212,20 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                                              project_id=vthunder_config.project_id,
                                              axapi_version=vthunder_config.axapi_version,
                                              topology="STANDALONE",
-                                             role="MASTER")
+                                             role="MASTER",
+                                             status = "ACTIVE")
         LOG.info("Successfully created vthunder entry in database.")
+
+
+class MarkVthunderStatusInDB(BaseDatabaseTask):
+
+    def execute(self, vthunder, status):
+        try:
+            import rpdb; rpdb.set_trace()
+            self.vthunder_repo.update(db_apis.get_session(),
+                                      vthunder.id,
+                                      status=status)
+        except (sqlalchemy.orm.exc.NoResultFound,
+                sqlalchemy.orm.exc.UnmappedInstanceError):
+            LOG.debug('No existing amphora health record to mark busy '
+                      'for amphora: %s, skipping.', vthunder_id)
