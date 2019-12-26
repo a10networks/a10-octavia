@@ -13,6 +13,7 @@
 #    under the License.
 
 
+import datetime
 from oslo_config import cfg
 from oslo_db import exception as odb_exceptions
 from oslo_log import log as logging
@@ -105,7 +106,9 @@ class CreteVthunderEntry(BaseDatabaseTask):
             project_id=loadbalancer.project_id,
             compute_id=compute_id,
             topology=topology,
-            role=role)
+            role=role, 
+            last_update=datetime.datetime.now(),
+            status='ACTIVE')
         LOG.info("Successfully created vthunder entry in database.")
 
 
@@ -162,7 +165,7 @@ class GetComputeForProject(BaseDatabaseTask):
             db_apis.get_session(), loadbalancer.project_id)
         amphora_id = vthunder.amphora_id
         amphora = self.amphora_repo.get(db_apis.get_session(), id=amphora_id)
-        compute_id = amphora.compute_id
+        compute_id = vthunder.compute_id
         return compute_id
         LOG.info("Provided compute ID for existing vThunder device")
 
@@ -214,3 +217,24 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                                              topology="STANDALONE",
                                              role="MASTER")
         LOG.info("Successfully created vthunder entry in database.")
+
+
+class CreateVthunderHealthEntry(BaseDatabaseTask):
+
+    """ Create VThunder Health entry in DB """
+
+    def execute(self, loadbalancer, vthunder_config):
+        vthunder = self.vthunder_repo.create(db_apis.get_session(),
+                                             vthunder_id= uuidutils.generate_uuid(),
+                                             device_name=vthunder_config.device_name,
+                                             username=vthunder_config.username,
+                                             password=vthunder_config.password,
+                                             ip_address=vthunder_config.ip_address,
+                                             undercloud=vthunder_config.undercloud,
+                                             loadbalancer_id=loadbalancer.id,
+                                             project_id=vthunder_config.project_id,
+                                             axapi_version=vthunder_config.axapi_version,
+                                             topology="STANDALONE",
+                                             role="MASTER")
+        LOG.info("Successfully created vthunder entry in database.")
+    

@@ -18,7 +18,8 @@ def hm_type(c, os_hm_type):
         'PING': c.slb.hm.ICMP,
         'TCP': c.slb.hm.TCP,
         'HTTP': c.slb.hm.HTTP,
-        'HTTPS': c.slb.hm.HTTPS
+        'HTTPS': c.slb.hm.HTTPS,
+        'UDP' : c.slb.hm.UDP
     }
     return hm_map[os_hm_type]
 

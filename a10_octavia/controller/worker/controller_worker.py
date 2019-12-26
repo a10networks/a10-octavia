@@ -33,6 +33,9 @@ from octavia.common import exceptions
 from taskflow.listeners import logging as tf_logging
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
+from a10_octavia import a10_config
+from a10_octavia.common import data_models
+from a10_octavia.common import a10constants
 from a10_octavia.db import repositories as a10repo
 from a10_octavia.controller.worker.flows import a10_load_balancer_flows
 from a10_octavia.controller.worker.flows import a10_listener_flows
@@ -41,8 +44,7 @@ from a10_octavia.controller.worker.flows import a10_member_flows
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_l7policy_flows
 from a10_octavia.controller.worker.flows import a10_l7rule_flows
-from a10_octavia import a10_config
-from a10_octavia.common import data_models
+from a10_octavia.controller.worker.flows import vthunder_flows
 
 
 import acos_client
@@ -72,6 +74,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._health_monitor_flows = a10_health_monitor_flows.HealthMonitorFlows()
         self._l7policy_flows = a10_l7policy_flows.L7PolicyFlows()
         self._l7rule_flows = a10_l7rule_flows.L7RuleFlows()
+        self._vthunder_flows = vthunder_flows.VThunderFlows()
         self._vthunder_repo = a10repo.VThunderRepository()
         self._exclude_result_logging_tasks = ()
         a10_conf = a10_config.A10Config()
@@ -92,19 +95,22 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                   'Amphora. We will use preconfigured '
                                   'devices.')
 
-    def delete_amphora(self, amphora_id):
+    def delete_vthunder(self, vthunder_id):
         """Deletes an existing Amphora.
 
-        :param amphora_id: ID of the amphora to delete
+        :param vthunder_id: ID of the vthunder to delete
         :returns: None
-        :raises AmphoraNotFound: The referenced Amphora was not found
+        :raises AmphoraNotFound: The referenced Vthunder was not found
         """
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support deleting Amphora'
-                              'yet.',
-            operator_fault_string='This provider does not support deleting '
-                                  'Amphora. We will use preconfigured '
-                                  'devices.')
+        vthunder = self._vthunder_repo.get(db_apis.get_session(),
+                                         id=vthunder_id)
+        delete_amp_tf = self._taskflow_load(self._vthunder_flows.
+                                            delete_existing_vthunder(),
+                                            store={constants.AMPHORA: amphora})
+        with tf_logging.DynamicLoggingListener(delete_amp_tf,
+                                               log=LOG):
+            delete_amp_tf.run()
+
 
     def create_health_monitor(self, health_monitor_id):
         """Creates a health monitor.
@@ -672,19 +678,76 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             user_fault_string='This provider does not support L7 yet',
             operator_fault_string='This provider does not support L7 yet')
 
-    def failover_amphora(self, amphora_id):
-        """Perform failover operations for an amphora.
+    def _switch_roles_for_ha_flow(self, vthunder):
+        lock_session = db_apis.get_session(autocommit=False)
+        if vthunder.role == constants.ROLE_MASTER:
+            LOG.info("Master vthunder %s has failed, searching for existing backup vthunder.", 
+                    vthunder.ip_address)
+            backup_vthunder = self._vthunder_repo.getBackupVThunderFromLB(
+                                                lock_session,
+                                                 lb_id=vthunder.loadbalancer_id)
+            if backup_vthunder:
+                LOG.info("Making Backup vthunder %s as MASTER NOW", 
+                          backup_vthunder.ip_address)
+                self._vthunder_repo.update(
+                        lock_session, 
+                        backup_vthunder.id, role=constants.ROLE_MASTER)
+                
+                LOG.info("Putting %s to failed amphoras", 
+                            vthunder.ip_address)
+                
+                self._vthunder_repo.update(
+                    lock_session, 
+                    vthunder.id, role=constants.ROLE_BACKUP, status=a10constants.FAILED)
+                
+                lock_session.commit()
+                LOG.info("Vthunder %s's status is FAILED", vthunder.ip_address)
+                status = { 'vthunders': [{"id": vthunder.vthunder_id,
+                       "status": a10constants.FAILED,
+                       "ip_address": vthunder.ip_address}]}
+                LOG.info(str(status))
+            else: 
+                LOG.warning("No backup found for failed MASTER %s", vthunder.ip_address)
 
+        elif vthunder.role == constants.ROLE_BACKUP:
+            LOG.info("BACKUP vthunder %s has failed", vthunder.ip_address)
+            self._vthunder_repo.update(
+                    lock_session, 
+                    vthunder.id, status=a10constants.FAILED)
+            LOG.info("Vthunder %s's status is FAILED", vthunder.ip_address)
+            status = { 'vthunders': [{"id": vthunder.vthunder_id,
+                       "status": a10constants.FAILED, 
+                       "ip_address": vthunder.ip_address}]}
+            lock_session.commit()
+            LOG.info(str(status))
+
+
+    def failover_amphora(self, vthunder_id):
+        """Perform failover operations for an amphora.
         :param amphora_id: ID for amphora to failover
         :returns: None
         :raises AmphoraNotFound: The referenced amphora was not found
         """
+        try: 
+            vthunder = self._vthunder_repo.get(db_apis.get_session(),
+                                         vthunder_id=vthunder_id)
+            if not vthunder:
+                LOG.warning("Could not fetch Amphora %s from DB, ignoring "
+                            "failover request.", vthunder.vthunder_id)
+                return
+          
+            LOG.info("Starting Failover process on %s", vthunder.ip_address)
+            #feature : db role switching for HA flow
+            self._switch_roles_for_ha_flow(vthunder)
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support Amphora '
-                              'failover.',
-            operator_fault_string='This provider does not support Amphora '
-                                  'failover.')
+            # TODO: delete failed one
+            # TODO: boot up new amps
+            # TODO: vrrp sync
+        
+        except Exception as e:
+            with excutils.save_and_reraise_exception():
+                LOG.error("Vthunder %(id)s failover exception: %(exc)s",
+                          {'id': vthunder_id, 'exc': e})
 
     def failover_loadbalancer(self, load_balancer_id):
         """Perform failover operations for a load balancer.
@@ -714,3 +777,4 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             operator_fault_string='This provider does not support rotating '
                                   'Amphora certs. We will use preconfigured '
                                   'devices.')
+

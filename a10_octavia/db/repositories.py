@@ -190,6 +190,20 @@ class BaseRepository(object):
 class VThunderRepository(BaseRepository):
     model_class = models.VThunder
 
+    def get_stale_vthunders(self, session):
+        failover_wait_time = CONF.health_manager.heartbeat_timeout
+        expired_time = datetime.datetime.utcnow() - datetime.timedelta(
+            seconds=failover_wait_time)
+
+        model = session.query(self.model_class).filter(
+            self.model_class.last_update < expired_time).filter(
+                self.model_class.status != 'FAILED').filter(
+                or_(self.model_class.role == "MASTER", 
+                self.model_class.role == "BACKUP")).first()
+        if model is None:
+            return None
+        return model.to_data_model()
+
     def getVThunderFromLB(self, session, lb_id):
         model = session.query(self.model_class).filter(
             self.model_class.loadbalancer_id == lb_id).filter(
@@ -235,3 +249,12 @@ class VThunderRepository(BaseRepository):
                 return False
         else:
             return False
+    
+    def get_vthunder_from_src_addr(self, session, srcaddr):
+        model = session.query(self.model_class).filter(
+            self.model_class.ip_address == srcaddr).first()
+
+        if not model:
+            return None
+        return model.id
+
