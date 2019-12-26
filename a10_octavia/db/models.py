@@ -42,6 +42,7 @@ class VThunder(base_models.BASE):
     compute_id = sa.Column(sa.String(36))
     topology = sa.Column(sa.String(50))
     role = sa.Column(sa.String(50))
+    status = sa.Column('status', sa.String(36), default='ACTIVE', nullable=False)
 
     @classmethod
     def find_by_loadbalancer_id(cls, loadbalancer_id, db_session=None):
