@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 import sys
 
 import cotyledon
@@ -19,10 +20,8 @@ from cotyledon import oslo_config_glue
 from oslo_config import cfg
 from oslo_reports import guru_meditation_report as gmr
 
-
 from a10_octavia.cmd import service as octavia_service
 from a10_octavia.controller.queue import consumer
-
 from octavia import version
 
 CONF = cfg.CONF
@@ -37,9 +36,3 @@ def main():
            args=(CONF,))
     oslo_config_glue.setup(sm, CONF, reload_method="mutate")
     sm.run()
-
-    
-
-    
-
-
