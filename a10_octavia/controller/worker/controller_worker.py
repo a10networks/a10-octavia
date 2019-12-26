@@ -95,22 +95,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                   'Amphora. We will use preconfigured '
                                   'devices.')
 
-    def delete_vthunder(self, vthunder_id):
-        """Deletes an existing Amphora.
-
-        :param vthunder_id: ID of the vthunder to delete
-        :returns: None
-        :raises AmphoraNotFound: The referenced Vthunder was not found
-        """
-        vthunder = self._vthunder_repo.get(db_apis.get_session(),
-                                         id=vthunder_id)
-        delete_amp_tf = self._taskflow_load(self._vthunder_flows.
-                                            delete_existing_vthunder(),
-                                            store={constants.AMPHORA: amphora})
-        with tf_logging.DynamicLoggingListener(delete_amp_tf,
-                                               log=LOG):
-            delete_amp_tf.run()
-
 
     def create_health_monitor(self, health_monitor_id):
         """Creates a health monitor.
