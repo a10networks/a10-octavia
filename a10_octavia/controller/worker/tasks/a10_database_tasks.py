@@ -221,7 +221,6 @@ class MarkVthunderStatusInDB(BaseDatabaseTask):
 
     def execute(self, vthunder, status):
         try:
-            import rpdb; rpdb.set_trace()
             self.vthunder_repo.update(db_apis.get_session(),
                                       vthunder.id,
                                       status=status)
