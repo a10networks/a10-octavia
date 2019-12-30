@@ -519,7 +519,7 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
             c = self.client_factory(vthunder)
             out = c.slb.hm.create(health_mon.id[0:5],
                                   openstack_mappings.hm_type(c,
-                                                             health_mon.type),
+                                  health_mon.type),
                                   health_mon.delay,
                                   health_mon.timeout,
                                   health_mon.rise_threshold,
