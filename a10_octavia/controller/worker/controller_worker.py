@@ -50,16 +50,6 @@ from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_l7policy_flows
 from a10_octavia.controller.worker.flows import a10_l7rule_flows
 from a10_octavia.db import repositories as a10repo
-from a10_octavia import a10_config
-from a10_octavia.common import data_models
-from a10_octavia.db import repositories as a10repo
-from taskflow.listeners import logging as tf_logging
-from octavia.api.drivers import driver_lib
-from octavia.common import constants
-from octavia.common import base_taskflow
-from octavia.common import exceptions
-from octavia.db import api as db_apis
-from octavia.db import repositories as repo
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -335,18 +325,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         store[constants.UPDATE_DICT] = {
             constants.TOPOLOGY: topology
         }
-
-        if lb.project_id in self.rack_dict:
-            LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'
-                     'from config file for Rack Vthunder' % (lb.project_id))
-            create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
-                vthunder_conf=self.rack_dict[lb.project_id], topology=topology, listeners=lb.listeners)
-            create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
-        else:
-            create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
-                topology=topology, listeners=lb.listeners)
-            create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
-
 
         if lb.project_id in self.rack_dict:
             LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'

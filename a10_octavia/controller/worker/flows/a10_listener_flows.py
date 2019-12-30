@@ -13,9 +13,6 @@
 #    under the License.
 
 from taskflow.patterns import linear_flow
-from a10_octavia.controller.worker.tasks import handler_virtual_port
-from a10_octavia.controller.worker.tasks import a10_database_tasks
-from a10_octavia.common import a10constants
 
 from octavia.common import constants
 try:
