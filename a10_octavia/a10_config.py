@@ -85,34 +85,6 @@ class A10Config(object):
         rack_dict = {}
         if self._conf.has_section("RACK_VTHUNDER") and self._conf.has_option("RACK_VTHUNDER", "devices"):
             project_conf = self._conf.get('RACK_VTHUNDER', 'devices')
-            rack_conf = ast.literal_eval(project_conf.strip('"'))
-            validation_flag = False
-            try:
-                for rack_device in rack_conf["device_list"]:
-                    validation_flag = self.validate(rack_device["project_id"],
-                                                    rack_device["ip_address"],
-                                                    rack_device["username"],
-                                                    rack_device["password"],
-                                                    rack_device["axapi_version"],
-                                                    rack_device["device_name"])
-                    if validation_flag:
-                        rack_device["undercloud"] = True
-                        vthunder_conf = data_models.VThunder(**rack_device)
-                        rack_dict[rack_device["project_id"]] = vthunder_conf
-                    else:
-                        LOG.warning('Invalid definition of rack device for'
-                                    'project ' + project_id)
-
-            except KeyError as e:
-                LOG.error("Invalid definition of rack device in A10 config file."
-                          "The Loadbalancer you create shall boot as overcloud."
-                          "Check attribute: " + str(e))
-        return rack_dict
-
-    def get_rack_dict(self):
-        rack_dict = {}
-        if self._conf.has_section("RACK_VTHUNDER") and self._conf.has_option("RACK_VTHUNDER", "devices"):
-            project_conf = self._conf.get('RACK_VTHUNDER', 'devices')
             rack_list = ast.literal_eval(project_conf.strip('"'))
             validation_flag = False
             try:
