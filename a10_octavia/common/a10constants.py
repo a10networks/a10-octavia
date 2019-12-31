@@ -12,7 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# Flow names
 GET_VTHUNDER_FOR_LB_SUBFLOW = 'octavia-get-vthunder-for-lb-subflow'
+NETWORK_TYPE_HANDLER_SUBFLOW = 'octavia-get-network-type-handler-sublow'
+
+# Constant values
 VTHUNDER = 'vthunder'
 STATUS = 'status'
 ROLE = 'role'

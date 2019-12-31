@@ -44,7 +44,7 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
 
     def __init__(self):
         super(A10OctaviaNeutronDriver, self).__init__()
-#        self._check_aap_loaded()
+        #self._check_aap_loaded()
         self.compute = stevedore_driver.DriverManager(
             namespace='octavia.compute.drivers',
             name=CONF.controller_worker.compute_driver,
@@ -413,6 +413,7 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
         self.update_vip_sg(load_balancer, vip)
         plugged_amphorae = []
         subnet = self.get_subnet(vip.subnet_id)
+
         for amphora in six.moves.filter(
             lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
                 load_balancer.amphorae):

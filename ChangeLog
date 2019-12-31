@@ -24,6 +24,9 @@ CHANGES
 * QOL update for functional testing
 * Refactored install script
 * Added QOL scripts for testing
+* Made minor fixes
+* Fixed naming typo
+* Made numerous minor fixex
 * Removed another change from rebase
 * Removed further unintended changes from rebase
 * Removed more intendation issues leftover from rebase

@@ -229,7 +229,7 @@ class LoadBalancerFlows(object):
 
         return (delete_LB_flow, store)
 
-    def get_new_lb_networking_subflow(self, topology):
+    def get_new_lb_networking_subflow(self, topology, network_type="flat"):
         """Create a sub-flow to setup networking.
 
         :returns: The flow to setup networking for a new amphora
@@ -237,9 +237,7 @@ class LoadBalancerFlows(object):
         LOG.info("Inside network subflow")
         new_LB_net_subflow = linear_flow.Flow(constants.
                                               LOADBALANCER_NETWORKING_SUBFLOW)
-        new_LB_net_subflow.add(a10_network_tasks.AllocateVIP(
-            requires=constants.LOADBALANCER,
-            provides=constants.VIP))
+        network_subflow = get_network_type_handler_subflow(network_type)
         new_LB_net_subflow.add(database_tasks.UpdateVIPAfterAllocation(
             requires=(constants.LOADBALANCER_ID, constants.VIP),
             provides=constants.LOADBALANCER))
@@ -367,3 +365,14 @@ class LoadBalancerFlows(object):
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
                 requires=constants.LOADBALANCER))
         return post_create_lb_flow
+
+    def get_network_type_handler_subflow(self, network_type):
+        network_handler_subflow = linear_flow.Flow(a10constants.
+                                                   NETWORK_TYPE_HANDLER_SUBFLOW) 
+        network_handler_subflow.add(a10_network_tasks.AllocateVIP(
+                requires=constants.LOADBALANCER,
+                provides=constants.VIP))
+        if network_type == "vlan":
+            network_handler_subflow.add(a10_network_tasks.AllocateTrunk(
+                requires=constants.VIP,
+                provides=constants.TRUNK))
