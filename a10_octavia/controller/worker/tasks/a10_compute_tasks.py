@@ -57,6 +57,7 @@ class ComputeCreate(BaseComputeTask):
 
         :returns: an amphora
         """
+
         ports = ports or []
         network_ids = CONF.a10_controller_worker.amp_boot_network_list[:]
         config_drive_files = config_drive_files or {}

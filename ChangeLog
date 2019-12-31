@@ -35,6 +35,7 @@ CHANGES
 * Rack device code review 3
 * Added update functions
 * Review comments update 2
+* Adding VRRP synch correctin part
 * Review comments inclusion
 * support for rack vThunder devices
 * updated comments on file

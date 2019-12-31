@@ -120,7 +120,7 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
                               'plug_port failed. This resource is being '
                               'abandoned and should be manually deleted when '
                               'neutron is functional.', new_port.id)
-                raise base.PlugVIPException(message)
+            raise base.PlugVIPException(message)
         return interface
 
     def _add_vip_address_pair(self, port_id, vip_address):
