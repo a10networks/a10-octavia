@@ -26,7 +26,7 @@ from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 
 from a10_octavia.cmd import vthunder_heartbeat_udp as heartbeat_udp
-from a10_octavia.controller.healthmanager import a10_health_manager as health_manager 
+from a10_octavia.controller.healthmanager import a10_health_manager as health_manager
 from octavia.common import service
 from octavia import version
 
@@ -94,12 +94,10 @@ def main():
                                                target=hm_listener,
                                                args=(exit_event,))
     processes.append(hm_listener_proc)
-    
     hm_health_check_proc = multiprocessing.Process(name='HM_health_check',
                                                    target=hm_health_check,
                                                    args=(exit_event,))
     processes.append(hm_health_check_proc)
-
 
     LOG.info("Health Manager listener process starts:")
     hm_listener_proc.start()

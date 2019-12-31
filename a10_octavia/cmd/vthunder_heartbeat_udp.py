@@ -89,14 +89,12 @@ class UDPStatusGetter(object):
         :return: Returns the unwrapped payload and addr that sent the
                  heartbeat. The format of the obj from the UDP sender
                  can be seen below. Note that listener_1 has no pools
-                 and listener_4 has no members.        
+                 and listener_4 has no members.
 
         """
-        # import rpdb; rpdb.set_trace()
         (data, srcaddr) = self.sock.recvfrom(UDP_MAX_SIZE)
         ip, port = srcaddr
-        LOG.warning('Received packet from %s', ip)
-        
+        LOG.warning('Received packet from %s', ip) 
         # get record id of first vthunder from srcaddr
         record_id = self.vthunder_repo.get_vthunder_from_src_addr(db_api.get_session(), ip)
        
