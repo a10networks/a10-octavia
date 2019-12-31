@@ -566,6 +566,19 @@ class PlugVIPPort(BaseNetworkTask):
                         '%(amp)s', {'port': vrrp_port.id, 'amp': amphora.id})
 
 
+class AllocateTrunk(BaseNetworkTask):
+    """Task to create a neutron trunk and attach a port to it."""
+
+    def execute(self, vip):
+        parent_port_id = vip.port_id
+        LOG.debug('Creating trunk for port with ID: {}'.format(parent_port_id))
+        self.network_driver.allocate_trunk(parent_port_id)
+
+    def revert(self, result, *args, **kwargs):
+        pass 
+            
+        
+
 class WaitForPortDetach(BaseNetworkTask):
     """Task to wait for the neutron ports to detach from an amphora."""
 

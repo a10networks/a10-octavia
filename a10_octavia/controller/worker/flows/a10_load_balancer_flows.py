@@ -237,7 +237,8 @@ class LoadBalancerFlows(object):
         LOG.info("Inside network subflow")
         new_LB_net_subflow = linear_flow.Flow(constants.
                                               LOADBALANCER_NETWORKING_SUBFLOW)
-        network_subflow = get_network_type_handler_subflow(network_type)
+        network_type = "vlan"
+        new_LB_net_subflow.add(self.get_network_type_handler_subflow(network_type))
         new_LB_net_subflow.add(database_tasks.UpdateVIPAfterAllocation(
             requires=(constants.LOADBALANCER_ID, constants.VIP),
             provides=constants.LOADBALANCER))
@@ -375,4 +376,6 @@ class LoadBalancerFlows(object):
         if network_type == "vlan":
             network_handler_subflow.add(a10_network_tasks.AllocateTrunk(
                 requires=constants.VIP,
-                provides=constants.TRUNK))
+                provides=a10constants.TRUNK))
+
+        return network_handler_subflow

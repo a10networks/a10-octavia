@@ -658,6 +658,20 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
                                           vip_subnet, vip_port)
         return amp_configs
 
+    def allocate_trunk(self, parent_port_id):
+        payload = {"trunk": { "port_id": parent_port_id,
+                              "admin_state_up": "true"}}
+        try:
+            trunk = self.neutron_client.create_trunk(payload) 
+        except Exception:
+            message = _('Error creating trunk on port {port_id}' 
+                        'into network {network_id}.').format(
+                            port_id=parent_port_id)
+            LOG.exception(message)
+            # raise CustomTrunkException(msg) 
+
+        return trunk
+
     def wait_for_port_detach(self, amphora):
         """Waits for the amphora ports device_id to be unset.
 

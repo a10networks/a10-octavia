@@ -26,5 +26,6 @@ VRRP_STATUS = 'vrrp_status'
 FAILED = 'FAILED'
 VTHUNDER_UDP_HEARTBEAT = 'vthunder_udp_heartbeat'
 HM_SERVER = 'a10_hm_server'
-VTHUNDER_CONFIG = 'vthunder_config'
 VTHUNDER_ID = "vthunder_id"
+VTHUNDER_CONFIG='vthunder_config'
+TRUNK = 'trunk'
