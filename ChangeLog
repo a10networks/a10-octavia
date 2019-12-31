@@ -1,6 +1,8 @@
 CHANGES
 =======
 
+* removed pdb
+* Added changes related to db stability
 * Review changes for Afrin
 * update functions corrections for stein
 * Added update functions

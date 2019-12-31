@@ -12,28 +12,29 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+import logging
 import sys
-
+import threading
 import cotyledon
 from cotyledon import oslo_config_glue
 from oslo_config import cfg
 from oslo_reports import guru_meditation_report as gmr
 
-from a10_octavia.cmd import service as octavia_service
-from a10_octavia.controller.queue import consumer
 from octavia import version
 
+from a10_octavia.controller.queue import consumer
+from a10_octavia.cmd import service as octavia_service
+
+
 CONF = cfg.CONF
+LOG = logging.getLogger(__name__)
 
 
 def main():
     octavia_service.prepare_service(sys.argv)
     gmr.TextGuruMeditation.setup_autorun(version)
-
     sm = cotyledon.ServiceManager()
     sm.add(consumer.ConsumerService, workers=CONF.controller_worker.workers,
            args=(CONF,))
     oslo_config_glue.setup(sm, CONF, reload_method="mutate")
     sm.run()
-

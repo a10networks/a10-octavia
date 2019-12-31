@@ -49,6 +49,7 @@ from a10_octavia.controller.worker.flows import a10_member_flows
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_l7policy_flows
 from a10_octavia.controller.worker.flows import a10_l7rule_flows
+from a10_octavia.controller.worker.flows import vthunder_flows
 from a10_octavia.db import repositories as a10repo
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -80,6 +81,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._health_monitor_flows = a10_health_monitor_flows.HealthMonitorFlows()
         self._l7policy_flows = a10_l7policy_flows.L7PolicyFlows()
         self._l7rule_flows = a10_l7rule_flows.L7RuleFlows()
+        self._vthunder_flows = vthunder_flows.VThunderFlows()
         self._vthunder_repo = a10repo.VThunderRepository()
         self._exclude_result_logging_tasks = ()
         a10_conf = a10_config.A10Config()
@@ -93,12 +95,16 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         :returns: amphora_id
         """
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support creating Amphora'
-                              'yet.',
-            operator_fault_string='This provider does not support creating '
-                                  'Amphora. We will use preconfigured '
-                                  'devices.')
+        create_vthunder_tf = self._taskflow_load(
+            self._vthunder_flows.get_create_vthunder_flow(),
+            store={constants.BUILD_TYPE_PRIORITY:
+                   constants.LB_CREATE_SPARES_POOL_PRIORITY}
+        )
+        with tf_logging.DynamicLoggingListener(create_vthunder_tf, log=LOG):
+
+            create_vthunder_tf.run()
+
+        return create_vthunder_tf.storage.fetch('amphora')
 
     def delete_amphora(self, amphora_id):
         """Deletes an existing Amphora.
@@ -304,7 +310,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-    
+
     def create_load_balancer(self, load_balancer_id):
         """Creates a load balancer by allocating Amphorae.
 
@@ -325,7 +331,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         topology = CONF.controller_worker.loadbalancer_topology
 
         store[constants.UPDATE_DICT] = {
-            constants.TOPOLOGY: topology
+            constants.LOADBALANCER_TOPOLOGY: topology
         }
 
         if lb.project_id in self.rack_dict:
@@ -416,13 +422,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(update_lb_tf,
                                                log=LOG):
             update_lb_tf.run()
-            
+
     @tenacity.retry(
         retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-    
+
     def create_member(self, member_id):
         """Creates a pool member.
 

@@ -14,7 +14,7 @@
 
 
 import re
-
+from datetime import datetime
 import six
 from sqlalchemy.orm import collections
 
@@ -134,11 +134,12 @@ class BaseDataModel(object):
 
 class VThunder(BaseDataModel):
 
-    def __init__(self, id=None, vthunder_id=None, amphora_id=None, device_name=None, ip_address=None,
-                 username=None, password=None, axapi_version=None, undercloud=None,
+    def __init__(self, id=None, vthunder_id=None, amphora_id=None,
+                 device_name=None, ip_address=None, username=None,
+                 password=None, axapi_version=None, undercloud=None,
                  loadbalancer_id=None, project_id=None, compute_id=None,
-                 topology="STANDALONE", role="MASTER", status="ACTIVE"):
-                 
+                 topology="STANDALONE", role="MASTER", status="ACTIVE",
+                 updated_at=datetime.now()):
         self.id = id
         self.vthunder_id = vthunder_id
         self.amphora_id = amphora_id
@@ -154,3 +155,4 @@ class VThunder(BaseDataModel):
         self.topology = topology
         self.role = role
         self.status = status
+        updated_at = datetime.now()

@@ -19,4 +19,5 @@ STATUS = 'status'
 ROLE = 'role'
 BACKUP_VTHUNDER = 'backup_vthunder'
 VRRP_STATUS = 'vrrp_status'
-VTHUNDER_CONFIG='vthunder_config'
+VTHUNDER_CONFIG = 'vthunder_config'
+VTHUNDER_ID = "vthunder_id"
