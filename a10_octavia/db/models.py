@@ -24,6 +24,7 @@ from a10_octavia.common import data_models
 from a10_octavia.db import base_models
 from octavia.i18n import _
 
+
 class VThunder(base_models.BASE):
     __data_model__ = data_models.VThunder
     __tablename__ = 'vthunders'
@@ -35,7 +36,7 @@ class VThunder(base_models.BASE):
     device_name = sa.Column(sa.String(1024), nullable=False)
     ip_address = sa.Column('ip_address', sa.String(64), nullable=False)
     username = sa.Column(sa.String(1024), nullable=False)
-    password = sa.Column(sa.String(50), nullable= False)
+    password = sa.Column(sa.String(50), nullable=False)
     axapi_version = sa.Column(sa.Integer, default=30, nullable=False)
     undercloud = sa.Column(sa.Boolean(), default=False, nullable=False)
     loadbalancer_id = sa.Column(sa.String(36))
@@ -43,6 +44,7 @@ class VThunder(base_models.BASE):
     topology = sa.Column(sa.String(50))
     role = sa.Column(sa.String(50))
     status = sa.Column('status', sa.String(36), default='ACTIVE', nullable=False)
+    updated_at = sa.Column(u'updated_at', sa.DateTime(), nullable=True)
 
     @classmethod
     def find_by_loadbalancer_id(cls, loadbalancer_id, db_session=None):

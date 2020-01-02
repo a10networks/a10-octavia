@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+from datetime import datetime
 from oslo_config import cfg
 from oslo_db import exception as odb_exceptions
 from oslo_log import log as logging
@@ -105,7 +105,8 @@ class CreteVthunderEntry(BaseDatabaseTask):
             compute_id=compute_id,
             topology=topology,
             role=role,
-            status = "ACTIVE")
+            status="ACTIVE",
+            updated_at=datetime.now())
         LOG.info("Successfully created vthunder entry in database.")
 
 
@@ -160,11 +161,15 @@ class GetComputeForProject(BaseDatabaseTask):
     def execute(self, loadbalancer):
         vthunder = self.vthunder_repo.getVThunderByProjectID(
             db_apis.get_session(), loadbalancer.project_id)
+        if vthunder is None:
+            vthunder = self.vthunder_repo.getSparevThunder(
+                db_apis.get_session())
+            self.vthunder_repo.update(db_apis.get_session(), vthunder.id,
+                                      status="USED_SPARE", updated_at=datetime.now())
         amphora_id = vthunder.amphora_id
         amphora = self.amphora_repo.get(db_apis.get_session(), id=amphora_id)
         compute_id = amphora.compute_id
         return compute_id
-        LOG.info("Provided compute ID for existing vThunder device")
 
 
 class MapLoadbalancerToAmphora(BaseDatabaseTask):
@@ -189,9 +194,12 @@ class MapLoadbalancerToAmphora(BaseDatabaseTask):
             loadbalancer.project_id)
 
         if vthunder is None:
-            LOG.debug("No Amphora available for load balancer with id %s",
-                      loadbalancer.id)
-            return None
+            # Check for spare vthunder
+            vthunder = self.vthunder_repo.getSparevThunder(db_apis.get_session())
+            if vthunder is None:
+                LOG.debug("No Amphora available for load balancer with id %s",
+                          loadbalancer.id)
+                return None
 
         return vthunder.id
 
@@ -202,7 +210,7 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
 
     def execute(self, loadbalancer, vthunder_config):
         vthunder = self.vthunder_repo.create(db_apis.get_session(),
-                                             vthunder_id= uuidutils.generate_uuid(),
+                                             vthunder_id=uuidutils.generate_uuid(),
                                              device_name=vthunder_config.device_name,
                                              username=vthunder_config.username,
                                              password=vthunder_config.password,
@@ -213,7 +221,8 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                                              axapi_version=vthunder_config.axapi_version,
                                              topology="STANDALONE",
                                              role="MASTER",
-                                             status = "ACTIVE")
+                                             status="ACTIVE",
+                                             updated_at=datetime.now())
         LOG.info("Successfully created vthunder entry in database.")
 
 
@@ -221,10 +230,40 @@ class MarkVthunderStatusInDB(BaseDatabaseTask):
 
     def execute(self, vthunder, status):
         try:
-            self.vthunder_repo.update(db_apis.get_session(),
-                                      vthunder.id,
-                                      status=status)
+            if vthunder:
+                self.vthunder_repo.update(db_apis.get_session(),
+                                          vthunder.id,
+                                          status=status, updated_at=datetime.now())
         except (sqlalchemy.orm.exc.NoResultFound,
                 sqlalchemy.orm.exc.UnmappedInstanceError):
             LOG.debug('No existing amphora health record to mark busy '
                       'for amphora: %s, skipping.', vthunder_id)
+
+
+class CreateSpareVthunderEntry(BaseDatabaseTask):
+
+    def execute(self, amphora):
+        vthunder_id = uuidutils.generate_uuid()
+        self.config = self.a10_conf.get_conf()
+
+        username = self.config.get(
+            'DEFAULT', 'DEFAULT_VTHUNDER_USERNAME').replace('"', '')
+        password = self.config.get(
+            'DEFAULT', 'DEFAULT_VTHUNDER_PASSWORD').replace('"', '')
+        axapi_version = int(
+            self.config.get('DEFAULT', 'DEFAULT_AXAPI_VERSION'))
+        vthunder = self.vthunder_repo.create(
+            db_apis.get_session(), vthunder_id=vthunder_id,
+            amphora_id=amphora.id,
+            device_name=vthunder_id, username=username,
+            password=password, ip_address=amphora.lb_network_ip,
+            undercloud=False, axapi_version=axapi_version,
+            loadbalancer_id=None,
+            project_id=None,
+            compute_id=amphora.compute_id,
+            topology="SINGLE",
+            role="MASTER",
+            status="READY",
+            updated_at=datetime.now())
+        LOG.info("Successfully created vthunder entry in database.")
+        return vthunder

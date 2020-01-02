@@ -1,0 +1,9 @@
+#!/usr/bin/python
+
+import sys
+
+from a10_octavia.cmd.a10_house_keeper import main
+
+
+if __name__ == "__main__":
+    sys.exit(main())
