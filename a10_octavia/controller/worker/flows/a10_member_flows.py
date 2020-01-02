@@ -112,9 +112,15 @@ class MemberFlows(object):
         #create_member_flow.set_target(final_state)
         return create_member_flow
 
-    def _test_decider(self, history):
-        import remote_pdb; remote_pdb.set_trace()
-        print("REMOVE ME")
+    def _create_new_nic_decider(self, history):
+        """Decides if a new nic will be added in the
+           event a member subnet is outside current subnet scope"""
+        return history[history.keys()[0]] == None
+
+    def _tag_current_nic_decider(self, history):
+        """Decides if the current nic will be tagged in the event
+           a member subnet is outside current subnet scope"""
+        return history[history.keys()[0]] != None
 
     def get_delete_member_flow(self):
         """Create a flow to delete a member

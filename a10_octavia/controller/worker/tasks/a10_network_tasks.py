@@ -586,7 +586,7 @@ class GetParentPort(BaseNetworkTask):
 
 
 class FakePort(BaseNetworkTask):
-    "DO NOT LEAVE THIS IN"
+    """DO NOT LEAVE THIS IN"""
     def execute(self, parent_port):
         LOG.debug('Getting parent port for loadbalancer {}', parent_port.id)
 

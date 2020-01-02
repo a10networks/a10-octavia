@@ -332,7 +332,9 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
                                             ip_address=fixed_ip.get('ip_address'))
                      for fixed_ip in port.get('fixed_ips', [])]
 
-        subports = port.get('trunk_details')['sub_ports']
+        trunk_id = port['trunk_details']['trunk_id'] if port.get('trunk_details') else None
+        subports = port['trunk_details']['sub_ports'] if port.get('trunk_details') else None
+        child_port_list = []
         if subports:
             child_port_list = [a10_network_models.ChildPort(segmentation_id=subports['segmentation_id'],
                                                             port_id=['port_id'],
@@ -348,9 +350,9 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
             status=port.get('status'),
             project_id=port.get('project_id'),
             admin_state_up=port.get('admin_state_up'),
-            fixed_ips=fixed_ids,
+            fixed_ips=fixed_ips,
             qos_policy_id=port.get('qos_policy_id'),
-            trunk_id=None, subports=None)
+            trunk_id=trunk_id, subports=child_port_list)
 
 
     def deallocate_vip(self, vip):
