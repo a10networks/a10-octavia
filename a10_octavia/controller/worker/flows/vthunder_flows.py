@@ -48,14 +48,45 @@ class VThunderFlows(object):
         pass
 
     def get_create_vthunder_flow(self):
-        """Creates a flow to create an amphora.
+        """Creates a flow to create a spare amphora.
 
         :returns: The flow for creating the amphora
         """
+
         create_vthunder_flow = linear_flow.Flow(constants.CREATE_AMPHORA_FLOW)
-        create_vthunder_flow.add(a10_database_tasks.CreateVThunderInDB(
+        sf_name = 'spare_vthunder_create'
+        create_vthunder_flow.add(database_tasks.CreateAmphoraInDB(
+            name=sf_name + '-' + constants.CREATE_AMPHORA_INDB,
             provides=constants.AMPHORA_ID))
 
+        create_vthunder_flow.add(compute_tasks.ComputeCreate(
+            name=sf_name + '-' + constants.COMPUTE_CREATE,
+            requires=(constants.AMPHORA_ID,
+                      constants.BUILD_TYPE_PRIORITY,
+                      ),
+            provides=constants.COMPUTE_ID))
+        create_vthunder_flow.add(database_tasks.UpdateAmphoraComputeId(
+            name=sf_name + '-' + constants.UPDATE_AMPHORA_COMPUTEID,
+            requires=(constants.AMPHORA_ID, constants.COMPUTE_ID)))
+        create_vthunder_flow.add(database_tasks.MarkAmphoraBootingInDB(
+            name=sf_name + '-' + constants.MARK_AMPHORA_BOOTING_INDB,
+            requires=(constants.AMPHORA_ID, constants.COMPUTE_ID)))
+        create_vthunder_flow.add(compute_tasks.ComputeActiveWait(
+            name=sf_name + '-' + constants.COMPUTE_WAIT,
+            requires=(constants.COMPUTE_ID, constants.AMPHORA_ID),
+            provides=constants.COMPUTE_OBJ))
+        create_vthunder_flow.add(database_tasks.UpdateAmphoraInfo(
+            name=sf_name + '-' + constants.UPDATE_AMPHORA_INFO,
+            requires=(constants.AMPHORA_ID, constants.COMPUTE_OBJ),
+            provides=constants.AMPHORA))
+        create_vthunder_flow.add(a10_database_tasks.CreateSpareVthunderEntry(
+            name=sf_name + '-' + 'create_vThunder_entry_in_database',
+            requires=(constants.AMPHORA),
+            provides=a10constants.VTHUNDER))
+        create_vthunder_flow.add(
+            vthunder_tasks.VThunderComputeConnectivityWait(
+                name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
+                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         return create_vthunder_flow
 
     def get_vthunder_for_lb_subflow(
@@ -352,11 +383,11 @@ class VThunderFlows(object):
             name=sf_name + '-' + 'configure_vrrp_sync',
             requires=(a10constants.VTHUNDER, a10constants.BACKUP_VTHUNDER, a10constants.VRRP_STATUS)))
         vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-                name=sf_name + '-' + 'wait_for_master_sync',
-                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+            name=sf_name + '-' + 'wait_for_master_sync',
+            requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-                name=sf_name + '-' + 'wait_for_backup_sync',
-                rebind=(a10constants.BACKUP_VTHUNDER, constants.AMPHORA)))
+            name=sf_name + '-' + 'wait_for_backup_sync',
+            rebind=(a10constants.BACKUP_VTHUNDER, constants.AMPHORA)))
         vrrp_subflow.add(vthunder_tasks.ConfigureaVCS(
             name=sf_name + '-' + 'configure_avcs_sync',
             requires=(a10constants.VTHUNDER, a10constants.BACKUP_VTHUNDER, a10constants.VRRP_STATUS)))

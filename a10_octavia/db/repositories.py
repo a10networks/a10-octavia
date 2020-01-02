@@ -32,11 +32,13 @@ from octavia.common import constants as consts
 from octavia.common import data_models
 from octavia.common import exceptions
 from octavia.common import validate
+from octavia.db import models as base_models
 from a10_octavia.db import models
 
 CONF = cfg.CONF
 
 LOG = logging.getLogger(__name__)
+
 
 class BaseRepository(object):
     model_class = None
@@ -152,7 +154,6 @@ class BaseRepository(object):
         data_model_list = [model.to_data_model() for model in model_list]
         return data_model_list, links
 
-
     def exists(self, session, id):
         """Determines whether an entity exists in the database by its id.
 
@@ -179,7 +180,7 @@ class BaseRepository(object):
         if hasattr(self.model_class, 'status'):
             query = query.filter_by(status=consts.DELETED)
         else:
-            query = query.filter_by(operating_status=consts.DELETED)
+            query = query.filter_by(provisioning_status=consts.DELETED)
         # Do not load any relationship
         query = query.options(noload('*'))
         model_list = query.all()
@@ -207,10 +208,9 @@ class VThunderRepository(BaseRepository):
 
     def getVThunderFromLB(self, session, lb_id):
         model = session.query(self.model_class).filter(
-            self.model_class.loadbalancer_id == lb_id).filter(
-            and_(self.model_class.status == "ACTIVE",
-            or_(self.model_class.role == "STANDALONE",
-                self.model_class.role == "MASTER"))).first()
+            self.model_class.loadbalancer_id == lb_id).filter(and_(self.model_class.status == "ACTIVE",
+                                                                   or_(self.model_class.role == "STANDALONE",
+                                                                       self.model_class.role == "MASTER"))).first()
 
         if not model:
             return None
@@ -219,10 +219,9 @@ class VThunderRepository(BaseRepository):
 
     def getBackupVThunderFromLB(self, session, lb_id):
         model = session.query(self.model_class).filter(
-            self.model_class.loadbalancer_id == lb_id).filter(
-            and_(self.model_class.status == "ACTIVE",
-            or_(self.model_class.role == "STANDALONE",
-                self.model_class.role == "BACKUP"))).first()
+            self.model_class.loadbalancer_id == lb_id).filter(and_(self.model_class.status == "ACTIVE",
+                                                                   or_(self.model_class.role == "STANDALONE",
+                                                                       self.model_class.role == "BACKUP"))).first()
 
         if not model:
             return None
@@ -231,10 +230,9 @@ class VThunderRepository(BaseRepository):
 
     def getVThunderByProjectID(self, session, project_id):
         model = session.query(self.model_class).filter(
-            self.model_class.project_id == project_id).filter(
-            and_(self.model_class.status == "ACTIVE",
-            or_(self.model_class.role == "STANDALONE",
-                self.model_class.role == "MASTER"))).first()
+            self.model_class.project_id == project_id).filter(and_(self.model_class.status == "ACTIVE",
+                                                                   or_(self.model_class.role == "STANDALONE",
+                                                                       self.model_class.role == "MASTER"))).first()
 
         if not model:
             return None
@@ -245,7 +243,6 @@ class VThunderRepository(BaseRepository):
         if compute_id:
             count = session.query(self.model_class).filter(
                 self.model_class.compute_id == compute_id).count()
-       
             if count < 2 and self.model_class.status == "ACTIVE":
                 return True
 
@@ -262,3 +259,41 @@ class VThunderRepository(BaseRepository):
             return None
         return model.id
 
+
+    def getSparevThunder(self, session):
+        model = session.query(self.model_class).filter(
+            self.model_class.status == "READY").first()
+
+        if not model:
+            return None
+
+        return model.to_data_model()
+
+    def get_spare_vthunder_count(self, session):
+        with session.begin(subtransactions=True):
+            count = session.query(self.model_class).filter_by(
+                status="READY", loadbalancer_id=None).count()
+
+        return count
+
+    def get_all_deleted_expiring(self, session, exp_age):
+
+        expiry_time = datetime.datetime.utcnow() - exp_age
+
+        query = session.query(self.model_class).filter(
+            self.model_class.updated_at < expiry_time)
+        query = session.query(self.model_class)
+        if hasattr(self.model_class, 'status'):
+            query = query.filter(or_(self.model_class.status == "USED_SPARE", self.model_class.status == consts.DELETED))
+        else:
+            query = query.filter_by(operating_status=consts.DELETED)
+        # Do not load any relationship
+        query = query.options(noload('*'))
+        model_list = query.all()
+
+        id_list = [model.id for model in model_list]
+        return id_list
+
+
+class LoadBalancerRepository(BaseRepository):
+    model_class = base_models.LoadBalancer

@@ -34,7 +34,8 @@ def upgrade():
     sa.Column('topology', sa.String(50)),
     sa.Column('role', sa.String(50)),
     sa.Column('last_update', sa.DateTime(timezone=True), nullable=False),
-     sa.Column('status', sa.String(36), default='ACTIVE', nullable=False)
+    sa.Column('status', sa.String(36), default='ACTIVE', nullable=False),
+    sa.Column(u'updated_at', sa.DateTime(), nullable=True)
     )
 
 def downgrade():

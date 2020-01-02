@@ -4,6 +4,11 @@ CHANGES
 * removed unwanted changes
 * removed unwanted changes
 * Added hm-phase1 changes
+* removed pdb
+* Added changes related to db stability
+* Review changes for Afrin
+* update functions corrections for stein
+* Added update functions
 * correction in data structure
 * removed non-required comment line
 * Rack device code review 3

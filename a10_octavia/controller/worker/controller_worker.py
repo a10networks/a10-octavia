@@ -46,7 +46,6 @@ from a10_octavia.controller.worker.flows import a10_l7policy_flows
 from a10_octavia.controller.worker.flows import a10_l7rule_flows
 from a10_octavia.controller.worker.flows import vthunder_flows
 
-
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 RETRY_ATTEMPTS = 15
@@ -90,12 +89,16 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         :returns: amphora_id
         """
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support creating Amphora'
-                              'yet.',
-            operator_fault_string='This provider does not support creating '
-                                  'Amphora. We will use preconfigured '
-                                  'devices.')
+        create_vthunder_tf = self._taskflow_load(
+            self._vthunder_flows.get_create_vthunder_flow(),
+            store={constants.BUILD_TYPE_PRIORITY:
+                   constants.LB_CREATE_SPARES_POOL_PRIORITY}
+        )
+        with tf_logging.DynamicLoggingListener(create_vthunder_tf, log=LOG):
+
+            create_vthunder_tf.run()
+
+        return create_vthunder_tf.storage.fetch('amphora')
 
 
     def create_health_monitor(self, health_monitor_id):
@@ -288,7 +291,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-    
+
     def create_load_balancer(self, load_balancer_id):
         """Creates a load balancer by allocating Amphorae.
 
@@ -309,7 +312,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         topology = CONF.controller_worker.loadbalancer_topology
 
         store[constants.UPDATE_DICT] = {
-            constants.TOPOLOGY: topology
+            constants.LOADBALANCER_TOPOLOGY: topology
         }
 
         if lb.project_id in self.rack_dict:
@@ -400,13 +403,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(update_lb_tf,
                                                log=LOG):
             update_lb_tf.run()
-            
+
     @tenacity.retry(
         retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-    
+
     def create_member(self, member_id):
         """Creates a pool member.
 
