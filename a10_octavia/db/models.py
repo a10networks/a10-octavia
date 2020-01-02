@@ -43,7 +43,7 @@ class VThunder(base_models.BASE):
     compute_id = sa.Column(sa.String(36))
     topology = sa.Column(sa.String(50))
     role = sa.Column(sa.String(50))
-    last_update = sa.Column(sa.DateTime, default=func.now(), nullable=False)
+    last_udp_update = sa.Column(sa.DateTime, default=func.now(), nullable=False)
     status = sa.Column('status', sa.String(36), default='ACTIVE', nullable=False)
     updated_at = sa.Column(u'updated_at', sa.DateTime(), nullable=True)
 

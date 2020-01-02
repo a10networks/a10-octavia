@@ -198,7 +198,7 @@ class VThunderRepository(BaseRepository):
             seconds=failover_wait_time)
 
         model = session.query(self.model_class).filter(
-            self.model_class.last_update < expired_time).filter(
+            self.model_class.last_udp_update < expired_time).filter(
                 self.model_class.status != 'FAILED').filter(
                 or_(self.model_class.role == "MASTER", 
                 self.model_class.role == "BACKUP")).first()

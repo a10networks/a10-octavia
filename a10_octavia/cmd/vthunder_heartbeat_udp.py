@@ -99,8 +99,8 @@ class UDPStatusGetter(object):
         record_id = self.vthunder_repo.get_vthunder_from_src_addr(db_api.get_session(), ip)
        
         if record_id:
-            last_update = datetime.datetime.utcnow()
-            self.vthunder_repo.update(db_api.get_session(), record_id, last_update=last_update) 
+            last_udp_update = datetime.datetime.utcnow()
+            self.vthunder_repo.update(db_api.get_session(), record_id, last_udp_update=last_udp_update) 
         
         return srcaddr[0]
 
