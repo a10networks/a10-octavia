@@ -31,6 +31,8 @@ from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron import base as neutron_base
 from octavia.network.drivers.neutron import utils
 
+from a10_octavia.network import data_models as a10_network_models
+
 LOG = logging.getLogger(__name__)
 AAP_EXT_ALIAS = 'allowed-address-pairs'
 PROJECT_ID_ALIAS = 'project-id'
@@ -324,6 +326,18 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
                                         port_id, sec_grp_id)
                     # Now try it again
                     self._delete_vip_security_group(sec_grp_id)
+
+    def _port_to_parent_port(self, port):
+        subports = port.get('trunk_details')['sub_ports']
+        if subports:
+            child_port_list = [a10_network_models.ChildPort(segmentation_id=subports['segmentation_id'],
+                                                            port_id=['port_id'],
+                                                            segmentation_type=['segmentation_type'],
+                                                            mac_address=['mac_address'])
+                               for subport in subports] 
+        parent_port = a10_network_models.ParentPort()
+        return parent_port
+
 
     def deallocate_vip(self, vip):
         """Delete the vrrp_port (instance port) in case nova didn't
@@ -671,6 +685,15 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
             # raise CustomTrunkException(msg) 
 
         return trunk
+
+    def get_plugged_parent_port(self, loadbalancer):
+        try:
+            port = self.neutron_client.show_port(loadbalancer.vip.port_id)
+            parent_port = self._port_to_parent_port(port.get("port"))
+        except Exception:
+            LOG.debug('Couldn\'t retrieve port with id: {}'.format(loadbalancer.vip.port_id))
+
+        return parent_port
 
     def wait_for_port_detach(self, amphora):
         """Waits for the amphora ports device_id to be unset.

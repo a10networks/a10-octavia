@@ -15,13 +15,28 @@
 from octavia.common import data_models as base_data_models
 from octavia.network import data_models as network_data_models
 
+
 class ParentPort(network_data_models.Port):
 
-    def __init__(self, trunk_details=None, **kwargs):
-        if trunk_details:
-            self.trunk_id = trunk_details["trunk_id"]
-            self.sub_ports = [ChildPort(**subport) for subport in trunk_details["sub_ports"]]
-        super(ParentPort, self).__init__(**kwargs)
+    def __init__(self, id=None, name=None, device_id=None, device_owner=None,
+                 mac_address=None, network_id=None, status=None, project_id=None,
+                 admin_state_up=None, fixed_ips=None, network=None,
+                 qos_policy_id=None, trunk_id=None, subports=None):
+
+        self.id = id
+        self.name = name
+        self.device_id = device_id
+        self.device_owner = device_owner
+        self.mac_address = mac_address
+        self.network_id = network_id
+        self.status = status
+        self.project_id = project_id
+        self.admin_state_up = admin_state_up
+        self.fixed_ips = fixed_ips or []
+        self.network = network
+        self.qos_policy_id = qos_policy_id
+        self.trunk_id = trunk_id 
+        self.subports = subports or []
 
 
 class ChildPort(base_data_models.BaseDataModel):

@@ -48,7 +48,7 @@ class CalculateAmphoraDelta(BaseNetworkTask):
 
     default_provides = constants.DELTA
 
-    def execute(self, loadbalancer, amphora, ports):
+    def execute(self, loadbalancer, amphora, parent_port):
         LOG.debug("Calculating network delta for amphora id: %s", amphora.id)
         # Figure out what networks we want
         # seed with lb network(s)
@@ -91,7 +91,7 @@ class CalculateDelta(BaseNetworkTask):
 
     default_provides = constants.DELTAS
 
-    def execute(self, loadbalancer):
+    def execute(self, loadbalancer, parent_port=None):
         """Compute which NICs need to be plugged
 
         for the amphora to become operational.
@@ -219,7 +219,7 @@ class HandleNetworkDelta(BaseNetworkTask):
     Plug or unplug networks based on delta
     """
 
-    def execute(self, amphora, delta):
+    def execute(self, amphora, delta, parent_port=None):
         """Handle network plugging based off deltas."""
         added_ports = {}
         added_ports[amphora.id] = []
@@ -269,7 +269,7 @@ class HandleNetworkDeltas(BaseNetworkTask):
     networks based on delta
     """
 
-    def execute(self, deltas):
+    def execute(self, deltas, parent_port=None):
         """Handle network plugging based off deltas."""
         added_ports = {}
         for amp_id, delta in six.iteritems(deltas):
@@ -578,10 +578,17 @@ class AllocateTrunk(BaseNetworkTask):
         pass 
 
 
-class GetPortList(BaseNetworkTask):
+class GetParentPort(BaseNetworkTask):
 
-    def execute(self):
-        pass
+    def execute(self, loadbalancer):
+        LOG.debug('Getting parent port for loadbalancer {}', loadbalancer.id)
+        return self.network_driver.get_plugged_parent_port(loadbalancer)
+
+
+class FakePort(BaseNetworkTask):
+    "DO NOT LEAVE THIS IN"
+    def execute(self, parent_port):
+        LOG.debug('Getting parent port for loadbalancer {}', parent_port.id)
 
 
 class WaitForPortDetach(BaseNetworkTask):
