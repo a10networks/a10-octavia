@@ -13,7 +13,7 @@
 #    under the License.
 
 
-from taskflow.patterns import linear_flow, unordered_flow
+from taskflow.patterns import linear_flow, unordered_flow, graph_flow
 from taskflow.patterns.graph_flow import TargetedFlow
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.controller.worker.tasks import handler_server
@@ -48,8 +48,8 @@ class MemberFlows(object):
 
         :returns: The flow for creating a member
         """
-        create_member_flow = TargetedFlow(constants.CREATE_MEMBER_FLOW)
-        create_member_flow.set_target("member_mark_lb_and_listener_active")
+        #create_member_flow = TargetedFlow(constants.CREATE_MEMBER_FLOW)
+        create_member_flow = graph_flow.Flow(constants.CREATE_MEMBER_FLOW)
         create_member_flow.add(lifecycle_tasks.MemberToErrorOnRevertTask(
             requires=[constants.MEMBER,
                       constants.LISTENERS,
@@ -57,38 +57,44 @@ class MemberFlows(object):
                       constants.POOL]))
         create_member_flow.add(database_tasks.MarkMemberPendingCreateInDB(
             requires=constants.MEMBER))
-        create_member_flow.add(a10_network_tasks.GetPortList(
+
+        parent_port = a10_network_tasks.GetParentPort(
             requires=constants.LOADBALANCER,
-            provides=a10constants.PARENTPORT))
+            provides=a10constants.PARENTPORT)
+
+        fake_port = a10_network_tasks.FakePort(
+            requires=a10constants.PARENTPORT)
+
+        create_member_flow.add(parent_port, fake_port)
+
+        create_member_flow.link(parent_port, fake_port,
+                                decider=self._test_decider)
+
         create_member_flow.add(a10_network_tasks.CalculateDelta(
-            requires=constants.LOADBALANCER,
-            requires=a10constants.PARENTPORT,
+            requires=[constants.LOADBALANCER,
+                      a10constants.PARENTPORT],
             provides=constants.DELTAS))
         create_member_flow.add(a10_network_tasks.HandleNetworkDeltas(
-            requires=constants.DELTAS, provides=constants.ADDED_PORTS))
-        # Need to add relaod vThunder logic here
-        # create_member_flow.add(amphora_driver_tasks.AmphoraePostNetworkPlug(
-        #    requires=(constants.LOADBALANCER, constants.ADDED_PORTS)
-        # ))
-        # create_member_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=(constants.LOADBALANCER, constants.LISTENERS)))
-        # Get VThunder details from database
+            requires=[constants.DELTAS,
+                      a10constants.PARENTPORT],
+            provides=constants.ADDED_PORTS))
         create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
         create_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        # managing interface additions here
-        create_member_flow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
-            requires=(constants.LOADBALANCER, constants.ADDED_PORTS, a10constants.VTHUNDER)))
 
-        create_member_flow.add(get_vthunder_network_subflow_flat(a10constant.VTHUNDER,
+        create_member_flow.add(self.get_vthunder_interface_subflow_flat(a10constants.VTHUNDER,
             enable_iface=True))
 
         # configure member flow for HA
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
-            create_member_flow.add(get_vthunder_network_subflow_flat(a10constant.BACKUP_VTHUNDER,
+            vthunder_network_subflow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                name="get_{}".format(a10constants.BACKUP_VTHUNDER),
+                requires=constants.LOADBALANCER,
+                provides=a10constants.BACKUP_VTHUNDER))
+            create_member_flow.add(self.get_vthunder_interface_subflow_flat(a10constants.BACKUP_VTHUNDER,
                 enable_iface=True))
 
         create_member_flow.add(handler_server.MemberCreate(
@@ -97,20 +103,26 @@ class MemberFlows(object):
             requires=constants.MEMBER))
         create_member_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
-        create_member_flow.add(database_tasks.
-                               MarkLBAndListenersActiveInDB(
-                                   name="member_mark_lb_and_listener_active",
-                                   requires=(constants.LOADBALANCER,
-                                             constants.LISTENERS)))
+        final_state = database_tasks.MarkLBAndListenersActiveInDB(
+                              name="member_mark_lb_and_listener_active",
+                              requires=(constants.LOADBALANCER,
+                                        constants.LISTENERS))
 
+        create_member_flow.add(final_state)
+        #create_member_flow.set_target(final_state)
         return create_member_flow
+
+    def _test_decider(self, history):
+        import remote_pdb; remote_pdb.set_trace()
+        print("REMOVE ME")
 
     def get_delete_member_flow(self):
         """Create a flow to delete a member
 
         :returns: The flow for deleting a member
         """
-
+        delete_member_flow = linear_flow.Flow(constants.DELETE_MEMBER_FLOW)
+        delete_member_flow.add(lifecycle_tasks.MemberToErrorOnRevertTask(
             requires=[constants.MEMBER,
                       constants.LISTENERS,
                       constants.LOADBALANCER,
@@ -166,10 +178,9 @@ class MemberFlows(object):
             requires=constants.MEMBER))
         update_member_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
-        update_member_flow.add(database_tasks.
-                               MarkLBAndListenersActiveInDB(
-                                   requires=[constants.LOADBALANCER,
-                                             constants.LISTENERS]))
+        update_member_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
+                               requires=[constants.LOADBALANCER,
+                                         constants.LISTENERS]))
 
         return update_member_flow
 
@@ -290,20 +301,33 @@ class MemberFlows(object):
                                              constants.LISTENERS)))
         return create_member_flow
 
-    def get_vthunder_network_subflow_flat(self, vthunder_constant, enable_iface=False):
-            create_member_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
-                name="get_{}".format(vthunder_constant),
-                requires=constants.LOADBALANCER,
-                provides=vthunder_constant))
-            create_member_flow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
-                name="{}_amphora_network_plug".format(vthunder_constant),
-                rebind=[constants.ADDED_PORTS, constants.LOADBALANCER, vthunder_constant]))
-            create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-                name="{}_compute_conn_wait".format(vthunder_constant),
-                rebind=[vthunder_constant, constants.AMPHORA]))
-            create_member_flow.add(vthunder_tasks.EnableInterfaceForMembers(
-                name="{}_enable_interface".format(vthunder_constant),
-                rebind=[constants.ADDED_PORTS, constants.LOADBALANCER, vthunder_constant]))
+    def get_vthunder_interface_subflow_flat(self, vthunder_constant, enable_iface=False):
+        vthunder_network_subflow = linear_flow.Flow(a10constants.GET_FLAT_NET_SUBFLOW)
+        vthunder_network_subflow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
+            name="{}_amphora_network_plug".format(vthunder_constant),
+            rebind=[constants.ADDED_PORTS, constants.LOADBALANCER, vthunder_constant]))
+        vthunder_network_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            name="{}_compute_conn_wait".format(vthunder_constant),
+            rebind=[vthunder_constant, constants.AMPHORA]))
+        vthunder_network_subflow.add(vthunder_tasks.EnableInterfaceForMembers(
+            name="{}_enable_interface".format(vthunder_constant),
+            rebind=[constants.ADDED_PORTS, constants.LOADBALANCER, vthunder_constant]))
+        return vthunder_network_subflow
 
     def get_vthunder_interface_subflow_vlan(self):
+        pass
+
+    def get_flat_network_handler_subflow(self):
+        vthunder_network_handler_subflow = linear_flow.Flow(a10constants.FLAT_NET_HANDLER_SUBFLOW)
+        create_member_flow.add(a10_network_tasks.CalculateDelta(
+            requires=[constants.LOADBALANCER,
+                      a10constants.PARENTPORT],
+            provides=constants.DELTAS))
+        create_member_flow.add(a10_network_tasks.HandleNetworkDeltas(
+            requires=[constants.DELTAS,
+                      a10constants.PARENTPORT],
+            provides=constants.ADDED_PORTS))
+        return vtunder_network_handler_subflow
+
+    def get_vlan_network_handler_subflow(self):
         pass
