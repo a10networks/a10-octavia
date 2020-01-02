@@ -24,6 +24,14 @@ CHANGES
 * QOL update for functional testing
 * Refactored install script
 * Added QOL scripts for testing
+* Added import back. Added function sig
+* Added ability overwrite of lb status
+* Added database level delete for last resolt
+* Fixed typing issue
+* Updating QOL script
+* Added QOL scripts
+* Established trunk and port association
+* Started adding network handler flow
 * Made minor fixes
 * Fixed naming typo
 * Made numerous minor fixex
