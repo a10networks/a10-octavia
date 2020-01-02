@@ -13,8 +13,8 @@
 #    under the License.
 
 
-from taskflow.patterns import linear_flow
-from taskflow.patterns import unordered_flow
+from taskflow.patterns import linear_flow, unordered_flow
+from taskflow.patterns.graph_flow import TargetedFlow
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.controller.worker.tasks import handler_server
 from a10_octavia.controller.worker.tasks import a10_database_tasks
@@ -48,7 +48,8 @@ class MemberFlows(object):
 
         :returns: The flow for creating a member
         """
-        create_member_flow = linear_flow.Flow(constants.CREATE_MEMBER_FLOW)
+        create_member_flow = TargetedFlow(constants.CREATE_MEMBER_FLOW)
+        create_member_flow.set_target("member_mark_lb_and_listener_active")
         create_member_flow.add(lifecycle_tasks.MemberToErrorOnRevertTask(
             requires=[constants.MEMBER,
                       constants.LISTENERS,
@@ -56,6 +57,9 @@ class MemberFlows(object):
                       constants.POOL]))
         create_member_flow.add(database_tasks.MarkMemberPendingCreateInDB(
             requires=constants.MEMBER))
+        create_member_flow.add(a10_network_tasks.GetPortList(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.PORTS))
         create_member_flow.add(a10_network_tasks.CalculateDelta(
             requires=constants.LOADBALANCER,
             provides=constants.DELTAS))
@@ -105,6 +109,7 @@ class MemberFlows(object):
             requires=constants.POOL))
         create_member_flow.add(database_tasks.
                                MarkLBAndListenersActiveInDB(
+                                   name="member_mark_lb_and_listener_active",
                                    requires=(constants.LOADBALANCER,
                                              constants.LISTENERS)))
 

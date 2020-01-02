@@ -48,7 +48,7 @@ class CalculateAmphoraDelta(BaseNetworkTask):
 
     default_provides = constants.DELTA
 
-    def execute(self, loadbalancer, amphora):
+    def execute(self, loadbalancer, amphora, ports):
         LOG.debug("Calculating network delta for amphora id: %s", amphora.id)
         # Figure out what networks we want
         # seed with lb network(s)
@@ -64,7 +64,7 @@ class CalculateAmphoraDelta(BaseNetworkTask):
             ]
             desired_network_ids.update(member_networks)
 
-        nics = self.network_driver.get_plugged_networks(amphora.compute_id)
+        ports = self.network_driver.get_plugged_networks(amphora.compute_id)
         # assume we don't have two nics in the same network
         actual_network_nics = dict((nic.network_id, nic) for nic in nics)
 
@@ -576,8 +576,13 @@ class AllocateTrunk(BaseNetworkTask):
 
     def revert(self, result, *args, **kwargs):
         pass 
-            
-        
+
+
+class GetPortList(BaseNetworkTask):
+
+    def execute(self):
+        pass
+
 
 class WaitForPortDetach(BaseNetworkTask):
     """Task to wait for the neutron ports to detach from an amphora."""

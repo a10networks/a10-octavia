@@ -29,3 +29,4 @@ HM_SERVER = 'a10_hm_server'
 VTHUNDER_ID = "vthunder_id"
 VTHUNDER_CONFIG='vthunder_config'
 TRUNK = 'trunk'
+PORTS = 'ports'
