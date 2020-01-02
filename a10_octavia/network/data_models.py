@@ -17,7 +17,7 @@ from octavia.network import data_models as network_data_models
 
 class ParentPort(network_data_models.Port):
 
-    def __init__(self, trunk_details=None, **kwargs) 
+    def __init__(self, trunk_details=None, **kwargs):
         if trunk_details:
             self.trunk_id = trunk_details["trunk_id"]
             self.sub_ports = [ChildPort(**subport) for subport in trunk_details["sub_ports"]]
@@ -25,7 +25,7 @@ class ParentPort(network_data_models.Port):
 
 
 class ChildPort(base_data_models.BaseDataModel):
-    """Somtimes reffered to as subport"""
+    """Sometimes reffered to as subport"""
 
     def __init__(self, segmentation_id=None, port_id=None,
                  segmentation_type=None, mac_address=None):
