@@ -328,15 +328,29 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
                     self._delete_vip_security_group(sec_grp_id)
 
     def _port_to_parent_port(self, port):
+        fixed_ips = [n_data_models.FixedIP(subnet_id=fixed_ip.get('subnet_id'),
+                                            ip_address=fixed_ip.get('ip_address'))
+                     for fixed_ip in port.get('fixed_ips', [])]
+
         subports = port.get('trunk_details')['sub_ports']
         if subports:
             child_port_list = [a10_network_models.ChildPort(segmentation_id=subports['segmentation_id'],
                                                             port_id=['port_id'],
                                                             segmentation_type=['segmentation_type'],
                                                             mac_address=['mac_address'])
-                               for subport in subports] 
-        parent_port = a10_network_models.ParentPort()
-        return parent_port
+                               for subport in subports]
+        return a10_network_models.ParentPort(id=port.get('id'),
+            name=port.get('name'),
+            device_id=port.get('device_id'),
+            device_owner=port.get('device_owner'),
+            mac_address=port.get('mac_address'),
+            network_id=port.get('network_id'),
+            status=port.get('status'),
+            project_id=port.get('project_id'),
+            admin_state_up=port.get('admin_state_up'),
+            fixed_ips=fixed_ids,
+            qos_policy_id=port.get('qos_policy_id'),
+            trunk_id=None, subports=None)
 
 
     def deallocate_vip(self, vip):

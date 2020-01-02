@@ -20,8 +20,8 @@ class ParentPort(network_data_models.Port):
 
     def __init__(self, id=None, name=None, device_id=None, device_owner=None,
                  mac_address=None, network_id=None, status=None, project_id=None,
-                 admin_state_up=None, fixed_ips=None, network=None,
-                 qos_policy_id=None, trunk_id=None, subports=None):
+                 admin_state_up=None, fixed_ips=None, qos_policy_id=None,
+                 trunk_id=None, subports=None):
 
         self.id = id
         self.name = name
@@ -33,7 +33,6 @@ class ParentPort(network_data_models.Port):
         self.project_id = project_id
         self.admin_state_up = admin_state_up
         self.fixed_ips = fixed_ips or []
-        self.network = network
         self.qos_policy_id = qos_policy_id
         self.trunk_id = trunk_id 
         self.subports = subports or []
