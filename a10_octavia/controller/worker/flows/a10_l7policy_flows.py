@@ -13,11 +13,13 @@
 #    under the License.
 
 from taskflow.patterns import linear_flow
+from a10_octavia.controller.worker.tasks import handler_l7policy
+from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.common import a10constants
 
 from octavia.common import constants
 
 try:
-    from octavia.controller.worker.v2.tasks import amphora_driver_tasks
     from octavia.controller.worker.v2.tasks import database_tasks
     from octavia.controller.worker.v2.tasks import lifecycle_tasks
     from octavia.controller.worker.v2.tasks import model_tasks
@@ -26,18 +28,11 @@ except (ImportError, AttributeError):
 
 try:
     # Stein and previous
-    from octavia.controller.worker.tasks import amphora_driver_tasks
     from octavia.controller.worker.tasks import database_tasks
     from octavia.controller.worker.tasks import lifecycle_tasks
     from octavia.controller.worker.tasks import model_tasks
 except (ImportError, AttributeError):
     pass
-
-
-#from a10_octavia.controller.worker.tasks import vthunder_tasks
-from a10_octavia.controller.worker.tasks import handler_l7policy
-from a10_octavia.controller.worker.tasks import a10_database_tasks
-from a10_octavia.common import a10constants
 
 
 class L7PolicyFlows(object):
@@ -54,8 +49,6 @@ class L7PolicyFlows(object):
                       constants.LOADBALANCER]))
         create_l7policy_flow.add(database_tasks.MarkL7PolicyPendingCreateInDB(
             requires=constants.L7POLICY))
-        #create_l7policy_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -82,8 +75,6 @@ class L7PolicyFlows(object):
             requires=constants.L7POLICY))
         delete_l7policy_flow.add(model_tasks.DeleteModelObject(
             rebind={constants.OBJECT: constants.L7POLICY}))
-        #delete_l7policy_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         delete_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -98,7 +89,6 @@ class L7PolicyFlows(object):
 
     def get_update_l7policy_flow(self):
         """Create a flow to update an L7 policy
-
         :returns: The flow for updating an L7 policy
         """
         update_l7policy_flow = linear_flow.Flow(constants.UPDATE_L7POLICY_FLOW)
@@ -108,8 +98,12 @@ class L7PolicyFlows(object):
                       constants.LOADBALANCER]))
         update_l7policy_flow.add(database_tasks.MarkL7PolicyPendingUpdateInDB(
             requires=constants.L7POLICY))
-        update_l7policy_flow.add(amphora_driver_tasks.ListenersUpdate(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        update_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        update_l7policy_flow.add(handler_l7policy.CreateL7Policy(
+            requires=[constants.L7POLICY, a10constants.VTHUNDER]))
+
         update_l7policy_flow.add(database_tasks.UpdateL7PolicyInDB(
             requires=[constants.L7POLICY, constants.UPDATE_DICT]))
         update_l7policy_flow.add(database_tasks.MarkL7PolicyActiveInDB(

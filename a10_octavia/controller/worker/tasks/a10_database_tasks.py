@@ -73,7 +73,6 @@ class CreteVthunderEntry(BaseDatabaseTask):
             'DEFAULT', 'DEFAULT_VTHUNDER_USERNAME').replace('"', '')
         password = self.config.get(
             'DEFAULT', 'DEFAULT_VTHUNDER_PASSWORD').replace('"', '')
-
         axapi_version = int(
             self.config.get('DEFAULT', 'DEFAULT_AXAPI_VERSION'))
 
@@ -109,6 +108,7 @@ class CreteVthunderEntry(BaseDatabaseTask):
             role=role, 
             last_update=datetime.datetime.now(),
             status='ACTIVE')
+
         LOG.info("Successfully created vthunder entry in database.")
 
 
@@ -215,7 +215,8 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                                              project_id=vthunder_config.project_id,
                                              axapi_version=vthunder_config.axapi_version,
                                              topology="STANDALONE",
-                                             role="MASTER")
+                                             role="MASTER",
+                                             status = "ACTIVE")
         LOG.info("Successfully created vthunder entry in database.")
 
 
@@ -238,3 +239,15 @@ class CreateVthunderHealthEntry(BaseDatabaseTask):
                                              role="MASTER")
         LOG.info("Successfully created vthunder entry in database.")
     
+
+class MarkVthunderStatusInDB(BaseDatabaseTask):
+
+    def execute(self, vthunder, status):
+        try:
+            self.vthunder_repo.update(db_apis.get_session(),
+                                      vthunder.id,
+                                      status=status)
+        except (sqlalchemy.orm.exc.NoResultFound,
+                sqlalchemy.orm.exc.UnmappedInstanceError):
+            LOG.debug('No existing amphora health record to mark busy '
+                      'for amphora: %s, skipping.', vthunder_id)

@@ -12,30 +12,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-from taskflow import task
-
-from octavia.controller.worker import task_utils as task_utilities
-from octavia.common import constants
-import acos_client
-from octavia.amphorae.driver_exceptions import exceptions as driver_except
-import time
+import json
 from oslo_log import log as logging
 from oslo_config import cfg
-from a10_octavia.common import openstack_mappings
-from a10_octavia.controller.worker.tasks.policy import PolicyUtil
-from a10_octavia.controller.worker.tasks import persist
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
-import json
+from octavia.common import constants
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
-class CreateVitualServerTask(BaseVThunderTask):
-    """Task to create a virtual server in vthunder device."""
 
-    def execute(self, loadbalancer_id, loadbalancer, vthunder):
-        conf_templates = self.readConf('SLB','template_virtual_server')
+class LoadBalancerParent(object):
+    def set(self, set_method, loadbalancer_id, loadbalancer, vthunder):
+        conf_templates = self.readConf('SLB', 'template_virtual_server')
         virtual_server_templates = {}
         try:
             if conf_templates is not None:
@@ -43,6 +32,7 @@ class CreateVitualServerTask(BaseVThunderTask):
                 virtual_server_templates['template-server'] = conf_templates
         except:
             virtual_server_templates = None
+            LOG.warning("Invalid definition of A10 config in Pool section.")
 
         try:
             c = self.client_factory(vthunder)
@@ -50,32 +40,44 @@ class CreateVitualServerTask(BaseVThunderTask):
             if not loadbalancer.provisioning_status:
                 status = c.slb.DOWN
             vip_meta = self.meta(loadbalancer, 'virtual_server', {})
-            arp_disable = self.readConf('SLB','arp_disable')
+            arp_disable = self.readConf('SLB', 'arp_disable')
             if isinstance(arp_disable, str):
-                arp_disable=json.loads(arp_disable.lower())
+                arp_disable = json.loads(arp_disable.lower())
             else:
-                arp_disable=False
-            vrid = self.readConf('SLB','default_virtual_server_vrid')
+                arp_disable = False
+            vrid = self.readConf('SLB', 'default_virtual_server_vrid')
             if vrid is not None:
                 vrid = int(vrid)
-            r = c.slb.virtual_server.create(loadbalancer_id, 
-                                            loadbalancer.vip.ip_address,
-                                            arp_disable=arp_disable,
-                                            status=status, vrid=vrid,
-                                            virtual_server_templates=virtual_server_templates,
-                                            axapi_body=vip_meta)
-            status = { 'loadbalancers': [{"id": loadbalancer_id,
-                       "provisioning_status": constants.ACTIVE }]}
+            set_method(
+                loadbalancer_id,
+                loadbalancer.vip.ip_address,
+                arp_disable=arp_disable,
+                status=status, vrid=vrid,
+                virtual_server_templates=virtual_server_templates,
+                axapi_body=vip_meta)
+            status = {'loadbalancers': [{"id": loadbalancer_id,
+                      "provisioning_status": constants.ACTIVE}]}
         except Exception as e:
-            r = str(e)
-            LOG.info(r)
-            status = { 'loadbalancers': [{"id": loadbalancer_id,
-                       "provisioning_status": constants.ERROR }]}
+            LOG.error(str(e))
+            status = {'loadbalancers': [{"id": loadbalancer_id,
+                      "provisioning_status": constants.ERROR}]}
         LOG.info(str(status))
         return status
 
     def revert(self, loadbalancer_id, *args, **kwargs):
         pass
+
+
+class CreateVitualServerTask(BaseVThunderTask, LoadBalancerParent):
+    """Task to create a virtual server in vthunder device."""
+
+    def execute(self, loadbalancer_id, loadbalancer, vthunder):
+        c = self.client_factory(vthunder)
+        status = LoadBalancerParent.set(self, c.slb.virtual_server.create,
+                                        loadbalancer_id,
+                                        loadbalancer,
+                                        vthunder)
+        return status
 
 
 class DeleteVitualServerTask(BaseVThunderTask):
@@ -85,16 +87,28 @@ class DeleteVitualServerTask(BaseVThunderTask):
         loadbalancer_id = loadbalancer.id
         try:
             c = self.client_factory(vthunder)
-            r = c.slb.virtual_server.delete(loadbalancer_id)
-            status = { 'loadbalancers': [{"id": loadbalancer_id,
-                       "provisioning_status": constants.DELETED }]}
+            c.slb.virtual_server.delete(loadbalancer_id)
+            status = {'loadbalancers': [{"id": loadbalancer_id,
+                      "provisioning_status": constants.DELETED}]}
         except Exception as e:
-            r = str(e)
-            LOG.info(r)
-            status = { 'loadbalancers': [{"id": loadbalancer_id,
-                       "provisioning_status": constants.ERROR }]}
+            LOG.error(str(e))
+            status = {'loadbalancers': [{"id": loadbalancer_id,
+                      "provisioning_status": constants.ERROR}]}
         LOG.info(str(status))
         return status
 
     def revert(self, loadbalancer, *args, **kwargs):
         pass
+
+
+class UpdateVitualServerTask(BaseVThunderTask, LoadBalancerParent):
+    """Task to update a virtual server in vthunder device."""
+
+    def execute(self, loadbalancer, vthunder):
+        c = self.client_factory(vthunder)
+        status = LoadBalancerParent.set(self,
+                                        c.slb.virtual_server.update,
+                                        loadbalancer.id,
+                                        loadbalancer,
+                                        vthunder)
+        return status

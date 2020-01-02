@@ -12,40 +12,30 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+import logging
 from oslo_config import cfg
 from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
-from taskflow.patterns import unordered_flow
-
-from octavia.common import constants
-try:
-    from octavia.controller.worker.v2.tasks import amphora_driver_tasks
-    from octavia.controller.worker.v2.tasks import database_tasks
-    from octavia.controller.worker.v2.tasks import lifecycle_tasks
-    from octavia.controller.worker.v2.tasks import model_tasks
-    from octavia.controller.worker.v2.tasks import network_tasks
-except (ImportError, AttributeError):
-    pass
-
-try:
-    # Stein and previous
-    from octavia.controller.worker.tasks import amphora_driver_tasks
-    from octavia.controller.worker.tasks import database_tasks
-    from octavia.controller.worker.tasks import lifecycle_tasks
-    from octavia.controller.worker.tasks import model_tasks
-    from octavia.controller.worker.tasks import network_tasks
-except (ImportError, AttributeError):
-    pass
-
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_compute_tasks as compute_tasks
 
+from octavia.common import constants
+try:
+    from octavia.controller.worker.v2.tasks import database_tasks
+except (ImportError, AttributeError):
+    pass
+
+try:
+    # Stein and previous
+    from octavia.controller.worker.tasks import database_tasks
+except (ImportError, AttributeError):
+    pass
+
+
 CONF = cfg.CONF
 
-import logging
 LOG = logging.getLogger(__name__)
 
 

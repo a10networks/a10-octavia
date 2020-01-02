@@ -43,7 +43,7 @@ class VThunder(base_models.BASE):
     topology = sa.Column(sa.String(50))
     role = sa.Column(sa.String(50))
     last_update = sa.Column(sa.DateTime, default=func.now(), nullable=False)
-    status = sa.Column(sa.String(50))
+    status = sa.Column('status', sa.String(36), default='ACTIVE', nullable=False)
 
     @classmethod
     def find_by_loadbalancer_id(cls, loadbalancer_id, db_session=None):
