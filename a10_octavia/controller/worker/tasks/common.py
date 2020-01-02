@@ -40,7 +40,7 @@ class BaseVThunderTask(task.Task):
     def client_factory(self, vthunder):
         axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
         c = acos_client.Client(vthunder.ip_address, axapi_version, vthunder.username, vthunder.password,
-                               timeout=30)
+                               timeout=30, port=vthunder.port, protocol=vthunder.protocol)
         return c
 
     def meta(self, lbaas_obj, key, default):
