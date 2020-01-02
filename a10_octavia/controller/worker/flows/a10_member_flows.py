@@ -122,8 +122,7 @@ class MemberFlows(object):
 
         :returns: The flow for deleting a member
         """
-        delete_member_flow = linear_flow.Flow(constants.DELETE_MEMBER_FLOW)
-        delete_member_flow.add(lifecycle_tasks.MemberToErrorOnRevertTask(
+
             requires=[constants.MEMBER,
                       constants.LISTENERS,
                       constants.LOADBALANCER,
