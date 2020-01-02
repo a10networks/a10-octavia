@@ -95,6 +95,12 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(handler_virtual_server.CreateVitualServerTask(
             requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.STATUS))
+        
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            lb_create_flow.add(vthunder_tasks.CreateHealthMonitorOnVthunder(
+                name='creating health monitor to master vthunder',
+                requires=(a10constants.VTHUNDER)))
+
         return lb_create_flow
 
     def _create_single_topology(self):
@@ -194,8 +200,9 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(handler_virtual_server.DeleteVitualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.STATUS))
-        # delete_LB_flow.add(listeners_delete)
-        # delete_LB_flow.add(network_tasks.UnplugVIP(
+
+        #delete_LB_flow.add(listeners_delete)
+        #delete_LB_flow.add(network_tasks.UnplugVIP(
         #    requires=constants.LOADBALANCER))
         # delete_LB_flow.add(network_tasks.DeallocateVIP(
         #    requires=constants.LOADBALANCER))
@@ -212,6 +219,9 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.MarkLBDeletedInDB(
             requires=constants.LOADBALANCER))
+        delete_LB_flow.add(a10_database_tasks.DeleteVthunderEntry(
+            requires=constants.LOADBALANCER))
+
         delete_LB_flow.add(database_tasks.DecrementLoadBalancerQuota(
             requires=constants.LOADBALANCER))
 

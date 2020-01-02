@@ -138,7 +138,7 @@ class VThunder(BaseDataModel):
                  device_name=None, ip_address=None, username=None,
                  password=None, axapi_version=None, undercloud=None,
                  loadbalancer_id=None, project_id=None, compute_id=None,
-                 topology="STANDALONE", role="MASTER", status="ACTIVE",
+                 topology="STANDALONE", role="MASTER", last_udp_update=None, status="ACTIVE",
                  updated_at=datetime.now()):
         self.id = id
         self.vthunder_id = vthunder_id
@@ -154,5 +154,6 @@ class VThunder(BaseDataModel):
         self.compute_id = compute_id
         self.topology = topology
         self.role = role
+        self.last_udp_update = last_udp_update
         self.status = status
         updated_at = datetime.now()

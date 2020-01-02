@@ -28,10 +28,11 @@ from octavia.db import api as db_apis
 from oslo_log import log as logging
 from oslo_config import cfg
 from octavia.common import utils
-from a10_octavia.common import openstack_mappings
+from a10_octavia.common import a10constants, openstack_mappings
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 from a10_octavia.controller.worker.tasks import persist
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+
 
 
 CONF = cfg.CONF
@@ -442,6 +443,43 @@ class MemberDelete(BaseVThunderTask):
         except Exception as e:
             print(str(e))
             LOG.info("Error occurred")
+
+
+class CreateHealthMonitorOnVthunder(BaseVThunderTask):
+    """ Task to create a healthmonitor and associate it with provided pool. """
+
+    def execute(self, vthunder):
+        """ Execute create health monitor for master vthunder """
+        # TODO : Length of name of healthmonitor for older vThunder devices
+        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+        try:
+            method = None
+            url = None
+            expect_code = None
+            ##TODO : change this
+            name = a10constants.VTHUNDER_UDP_HEARTBEAT 
+            interval = CONF.health_manager.heartbeat_interval
+            timeout = 3
+            max_retries = 5
+            port = CONF.health_manager.bind_port
+            ipv4 = CONF.health_manager.bind_ip
+            c = self.client_factory(vthunder)
+            out = c.slb.hm.create(name, openstack_mappings.hm_type(c, 'UDP'),
+                                interval, timeout, max_retries, method, url, expect_code,
+                                port, ipv4)
+            LOG.info("Heath Monitor created successfully.")
+        except Exception as e:
+            LOG.info(str(e))
+        try:    
+            c = self.client_factory(vthunder)
+            name = a10constants.HM_SERVER
+            ip_address = '172.17.20.52'
+            health_check = a10constants.VTHUNDER_UDP_HEARTBEAT
+            out = c.slb.server.create(name, ip_address, health_check=health_check)
+            LOG.info("Server created successfully. Enabled health check for health monitor.")
+        except Exception as e:
+            LOG.info(str(e))
+
 
 class CreateAndAssociateHealthMonitor(BaseVThunderTask):
     """ Task to create a healthmonitor and associate it with provided pool. """

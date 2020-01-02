@@ -12,12 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 GET_VTHUNDER_FOR_LB_SUBFLOW = 'octavia-get-vthunder-for-lb-subflow'
 VTHUNDER = 'vthunder'
 STATUS = 'status'
 ROLE = 'role'
 BACKUP_VTHUNDER = 'backup_vthunder'
 VRRP_STATUS = 'vrrp_status'
+FAILED = 'FAILED'
+VTHUNDER_UDP_HEARTBEAT = 'vthunder_udp_heartbeat'
+HM_SERVER = 'a10_hm_server'
 VTHUNDER_CONFIG = 'vthunder_config'
 VTHUNDER_ID = "vthunder_id"

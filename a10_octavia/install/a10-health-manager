@@ -1,0 +1,10 @@
+#!/usr/bin/python
+
+import sys
+
+from a10_octavia.cmd.a10_health_manager import main
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+
