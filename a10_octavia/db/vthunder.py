@@ -21,6 +21,6 @@ models.VThunder.create_and_save(amphora_id_id='112', device_name='somename',
                                 password='password', axapi_version=30,
                                 undercloud=True, loadbalancer_id='lbid',
                                 status='ACTIVE', updated_at=datetime.now(),
-                                last_udp_update=datetime.datetime.utcnow(),
+                                last_udp_update=datetime.utcnow(),
                                 db_session=None)
 
