@@ -106,7 +106,7 @@ class CreteVthunderEntry(BaseDatabaseTask):
             compute_id=compute_id,
             topology=topology,
             role=role, 
-            last_udp_update=datetime.datetime.now(),
+            last_udp_update=datetime.now(),
             status="ACTIVE",
             updated_at=datetime.now())
 
