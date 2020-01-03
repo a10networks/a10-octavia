@@ -21,11 +21,19 @@ GET_VLAN_NET_SUBFLOW = 'octavia-get-vlan-net-subflow'
 FLAT_NET_HANDLER_SUBFLOW = 'octavia-get-flat-net-handler-sublow'
 VLAN_NET_HANDLER_SUBFLOW = 'octavia-get-vlan-net-handler-subflow'
 
-# Constant values
+
+# Flow constants
+BACKUP_VTHUNDER = 'backup_vthunder'
 VTHUNDER = 'vthunder'
+PARENT_PORT = 'parent_port'
+TRUNK = 'trunk'
+ADDED_NICS = 'added_nics'
+PORT_DELTAS = 'port_deltas'
+NIC_DELTAS  = 'nic_deltas'
+
+# Constant values
 STATUS = 'status'
 ROLE = 'role'
-BACKUP_VTHUNDER = 'backup_vthunder'
 VRRP_STATUS = 'vrrp_status'
 
 FAILED = 'FAILED'
@@ -33,5 +41,3 @@ VTHUNDER_UDP_HEARTBEAT = 'vthunder_udp_heartbeat'
 HM_SERVER = 'a10_hm_server'
 VTHUNDER_ID = "vthunder_id"
 VTHUNDER_CONFIG='vthunder_config'
-TRUNK = 'trunk'
-PARENTPORT = 'parent_port'

@@ -81,7 +81,56 @@ class CalculateAmphoraDelta(BaseNetworkTask):
         return delta
 
 
-class CalculateDelta(BaseNetworkTask):
+class CalculateAmphoraPortDelta(BaseNetworkTask):
+
+    default_provides = constants.DELTA
+
+    def execute(self, loadbalancer, amphora):
+        LOG.debug("Calculating network delta for amphora id: %s", amphora.id)
+        # Figure out what networks we want
+        # seed with lb network(s)
+        import remote_pdb; remote_pdb.set_trace()
+        vrrp_port = self.network_driver.get_port(amphora.vrrp_port_id)
+        desired_network_ids = {vrrp_port.network_id}.union(
+            CONF.controller_worker.amp_boot_network_list)
+
+        for pool in loadbalancer.pools:
+            member_networks = [
+                self.network_driver.get_subnet(member.subnet_id).network_id
+                for member in pool.members
+                if member.subnet_id
+            ]
+            desired_network_ids.update(member_networks)
+
+        ports = self.network_driver.get_plugged_networks(amphora.compute_id)
+        # assume we don't have two nics in the same network
+        actual_network_nics = dict((nic.network_id, nic) for nic in nics)
+
+        del_ids = set(actual_network_nics) - desired_network_ids
+        delete_nics = list(
+            actual_network_nics[net_id] for net_id in del_ids)
+
+        add_ids = desired_network_ids - set(actual_network_nics)
+        add_nics = list(n_data_models.Interface(
+            network_id=net_id) for net_id in add_ids)
+        delta = n_data_models.Delta(
+            amphora_id=amphora.id, compute_id=amphora.compute_id,
+            add_nics=add_nics, delete_nics=delete_nics)
+        return delta
+
+
+def _amp_intermediary_executor(calc_amp_func, loadbalancer):
+    deltas = {}
+    for amphora in six.moves.filter(
+        lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+            loadbalancer.amphorae):
+
+        delta = calc_amp_fun(loadbalancer, amphora)
+        deltas[amphora.id] = delta
+    return deltas
+
+
+class CalculateNICDelta(BaseNetworkTask):
     """Task to calculate the delta between
 
     the nics on the amphora and the ones
@@ -102,15 +151,17 @@ class CalculateDelta(BaseNetworkTask):
                   id
         """
 
-        calculate_amp = CalculateAmphoraDelta()
-        deltas = {}
-        for amphora in six.moves.filter(
-            lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
-                loadbalancer.amphorae):
+        calculate_amp = CalculateAmphoraNICDelta()
+        return _amp_intermediary_executor(calculate_amp.execute, laodbalancer)
 
-            delta = calculate_amp.execute(loadbalancer, amphora)
-            deltas[amphora.id] = delta
-        return deltas
+
+class CalculatePortDelta(BaseNetworkTask):
+
+    default_provides = constants.DELTAS
+
+    def execute(self, loadbalancer):
+        calculate_amp = CalculateAmphoraPortDelta()
+        return _amp_intermediary_executor(calculate_amp.execute, laodbalancer)
 
 
 class GetPlumbedNetworks(BaseNetworkTask):
