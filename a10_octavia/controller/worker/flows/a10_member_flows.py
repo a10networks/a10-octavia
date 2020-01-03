@@ -67,8 +67,11 @@ class MemberFlows(object):
 
         create_member_flow.add(parent_port, vlan_subflow, flat_subflow)
 
-        create_member_flow.link(parent_port, fake_port,
-                                decider=self._test_decider)
+        create_member_flow.link(parent_port, vlan_sublfow,
+                                decider=self._create_new_subport_decider)
+
+        create_member_flow.link(parent_port, flat_sublfow,
+                                decider=self._create_new_nic_decider)
 
         create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
@@ -109,7 +112,7 @@ class MemberFlows(object):
            event a member subnet is outside current subnet scope"""
         return history[history.keys()[0]] == None
 
-    def _tag_current_nic_decider(self, history):
+    def _creat_new_subport_decider(self, history):
         """Decides if the current nic will be tagged in the event
            a member subnet is outside current subnet scope"""
         return history[history.keys()[0]] != None
