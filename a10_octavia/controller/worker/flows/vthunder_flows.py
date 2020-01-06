@@ -58,7 +58,7 @@ class VThunderFlows(object):
             constants.CREATE_AMPHORA_FLOW)
         sf_name = 'spare_vthunder_create'
         create_vthunder_flow.add(database_tasks.CreateAmphoraInDB(
-            name=sf_name + '-' + constants.CREATE_AMPHORA_INDB,
+            name=sf_name + '-' + constants.CREATE_AMPHORA_INDB))
         create_vthunder_flow.add(compute_tasks.ComputeCreate(
             name=sf_name + '-' + constants.COMPUTE_CREATE,
             requires=(constants.AMPHORA_ID,
@@ -68,6 +68,7 @@ class VThunderFlows(object):
         create_vthunder_flow.add(database_tasks.UpdateAmphoraComputeId(
             name=sf_name + '-' + constants.UPDATE_AMPHORA_COMPUTEID,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_ID)))
+
         create_vthunder_flow.add(database_tasks.MarkAmphoraBootingInDB(
             name=sf_name + '-' + constants.MARK_AMPHORA_BOOTING_INDB,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_ID)))
