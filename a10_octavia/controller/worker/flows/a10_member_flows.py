@@ -62,15 +62,15 @@ class MemberFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.PARENT_PORT)
 
-        vlan_subflow = get_vlan_network_handler_subflow()
-        flat_subflow = get_flat_network_handler_subflow()
+        vlan_subflow = self.get_vlan_network_handler_subflow()
+        flat_subflow = self.get_flat_network_handler_subflow()
 
         create_member_flow.add(parent_port, vlan_subflow, flat_subflow)
 
-        create_member_flow.link(parent_port, vlan_sublfow,
+        create_member_flow.link(parent_port, vlan_subflow,
                                 decider=self._create_new_subport_decider)
 
-        create_member_flow.link(parent_port, flat_sublfow,
+        create_member_flow.link(parent_port, flat_subflow,
                                 decider=self._create_new_nic_decider)
 
         create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
@@ -112,7 +112,7 @@ class MemberFlows(object):
            event a member subnet is outside current subnet scope"""
         return history[history.keys()[0]] == None
 
-    def _creat_new_subport_decider(self, history):
+    def _create_new_subport_decider(self, history):
         """Decides if the current nic will be tagged in the event
            a member subnet is outside current subnet scope"""
         return history[history.keys()[0]] != None
@@ -252,9 +252,9 @@ class MemberFlows(object):
         # Done, do real updates
         batch_update_members_flow.add(network_tasks.CalculateDelta(
             requires=constants.LOADBALANCER,
-            provides=constants.DELTAS))
+            provides=a10constants.NIC_DELTAS))
         batch_update_members_flow.add(network_tasks.HandleNetworkDeltas(
-            requires=constants.DELTAS, provides=constants.ADDED_PORTS))
+            requires=a10constants.NIC_DELTAS, provides=constants.ADDED_PORTS))
         batch_update_members_flow.add(
             amphora_driver_tasks.AmphoraePostNetworkPlug(
                 requires=(constants.LOADBALANCER, constants.ADDED_PORTS)))
@@ -319,23 +319,22 @@ class MemberFlows(object):
         pass
 
     def get_flat_network_handler_subflow(self):
-        vthunder_network_handler_subflow = linear_flow.Flow(a10constants.FLAT_NET_HANDLER_SUBFLOW)
-        create_member_flow.add(a10_network_tasks.CalculateNICDelta(
+        flat_network_handler_subflow = linear_flow.Flow(a10constants.FLAT_NET_HANDLER_SUBFLOW)
+        flat_network_handler_subflow.add(a10_network_tasks.CalculateNICDelta(
             requires=constants.LOADBALANCER,
-            provides=a10constants.DELTAS))
-        create_member_flow.add(a10_network_tasks.HandleNICDeltas(
-            requires=constants.DELTAS,
+            provides=a10constants.NIC_DELTAS))
+        flat_network_handler_subflow.add(a10_network_tasks.HandleNICDeltas(
+            requires=a10constants.NIC_DELTAS,
             provides=a10constants.ADDED_NICS))
-        return vthunder_network_handler_subflow
+        return flat_network_handler_subflow
 
     def get_vlan_network_handler_subflow(self):
-        vthunder_network_handler_subflow = linear_flow.Flow(a10constants.VLAN_NET_HANDLER_SUBFLOW)
-        create_member_flow.add(a10_network_tasks.CalculatePortDelta(
+        vlan_network_handler_subflow = linear_flow.Flow(a10constants.VLAN_NET_HANDLER_SUBFLOW)
+        vlan_network_handler_subflow.add(a10_network_tasks.CalculatePortDelta(
             requires=[constants.LOADBALANCER,
                       a10constants.PARENT_PORT],
             provides=a10constants.PORT_DELTAS))
-        create_member_flow.add(a10_network_tasks.HandlePortDeltas(
-            requires=[a10constants.PORT_DELTAS,
-                      a10constants.PARENT_PORT],
+        vlan_network_handler_subflow.add(a10_network_tasks.HandlePortDeltas(
+            requires=a10constants.PORT_DELTAS,
             provides=constants.ADDED_PORTS))
-        return vthunder_network_handler_subflow
+        return vlan_network_handler_subflow
