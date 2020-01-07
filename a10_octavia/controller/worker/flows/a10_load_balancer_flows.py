@@ -22,6 +22,7 @@ from a10_octavia.controller.worker.tasks import handler_virtual_server
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.controller.worker.tasks import a10_compute_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.controller.worker.tasks import a10_network_tasks
 from octavia.common import constants
 from octavia.common import exceptions
 
@@ -249,7 +250,7 @@ class LoadBalancerFlows(object):
         new_LB_net_subflow.add(a10_network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.AMPS_DATA,
                       constants.UPDATE_DICT)))
-        new_LB_net_subflow.add(database_tasks.UpdateAmphoraVIPData(
+        new_LB_net_subflow.add(database_tasks.UpdateAmphoraeVIPData(
             requires=constants.AMPS_DATA))
         new_LB_net_subflow.add(database_tasks.ReloadLoadBalancer(
             name=constants.RELOAD_LB_AFTER_PLUG_VIP,

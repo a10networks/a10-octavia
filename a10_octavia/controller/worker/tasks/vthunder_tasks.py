@@ -90,7 +90,7 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
         try:
 
             LOG.info("Attempting to connect vThunder device for connection.")
-            attempts = 20
+            attempts = 30
             while attempts >= 0:
                 try:
                     attempts = attempts - 1
