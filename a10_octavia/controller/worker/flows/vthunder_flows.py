@@ -58,7 +58,9 @@ class VThunderFlows(object):
             constants.CREATE_AMPHORA_FLOW)
         sf_name = 'spare_vthunder_create'
         create_vthunder_flow.add(database_tasks.CreateAmphoraInDB(
-            name=sf_name + '-' + constants.CREATE_AMPHORA_INDB))
+            name=sf_name + '-' + constants.CREATE_AMPHORA_INDB,
+            provides=constants.AMPHORA_ID))
+
         create_vthunder_flow.add(compute_tasks.ComputeCreate(
             name=sf_name + '-' + constants.COMPUTE_CREATE,
             requires=(constants.AMPHORA_ID,
@@ -307,7 +309,7 @@ class VThunderFlows(object):
 
         require_server_group_id_condition = (
             role in (constants.ROLE_BACKUP, constants.ROLE_MASTER) and
-            CONF.nova.enable_anti_affinity)    
+            CONF.nova.enable_anti_affinity)
         # Relaod LB
         # vthunder_for_amphora_subflow.add(database_tasks.ReloadLoadBalancer(
         #    name=sf_name + '-' + 'reload_loadbalancer',
