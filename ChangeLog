@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+* Made multiple small fixes
+* Added further QOL update for functional testing
+* QOL update for functional testing
+* Refactored install script
+* Added QOL scripts for testing
 * Removed another change from rebase
 * Removed further unintended changes from rebase
 * Removed more intendation issues leftover from rebase
