@@ -37,7 +37,7 @@ class BaseVThunderTask(task.Task):
     """Base task to instansiate common classes."""
 
     def __init__(self, **kwargs):
-        a10_conf =a10_config. A10Config()
+        a10_conf = a10_config.A10Config()
         self.config = a10_conf.get_conf()
         self.task_utils = task_utilities.TaskUtils()
         super(BaseVThunderTask, self).__init__(**kwargs)
