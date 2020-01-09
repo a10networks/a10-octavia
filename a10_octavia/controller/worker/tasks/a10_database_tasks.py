@@ -61,11 +61,11 @@ class GetVThunderTask(BaseDatabaseTask):
         return vthunder
 
 
-class CreteVthunderEntry(BaseDatabaseTask):
+class CreateVthunderEntry(BaseDatabaseTask):
 
     """ Create VThunder device entry in DB"""
 
-    def execute(self, amphora, loadbalancer, role):
+    def execute(self, amphora, loadbalancer, role, status="ACTIVE"):
         vthunder_id = uuidutils.generate_uuid()
         self.config = self.a10_conf.get_conf()
 
@@ -74,7 +74,7 @@ class CreteVthunderEntry(BaseDatabaseTask):
         password = self.config.get(
             'DEFAULT', 'DEFAULT_VTHUNDER_PASSWORD').replace('"', '')
         axapi_version = int(
-            self.config.get('DEFAULT', 'DEFAULT_AXAPI_VERSION'))
+            self.config.get('DEFAULT', 'DEFAULT_AXAPI_VERSION').replace('"', ''))
 
         compute_id = None
         undercloud = True
@@ -107,7 +107,7 @@ class CreteVthunderEntry(BaseDatabaseTask):
             topology=topology,
             role=role, 
             last_udp_update=datetime.now(),
-            status="ACTIVE",
+            status=status,
             updated_at=datetime.now())
 
         LOG.info("Successfully created vthunder entry in database.")

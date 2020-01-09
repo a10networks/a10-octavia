@@ -23,11 +23,10 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class CreateL7Policy(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
+class L7PolicyParent(object):
 
-    def execute(self, l7policy, listeners, vthunder):
-        """ Execute create health monitor for amphora """
+    def set(self, l7policy, listeners, vthunder):
+        
         try:
             filename = l7policy.id
             p = PolicyUtil()
@@ -62,6 +61,32 @@ class CreateL7Policy(BaseVThunderTask):
         except Exception as e:
             LOG.error(str(e))
             LOG.info("Error occurred")
+
+
+
+class CreateL7Policy(BaseVThunderTask, L7PolicyParent):
+    """ Task to create a healthmonitor and associate it with provided pool. """
+
+    def execute(self, l7policy, listeners, vthunder):
+        """ Execute create health monitor for amphora """
+        c = self.client_factory(vthunder)
+        status = L7PolicyParent.set(self, 
+                                    l7policy,
+                                    listeners,
+                                    vthunder)
+
+
+class UpdateL7Policy(BaseVThunderTask, L7PolicyParent):
+    """ Task to create a healthmonitor and associate it with provided pool. """
+
+    def execute(self, l7policy, listeners, vthunder, update_dict):
+        """ Execute create health monitor for amphora """
+        l7policy.__dict__.update(update_dict)
+        c = self.client_factory(vthunder)
+        status = L7PolicyParent.set(self,
+                                    l7policy,
+                                    listeners,
+                                    vthunder)
 
 
 class DeleteL7Policy(BaseVThunderTask):

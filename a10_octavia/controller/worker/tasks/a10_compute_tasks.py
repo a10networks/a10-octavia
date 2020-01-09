@@ -84,7 +84,7 @@ class ComputeCreate(BaseComputeTask):
 
             agent_cfg = agent_jinja_cfg.AgentJinjaTemplater()
             config_drive_files['/etc/octavia/amphora-agent.conf'] = (
-                agent_cfg.build_agent_config(amphora_id))
+                agent_cfg.build_agent_config(amphora_id, "STANDALONE"))
             if user_data_config_drive:
                 udtemplater = user_data_jinja_cfg.UserDataJinjaCfg()
                 user_data = udtemplater.build_user_data_config(

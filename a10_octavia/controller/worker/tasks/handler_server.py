@@ -37,10 +37,10 @@ class MemberCreate(BaseVThunderTask):
         server_args = self.meta(member, 'server', {})
         try:
             c = self.client_factory(vthunder)
-            if not member.provisioning_status:
-                status = c.slb.DOWN
+            if not member.enabled:
+                status = False
             else:
-                status = c.slb.UP
+                status = True
             if conn_limit is not None:
                 if conn_limit < 1 or conn_limit > 8000000:
                     LOG.warning("The specified member server connection limit " +
@@ -93,8 +93,9 @@ class MemberDelete(BaseVThunderTask):
 
 class MemberUpdate(BaseVThunderTask):
 
-    def execute(self, member, vthunder, pool):
+    def execute(self, member, vthunder, pool, update_dict):
         """Execute create member for an amphora."""
+        member.__dict__.update(update_dict)
         conn_limit = self.readConf('SERVER', 'conn_limit')
         if conn_limit is not None:
             conn_limit = int(conn_limit)
@@ -105,10 +106,10 @@ class MemberUpdate(BaseVThunderTask):
 
         try:
             c = self.client_factory(vthunder)
-            if not member.provisioning_status:
-                status = c.slb.DOWN
+            if not member.enabled:
+                status = False
             else:
-                status = c.slb.UP
+                status = True
             if conn_limit is not None:
                 if conn_limit < 1 or conn_limit > 8000000:
                     LOG.warning("The specified member server connection limit " +

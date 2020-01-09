@@ -104,11 +104,12 @@ class DeleteVitualServerTask(BaseVThunderTask):
 class UpdateVitualServerTask(BaseVThunderTask, LoadBalancerParent):
     """Task to update a virtual server in vthunder device."""
 
-    def execute(self, loadbalancer, vthunder):
+    def execute(self, loadbalancer, vthunder, update_dict):
+        new_loadbalancer = loadbalancer.__dict__.update(update_dict)
         c = self.client_factory(vthunder)
         status = LoadBalancerParent.set(self,
                                         c.slb.virtual_server.update,
                                         loadbalancer.id,
-                                        loadbalancer,
+                                        new_loadbalancer,
                                         vthunder)
         return status

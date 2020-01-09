@@ -208,9 +208,8 @@ class VThunderRepository(BaseRepository):
 
     def getVThunderFromLB(self, session, lb_id):
         model = session.query(self.model_class).filter(
-            self.model_class.loadbalancer_id == lb_id).filter(and_(self.model_class.status == "ACTIVE",
-                                                                   or_(self.model_class.role == "STANDALONE",
-                                                                       self.model_class.role == "MASTER"))).first()
+            self.model_class.loadbalancer_id == lb_id).filter(or_(self.model_class.role == "STANDALONE",
+                                                                  self.model_class.role == "MASTER")).first()
 
         if not model:
             return None
@@ -219,9 +218,8 @@ class VThunderRepository(BaseRepository):
 
     def getBackupVThunderFromLB(self, session, lb_id):
         model = session.query(self.model_class).filter(
-            self.model_class.loadbalancer_id == lb_id).filter(and_(self.model_class.status == "ACTIVE",
-                                                                   or_(self.model_class.role == "STANDALONE",
-                                                                       self.model_class.role == "BACKUP"))).first()
+            self.model_class.loadbalancer_id == lb_id).filter(or_(self.model_class.role == "STANDALONE",
+                                                                  self.model_class.role == "BACKUP")).first()
 
         if not model:
             return None
@@ -243,7 +241,7 @@ class VThunderRepository(BaseRepository):
         if compute_id:
             count = session.query(self.model_class).filter(
                 self.model_class.compute_id == compute_id).count()
-            if count < 2 and self.model_class.status == "ACTIVE":
+            if count < 2:
                 return True
 
             else:

@@ -91,7 +91,10 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(
             self.get_post_lb_vthunder_association_flow(
                 post_amp_prefix, topology, mark_active=(not listeners)))
-
+        lb_create_flow.add(a10_database_tasks.MarkVthunderStatusInDB(
+            name="set_vThunder_entry_active",
+            requires=a10constants.VTHUNDER,
+            inject= {"status": "ACTIVE"}))
         lb_create_flow.add(handler_virtual_server.CreateVitualServerTask(
             requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.STATUS))
@@ -219,9 +222,6 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.MarkLBDeletedInDB(
             requires=constants.LOADBALANCER))
-        delete_LB_flow.add(a10_database_tasks.DeleteVthunderEntry(
-            requires=constants.LOADBALANCER))
-
         delete_LB_flow.add(database_tasks.DecrementLoadBalancerQuota(
             requires=constants.LOADBALANCER))
 
@@ -248,7 +248,7 @@ class LoadBalancerFlows(object):
         new_LB_net_subflow.add(network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.AMPS_DATA,
                       constants.UPDATE_DICT)))
-        new_LB_net_subflow.add(database_tasks.UpdateAmphoraVIPData(
+        new_LB_net_subflow.add(database_tasks.UpdateAmphoraeVIPData(
             requires=constants.AMPS_DATA))
         new_LB_net_subflow.add(database_tasks.ReloadLoadBalancer(
             name=constants.RELOAD_LB_AFTER_PLUG_VIP,
@@ -308,7 +308,7 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_LB_flow.add(handler_virtual_server.UpdateVitualServerTask(
-            requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER, constants.UPDATE_DICT),
             provides=a10constants.STATUS))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))

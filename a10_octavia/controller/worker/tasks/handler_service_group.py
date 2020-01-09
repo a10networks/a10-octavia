@@ -73,7 +73,11 @@ class PoolDelete(BaseVThunderTask):
 
 class PoolUpdate(BaseVThunderTask, PoolParent):
 
-    def execute(self, pool, vthunder):
+    def execute(self, pool, vthunder, update_dict):
         """Execute update pool for an amphora."""
+        if 'session_persistence' in update_dict:
+            pool.session_persistence.__dict__.update(update_dict['session_persistence'])
+            del update_dict['session_persistence']
+        pool.__dict__.update(update_dict)
         c = self.client_factory(vthunder)
         PoolParent.set(self, c.slb.service_group.update, pool, vthunder)

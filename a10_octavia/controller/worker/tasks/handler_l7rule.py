@@ -23,10 +23,9 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class CreateL7Rule(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
+class L7RuleParent(object):
 
-    def execute(self, l7rule, listeners, vthunder):
+    def set(self, l7rule, listeners, vthunder):
         """ Execute create health monitor for amphora """
         try:
             l7policy = l7rule.l7policy
@@ -67,6 +66,28 @@ class CreateL7Rule(BaseVThunderTask):
             LOG.error(str(e))
             LOG.info("Error occurred")
 
+
+class CreateL7Rule(BaseVThunderTask, L7RuleParent):
+    """ Task to create a healthmonitor and associate it with provided pool. """
+
+    def execute(self, l7rule, listeners, vthunder):
+        c = self.client_factory(vthunder)
+        status = L7RuleParent.set(self,
+                                  l7rule,
+                                  listeners,
+                                  vthunder)
+
+
+class UpdateL7Rule(BaseVThunderTask, L7RuleParent):
+    """ Task to create a healthmonitor and associate it with provided pool. """
+
+    def execute(self, l7rule, listeners, vthunder, update_dict):
+        l7rule.__dict__.update(update_dict)
+        c = self.client_factory(vthunder)
+        status = L7RuleParent.set(self,
+                                  l7rule,
+                                  listeners,
+                                  vthunder)
 
 class DeleteL7Rule(BaseVThunderTask):
     """ Task to delete a l7rule and associate it with provided pool. """

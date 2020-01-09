@@ -47,29 +47,29 @@ class ListenersParent(object):
             ha_conn_mirror = False
 
         autosnat = bool(self.readConf('LISTENER', 'autosnat'))
-        conn_limit = self.readConf('LISTENER', 'conn_limit')
         virtual_port_templates = {}
         template_virtual_port = self.readConf('LISTENER', 'template_virtual_port')
         if template_virtual_port is not None:
             virtual_port_templates['template-virtual-port'] = template_virtual_port.strip('"')
         else:
             virtual_port_templates['template-virtual-port'] = None
-
+        conn_limit = self.readConf('LISTENER', 'conn_limit')
         template_args = {}
         if conn_limit is not None:
             conn_limit = int(conn_limit)
-            if conn_limit < 1 or conn_limit > 8000000:
-                LOG.warning("The specified member server connection limit " +
-                            "(configuration setting: conn-limit) is out of " +
-                            "bounds with value {0}. Please set to between " +
-                            "1-8000000. Defaulting to 8000000".format(conn_limit))
-
         try:
             c = self.client_factory(vthunder)
             status = c.slb.UP
             for listener in listeners:
+                if listener.connection_limit != -1:
+                    conn_limit = listener.connection_limit
+                if conn_limit < 1 or conn_limit > 8000000:
+                    LOG.warning("The specified member server connection limit " +
+                                "(configuration setting: conn-limit) is out of " +
+                                "bounds with value {0}. Please set to between " +
+                                "1-8000000. Defaulting to 8000000".format(conn_limit))
                 listener.load_balancer = loadbalancer
-                if not listener.provisioning_status:
+                if not listener.enabled:
                     status = c.slb.DOWN
                 persistence = persist.PersistHandler(c, listener.default_pool)
                 s_pers = persistence.s_persistence()
@@ -183,8 +183,10 @@ class ListenersCreate(BaseVThunderTask, ListenersParent):
 class ListenersUpdate(BaseVThunderTask, ListenersParent):
     """Task to update amphora with all specified listeners' configurations."""
 
-    def execute(self, loadbalancer, listeners, vthunder):
+    def execute(self, loadbalancer, listeners, vthunder, update_dict=None):
         """Execute updates per listener for an amphora."""
+        if update_dict:
+             listener[0].__dict__.update(update_dict)
         c = self.client_factory(vthunder)
         ListenersParent.set(self, c.slb.virtual_server.vport.update, loadbalancer, listeners, vthunder)
 
