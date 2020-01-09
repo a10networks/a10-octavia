@@ -29,10 +29,8 @@ class ListenersParent(object):
 
     def set(self, set_method, loadbalancer, listeners, vthunder):
         ipinip = self.readConf('LISTENER', 'ipinip')
-        if ipinip is not None:
+        if isinstance(ipinip, str):
             ipinip = json.loads(ipinip.lower())
-        else:
-            ipinip = False
 
         no_dest_nat = self.readConf('LISTENER', 'no_dest_nat')
         if no_dest_nat is not None:
@@ -209,6 +207,7 @@ class ListenerDelete(BaseVThunderTask):
             name = loadbalancer.id + "_" + str(listener.protocol_port)
             c.slb.virtual_server.vport.delete(loadbalancer.id, name, listener.protocol,
                                               listener.protocol_port)
+
             LOG.info("Listener deleted successfully.")
         except Exception as e:
             LOG.error(str(e))

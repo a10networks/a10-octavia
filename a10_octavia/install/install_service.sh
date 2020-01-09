@@ -6,15 +6,16 @@ if [ "$EUID" -ne 0 ]
 fi
 
 
-echo "[+] Installing a10-controller-worker"
-echo "[+] Installing a10-house-keeper"
-echo "[+] Installing a10-health-manager"
 SYSTEMD_SCRIPT_DIR=$(cd $(dirname ${BASH_SOURCE:=$0}) && pwd)
 CONTROLLER="a10-controller-worker.service"
 HOUSEKEEPER="a10-house-keeper.service"
 HEALTHMANAGER="a10-health-manager.service"
 
 SERVICES=("$CONTROLLER" "$HOUSEKEEPER" "$HEALTHMANAGER")
+
+echo "[+] Installing a10-controller-worker"
+echo "[+] Installing a10-house-keeper"
+echo "[+] Installing a10-health-manager"
 
 for i in ${SERVICES[@]}; do
 	cp -f "$SYSTEMD_SCRIPT_DIR/${i}" /etc/systemd/system/
