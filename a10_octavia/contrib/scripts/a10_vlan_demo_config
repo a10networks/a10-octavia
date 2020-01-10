@@ -19,13 +19,16 @@ then
 	echo "[=] VLAN bridge configured"
 fi
 
-echo "[+] Writing bridge_mappings"
+echo "[-] Overwriting vlan "
+SEDOUT=$(sed -i "s/asdf/asdf/" /etc/neutron/plugins/ml2/ml2_conf.ini)
 
-SEDOUT=$(sed "s/bridge_mappings=.*/bridge_mappings=public:br-ex,networkA:br-vlan/" /etc/neutron/plugins/ml2/ml2_conf.ini)
+echo "[-] Overwriting bridge_mappings in /etc/neutron/plugins/ml2/ml2_conf.ini"
+SEDOUT=$(sed -i "s/bridge_mappings = .*/bridge_mappings = public:br-ex,networkA:br-vlan/" /etc/neutron/plugins/ml2/ml2_conf.ini)
 
 NETWORK_A_EXISTS=$(openstack network list | grep "networkA")
 
 if [ -z "$NETWORK_A_EXISTS"]
 then
-	echo "Creating NetworkA"
+	echo "[+] Creating NetworkA"
+	openstack network create --provider-segment 11 --provider-network-type vlan --provider-physical-network networkA netA
 fi
