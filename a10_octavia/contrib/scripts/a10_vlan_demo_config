@@ -1,6 +1,6 @@
 #!/bin/bash
-VLAN_EXISTS=$(sudo ovs-vsctl list-br | grep "br-vlan")
 
+VLAN_EXISTS=$(sudo ovs-vsctl list-br | grep "br-vlan")
 if [ -z "$VLAN_EXISTS" ]
 then
 	echo "[+] Creating vlan bridge"
@@ -19,15 +19,18 @@ then
 	echo "[=] VLAN bridge configured"
 fi
 
-HOST_IP=ifconfig eth0 | grep "inet " | awk '{print $2}'
+HOST_IP=$(ifconfig eth0 | grep "inet " | awk '{print $2}')
+echo "[+] Appending segment section to neutron.conf"
+sed "s/HOST/$HOST_IP/g" segment.txt > /etc/neutron/neutron.conf 
 
-echo "[-] Overwriting service_plugins"
+
+echo "[-] Overwriting service_plugins in /etc/neutron/neutron.conf"
 sed -i "s/service_plugins = router,qos/service_plugins = qos,router,segments,trunk/" /etc/neutron/neutron.conf
 
-echo "[-] Overwriting tenant_network_types"
+echo "[-] Overwriting tenant_network_types in /etc/neutron/plugins/ml2/ml2_conf.ini"
 sed -i "s/tenant_network_types = vxlan/tenant_network_types = vlan/" /etc/neutron/plugins/ml2/ml2_conf.ini
 
-echo "[-] Overwriting network_vlan_ranges"
+echo "[-] Overwriting network_vlan_ranges /etc/neutron/plugins/ml2/ml2_conf.ini"
 sed -i "s/#network_vlan_ranges =/network_vlan_ranges = vlanNet:10:15/" /etc/neutron/plugins/ml2/ml2_conf.ini
 
 echo "[-] Overwriting bridge_mappings in /etc/neutron/plugins/ml2/ml2_conf.ini"
@@ -36,7 +39,6 @@ sed -i "s/bridge_mappings = .*/bridge_mappings = public:br-ex,vlanNet:br-vlan/" 
 sudo systemctl restart devstack@o-* devstack@neutron-*
 
 NETWORK_A_EXISTS=$(openstack network list | grep "networkA")
-
 if [ -z "$NETWORK_A_EXISTS" ]
 then
 	echo "[+] Creating NetworkA"
