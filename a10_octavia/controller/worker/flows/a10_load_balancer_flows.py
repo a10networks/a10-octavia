@@ -22,6 +22,7 @@ from a10_octavia.controller.worker.tasks import handler_virtual_server
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.controller.worker.tasks import a10_compute_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.controller.worker.tasks import a10_network_tasks
 from octavia.common import constants
 from octavia.common import exceptions
 
@@ -48,6 +49,7 @@ try:
     from octavia.controller.worker.tasks import network_tasks
 except (ImportError, AttributeError):
     pass
+
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -96,7 +98,8 @@ class LoadBalancerFlows(object):
             requires=a10constants.VTHUNDER,
             inject= {"status": "ACTIVE"}))
         lb_create_flow.add(handler_virtual_server.CreateVitualServerTask(
-            requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER, a10constants.VTHUNDER),
+            requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER,
+                           a10constants.VTHUNDER),
             provides=a10constants.STATUS))
         
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
@@ -163,7 +166,6 @@ class LoadBalancerFlows(object):
                 name=sf_name + '-' + constants.RELOAD_LB_AFTER_AMP_ASSOC,
                 requires=constants.LOADBALANCER_ID,
                 provides=constants.LOADBALANCER))
-        
         # IMP: here we will inject network flow
         new_LB_net_subflow = self.get_new_LB_networking_subflow(topology)
         post_create_lb_flow.add(new_LB_net_subflow)
@@ -235,26 +237,26 @@ class LoadBalancerFlows(object):
         LOG.info("Inside network subflow")
         new_LB_net_subflow = linear_flow.Flow(constants.
                                               LOADBALANCER_NETWORKING_SUBFLOW)
-        new_LB_net_subflow.add(network_tasks.AllocateVIP(
+        new_LB_net_subflow.add(a10_network_tasks.AllocateVIP(
             requires=constants.LOADBALANCER,
             provides=constants.VIP))
         new_LB_net_subflow.add(database_tasks.UpdateVIPAfterAllocation(
             requires=(constants.LOADBALANCER_ID, constants.VIP),
             provides=constants.LOADBALANCER))
-        new_LB_net_subflow.add(network_tasks.PlugVIP(
+        new_LB_net_subflow.add(a10_network_tasks.PlugVIP(
             requires=constants.LOADBALANCER,
             provides=constants.AMPS_DATA))
         LOG.info("After plugging the VIP")
-        new_LB_net_subflow.add(network_tasks.ApplyQos(
+        new_LB_net_subflow.add(a10_network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.AMPS_DATA,
                       constants.UPDATE_DICT)))
-        new_LB_net_subflow.add(database_tasks.UpdateAmphoraVIPData(
+        new_LB_net_subflow.add(database_tasks.UpdateAmphoraeVIPData(
             requires=constants.AMPS_DATA))
         new_LB_net_subflow.add(database_tasks.ReloadLoadBalancer(
             name=constants.RELOAD_LB_AFTER_PLUG_VIP,
             requires=constants.LOADBALANCER_ID,
             provides=constants.LOADBALANCER))
-        new_LB_net_subflow.add(network_tasks.GetAmphoraeNetworkConfigs(
+        new_LB_net_subflow.add(a10_network_tasks.GetAmphoraeNetworkConfigs(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORAE_NETWORK_CONFIG))
         new_LB_net_subflow.add(database_tasks.GetAmphoraeFromLoadbalancer(
@@ -316,6 +318,7 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         return update_LB_flow
 
+
     def get_create_rack_vthunder_load_balancer_flow(self, vthunder_conf, topology, listeners=None):
         """Creates a linear flow to create rack vthunder
 
@@ -326,7 +329,6 @@ class LoadBalancerFlows(object):
 
         lb_create_flow.add(lifecycle_tasks.LoadBalancerIDToErrorOnRevertTask(
             requires=constants.LOADBALANCER_ID))
-
 
         lb_create_flow.add(self.vthunder_flows.get_rack_vthunder_for_lb_subflow(
             vthunder_conf=vthunder_conf,

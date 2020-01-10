@@ -1,6 +1,31 @@
 CHANGES
 =======
 
+<<<<<<< HEAD
+=======
+* Made multiple small fixes
+* Added further QOL update for functional testing
+* QOL update for functional testing
+* Refactored install script
+* Added QOL scripts for testing
+* Removed another change from rebase
+* Removed further unintended changes from rebase
+* Removed more intendation issues leftover from rebase
+* Fixed intendation
+* Removed further duplication
+* Removed duplication and other issues from rebase
+* Review changes for Afrin
+* Added update functions
+* Rack device code review 3
+* Added update functions
+* Review comments update 2
+* Review comments inclusion
+* support for rack vThunder devices
+* updated comments on file
+* Added custom network drivers for resolving multi-load-balancer config to vthunder
+* Doc update
+* Refactored install script
+>>>>>>> master
 * import fixes
 * Changed variable names
 * Added changes for new service called a10-health-manager
