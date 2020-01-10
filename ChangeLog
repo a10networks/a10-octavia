@@ -24,6 +24,20 @@ CHANGES
 * QOL update for functional testing
 * Refactored install script
 * Added QOL scripts for testing
+* Modified NIC/Port subflows and tasks
+* Leveraged inheritance from aap driver
+* Added targetflow link
+* Added seperate calculation for ports and nics
+* Removed parent port arg
+* Added deciders for vlan and flat networks
+* Updated port data model
+* Added stricter implementation of data model
+* Added targeted flow for members
+* Refactored codeblock into subflow for flat networks
+* Fixed syntax error
+* Added parent and child port data models used for trunking
+* Added port/protocol to creates
+* Added support for port and protocol
 * Added import back. Added function sig
 * Added ability overwrite of lb status
 * Added database level delete for last resolt

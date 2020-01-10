@@ -104,15 +104,15 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
 
         self._delete_security_group(vip, port)
 
-   def allocate_trunk(self, parent_port_id):
+    def allocate_trunk(self, parent_port_id):
         payload = {"trunk": { "port_id": parent_port_id,
                               "admin_state_up": "true"}}
         try:
             trunk = self.neutron_client.create_trunk(payload) 
         except Exception:
-            message = _('Error creating trunk on port {port_id}' 
-                        'into network {network_id}.').format(
-                            port_id=parent_port_id)
+            message = _('Error creating trunk on port '
+                        '{port_id}'.format(
+                            port_id=parent_port_id))
             LOG.exception(message)
             # raise CustomTrunkException(msg) 
 

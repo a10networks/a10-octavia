@@ -18,6 +18,7 @@ GET_VTHUNDER_FOR_LB_SUBFLOW = 'octavia-get-vthunder-for-lb-subflow'
 GET_FLAT_NET_SUBFLOW = 'octavia-get-flat-net-subflow'
 GET_VLAN_NET_SUBFLOW = 'octavia-get-vlan-net-subflow'
 
+NETWORK_TYPE_HANDLER_SUBFLOW = 'octavia-get-network-type-handler-subflow'
 FLAT_NET_HANDLER_SUBFLOW = 'octavia-get-flat-net-handler-sublow'
 VLAN_NET_HANDLER_SUBFLOW = 'octavia-get-vlan-net-handler-subflow'
 
@@ -30,6 +31,8 @@ TRUNK = 'trunk'
 ADDED_NICS = 'added_nics'
 PORT_DELTAS = 'port_deltas'
 NIC_DELTAS  = 'nic_deltas'
+PORT_DELTA = 'port_delta'
+NIC_DELTA = 'nic_delta'
 
 # Constant values
 STATUS = 'status'

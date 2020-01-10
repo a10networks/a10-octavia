@@ -25,6 +25,9 @@ from octavia.controller.worker import task_utils
 from octavia.network import base
 from octavia.network import data_models as n_data_models
 
+from a10_octavia.network import data_models
+from a10_octavia.common import a10constants
+
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 
@@ -46,7 +49,7 @@ class BaseNetworkTask(task.Task):
 
 class CalculateAmphoraDelta(BaseNetworkTask):
 
-    default_provides = constants.DELTA
+    default_provides = a10constants.NIC_DELTA
 
     def execute(self, loadbalancer, amphora):
         LOG.debug("Calculating network delta for amphora id: %s", amphora.id)
@@ -64,7 +67,7 @@ class CalculateAmphoraDelta(BaseNetworkTask):
             ]
             desired_network_ids.update(member_networks)
 
-        ports = self.network_driver.get_plugged_networks(amphora.compute_id)
+        nics = self.network_driver.get_plugged_networks(amphora.compute_id)
         # assume we don't have two nics in the same network
         actual_network_nics = dict((nic.network_id, nic) for nic in nics)
 
@@ -83,17 +86,14 @@ class CalculateAmphoraDelta(BaseNetworkTask):
 
 class CalculateAmphoraPortDelta(BaseNetworkTask):
 
-    default_provides = constants.DELTA
+    default_provides = a10constants.PORT_DELTA
 
     def execute(self, loadbalancer, amphora, parent_port):
         LOG.debug("Calculating network delta for amphora id: %s", amphora.id)
         # Figure out what networks we want
         # seed with lb network(s)
 
-        vrrp_port = self.network_driver.get_port(amphora.vrrp_port_id)
-        desired_network_ids = {vrrp_port.network_id}.union(
-            CONF.controller_worker.amp_boot_network_list)
-
+        desired_network_ids = set([])
         for pool in loadbalancer.pools:
             member_networks = [
                 self.network_driver.get_subnet(member.subnet_id).network_id
@@ -102,20 +102,22 @@ class CalculateAmphoraPortDelta(BaseNetworkTask):
             ]
             desired_network_ids.update(member_networks)
 
-        ports = self.network_driver.get_plugged_networks(amphora.compute_id)
-        # assume we don't have two nics in the same network
-        actual_network_nics = dict((nic.network_id, nic) for nic in nics)
+        connected_subports = {}
+        for subport in parent_port.subports:
+            net_id = self.network_driver.get_port(subport.port_id).id
+            connected_subports[net_id] = subport
 
-        del_ids = set(actual_network_nics) - desired_network_ids
-        delete_nics = list(
-            actual_network_nics[net_id] for net_id in del_ids)
+        del_ids = set(connected_subports) - desired_network_ids
+        delete_subports = list(
+            connected_subports[net_id] for net_id in del_ids)
 
-        add_ids = desired_network_ids - set(actual_network_nics)
-        add_nics = list(n_data_models.Interface(
+        add_ids = desired_network_ids - set(connected_subports)
+        add_subports = list(n_data_models.Port(
             network_id=net_id) for net_id in add_ids)
-        delta = n_data_models.Delta(
+
+        delta = data_models.PortDelta(
             amphora_id=amphora.id, compute_id=amphora.compute_id,
-            add_nics=add_nics, delete_nics=delete_nics)
+            add_subports=add_subports, delete_subports=delete_subports)
         return delta
 
 
@@ -141,7 +143,7 @@ class CalculateNICDelta(BaseNetworkTask):
     plumbing them.
     """
 
-    default_provides = constants.DELTAS
+    default_provides = a10constants.NIC_DELTAS
 
     def execute(self, loadbalancer):
         """Compute which NICs need to be plugged
@@ -160,7 +162,7 @@ class CalculateNICDelta(BaseNetworkTask):
 
 class CalculatePortDelta(BaseNetworkTask):
 
-    default_provides = constants.DELTAS
+    default_provides = a10constants.PORT_DELTAS
 
     def execute(self, loadbalancer, parent_port):
         calculate_amp = CalculateAmphoraPortDelta()

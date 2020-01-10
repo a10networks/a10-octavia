@@ -22,7 +22,6 @@ class ParentPort(network_data_models.Port):
                  mac_address=None, network_id=None, status=None, project_id=None,
                  admin_state_up=None, fixed_ips=None, qos_policy_id=None,
                  trunk_id=None, subports=None):
-
         self.id = id
         self.name = name
         self.device_id = device_id
@@ -42,8 +41,20 @@ class ChildPort(base_data_models.BaseDataModel):
     """Sometimes reffered to as subport"""
 
     def __init__(self, segmentation_id=None, port_id=None,
-                 segmentation_type=None, mac_address=None):
+                 segmentation_type=None, mac_address=None,
+                 network_id=None):
         self.segmentation_id = segmentation_id
         self.port_id = port_id
         self.segmentation_vlan = segmentation_vlan
         self.mac_address = mac_address
+        self.network_id = network_id
+
+
+class PortDelta(base_data_models.BaseDataModel):
+
+    def __init__(self, amphora_id=None, compute_id=None,
+                 add_subports=None, delete_subports=None):
+        self.compute_id = compute_id
+        self.amphora_id = amphora_id
+        self.add_subports = add_subports
+        self.delete_subports = delete_subports
