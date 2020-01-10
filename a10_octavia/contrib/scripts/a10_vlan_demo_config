@@ -1,0 +1,14 @@
+echo "Creating vlan bridge"
+sudo ovs-vsctl add-br br-vlan
+
+echo "Attaching patch ports"
+sudo ovs-vsctl add-port br-vlan phy-br-vlan
+sudo ovs-vsctl add-port br-int int-br-vlan
+
+echo "Connecting patch ports"
+sudo ovs-vsctl set interface phy-br-vlan type=patch
+sudo ovs-vsctl set interface phy-br-vlan options:peer=int-br-vlan
+sudo ovs-vsctl set interface int-br-vlan type=patch
+sudo ovs-vsctl set interface int-br-vlan options:peer=phy-br-vlan
+
+echo "VLAN bridge configured"
