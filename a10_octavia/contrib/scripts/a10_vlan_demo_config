@@ -20,8 +20,8 @@ then
 fi
 
 HOST_IP=$(ifconfig eth0 | grep "inet " | awk '{print $2}')
-echo "[+] Appending segment section to neutron.conf"
-sed "s/HOST/$HOST_IP/g" segment.txt > /etc/neutron/neutron.conf 
+echo "[+] Appending segment section to /etc/neutron/neutron.conf"
+sed "s/HOST/$HOST_IP/g" segment.txt >> /etc/neutron/neutron.conf 
 
 
 echo "[-] Overwriting service_plugins in /etc/neutron/neutron.conf"
