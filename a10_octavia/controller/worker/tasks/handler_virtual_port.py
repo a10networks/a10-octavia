@@ -186,7 +186,7 @@ class ListenersUpdate(BaseVThunderTask, ListenersParent):
     def execute(self, loadbalancer, listeners, vthunder, update_dict=None):
         """Execute updates per listener for an amphora."""
         if update_dict:
-             listener[0].__dict__.update(update_dict)
+             listeners[0].__dict__.update(update_dict)
         c = self.client_factory(vthunder)
         ListenersParent.set(self, c.slb.virtual_server.vport.update, loadbalancer, listeners, vthunder)
 

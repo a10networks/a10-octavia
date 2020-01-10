@@ -16,6 +16,7 @@ from oslo_log import log as logging
 from oslo_config import cfg
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+from a10_octavia.controller.worker.tasks import handler_persist
 import acos_client
 
 CONF = cfg.CONF
@@ -24,9 +25,11 @@ LOG = logging.getLogger(__name__)
 
 class PoolParent(object):
 
-    def set(self, set_method, pool, vthunder):
-        args = {'service_group': self.meta(pool, 'service_group', {})}
+    def set(self, set_method, pool, vthunder, old_pool=None):
         try:
+            c = self.client_factory(vthunder)
+            self._update_session_persistence(pool, old_pool, c)
+            args = {'service_group': self.meta(pool, 'service_group', {})}
             conf_templates = self.readConf('SERVICE_GROUP', 'templates').strip('"')
             service_group_temp = {}
             service_group_temp['template-server'] = conf_templates
@@ -45,6 +48,33 @@ class PoolParent(object):
             LOG.info("Pool created successfully.")
         except Exception as e:
             LOG.error(str(e))
+
+    def _update_session_persistence(self, pool, old_pool, c):
+        # didn't exist, does exist, create
+        if not old_pool or (not old_pool.session_persistence and pool.session_persistence):
+            p = handler_persist.PersistHandler(c,  pool)
+            p.create()
+            return
+
+        # existed, change, delete and recreate
+        if (old_pool.session_persistence and pool.session_persistence and
+                old_pool.session_persistence.type != pool.session_persistence.type):
+            p = handler_persist.PersistHandler(c, old_pool)
+            p.delete()
+            p = handler_persist.PersistHandler(c, pool)
+            p.create()
+            return
+
+        # didn't exist, does exist now, create
+        if old_pool.session_persistence and not pool.session_persistence:
+            p = handler_persist.PersistHandler(c, pool)
+            p.create()
+            return
+
+        # didn't exist, doesn't exist
+        # did exist, does exist, didn't changen
+        return
+
 
 
 class PoolCreate(BaseVThunderTask, PoolParent):
@@ -75,9 +105,10 @@ class PoolUpdate(BaseVThunderTask, PoolParent):
 
     def execute(self, pool, vthunder, update_dict):
         """Execute update pool for an amphora."""
+        old_pool = pool
         if 'session_persistence' in update_dict:
             pool.session_persistence.__dict__.update(update_dict['session_persistence'])
             del update_dict['session_persistence']
         pool.__dict__.update(update_dict)
         c = self.client_factory(vthunder)
-        PoolParent.set(self, c.slb.service_group.update, pool, vthunder)
+        PoolParent.set(self, c.slb.service_group.update, pool, vthunder, old_pool)

@@ -77,7 +77,7 @@ class UpdateHealthMonitor(BaseVThunderTask):
     def execute(self, health_mon, vthunder, update_dict):
         """ Execute create health monitor for amphora """
         # TODO : Length of name of healthmonitor for older vThunder devices
-        new_hm = health_mon.__dict__.update(update_dict)
+        health_mon.__dict__.update(update_dict)
         try:
             method = None
             url = None

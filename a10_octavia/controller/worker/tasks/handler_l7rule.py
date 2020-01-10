@@ -36,10 +36,8 @@ class L7RuleParent(object):
             c = self.client_factory(vthunder)
             c.slb.aflex_policy.create(file=filename, script=script, size=size, action="import")
             LOG.info("aFlex policy created successfully.")
-            # get SLB vPort
             listener = listeners[0]
 
-            new_listener = listeners[0]
             get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
                                                           listener.protocol, listener.protocol_port)
 
@@ -115,7 +113,6 @@ class DeleteL7Rule(BaseVThunderTask):
             # get SLB vPort
             listener = listeners[0]
 
-            new_listener = listeners[0]
             get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
                                                           listener.protocol, listener.protocol_port)
 

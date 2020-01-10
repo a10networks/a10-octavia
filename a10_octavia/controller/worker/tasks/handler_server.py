@@ -83,7 +83,7 @@ class MemberDelete(BaseVThunderTask):
         try:
             c = self.client_factory(vthunder)
             c.slb.service_group.member.delete(pool.id, member.id, member.protocol_port)
-            LOG.info("Member de-associated to pool successfully.")
+            LOG.info("Member dissociated from pool successfully.")
             c.slb.server.delete(member.id)
             LOG.info("Member deleted successfully.")
         except Exception as e:

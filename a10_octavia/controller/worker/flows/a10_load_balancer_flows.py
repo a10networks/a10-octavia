@@ -248,7 +248,7 @@ class LoadBalancerFlows(object):
         new_LB_net_subflow.add(network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.AMPS_DATA,
                       constants.UPDATE_DICT)))
-        new_LB_net_subflow.add(database_tasks.UpdateAmphoraeVIPData(
+        new_LB_net_subflow.add(database_tasks.UpdateAmphoraVIPData(
             requires=constants.AMPS_DATA))
         new_LB_net_subflow.add(database_tasks.ReloadLoadBalancer(
             name=constants.RELOAD_LB_AFTER_PLUG_VIP,
