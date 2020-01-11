@@ -16,6 +16,9 @@ then
 	ovs-vsctl set interface int-br-vlan type=patch
 	ovs-vsctl set interface int-br-vlan options:peer=phy-br-vlan
 
+        echo "[=] Assigning inet addr to br-vlan"
+        ip addr add 11.11.11.1/24 dev br-vlan        
+
 	echo "[=] VLAN bridge configured"
 fi
 
@@ -45,9 +48,18 @@ then
 	openstack network create --provider-segment 11 --provider-network-type vlan --provider-physical-network vlanNet networkA
 fi
 
+
+NETWORK_SEG_EXIST=$(openstack network list | grep "segmentA")
+if [ -z "$NETWORK_SEG_EXISTS" ]
+then
+        SEG_ID=$(openstack network segment list | grep "vlan" | awk '{print $2}')
+	echo "[=] Renaming vlan segment 11 to segmentA"
+	openstack network segment set --name segmentA $SEG_ID
+fi
+
 SUBNET_A_EXISTS=$(openstack network list | grep "subnetA")
 if [ -z "$SUBNET_A_EXISTS" ]
 then
 	echo "[+] Creating SubnetA"
-	openstack subnet create --network networkA --network-segment 11 --subnet-range 11.11.11.0/24 subnetA
+	openstack subnet create --network networkA --network-segment segmentA --subnet-range 11.11.11.0/24 subnetA
 fi
