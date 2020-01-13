@@ -31,7 +31,7 @@ from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron.allowed_address_pairs import AllowedAddressPairsDriver 
 from octavia.network.drivers.neutron import utils
 
-from a10_octavia.network import data_models as a10_network_models
+from a10_octavia.network import data_models
 
 LOG = logging.getLogger(__name__)
 #A10_Net_EXT_ALIAS = ''
@@ -68,14 +68,14 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
 
         trunk_id = port['trunk_details']['trunk_id'] if port.get('trunk_details') else None
         subports = port['trunk_details']['sub_ports'] if port.get('trunk_details') else None
-        child_port_list = []
+        subport_list = []
         if subports:
-            child_port_list = [a10_network_models.ChildPort(segmentation_id=subports['segmentation_id'],
-                                                            port_id=['port_id'],
-                                                            segmentation_type=['segmentation_type'],
-                                                            mac_address=['mac_address'])
+            subport_list = [data_models.ChildPort(segmentation_id=subports['segmentation_id'],
+                                                  port_id=subport['port_id'],
+                                                  segmentation_type=subport['segmentation_type'],
+                                                  mac_address=subport['mac_address'])
                                for subport in subports]
-        return a10_network_models.ParentPort(id=port.get('id'),
+        return data_models.ParentPort(id=port.get('id'),
             name=port.get('name'),
             device_id=port.get('device_id'),
             device_owner=port.get('device_owner'),
@@ -88,6 +88,24 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
             qos_policy_id=port.get('qos_policy_id'),
             trunk_id=trunk_id, subports=child_port_list)
 
+    def _subport_model_to_dict(self, subport):
+        pass
+
+    def create_port(self, network_id):
+        try:
+            port = {'port': {'name': 'octavia-port-' + network_id,
+                             'network_id': network_id,
+                             'admin_state_up': True,
+                             'device_owner': OCTAVIA_OWNER}}
+            new_port = self.neutron_client.create_port(port)
+            new_port = utils.convert_port_dict_to_model(new_port)
+            LOG.debug('Create subport with id: ')
+        except Exception:
+            message = _('ERROR creating port')
+            LOG.exception(message)
+            # raise base.SubPortException
+
+        return new_port
 
     def deallocate_security_group(self, vip):
         """Delete the sec group (instance port) in case nova didn't
@@ -108,7 +126,7 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
         payload = {"trunk": { "port_id": parent_port_id,
                               "admin_state_up": "true"}}
         try:
-            trunk = self.neutron_client.create_trunk(payload) 
+            new_trunk = self.neutron_client.create_trunk(payload) 
         except Exception:
             message = _('Error creating trunk on port '
                         '{port_id}'.format(
@@ -116,25 +134,20 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
             LOG.exception(message)
             # raise CustomTrunkException(msg) 
 
-        return trunk
+        return new_trunk
 
-    def create_subport(self, network_id):
+    def plug_trunk_subport(self, trunk_id, subports):
+        payload = {'sub_ports': []}
+        for subport in subports:
+            payload['sub_ports'].append(self.subport_model_to_dict(subport))
+
         try:
-            port = {'port': {'name': 'octavia-subport-' + network_id,
-                             'network_id': network_id,
-                             'admin_state_up': True,
-                             'device_owner': OCTAVIA_OWNER}}
-            new_port = self.neutron_client.create_port(port)
-
-            LOG.debug('Create subport with id: ')
-
+            updated_trunk = self.neutron_client.trunk_add_subports(trunk_id, payload)
         except Exception:
-            message = _('ERROR creating subport')
-            LOG.exception(message)
-            # raise base.SubPortException
+            message = _('Error adding subports')
+            LOG.exception(messag)
 
-    def plug_trunk_subport(self, trunk, subports):
-        pass
+        return updated_trunk
 
     def get_plugged_parent_port(self, loadbalancer):
         try:
