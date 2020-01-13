@@ -70,7 +70,7 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
         subports = port['trunk_details']['sub_ports'] if port.get('trunk_details') else None
         subport_list = []
         if subports:
-            subport_list = [data_models.ChildPort(segmentation_id=subports['segmentation_id'],
+            subport_list = [data_models.Subport(segmentation_id=subports['segmentation_id'],
                                                   port_id=subport['port_id'],
                                                   segmentation_type=subport['segmentation_type'],
                                                   mac_address=subport['mac_address'])
@@ -89,7 +89,9 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
             trunk_id=trunk_id, subports=child_port_list)
 
     def _subport_model_to_dict(self, subport):
-        pass
+        return {'port_id': subport.port_id,
+                'segmentation_type': subport.segmentation_type,
+                'segmentation_id': subport.segmentation_id}
 
     def create_port(self, network_id):
         try:
