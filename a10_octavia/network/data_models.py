@@ -37,7 +37,7 @@ class ParentPort(network_data_models.Port):
         self.subports = subports or []
 
 
-class ChildPort(base_data_models.BaseDataModel):
+class Subport(base_data_models.BaseDataModel):
     """Sometimes reffered to as subport"""
 
     def __init__(self, segmentation_id=None, port_id=None,
@@ -45,7 +45,7 @@ class ChildPort(base_data_models.BaseDataModel):
                  network_id=None):
         self.segmentation_id = segmentation_id
         self.port_id = port_id
-        self.segmentation_vlan = segmentation_vlan
+        self.segmentation_type = segmentation_type
         self.mac_address = mac_address
         self.network_id = network_id
 
