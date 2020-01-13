@@ -99,8 +99,8 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
                              'network_id': network_id,
                              'admin_state_up': True,
                              'device_owner': OCTAVIA_OWNER}}
-            if mac_address:
-                port['port']['mac_address'] = mac_address
+            #if mac_address:
+            #    port['port']['mac_address'] = mac_address
             if fixed_ip:
                 subnet_id = self.get_network(network_id).subnets[0]
                 port['port']['fixed_ips'] = [{'subnet_id': subnet_id}]
