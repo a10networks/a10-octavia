@@ -20,6 +20,7 @@ from octavia.common import constants
 import acos_client
 from acos_client.errors import ACOSException
 from octavia.amphorae.driver_exceptions import exceptions as driver_except
+import six
 import time
 from requests.exceptions import ConnectionError
 from requests.exceptions import ReadTimeout
@@ -161,12 +162,13 @@ class ConfigureSubportVLANs(BaseVThunderTask):
 
     def execute(self, vthunder, added_ports):
         """Execute to configure vlan on thunder device."""
-        c = self.client_factor(vthunder)
+        c = self.client_factory(vthunder)
         vlan_client = acos_client.v30.vlan.Vlan(c)
-        for port in added_ports:
-            vlan_id = port.segmentation_id
-            if not vlan_client.exists(port.segmentation_id):
-                vlan_client.create(port.segmentation_id, tagged_eths=[1], veth=True)
+        for port_id, subports in six.iteritems(added_ports):
+            for subport in subports:
+                vlan_id = subport.segmentation_id
+                if not vlan_client.exists(subport.segmentation_id):
+                    vlan_client.create(subport.segmentation_id, tagged_eths=[1], veth=True)
 
 
 class ConfigureVRRP(BaseVThunderTask):
