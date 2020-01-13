@@ -117,8 +117,10 @@ class CalculateAmphoraPortDelta(BaseNetworkTask):
 
         add_subports = []
         for net_id in network_ids:
-            seg_id = self.network_driver.get_network(net_id).provider_segmentation_id
-            data_models.ChildPort(network_id=net_id, segmentation_id=seg_id)
+            port_net = self.network_driver.get_network(net_id)
+            data_models.Subport(network_id=net_id,
+                                  segmentation_id=port_net.provider_segmentation_id,
+                                  segemntation_type=port_net.provider_network_type)
 
         delta = data_models.PortDelta(
             amphora_id=amphora.id, compute_id=amphora.compute_id,
