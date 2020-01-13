@@ -156,6 +156,19 @@ class EnableInterfaceForMembers(BaseVThunderTask):
             raise
 
 
+class ConfigureSubportVLANs(BaseVThunderTask):
+    """Task to configure vThunder VLAN"""
+
+    def execute(self, vthunder, added_ports):
+        """Execute to configure vlan on thunder device."""
+        c = self.client_factor(vthunder)
+        vlan_client = acos_client.v30.vlan.Vlan(c)
+        for port in added_ports:
+            vlan_id = port.segmentation_id
+            if not vlan_client.exists(port.segmentation_id):
+                vlan_client.create(port.segmentation_id, tagged_eths=[1], veth=True)
+
+
 class ConfigureVRRP(BaseVThunderTask):
     """"Task to configure vThunder VRRP """
 

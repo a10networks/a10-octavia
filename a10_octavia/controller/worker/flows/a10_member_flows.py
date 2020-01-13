@@ -306,17 +306,17 @@ class MemberFlows(object):
         vthunder_network_subflow = linear_flow.Flow(a10constants.GET_FLAT_NET_SUBFLOW)
         vthunder_network_subflow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
             name="{}_amphora_network_plug".format(vthunder_constant),
-            rebind=[constants.ADDED_PORTS, constants.LOADBALANCER, vthunder_constant]))
+            rebind=[constants.ADDED_NICS, constants.LOADBALANCER, vthunder_constant]))
         vthunder_network_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
             name="{}_compute_conn_wait".format(vthunder_constant),
             rebind=[vthunder_constant, constants.AMPHORA]))
         vthunder_network_subflow.add(vthunder_tasks.EnableInterfaceForMembers(
             name="{}_enable_interface".format(vthunder_constant),
-            rebind=[constants.ADDED_PORTS, constants.LOADBALANCER, vthunder_constant]))
+            rebind=[constants.ADDED_NICS, constants.LOADBALANCER, vthunder_constant]))
         return vthunder_network_subflow
 
     def get_vthunder_interface_subflow_vlan(self):
-        pass
+        vthunder_network_subflow = linear_flow.Flow(a10constatns.GET_VLAN_NET_SUBFLOW)
 
     def get_flat_network_handler_subflow(self):
         flat_network_handler_subflow = linear_flow.Flow(a10constants.FLAT_NET_HANDLER_SUBFLOW)
