@@ -606,7 +606,10 @@ class HandlePortDeltas(BaseNetworkTask):
             added_ports[amp_id] = []
 
             for subport in delta.add_subports:
-                subport.port_id = self.network_driver.create_port(subport.network_id, fixed_ip=True).id
+                subport.port_id = self.network_driver.create_port(
+                    subport.network_id,
+                    mac_address=parent_port.mac_address,
+                    fixed_ip=True).id
 
             try:
                 self.network_driver.plug_trunk_subports(parent_port.trunk_id, delta.add_subports)

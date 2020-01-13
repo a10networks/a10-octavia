@@ -93,12 +93,14 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
                 'segmentation_type': subport.segmentation_type,
                 'segmentation_id': subport.segmentation_id}
 
-    def create_port(self, network_id, fixed_ip=True):
+    def create_port(self, network_id, mac_address=None, fixed_ip=False):
         try:
             port = {'port': {'name': 'octavia-port-' + network_id,
                              'network_id': network_id,
                              'admin_state_up': True,
                              'device_owner': OCTAVIA_OWNER}}
+            if mac_address:
+                port['port']['mac_address'] = mac_address
             if fixed_ip:
                 subnet_id = self.get_network(network_id).subnets[0]
                 port['port']['fixed_ips'] = [{'subnet_id': subnet_id}]
