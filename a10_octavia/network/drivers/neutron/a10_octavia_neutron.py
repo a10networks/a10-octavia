@@ -118,6 +118,24 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
 
         return trunk
 
+    def create_subport(self, network_id):
+        try:
+            port = {'port': {'name': 'octavia-subport-' + network_id,
+                             'network_id': network_id,
+                             'admin_state_up': True,
+                             'device_owner': OCTAVIA_OWNER}}
+            new_port = self.neutron_client.create_port(port)
+
+            LOG.debug('Create subport with id: ')
+
+        except Exception:
+            message = _('ERROR creating subport')
+            LOG.exception(message)
+            # raise base.SubPortException
+
+    def plug_trunk_subport(self, trunk, subports):
+        pass
+
     def get_plugged_parent_port(self, loadbalancer):
         try:
             port = self.neutron_client.show_port(loadbalancer.vip.port_id)

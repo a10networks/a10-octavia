@@ -104,7 +104,7 @@ class CalculateAmphoraPortDelta(BaseNetworkTask):
 
         connected_subports = {}
         for subport in parent_port.subports:
-            net_id = self.network_driver.get_port(subport.port_id).id
+            net_id = self.network_driver.get_port(subport.port_id).network
             connected_subports[net_id] = subport
 
         del_ids = set(connected_subports) - desired_network_ids
@@ -112,8 +112,13 @@ class CalculateAmphoraPortDelta(BaseNetworkTask):
             connected_subports[net_id] for net_id in del_ids)
 
         add_ids = desired_network_ids - set(connected_subports)
-        add_subports = list(n_data_models.Port(
-            network_id=net_id) for net_id in add_ids)
+        for net_id in add_ids:
+            subport_network = self.network_driver.get_network(network_id)
+
+        add_subports = []
+        for net_id in network_ids:
+            seg_id = self.network_driver.get_network(net_id).provider_segmentation_id
+            data_models.ChildPort(network_id=net_id, segmentation_id=seg_id)
 
         delta = data_models.PortDelta(
             amphora_id=amphora.id, compute_id=amphora.compute_id,
@@ -594,28 +599,29 @@ class HandlePortDeltas(BaseNetworkTask):
     networks based on delta
     """
 
-    def execute(self, port_deltas):
+    def execute(self, parent_port, port_deltas):
         """Handle network plugging based off deltas."""
         added_ports = {}
-        for amp_id, delta in six.iteritems(deltas):
+        for amp_id, delta in six.iteritems(port_deltas):
             added_ports[amp_id] = []
-            for nic in delta.add_nics:
-                interface = self.network_driver.plug_network(delta.compute_id,
-                                                             nic.network_id)
-                port = self.network_driver.get_port(interface.port_id)
-                port.network = self.network_driver.get_network(port.network_id)
-                for fixed_ip in port.fixed_ips:
-                    fixed_ip.subnet = self.network_driver.get_subnet(
-                        fixed_ip.subnet_id)
-                added_ports[amp_id].append(port)
-            for nic in delta.delete_nics:
-                try:
-                    self.network_driver.unplug_network(delta.compute_id,
-                                                       nic.network_id)
-                except base.NetworkNotFound:
-                    LOG.debug("Network %d not found ", nic.network_id)
-                except Exception:
-                    LOG.exception("Unable to unplug network")
+
+            subports = []
+            for subport in delta.add_subports:
+                subports.append(self.network_driver.create_subport(subport.network_id))
+
+            try:
+                self.network_driver.plug_trunk_subports(parent_port.trunk_id, subports)
+            except Exception:
+                LOG.exception("Unable to plug subports")
+
+            try:
+                self.network_driver.unplug_trunk_subports(parent_port.trunk_id, delta.delete_subports)
+            #except base.NetworkNotFound:
+            #    LOG.debug("Network %d not found ", nic.network_id)
+            except Exception:
+                LOG.exception("Unable to unplug subports")
+
+            added_ports[amp_id] = subports
         return added_ports
 
     def revert(self, result, port_deltas, *args, **kwargs):

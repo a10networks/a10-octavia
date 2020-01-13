@@ -335,6 +335,7 @@ class MemberFlows(object):
                       a10constants.PARENT_PORT],
             provides=a10constants.PORT_DELTAS))
         vlan_network_handler_subflow.add(a10_network_tasks.HandlePortDeltas(
-            requires=a10constants.PORT_DELTAS,
+            requires=[a10constants.PARENT_PORT,
+                      a10constants.PORT_DELTAS],
             provides=constants.ADDED_PORTS))
         return vlan_network_handler_subflow
