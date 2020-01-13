@@ -138,10 +138,10 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
 
         return new_trunk
 
-    def plug_trunk_subport(self, trunk_id, subports):
+    def plug_trunk_subports(self, trunk_id, subports):
         payload = {'sub_ports': []}
         for subport in subports:
-            payload['sub_ports'].append(self.subport_model_to_dict(subport))
+            payload['sub_ports'].append(self._subport_model_to_dict(subport))
 
         try:
             updated_trunk = self.neutron_client.trunk_add_subports(trunk_id, payload)

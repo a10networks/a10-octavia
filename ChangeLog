@@ -24,6 +24,12 @@ CHANGES
 * QOL update for functional testing
 * Refactored install script
 * Added QOL scripts for testing
+* Added network type consideratin to subport creation
+* Added conversion to subport to dict
+* Renamed ChildPort to Subport
+* Added request to add subports to trunk
+* Added to subport delta calculation and handling
+* Altered tree creation to work with actual instance
 * Added ip addr assignment vlan bridge
 * Fixed syntax error
 * Included appending of segment section to neutron.conf

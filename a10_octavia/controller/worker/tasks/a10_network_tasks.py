@@ -112,15 +112,13 @@ class CalculateAmphoraPortDelta(BaseNetworkTask):
             connected_subports[net_id] for net_id in del_ids)
 
         add_ids = desired_network_ids - set(connected_subports)
-        for net_id in add_ids:
-            subport_network = self.network_driver.get_network(network_id)
 
         add_subports = []
-        for net_id in network_ids:
+        for net_id in add_ids:
             port_net = self.network_driver.get_network(net_id)
-            data_models.Subport(network_id=net_id,
-                                  segmentation_id=port_net.provider_segmentation_id,
-                                  segemntation_type=port_net.provider_network_type)
+            add_subports.append(data_models.Subport(network_id=net_id,
+                segmentation_id=port_net.provider_segmentation_id,
+                segmentation_type=port_net.provider_network_type))
 
         delta = data_models.PortDelta(
             amphora_id=amphora.id, compute_id=amphora.compute_id,
@@ -607,23 +605,23 @@ class HandlePortDeltas(BaseNetworkTask):
         for amp_id, delta in six.iteritems(port_deltas):
             added_ports[amp_id] = []
 
-            subports = []
             for subport in delta.add_subports:
-                subports.append(self.network_driver.create_subport(subport.network_id))
+                subport.port_id = self.network_driver.create_port(subport.network_id).id
 
             try:
-                self.network_driver.plug_trunk_subports(parent_port.trunk_id, subports)
+                self.network_driver.plug_trunk_subports(parent_port.trunk_id, delta.add_subports)
             except Exception:
                 LOG.exception("Unable to plug subports")
 
-            try:
-                self.network_driver.unplug_trunk_subports(parent_port.trunk_id, delta.delete_subports)
+            #try:
+            #    self.network_driver.unplug_trunk_subports(parent_port.trunk_id, delta.delete_subports)
             #except base.NetworkNotFound:
             #    LOG.debug("Network %d not found ", nic.network_id)
-            except Exception:
-                LOG.exception("Unable to unplug subports")
+            #except Exception:
+            #    LOG.exception("Unable to unplug subports")
 
-            added_ports[amp_id] = subports
+            added_ports[amp_id] = delta.add_subports
+
         return added_ports
 
     def revert(self, result, port_deltas, *args, **kwargs):
