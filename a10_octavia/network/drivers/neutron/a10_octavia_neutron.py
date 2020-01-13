@@ -70,7 +70,7 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
         subports = port['trunk_details']['sub_ports'] if port.get('trunk_details') else None
         subport_list = []
         if subports:
-            subport_list = [data_models.Subport(segmentation_id=subports['segmentation_id'],
+            subport_list = [data_models.Subport(segmentation_id=subport['segmentation_id'],
                                                   port_id=subport['port_id'],
                                                   segmentation_type=subport['segmentation_type'],
                                                   mac_address=subport['mac_address'])
@@ -93,12 +93,15 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
                 'segmentation_type': subport.segmentation_type,
                 'segmentation_id': subport.segmentation_id}
 
-    def create_port(self, network_id):
+    def create_port(self, network_id, fixed_ip=True):
         try:
             port = {'port': {'name': 'octavia-port-' + network_id,
                              'network_id': network_id,
                              'admin_state_up': True,
                              'device_owner': OCTAVIA_OWNER}}
+            if fixed_ip:
+                subnet_id = self.get_network(network_id).subnets[0]
+                port['port']['fixed_ips'] = [{'subnet_id': subnet_id}]
             new_port = self.neutron_client.create_port(port)
             new_port = utils.convert_port_dict_to_model(new_port)
             LOG.debug('Create subport with id: ')
