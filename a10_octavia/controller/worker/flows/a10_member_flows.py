@@ -48,7 +48,6 @@ class MemberFlows(object):
 
         :returns: The flow for creating a member
         """
-        #create_member_flow = TargetedFlow(constants.CREATE_MEMBER_FLOW)
         create_member_flow = graph_flow.Flow(constants.CREATE_MEMBER_FLOW)
         create_member_flow.add(lifecycle_tasks.MemberToErrorOnRevertTask(
             requires=[constants.MEMBER,
@@ -66,22 +65,27 @@ class MemberFlows(object):
         flat_subflow = self.get_flat_network_handler_subflow()
 
         create_member_flow.add(parent_port, vlan_subflow, flat_subflow)
-
         create_member_flow.link(parent_port, vlan_subflow,
                                 decider=self._create_new_subport_decider)
-
         create_member_flow.link(parent_port, flat_subflow,
                                 decider=self._create_new_nic_decider)
 
         create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
-        create_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-            requires=constants.LOADBALANCER,
-            provides=a10constants.VTHUNDER))
 
-        create_member_flow.add(self.get_vthunder_interface_subflow_flat(a10constants.VTHUNDER,
-            enable_iface=True))
+        get_vthunder = a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER)
+        iface_flat_subflow = self.get_vthunder_interface_flat_subflow(a10constants.VTHUNDER,
+            enable_iface=True)
+        iface_vlan_subflow = self.get_vthunder_interface_vlan_subflow(a10constants.VTHUNDER)
+
+        create_member_flow.add(get_vthunder, iface_flat_subflow, iface_vlan_subflow)
+        create_member_flow.link(get_vthunder, iface_vlan_subflow,
+                                decider=self._create_new_subport_decider)
+        create_member_flow.link(get_vthunder, iface_flat_subflow,
+                                decider=self._create_new_nic_decider)
 
         # configure member flow for HA
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
@@ -104,7 +108,6 @@ class MemberFlows(object):
                                         constants.LISTENERS))
 
         create_member_flow.add(final_state)
-        #create_member_flow.set_target(final_state)
         return create_member_flow
 
     def _create_new_nic_decider(self, history):
@@ -302,21 +305,26 @@ class MemberFlows(object):
                                              constants.LISTENERS)))
         return create_member_flow
 
-    def get_vthunder_interface_subflow_flat(self, vthunder_constant, enable_iface=False):
+    def get_vthunder_interface_flat_subflow(self, vthunder_constant, enable_iface=False):
         vthunder_network_subflow = linear_flow.Flow(a10constants.GET_FLAT_NET_SUBFLOW)
         vthunder_network_subflow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
             name="{}_amphora_network_plug".format(vthunder_constant),
-            rebind=[constants.ADDED_NICS, constants.LOADBALANCER, vthunder_constant]))
+            rebind=[a10constants.ADDED_NICS, constants.LOADBALANCER, vthunder_constant]))
         vthunder_network_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
             name="{}_compute_conn_wait".format(vthunder_constant),
             rebind=[vthunder_constant, constants.AMPHORA]))
         vthunder_network_subflow.add(vthunder_tasks.EnableInterfaceForMembers(
             name="{}_enable_interface".format(vthunder_constant),
-            rebind=[constants.ADDED_NICS, constants.LOADBALANCER, vthunder_constant]))
+            rebind=[a10constants.ADDED_NICS, constants.LOADBALANCER, vthunder_constant]))
+        vthunder_network_subflow.add()
         return vthunder_network_subflow
 
-    def get_vthunder_interface_subflow_vlan(self):
-        vthunder_network_subflow = linear_flow.Flow(a10constatns.GET_VLAN_NET_SUBFLOW)
+    def get_vthunder_interface_vlan_subflow(self, vthunder_constant):
+        vthunder_network_subflow = linear_flow.Flow(a10constants.GET_VLAN_NET_SUBFLOW)
+        vthunder_network_subflow.add(vthunder_tasks.ConfigureSubportVLANs(
+            requires=[a10constants.VTHUNDER,
+                      constants.ADDED_PORTS]))
+        return vthunder_network_subflow
 
     def get_flat_network_handler_subflow(self):
         flat_network_handler_subflow = linear_flow.Flow(a10constants.FLAT_NET_HANDLER_SUBFLOW)
