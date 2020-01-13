@@ -86,7 +86,7 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
             admin_state_up=port.get('admin_state_up'),
             fixed_ips=fixed_ips,
             qos_policy_id=port.get('qos_policy_id'),
-            trunk_id=trunk_id, subports=child_port_list)
+            trunk_id=trunk_id, subports=subport_list)
 
     def _subport_model_to_dict(self, subport):
         return {'port_id': subport.port_id,
