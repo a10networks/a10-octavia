@@ -152,7 +152,7 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
             updated_trunk = self.neutron_client.trunk_add_subports(trunk_id, payload)
         except Exception:
             message = _('Error adding subports')
-            LOG.exception(messag)
+            LOG.exception(message)
 
         return updated_trunk
 
