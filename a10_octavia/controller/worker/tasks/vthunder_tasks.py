@@ -182,8 +182,9 @@ class ConfigureVirtEthIfaces(BaseVThunderTask):
         c = self.client_factory(vthunder)
         ve_client = acos_client.v30.interface.VirtualEthernet(c)
         for segment, fixed_ip in six.iteritems(ve_segments):
+            netmask = '/' + fixed_ip.subnet.cidr.split('/')[1]
             ve_client.update(segment, ip_address=fixed_ip.ip_address,
-                             ip_netmask=fixed_ip.subnet.cidr)
+                             ip_netmask=netmask)
 
 
 class ConfigureVRRP(BaseVThunderTask):

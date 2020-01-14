@@ -704,8 +704,9 @@ class FetchVirtEthIPs(BaseNetworkTask):
         for amp_id, subports in six.iteritems(added_ports):
             for subport in subports:
                 port = self.network_driver.get_port(subport.port_id)
-                # subports should never have more than 1 IP created for them
-                assert len(port.fixed_ips) <= 1
+                # subports should always have a ip assigned to them
+                assert len(port.fixed_ips) == 1
+                port.fixed_ips[0].subnet = self.network_driver.get_subnet(port.fixed_ips[0].subnet_id)
                 ve_interfaces[amp_id] = {subport.segmentation_id: port.fixed_ips[0]}
 
         return ve_interfaces

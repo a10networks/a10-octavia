@@ -106,8 +106,6 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
                 port['port']['fixed_ips'] = [{'subnet_id': subnet_id}]
             new_port = self.neutron_client.create_port(port)
             new_port = utils.convert_port_dict_to_model(new_port)
-            for fixed_ip in new_port.fixed_ips:
-                fixed_ip.subnet = self.get_subnet(fixed_ip.subnet_id)
             LOG.debug('Create subport with id: ')
         except Exception:
             message = _('ERROR creating port')
