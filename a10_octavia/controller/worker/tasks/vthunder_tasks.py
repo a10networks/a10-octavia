@@ -464,19 +464,23 @@ class CreateHealthMonitorOnVthunder(BaseVThunderTask):
             port = CONF.health_manager.bind_port
             ipv4 = CONF.health_manager.bind_ip
             c = self.client_factory(vthunder)
+            if interval < timeout:
+                LOG.warning("Interval should be greater than or equal to timeout(3 secs). Reverting to default(10 secs).")
+                interval = 10
             out = c.slb.hm.create(name, openstack_mappings.hm_type(c, 'UDP'),
-                                interval, timeout, max_retries, method, url, expect_code,
-                                port, ipv4)
-            LOG.info("Heath Monitor created successfully.")
-        except Exception as e:
-            LOG.info(str(e))
-        try:    
-            c = self.client_factory(vthunder)
-            name = a10constants.HM_SERVER
-            ip_address = '172.17.20.52'
-            health_check = a10constants.VTHUNDER_UDP_HEARTBEAT
-            out = c.slb.server.create(name, ip_address, health_check=health_check)
-            LOG.info("Server created successfully. Enabled health check for health monitor.")
+                            interval, timeout, max_retries, method, url, expect_code,
+                            port, ipv4)
+            LOG.info("Health Monitor created successfully.")
+            try:
+                c = self.client_factory(vthunder)
+                name = a10constants.HM_SERVER
+                #ip_address = '172.17.20.52' ##hardcoded for now. # TODO can save this configuration in octavia.conf
+                ip_address = CONF.api_settings.bind_host
+                health_check = a10constants.VTHUNDER_UDP_HEARTBEAT
+                out = c.slb.server.create(name, ip_address, health_check=health_check)
+                LOG.info("Server created successfully. Enabled health check for health monitor.")
+            except Exception as e:
+                LOG.info(str(e))
         except Exception as e:
             LOG.info(str(e))
 
