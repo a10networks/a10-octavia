@@ -24,28 +24,26 @@ from oslo_log import log as logging
 from sqlalchemy.orm import exc as db_exceptions
 import tenacity
 import urllib3
-import socket
 from taskflow.listeners import logging as tf_logging
 
 from octavia.api.drivers import driver_lib
-from octavia.common import constants
 from octavia.common import base_taskflow
+from octavia.common import constants
 from octavia.common import exceptions
-from a10_octavia.common import data_models
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
+
 from a10_octavia import a10_config
-from a10_octavia.common import data_models
 from a10_octavia.common import a10constants
-from a10_octavia.db import repositories as a10repo
-from a10_octavia.controller.worker.flows import a10_load_balancer_flows
-from a10_octavia.controller.worker.flows import a10_listener_flows
-from a10_octavia.controller.worker.flows import a10_pool_flows
-from a10_octavia.controller.worker.flows import a10_member_flows
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_l7policy_flows
 from a10_octavia.controller.worker.flows import a10_l7rule_flows
+from a10_octavia.controller.worker.flows import a10_listener_flows
+from a10_octavia.controller.worker.flows import a10_load_balancer_flows
+from a10_octavia.controller.worker.flows import a10_member_flows
+from a10_octavia.controller.worker.flows import a10_pool_flows
 from a10_octavia.controller.worker.flows import vthunder_flows
+from a10_octavia.db import repositories as a10repo
 
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)

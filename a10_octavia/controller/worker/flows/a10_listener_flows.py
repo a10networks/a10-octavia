@@ -47,7 +47,6 @@ class ListenerFlows(object):
         create_listener_flow = linear_flow.Flow(constants.CREATE_LISTENER_FLOW)
         create_listener_flow.add(lifecycle_tasks.ListenersToErrorOnRevertTask(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        # Get VThunder details from database
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -89,8 +88,6 @@ class ListenerFlows(object):
         delete_listener_flow = linear_flow.Flow(constants.DELETE_LISTENER_FLOW)
         delete_listener_flow.add(lifecycle_tasks.ListenerToErrorOnRevertTask(
             requires=constants.LISTENER))
-        # update delete flow task here
-        # Get VThunder details from database
         delete_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))

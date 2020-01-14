@@ -161,7 +161,7 @@ class ListenersParent(object):
 
 
 class ListenersCreate(BaseVThunderTask, ListenersParent):
-    """Task to update amphora with all specified listeners' configurations."""
+    """Task to create listener for loadbalancer."""
     def execute(self, loadbalancer, listeners, vthunder):
         """Execute updates per listener for an amphora."""
         c = self.client_factory(vthunder)
@@ -179,7 +179,7 @@ class ListenersCreate(BaseVThunderTask, ListenersParent):
 
 
 class ListenersUpdate(BaseVThunderTask, ListenersParent):
-    """Task to update amphora with all specified listeners' configurations."""
+    """Task to update listener with all specified listeners' configurations."""
 
     def execute(self, loadbalancer, listeners, vthunder, update_dict=None):
         """Execute updates per listener for an amphora."""

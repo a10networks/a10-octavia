@@ -306,15 +306,6 @@ class VThunderFlows(object):
         vthunder_for_amphora_subflow.add(database_tasks.CreateAmphoraInDB(
             name=sf_name + '-' + constants.CREATE_AMPHORA_INDB,
             provides=constants.AMPHORA_ID))
-
-        require_server_group_id_condition = (
-            role in (constants.ROLE_BACKUP, constants.ROLE_MASTER) and
-            CONF.nova.enable_anti_affinity)
-        # Relaod LB
-        # vthunder_for_amphora_subflow.add(database_tasks.ReloadLoadBalancer(
-        #    name=sf_name + '-' + 'reload_loadbalancer',
-        #   requires=constants.LOADBALANCER_ID,
-        #   provides=constants.LOADBALANCER))
         vthunder_for_amphora_subflow.add(a10_database_tasks.GetComputeForProject(
             name=sf_name + '-' + 'get_compute_id',
             requires=constants.LOADBALANCER,
@@ -366,7 +357,6 @@ class VThunderFlows(object):
     def get_vrrp_subflow(self, prefix):
         sf_name = prefix + '-' + constants.GET_VRRP_SUBFLOW
         vrrp_subflow = linear_flow.Flow(sf_name)
-        # Get VThunder details from database
         vrrp_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=sf_name + '-' + 'Get_Loadbalancer_from_db',
             requires=constants.LOADBALANCER,

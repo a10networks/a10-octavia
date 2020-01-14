@@ -93,17 +93,17 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(
             self.get_post_lb_vthunder_association_flow(
                 post_amp_prefix, topology, mark_active=(not listeners)))
-        lb_create_flow.add(a10_database_tasks.MarkVthunderStatusInDB(
+        lb_create_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name="set_vThunder_entry_active",
             requires=a10constants.VTHUNDER,
             inject= {"status": "ACTIVE"}))
-        lb_create_flow.add(handler_virtual_server.CreateVitualServerTask(
+        lb_create_flow.add(handler_virtual_server.CreateVirtualServerTask(
             requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER,
                            a10constants.VTHUNDER),
             provides=a10constants.STATUS))
         
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
-            lb_create_flow.add(vthunder_tasks.CreateHealthMonitorOnVthunder(
+            lb_create_flow.add(vthunder_tasks.CreateHealthMonitorOnVThunder(
                 name='creating health monitor to master vthunder',
                 requires=(a10constants.VTHUNDER)))
 
@@ -167,7 +167,7 @@ class LoadBalancerFlows(object):
                 requires=constants.LOADBALANCER_ID,
                 provides=constants.LOADBALANCER))
         # IMP: here we will inject network flow
-        new_LB_net_subflow = self.get_new_LB_networking_subflow(topology)
+        new_LB_net_subflow = self.get_new_lb_networking_subflow(topology)
         post_create_lb_flow.add(new_LB_net_subflow)
 
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
@@ -194,7 +194,7 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_LB_flow.add(a10_database_tasks.MarkVthunderStatusInDB(
+        delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name="DELETING",
             requires=a10constants.VTHUNDER,
             inject= {"status": "DELETING"}))
@@ -202,7 +202,7 @@ class LoadBalancerFlows(object):
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
             requires=constants.LOADBALANCER))
-        delete_LB_flow.add(handler_virtual_server.DeleteVitualServerTask(
+        delete_LB_flow.add(handler_virtual_server.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.STATUS))
 
@@ -214,7 +214,7 @@ class LoadBalancerFlows(object):
         if deleteCompute:
             delete_LB_flow.add(a10_compute_tasks.DeleteAmphoraeOnLoadBalancer(
                 requires=constants.LOADBALANCER))
-        delete_LB_flow.add(a10_database_tasks.MarkVthunderStatusInDB(
+        delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name="DELETED",
             requires=a10constants.VTHUNDER,
             inject= {"status": "DELETED"}))
@@ -229,7 +229,7 @@ class LoadBalancerFlows(object):
 
         return (delete_LB_flow, store)
 
-    def get_new_LB_networking_subflow(self, topology):
+    def get_new_lb_networking_subflow(self, topology):
         """Create a sub-flow to setup networking.
 
         :returns: The flow to setup networking for a new amphora
@@ -309,7 +309,7 @@ class LoadBalancerFlows(object):
         update_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        update_LB_flow.add(handler_virtual_server.UpdateVitualServerTask(
+        update_LB_flow.add(handler_virtual_server.UpdateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER, constants.UPDATE_DICT),
             provides=a10constants.STATUS))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(

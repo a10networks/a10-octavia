@@ -23,7 +23,7 @@ LOG = logging.getLogger(__name__)
 
 
 class MemberCreate(BaseVThunderTask):
-    """Task to update amphora with all specified member configurations."""
+    """Task to create member  with all specified member configurations."""
 
     def execute(self, member, vthunder, pool):
         """Execute create member for an amphora."""
@@ -76,7 +76,7 @@ class MemberCreate(BaseVThunderTask):
 
 
 class MemberDelete(BaseVThunderTask):
-    """Task to update amphora with all specified member configurations."""
+    """Task to delete member with all specified member configurations."""
 
     def execute(self, member, vthunder, pool):
         """Execute delete member for an amphora."""
@@ -94,7 +94,7 @@ class MemberDelete(BaseVThunderTask):
 class MemberUpdate(BaseVThunderTask):
 
     def execute(self, member, vthunder, pool, update_dict):
-        """Execute create member for an amphora."""
+        """Execute update member for an amphora."""
         member.__dict__.update(update_dict)
         conn_limit = self.readConf('SERVER', 'conn_limit')
         if conn_limit is not None:

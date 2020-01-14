@@ -78,7 +78,7 @@ class PoolParent(object):
 
 
 class PoolCreate(BaseVThunderTask, PoolParent):
-    """Task to update amphora with all specified listeners' configurations."""
+    """Task to create pool in VThunder"""
 
     def execute(self, pool, vthunder):
         """Execute create pool for an amphora."""
@@ -87,10 +87,10 @@ class PoolCreate(BaseVThunderTask, PoolParent):
 
 
 class PoolDelete(BaseVThunderTask):
-    """Task to update amphora with all specified listeners' configurations."""
+    """Task to update pool."""
 
     def execute(self, pool, vthunder):
-        """Execute create pool for an amphora."""
+        """Execute delete pool for an amphora."""
         try:
             axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             c = self.client_factory(vthunder)

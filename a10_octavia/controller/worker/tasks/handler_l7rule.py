@@ -26,7 +26,7 @@ LOG = logging.getLogger(__name__)
 class L7RuleParent(object):
 
     def set(self, l7rule, listeners, vthunder):
-        """ Execute create health monitor for amphora """
+        """ Execute create l7rule for amphora """
         try:
             l7policy = l7rule.l7policy
             filename = l7policy.id
@@ -66,7 +66,7 @@ class L7RuleParent(object):
 
 
 class CreateL7Rule(BaseVThunderTask, L7RuleParent):
-    """ Task to create a healthmonitor and associate it with provided pool. """
+    """ Task to create L7Rule. """
 
     def execute(self, l7rule, listeners, vthunder):
         c = self.client_factory(vthunder)
@@ -77,7 +77,7 @@ class CreateL7Rule(BaseVThunderTask, L7RuleParent):
 
 
 class UpdateL7Rule(BaseVThunderTask, L7RuleParent):
-    """ Task to create a healthmonitor and associate it with provided pool. """
+    """ Task to update L7Rule"""
 
     def execute(self, l7rule, listeners, vthunder, update_dict):
         l7rule.__dict__.update(update_dict)
@@ -88,10 +88,10 @@ class UpdateL7Rule(BaseVThunderTask, L7RuleParent):
                                   vthunder)
 
 class DeleteL7Rule(BaseVThunderTask):
-    """ Task to delete a l7rule and associate it with provided pool. """
+    """ Task to delete a L7rule and associate it with provided pool. """
 
     def execute(self, l7rule, listeners, vthunder):
-        """ Execute create health monitor for amphora """
+        """ Execute delete L7Rule for amphora """
         policy = l7rule.l7policy
         rules = policy.l7rules
 

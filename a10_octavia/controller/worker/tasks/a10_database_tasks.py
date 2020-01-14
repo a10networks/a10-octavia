@@ -249,7 +249,7 @@ class CreateVthunderHealthEntry(BaseDatabaseTask):
         LOG.info("Successfully created vthunder entry in database.")
     
 
-class MarkVthunderStatusInDB(BaseDatabaseTask):
+class MarkVThunderStatusInDB(BaseDatabaseTask):
 
     def execute(self, vthunder, status):
         try:

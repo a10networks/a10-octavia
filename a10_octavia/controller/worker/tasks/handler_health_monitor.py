@@ -38,7 +38,7 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
                 method = health_mon.http_method
                 url = health_mon.url_path
                 expect_code = health_mon.expected_codes
-            args = self.meta(health_mon, 'hm', {}) 
+            args = self.meta(health_mon, 'hm', {})
             c = self.client_factory(vthunder)
             c.slb.hm.create(health_mon.id[0:5],
                             openstack_mappings.hm_type(c, health_mon.type),
@@ -56,10 +56,10 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
 
 
 class DeleteHealthMonitor(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
+    """ Task to delete a healthmonitor and associate it with provided pool. """
 
     def execute(self, health_mon, vthunder):
-        """ Execute create health monitor for amphora """
+        """ Execute delete a health monitor for amphora """
         try:
             c = self.client_factory(vthunder)
             c.slb.service_group.update(health_mon.pool_id,
@@ -75,7 +75,7 @@ class DeleteHealthMonitor(BaseVThunderTask):
 class UpdateHealthMonitor(BaseVThunderTask):
 
     def execute(self, health_mon, vthunder, update_dict):
-        """ Execute create health monitor for amphora """
+        """ Execute update health monitor for amphora """
         # TODO : Length of name of healthmonitor for older vThunder devices
         health_mon.__dict__.update(update_dict)
         try:
