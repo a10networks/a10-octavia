@@ -161,15 +161,14 @@ class ListenersParent(object):
 
 
 class ListenersCreate(BaseVThunderTask, ListenersParent):
-    """Task to create listener."""
+    """ Task to create listener """
     def execute(self, loadbalancer, listeners, vthunder):
-        """Execute updates per listener."""
+        """ Execute updates per listener """
         c = self.client_factory(vthunder)
         ListenersParent.set(self, c.slb.virtual_server.vport.create, loadbalancer, listeners, vthunder)
 
     def revert(self, loadbalancer, *args, **kwargs):
-        """Handle failed listeners updates."""
-
+        """ Handle failed listeners updates """
         LOG.warning("Reverting listeners updates.")
 
         for listener in loadbalancer.listeners:
@@ -179,18 +178,17 @@ class ListenersCreate(BaseVThunderTask, ListenersParent):
 
 
 class ListenersUpdate(BaseVThunderTask, ListenersParent):
-    """Task to update listener."""
+    """ Task to update listener """
 
     def execute(self, loadbalancer, listeners, vthunder, update_dict=None):
-        """Execute updates per listener."""
+        """ Execute updates per listener """
         if update_dict:
              listeners[0].__dict__.update(update_dict)
         c = self.client_factory(vthunder)
         ListenersParent.set(self, c.slb.virtual_server.vport.update, loadbalancer, listeners, vthunder)
 
     def revert(self, loadbalancer, *args, **kwargs):
-        """Handle failed listeners updates."""
-
+        """ Handle failed listeners updates """
         LOG.warning("Reverting listeners updates.")
 
         for listener in loadbalancer.listeners:
@@ -200,10 +198,10 @@ class ListenersUpdate(BaseVThunderTask, ListenersParent):
 
 
 class ListenerDelete(BaseVThunderTask):
-    """Task to delete the listener."""
+    """ Task to delete the listener """
 
     def execute(self, loadbalancer, listener, vthunder):
-        """Execute listener delete routine."""
+        """ Execute listener delete """
         try:
             c = self.client_factory(vthunder)
             name = loadbalancer.id + "_" + str(listener.protocol_port)
@@ -216,8 +214,7 @@ class ListenerDelete(BaseVThunderTask):
             LOG.debug("Deleted the listener on the vip")
 
     def revert(self, listener, *args, **kwargs):
-        """Handle a failed listener delete."""
-
+        """ Handle a failed listener delete """
         LOG.warning("Reverting listener delete.")
 
         self.task_utils.mark_listener_prov_status_error(listener.id)

@@ -23,10 +23,10 @@ LOG = logging.getLogger(__name__)
 
 
 class MemberCreate(BaseVThunderTask):
-    """Task to create member."""
+    """ Task to create member """
 
     def execute(self, member, vthunder, pool):
-        """Execute create member."""
+        """ Execute create member """
 
         conn_limit = self.readConf('SERVER', 'conn_limit')
         if conn_limit is not None:
@@ -76,10 +76,10 @@ class MemberCreate(BaseVThunderTask):
 
 
 class MemberDelete(BaseVThunderTask):
-    """Task to delete member."""
+    """ Task to delete member """
 
     def execute(self, member, vthunder, pool):
-        """Execute delete member."""
+        """ Execute delete member """
         try:
             c = self.client_factory(vthunder)
             c.slb.service_group.member.delete(pool.id, member.id, member.protocol_port)
@@ -92,10 +92,10 @@ class MemberDelete(BaseVThunderTask):
 
 
 class MemberUpdate(BaseVThunderTask):
-    """Task to update member."""
+    """ Task to update member """
 
     def execute(self, member, vthunder, pool, update_dict):
-        """Execute update member."""
+        """ Execute update member """
         member.__dict__.update(update_dict)
         conn_limit = self.readConf('SERVER', 'conn_limit')
         if conn_limit is not None:

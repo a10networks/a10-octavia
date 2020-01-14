@@ -26,7 +26,7 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
     """ Task to create a healthmonitor and associate it with provided pool. """
 
     def execute(self, health_mon, vthunder):
-        """ Execute create health monitor."""
+        """ Execute create health monitor """
 
         # TODO : Length of name of healthmonitor for older vThunder devices
         try:
@@ -56,10 +56,10 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
 
 
 class DeleteHealthMonitor(BaseVThunderTask):
-    """ Task to disassociate healthmonitor from pool and then delete a healthmonitor. """
+    """ Task to disassociate healthmonitor from pool and then delete a healthmonitor """
 
     def execute(self, health_mon, vthunder):
-        """ Execute delete a health monitor  """
+        """ Execute delete health monitor  """
         try:
             c = self.client_factory(vthunder)
             c.slb.service_group.update(health_mon.pool_id,
@@ -76,7 +76,7 @@ class UpdateHealthMonitor(BaseVThunderTask):
     """ Task to update health monitor. """
 
     def execute(self, health_mon, vthunder, update_dict):
-        """ Execute update health monitor for amphora """
+        """ Execute update health monitor """
         # TODO : Length of name of healthmonitor for older vThunder devices
         health_mon.__dict__.update(update_dict)
         try:

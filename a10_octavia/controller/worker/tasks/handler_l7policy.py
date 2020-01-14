@@ -64,10 +64,10 @@ class L7PolicyParent(object):
 
 
 class CreateL7Policy(BaseVThunderTask, L7PolicyParent):
-    """ Task to create a L7Policy in VThunder. """
+    """ Task to create a L7Policy """
 
     def execute(self, l7policy, listeners, vthunder):
-        """ Execute create L7Policy for amphora """
+        """ Execute create L7Policy """
         c = self.client_factory(vthunder)
         status = L7PolicyParent.set(self, 
                                     l7policy,
@@ -76,10 +76,10 @@ class CreateL7Policy(BaseVThunderTask, L7PolicyParent):
 
 
 class UpdateL7Policy(BaseVThunderTask, L7PolicyParent):
-    """ Task to update L7Policy in VThunder. """
+    """ Task to update L7Policy """
 
     def execute(self, l7policy, listeners, vthunder, update_dict):
-        """ Execute update L7Policy for amphora """
+        """ Execute update L7Policy """
         l7policy.__dict__.update(update_dict)
         c = self.client_factory(vthunder)
         status = L7PolicyParent.set(self,
@@ -89,10 +89,10 @@ class UpdateL7Policy(BaseVThunderTask, L7PolicyParent):
 
 
 class DeleteL7Policy(BaseVThunderTask):
-    """ Task to delete L7Policy . """
+    """ Task to delete L7Policy """
 
     def execute(self, l7policy, vthunder):
-        """ Execute delete L7Policy task"""
+        """ Execute delete L7Policy """
         try:
             listener = l7policy.listener
             old_listener = l7policy.listener

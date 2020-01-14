@@ -78,19 +78,19 @@ class PoolParent(object):
 
 
 class PoolCreate(BaseVThunderTask, PoolParent):
-    """Task to create pool"""
+    """ Task to create pool """
 
     def execute(self, pool, vthunder):
-        """Execute create pool."""
+        """ Execute create pool """
         c = self.client_factory(vthunder)
         PoolParent.set(self, c.slb.service_group.create, pool, vthunder)
 
 
 class PoolDelete(BaseVThunderTask):
-    """Task to delete pool."""
+    """ Task to delete pool """
 
     def execute(self, pool, vthunder):
-        """Execute delete pool."""
+        """ Execute delete pool """
         try:
             axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             c = self.client_factory(vthunder)
@@ -101,10 +101,10 @@ class PoolDelete(BaseVThunderTask):
 
 
 class PoolUpdate(BaseVThunderTask, PoolParent):
-    """Task to update pool."""
+    """ Task to update pool """
 
     def execute(self, pool, vthunder, update_dict):
-        """Execute update pool."""
+        """ Execute update pool """
         old_pool = pool
         if 'session_persistence' in update_dict:
             pool.session_persistence.__dict__.update(update_dict['session_persistence'])
