@@ -697,6 +697,19 @@ class GetParentPort(BaseNetworkTask):
         return self.network_driver.get_plugged_parent_port(loadbalancer)
 
 
+class FetchVirtEthIPs(BaseNetworkTask):
+
+    def execute(self, added_ports):
+        ve_interface_ips = {}
+        for amp_id, subports in six.iteritems(added_ports):
+            for subport in subports:
+                port = self.network_driver.get_port(subport.port_id)
+                # subports should never have more than 1 IP created for them
+                assert len(port.fixed_ips) <= 1
+                ve_interface_ips[amp_id] = {subport.segmentation_id: port.fixed_ips[0]}
+
+        return ve_interface_ips
+
 class WaitForPortDetach(BaseNetworkTask):
     """Task to wait for the neutron ports to detach from an amphora."""
 
