@@ -26,10 +26,10 @@ LOG = logging.getLogger(__name__)
 class PoolParent(object):
 
     def set(self, set_method, pool, vthunder, old_pool=None):
+        args = {'service_group': self.meta(pool, 'service_group', {})}
         try:
             c = self.client_factory(vthunder)
             self._update_session_persistence(pool, old_pool, c)
-            args = {'service_group': self.meta(pool, 'service_group', {})}
             conf_templates = self.readConf('SERVICE_GROUP', 'templates').strip('"')
             service_group_temp = {}
             service_group_temp['template-server'] = conf_templates
@@ -72,7 +72,7 @@ class PoolParent(object):
             return
 
         # didn't exist, doesn't exist
-        # did exist, does exist, didn't changen
+        # did exist, does exist, didn't change
         return
 
 
@@ -94,6 +94,7 @@ class PoolDelete(BaseVThunderTask):
         try:
             axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             c = self.client_factory(vthunder)
+            handler_persist.PersistHandler(c, pool).delete()
             c.slb.service_group.delete(pool.id)
             LOG.info("Pool deleted successfully.")
         except Exception as e:
