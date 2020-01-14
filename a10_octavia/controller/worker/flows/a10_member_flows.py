@@ -306,25 +306,32 @@ class MemberFlows(object):
         return create_member_flow
 
     def get_vthunder_interface_flat_subflow(self, vthunder_constant, enable_iface=False):
-        vthunder_network_subflow = linear_flow.Flow(a10constants.GET_FLAT_NET_SUBFLOW)
-        vthunder_network_subflow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
+        flat_network_subflow = linear_flow.Flow(a10constants.GET_FLAT_NET_SUBFLOW)
+        flat_network_subflow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
             name="{}_amphora_network_plug".format(vthunder_constant),
             rebind=[a10constants.ADDED_NICS, constants.LOADBALANCER, vthunder_constant]))
-        vthunder_network_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+        flat_network_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
             name="{}_compute_conn_wait".format(vthunder_constant),
             rebind=[vthunder_constant, constants.AMPHORA]))
-        vthunder_network_subflow.add(vthunder_tasks.EnableInterfaceForMembers(
+        flat_network_subflow.add(vthunder_tasks.EnableInterfaceForMembers(
             name="{}_enable_interface".format(vthunder_constant),
             rebind=[a10constants.ADDED_NICS, constants.LOADBALANCER, vthunder_constant]))
-        vthunder_network_subflow.add()
-        return vthunder_network_subflow
+        return flat_network_subflow
 
     def get_vthunder_interface_vlan_subflow(self, vthunder_constant):
-        vthunder_network_subflow = linear_flow.Flow(a10constants.GET_VLAN_NET_SUBFLOW)
-        vthunder_network_subflow.add(vthunder_tasks.ConfigureSubportVLANs(
+        vlan_network_subflow = linear_flow.Flow(a10constants.GET_VLAN_NET_SUBFLOW)
+        vlan_network_subflow.add(vthunder_tasks.TagEthernetIfaces(
             requires=[a10constants.VTHUNDER,
-                      constants.ADDED_PORTS]))
-        return vthunder_network_subflow
+                      constants.ADDED_PORTS,
+                      constants.LOADBALANCER]))
+        vlan_network_subflow.add(a10_network_tasks.FetchVirtEthIPs(
+            requires=constants.ADDED_PORTS,
+            provides=a10constants.VE_INTERFACE_IPS))
+        vlan_network_subflow.add(vthunder_tasks.ConfigureVirtEthIfaces(
+            requires=[a10constants.VTHUNDER,
+                      a10constants.VE_INTERFACE_IPS,
+                      constants.LOADBALANCER]))
+        return vlan_network_subflow
 
     def get_flat_network_handler_subflow(self):
         flat_network_handler_subflow = linear_flow.Flow(a10constants.FLAT_NET_HANDLER_SUBFLOW)
