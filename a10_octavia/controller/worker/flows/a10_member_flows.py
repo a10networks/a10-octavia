@@ -326,10 +326,10 @@ class MemberFlows(object):
                       constants.LOADBALANCER]))
         vlan_network_subflow.add(a10_network_tasks.FetchVirtEthIPs(
             requires=constants.ADDED_PORTS,
-            provides=a10constants.VE_INTERFACE_IPS))
+            provides=a10constants.VE_INTERFACES))
         vlan_network_subflow.add(vthunder_tasks.ConfigureVirtEthIfaces(
             requires=[a10constants.VTHUNDER,
-                      a10constants.VE_INTERFACE_IPS,
+                      a10constants.VE_INTERFACES,
                       constants.LOADBALANCER]))
         return vlan_network_subflow
 

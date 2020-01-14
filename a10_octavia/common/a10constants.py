@@ -33,7 +33,7 @@ PORT_DELTAS = 'port_deltas'
 NIC_DELTAS  = 'nic_deltas'
 PORT_DELTA = 'port_delta'
 NIC_DELTA = 'nic_delta'
-VE_INTERFACE_IPS = 've_interface_ips'
+VE_INTERFACES = 've_interfaces'
 
 # Constant values
 STATUS = 'status'
