@@ -446,7 +446,7 @@ class MemberDelete(BaseVThunderTask):
 
 
 class CreateHealthMonitorOnVthunder(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
+    """ Task to create a healthmonitor on a vthunder. """
 
     def execute(self, vthunder):
         """ Execute create health monitor for master vthunder """
@@ -458,16 +458,16 @@ class CreateHealthMonitorOnVthunder(BaseVThunderTask):
             expect_code = None
             ##TODO : change this
             name = a10constants.VTHUNDER_UDP_HEARTBEAT 
-            interval = CONF.health_manager.heartbeat_interval
+            interval = CONF.a10_health_manager.heartbeat_interval
             timeout = 3
             max_retries = 5
-            port = CONF.health_manager.bind_port
-            ipv4 = CONF.health_manager.bind_ip
+            port = CONF.a10_health_manager.bind_port
+            ipv4 = CONF.a10_health_manager.bind_ip
             c = self.client_factory(vthunder)
             out = c.slb.hm.create(name, openstack_mappings.hm_type(c, 'UDP'),
                                 interval, timeout, max_retries, method, url, expect_code,
                                 port, ipv4)
-            LOG.info("Heath Monitor created successfully.")
+            LOG.info("Health Monitor created successfully.")
         except Exception as e:
             LOG.info(str(e))
         try:    

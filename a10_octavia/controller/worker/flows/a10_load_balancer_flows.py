@@ -115,7 +115,7 @@ class LoadBalancerFlows(object):
         # we should leverage the Nova anti-affinity capabilities
         # to place the amphora on different hosts, also we need to check
         # if anti-affinity-flag is enabled or not:
-        anti_affinity = CONF.nova.enable_anti_affinity
+        anti_affinity = CONF.a10_nova.enable_anti_affinity
         flows = []
         if anti_affinity:
             # we need to create a server group first

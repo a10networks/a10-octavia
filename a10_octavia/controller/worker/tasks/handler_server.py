@@ -28,10 +28,10 @@ class MemberCreate(BaseVThunderTask):
     def execute(self, member, vthunder, pool):
         """Execute create member for an amphora."""
 
-        conn_limit = self.readConf('SERVER', 'conn_limit')
+        conn_limit = CONF.SERVER.conn_limit
         if conn_limit is not None:
             conn_limit = int(conn_limit)
-        conn_resume = self.readConf('SERVER', 'conn_resume')
+        conn_resume = CONF.SERVER.conn_resume
         if conn_resume is not None:
             conn_resume = int(conn_resume)
         server_args = self.meta(member, 'server', {})
@@ -56,7 +56,7 @@ class MemberCreate(BaseVThunderTask):
                     server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}
             try:
-                conf_templates = self.readConf('SERVER', 'templates')
+                conf_templates = CONF.SERVER.templates
                 server_temp = {}
                 if conf_templates is not None:
                     conf_templates = conf_templates.strip('"')
@@ -95,10 +95,10 @@ class MemberUpdate(BaseVThunderTask):
 
     def execute(self, member, vthunder, pool):
         """Execute create member for an amphora."""
-        conn_limit = self.readConf('SERVER', 'conn_limit')
+        conn_limit = CONF.SERVER.conn_limit
         if conn_limit is not None:
             conn_limit = int(conn_limit)
-        conn_resume = self.readConf('SERVER', 'conn_resume')
+        conn_resume = CONF.SERVER.conn_resume
         if conn_resume is not None:
             conn_resume = int(conn_resume)
         server_args = self.meta(member, 'server', {})
@@ -124,7 +124,7 @@ class MemberUpdate(BaseVThunderTask):
                     server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}
             try:
-                conf_templates = self.readConf('SERVER', 'templates')
+                conf_templates = CONF.SERVER.templates
                 server_temp = {}
                 if conf_templates is not None:
                     conf_templates = conf_templates.strip('"')

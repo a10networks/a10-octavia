@@ -200,7 +200,7 @@ class VThunderFlows(object):
 
         require_server_group_id_condition = (
             role in (constants.ROLE_BACKUP, constants.ROLE_MASTER) and
-            CONF.nova.enable_anti_affinity)
+            CONF.a10_nova.enable_anti_affinity)
 
         if require_server_group_id_condition:
             create_amp_for_lb_subflow.add(compute_tasks.ComputeCreate(
@@ -306,7 +306,7 @@ class VThunderFlows(object):
 
         require_server_group_id_condition = (
             role in (constants.ROLE_BACKUP, constants.ROLE_MASTER) and
-            CONF.nova.enable_anti_affinity)
+            CONF.a10_nova.enable_anti_affinity)
         # Relaod LB
         # vthunder_for_amphora_subflow.add(database_tasks.ReloadLoadBalancer(
         #    name=sf_name + '-' + 'reload_loadbalancer',

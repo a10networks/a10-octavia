@@ -33,7 +33,6 @@ from octavia.common import base_taskflow
 from octavia.common import exceptions
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
-from a10_octavia import a10_config
 from a10_octavia.common import data_models
 from a10_octavia.common import a10constants
 from a10_octavia.db import repositories as a10repo
@@ -78,8 +77,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._vthunder_flows = vthunder_flows.VThunderFlows()
         self._vthunder_repo = a10repo.VThunderRepository()
         self._exclude_result_logging_tasks = ()
-        a10_conf = a10_config.A10Config()
-        self.rack_dict = a10_conf.get_rack_dict()
         super(A10ControllerWorker, self).__init__()
 
     def create_amphora(self):
@@ -207,7 +204,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         load_balancer = listener.load_balancer
 
-        if listener.project_id in self.rack_dict:
+        if listener.project_id in CONF.RACK_VTHUNDER.devices:
             create_listener_tf = self._taskflow_load(self._listener_flows.
                                                      get_rack_vthunder_create_listener_flow(listener.project_id),
                                                      store={constants.LOADBALANCER:
@@ -237,7 +234,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
         load_balancer = listener.load_balancer
-        if listener.project_id in self.rack_dict:
+        if listener.project_id in CONF.RACK_VTHUNDER.devices:
             delete_listener_tf = self._taskflow_load(
                 self._listener_flows.get_delete_rack_listener_flow(),
                 store={constants.LOADBALANCER: load_balancer,
@@ -309,17 +306,17 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                  constants.BUILD_TYPE_PRIORITY:
                  constants.LB_CREATE_NORMAL_PRIORITY}
 
-        topology = CONF.controller_worker.loadbalancer_topology
-
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+        
         store[constants.UPDATE_DICT] = {
             constants.LOADBALANCER_TOPOLOGY: topology
         }
 
-        if lb.project_id in self.rack_dict:
+        if lb.project_id in CONF.RACK_VTHUNDER.devices:
             LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'
                      'from config file for Rack Vthunder' % (lb.project_id))
             create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
-                vthunder_conf=self.rack_dict[lb.project_id], topology=topology, listeners=lb.listeners)
+                vthunder_conf=CONF.RACK_VTHUNDER.devices[lb.project_id], topology=topology, listeners=lb.listeners)
             create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
         else:
             create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
@@ -429,8 +426,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = pool.listeners
         load_balancer = pool.load_balancer
 
-        topology = CONF.controller_worker.loadbalancer_topology
-        if member.project_id in self.rack_dict:
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+        if member.project_id in CONF.RACK_VTHUNDER.devices:
             create_member_tf = self._taskflow_load(self._member_flows.get_rack_vthunder_create_member_flow(),
                                                    store={constants.MEMBER: member,
                                                           constants.LISTENERS:

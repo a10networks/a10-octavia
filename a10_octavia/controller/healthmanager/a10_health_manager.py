@@ -60,7 +60,7 @@ def update_stats_on_done(stats, fut):
 class A10HealthManager(object):
     def __init__(self, exit_event):
         self.cw = cw.A10ControllerWorker()
-        self.threads = CONF.health_manager.failover_threads
+        self.threads = CONF.a10_health_manager.failover_threads
         self.executor = futures.ThreadPoolExecutor(max_workers=self.threads)
         self.vthunder_repo = a10repo.VThunderRepository()
         self.lb_repo = repo.LoadBalancerRepository()

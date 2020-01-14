@@ -18,13 +18,14 @@ from oslo_log import log
 
 from octavia.common import config
 from octavia.common import rpc
-
+from a10_octavia.common import a10_config
 
 def prepare_service(argv=None):
     """Sets global config from config file and sets up logging."""
+    import rpdb; rpdb.set_trace()
     argv = argv or []
-    config.init(argv[1:])
+    a10_config.init(argv[1:])
     log.set_defaults()
-    config.setup_logging(cfg.CONF)
+    a10_config.setup_logging(cfg.CONF)
     rpc.init()
 

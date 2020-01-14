@@ -24,7 +24,7 @@ LOG = logging.getLogger(__name__)
 
 class LoadBalancerParent(object):
     def set(self, set_method, loadbalancer_id, loadbalancer, vthunder):
-        conf_templates = self.readConf('SLB', 'template_virtual_server')
+        conf_templates = CONF.SLB.template_virtual_server
         virtual_server_templates = {}
         try:
             if conf_templates is not None:
@@ -40,12 +40,12 @@ class LoadBalancerParent(object):
             if not loadbalancer.provisioning_status:
                 status = c.slb.DOWN
             vip_meta = self.meta(loadbalancer, 'virtual_server', {})
-            arp_disable = self.readConf('SLB', 'arp_disable')
+            arp_disable = CONF.SLB.arp_disable
             if isinstance(arp_disable, str):
                 arp_disable = json.loads(arp_disable.lower())
             else:
                 arp_disable = False
-            vrid = self.readConf('SLB', 'default_virtual_server_vrid')
+            vrid = CONF.SLB.default_virtual_server_vrid
             if vrid is not None:
                 vrid = int(vrid)
             set_method(

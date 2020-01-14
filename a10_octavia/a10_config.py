@@ -26,12 +26,14 @@ else:
     import configparser as ini
 
 from debtcollector import removals
+from oslo_config import cfg
 from a10_octavia.etc import config as blank_config
 from a10_octavia.etc import defaults
 from a10_octavia.common.defaults import DEFAULT
 from a10_octavia.common import data_models
 from octavia.db import repositories as repo
 
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -150,10 +152,10 @@ class A10Config(object):
 
     def get_octavia_conf(self, section, option):
         octavia_conf_dir = os.environ.get('OCTAVIA_CONF_DIR', self._config.octavia_conf_dir)
-        octavia_conf = '%s/octavia.conf' % octavia_conf_dir
+        octavia_conf = '%s/a10-octavia.conf' % octavia_conf_dir
 
         if os.path.exists(octavia_conf):
-            LOG.debug("found octavia.conf file in /etc")
+            LOG.debug("found a10-octavia.conf file in /etc")
             n = ini.ConfigParser()
             n.read(octavia_conf)
             try:
@@ -176,26 +178,3 @@ class A10Config(object):
     def get(self, key):
         return getattr(self._config, key)
 
-    def validate(self, project_id, ip_address, username, password,
-                 axapi_version, device_name):
-        ip_validator = self.is_valid_ipv4_address(ip_address)
-        if (project_id is not None and ip_address is not None and username is not None
-           and password is not None and axapi_version is not None):
-            if ip_validator:
-                return True
-            else:
-                return False
-
-    def is_valid_ipv4_address(self, address):
-        try:
-            socket.inet_pton(socket.AF_INET, address)
-        except AttributeError:
-            try:
-                socket.inet_aton(address)
-            except socket.error:
-                return False
-            return address.count('.') == 3
-        except socket.error:
-            return False
-
-        return True

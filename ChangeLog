@@ -1,6 +1,9 @@
 CHANGES
 =======
 
+* Changed variable names
+* Added changes for new service called a10-health-manager
+* house keeper for a10-ocatvia
 * removed unwanted changes
 * removed unwanted changes
 * Added hm-phase1 changes
@@ -12,11 +15,13 @@ CHANGES
 * correction in data structure
 * removed non-required comment line
 * Rack device code review 3
+* Added update functions
 * removed changes in attempts
 * Review comments update 2
 * Adding VRRP synch correctin part
 * Review comments inclusion
 * Removal of swo file
+* Implemented stein support
 * added example config file
 * added example config
 * tested the RACK devices

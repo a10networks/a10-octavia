@@ -39,11 +39,10 @@ class BaseComputeTask(task.Task):
     """Base task to load drivers common to the tasks."""
 
     def __init__(self, **kwargs):
-        self.a10_conf = a10_config.A10Config()
         super(BaseComputeTask, self).__init__(**kwargs)
         self.compute = stevedore_driver.DriverManager(
             namespace='octavia.compute.drivers',
-            name=self.a10_conf.get_octavia_conf('a10_octavia','compute_driver'),
+            name=CONF.a10_octavia.compute_driver,
             invoke_on_load=True
         ).driver
         self.rate_limit = amphora_rate_limit.AmphoraBuildRateLimit()
@@ -60,25 +59,20 @@ class ComputeCreate(BaseComputeTask):
         :returns: an amphora
         """
         ports = ports or []
-        #network_ids = CONF.a10_octavia.amp_boot_network_list[:]
-        network_ids = []
-        network_ids.append(self.a10_conf.get_octavia_conf('a10_octavia','amp_boot_network_list'))
+        network_ids = CONF.a10_octavia.amp_boot_network_list[:]
         config_drive_files = config_drive_files or {}
         user_data = None
         LOG.debug("Compute create execute for amphora with id ", amphora_id)
 
-        #user_data_config_drive = CONF.a10_octavia.user_data_config_drive
-        user_data_config_drive = self.a10_conf.get_octavia_conf('a10_octavia','user_data_config_drive')
+        user_data_config_drive = CONF.a10_octavia.user_data_config_drive
 
-        #key_name = CONF.a10_octavia.amp_ssh_key_name
-        key_name = self.a10_conf.get_octavia_conf('a10_octavia','amp_ssh_key_name')
+        key_name = CONF.a10_octavia.amp_ssh_key_name
         # TODO(rm_work): amp_ssh_access_allowed is deprecated in Pike.
         # Remove the following two lines in the S release.
-        ssh_access = CONF.controller_worker.amp_ssh_access_allowed
+        ssh_access = CONF.a10_controller_worker.amp_ssh_access_allowed
         key_name = None if not ssh_access else key_name
-
         try:
-            if CONF.haproxy_amphora.build_rate_limit != -1:
+            if CONF.a10_haproxy_amphora.build_rate_limit != -1:
                 self.rate_limit.add_to_build_request_queue(
                     amphora_id, build_type_priority)
 
@@ -90,20 +84,15 @@ class ComputeCreate(BaseComputeTask):
                 user_data = udtemplater.build_user_data_config(
                     config_drive_files)
                 config_drive_files = None
-
+            
             compute_id = self.compute.build(
                 name="amphora-" + amphora_id,
-                #amphora_flavor=CONF.a10_octavia.amp_flavor_id,
-                amphora_flavor=self.a10_conf.get_octavia_conf('a10_octavia','amp_flavor_id'),
-                #image_id=CONF.a10_octavia.amp_image_id,
-                image_id=self.a10_conf.get_octavia_conf('a10_octavia','amp_image_id'),
-                #image_tag=CONF.a10_octavia.amp_image_tag,
-                image_tag=self.a10_conf.get_octavia_conf('a10_octavia','amp_image_tag'),
-                #image_owner=CONF.a10_octavia.amp_image_owner_id,
-                image_owner=self.a10_conf.get_octavia_conf('a10_octavia','amp_image_owner_id'),
+                amphora_flavor=CONF.a10_octavia.amp_flavor_id,
+                image_id=CONF.a10_octavia.amp_image_id,
+                image_tag=CONF.a10_octavia.amp_image_tag,
+                image_owner=CONF.a10_octavia.amp_image_owner_id,
                 key_name=key_name,
-                #sec_groups=CONF.a10_octavia.amp_secgroup_list,
-                sec_groups=[self.a10_conf.get_octavia_conf('a10_octavia','amp_secgroup_list')],
+                sec_groups=CONF.a10_octavia.amp_secgroup_list,
                 network_ids=network_ids,
                 port_ids=[port.id for port in ports],
                 config_drive_files=config_drive_files,
@@ -146,7 +135,7 @@ class CertComputeCreate(ComputeCreate):
         """
 
         # load client certificate
-        with open(CONF.controller_worker.client_ca, 'r') as client_ca:
+        with open(CONF.a10_controller_worker.client_ca, 'r') as client_ca:
             ca = client_ca.read()
 
         key = utils.get_six_compatible_server_certs_key_passphrase()
@@ -198,15 +187,15 @@ class ComputeActiveWait(BaseComputeTask):
         :raises: Generic exception if the amphora is not active
         :returns: An amphora object
         """
-        for i in range(CONF.controller_worker.amp_active_retries):
+        for i in range(CONF.a10_controller_worker.amp_active_retries):
             amp, fault = self.compute.get_amphora(compute_id)
             if amp.status == constants.ACTIVE:
-                if CONF.haproxy_amphora.build_rate_limit != -1:
+                if CONF.a10_haproxy_amphora.build_rate_limit != -1:
                     self.rate_limit.remove_from_build_req_queue(amphora_id)
                 return amp
             elif amp.status == constants.ERROR:
                 raise exceptions.ComputeBuildException(fault=fault)
-            time.sleep(CONF.controller_worker.amp_active_wait_sec)
+            time.sleep(CONF.a10_controller_worker.amp_active_wait_sec)
 
         raise exceptions.ComputeWaitTimeoutException(id=compute_id)
 
@@ -223,7 +212,7 @@ class NovaServerGroupCreate(BaseComputeTask):
 
         name = 'octavia-lb-' + loadbalancer_id
         server_group = self.compute.create_server_group(
-            name, CONF.nova.anti_affinity_policy)
+            name, CONF.a10_nova.anti_affinity_policy)
         LOG.debug("Server Group created with id:  for load balancer id: "
                   "", server_group.id, loadbalancer_id)
         return server_group.id

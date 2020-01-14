@@ -34,7 +34,6 @@ from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 from a10_octavia.db import repositories as a10_repo
 from octavia.api.drivers import driver_lib
-from a10_octavia import a10_config
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -48,7 +47,6 @@ class BaseDatabaseTask(task.Task):
         self.repos = repo.Repositories()
         self.vthunder_repo = a10_repo.VThunderRepository()
         self.amphora_repo = repo.AmphoraRepository()
-        self.a10_conf = a10_config.A10Config()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -67,14 +65,10 @@ class CreteVthunderEntry(BaseDatabaseTask):
 
     def execute(self, amphora, loadbalancer, role):
         vthunder_id = uuidutils.generate_uuid()
-        self.config = self.a10_conf.get_conf()
 
-        username = self.config.get(
-            'DEFAULT', 'DEFAULT_VTHUNDER_USERNAME').replace('"', '')
-        password = self.config.get(
-            'DEFAULT', 'DEFAULT_VTHUNDER_PASSWORD').replace('"', '')
-        axapi_version = int(
-            self.config.get('DEFAULT', 'DEFAULT_AXAPI_VERSION'))
+        username = (CONF.VTHUNDER.DEFAULT_VTHUNDER_USERNAME).replace('"', '')
+        password = (CONF.VTHUNDER.DEFAULT_VTHUNDER_PASSWORD).replace('"', '')
+        axapi_version = (CONF.VTHUNDER.DEFAULT_AXAPI_VERSION).replace('"', '')
 
         compute_id = None
         undercloud = True
@@ -106,7 +100,7 @@ class CreteVthunderEntry(BaseDatabaseTask):
             compute_id=compute_id,
             topology=topology,
             role=role, 
-            last_udp_update=datetime.datetime.now(),
+            last_udp_update=datetime.now(),
             status="ACTIVE",
             updated_at=datetime.now())
 
@@ -267,14 +261,10 @@ class CreateSpareVthunderEntry(BaseDatabaseTask):
 
     def execute(self, amphora):
         vthunder_id = uuidutils.generate_uuid()
-        self.config = self.a10_conf.get_conf()
 
-        username = self.config.get(
-            'DEFAULT', 'DEFAULT_VTHUNDER_USERNAME').replace('"', '')
-        password = self.config.get(
-            'DEFAULT', 'DEFAULT_VTHUNDER_PASSWORD').replace('"', '')
-        axapi_version = int(
-            self.config.get('DEFAULT', 'DEFAULT_AXAPI_VERSION'))
+        username = (CONF.VTHUNDER.DEFAULT_VTHUNDER_USERNAME).replace('"', '')
+        password = (CONF.VTHUNDER.DEFAULT_VTHUNDER_PASSWORD).replace('"', '')
+        axapi_version = (CONF.VTHUNDER.DEFAULT_AXAPI_VERSION).replace('"', '')
         vthunder = self.vthunder_repo.create(
             db_apis.get_session(), vthunder_id=vthunder_id,
             amphora_id=amphora.id,

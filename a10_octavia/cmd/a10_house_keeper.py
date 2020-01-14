@@ -38,7 +38,7 @@ def spare_amphora_check():
     """Initiates spare amp check with respect to configured interval."""
 
     # Read the interval from CONF
-    interval = CONF.house_keeping.spare_check_interval
+    interval = CONF.a10_house_keeping.spare_check_interval
     LOG.info("Spare check interval is set to %d sec", interval)
     spare_amp = house_keeping.SpareAmphora()
     while not spare_amp_thread_event.is_set():
@@ -54,12 +54,12 @@ def spare_amphora_check():
 def db_cleanup():
     """Perform db cleanup for old resources."""
     # Read the interval from CONF
-    interval = CONF.house_keeping.cleanup_interval
+    interval = CONF.a10_house_keeping.cleanup_interval
     LOG.info("DB cleanup interval is set to %d sec", interval)
     LOG.info('Amphora expiry age is %s seconds',
-             CONF.house_keeping.amphora_expiry_age)
+             CONF.a10_house_keeping.amphora_expiry_age)
     LOG.info('Load balancer expiry age is %s seconds',
-             CONF.house_keeping.load_balancer_expiry_age)
+             CONF.a10_house_keeping.load_balancer_expiry_age)
 
     db_cleanup = house_keeping.DatabaseCleanup()
     while not db_cleanup_thread_event.is_set():

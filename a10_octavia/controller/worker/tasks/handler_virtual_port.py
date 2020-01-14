@@ -28,28 +28,22 @@ LOG = logging.getLogger(__name__)
 class ListenersParent(object):
 
     def set(self, set_method, loadbalancer, listeners, vthunder):
-        ipinip = self.readConf('LISTENER', 'ipinip')
-        if ipinip is not None:
-            ipinip = json.loads(ipinip.lower())
-        else:
+        ipinip = CONF.LISTENER.ipinip
+        if ipinip is None:
             ipinip = False
-
-        no_dest_nat = self.readConf('LISTENER', 'no_dest_nat')
-        if no_dest_nat is not None:
-            no_dest_nat = json.loads(no_dest_nat.lower())
-        else:
+        
+        no_dest_nat = CONF.LISTENER.no_dest_nat
+        if no_dest_nat is None:
             no_dest_nat = False
-
-        ha_conn_mirror = self.readConf('LISTENER', 'ha_conn_mirror')
-        if ha_conn_mirror is not None:
-            ha_conn_mirror = json.loads(ha_conn_mirror.lower())
-        else:
+        
+        ha_conn_mirror = CONF.LISTENER.ha_conn_mirror
+        if ha_conn_mirror is None:
             ha_conn_mirror = False
 
-        autosnat = bool(self.readConf('LISTENER', 'autosnat'))
-        conn_limit = self.readConf('LISTENER', 'conn_limit')
+        autosnat = bool(CONF.LISTENER.autosnat)
+        conn_limit = CONF.LISTENER.conn_limit
         virtual_port_templates = {}
-        template_virtual_port = self.readConf('LISTENER', 'template_virtual_port')
+        template_virtual_port = CONF.LISTENER.template_virtual_port
         if template_virtual_port is not None:
             virtual_port_templates['template-virtual-port'] = template_virtual_port.strip('"')
         else:
@@ -81,13 +75,13 @@ class ListenersParent(object):
                 if listener.protocol.lower() == 'http':
                     # TODO work around for issue in acos client
                     listener.protocol = listener.protocol.lower()
-                    virtual_port_template = self.readConf('LISTENER', 'template_http')
+                    virtual_port_template = CONF.LISTENER.template_http
                     if virtual_port_template is not None:
                         virtual_port_templates['template-http'] = virtual_port_template.strip('"')
                     else:
                         virtual_port_templates['template-http'] = None
                 else:
-                    virtual_port_template = self.readConf('LISTENER', 'template_tcp')
+                    virtual_port_template = CONF.LISTENER.template_tcp
                     if virtual_port_template is not None:
                         virtual_port_templates['template-tcp'] = virtual_port_template.strip('"')
                     else:

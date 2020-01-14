@@ -27,7 +27,7 @@ class PoolParent(object):
     def set(self, set_method, pool, vthunder):
         args = {'service_group': self.meta(pool, 'service_group', {})}
         try:
-            conf_templates = self.readConf('SERVICE_GROUP', 'templates').strip('"')
+            conf_templates = (CONF.SERVICE_GROUP.templates).strip('"')
             service_group_temp = {}
             service_group_temp['template-server'] = conf_templates
         except:
