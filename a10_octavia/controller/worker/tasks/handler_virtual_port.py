@@ -161,9 +161,9 @@ class ListenersParent(object):
 
 
 class ListenersCreate(BaseVThunderTask, ListenersParent):
-    """Task to create listener for loadbalancer."""
+    """Task to create listener."""
     def execute(self, loadbalancer, listeners, vthunder):
-        """Execute updates per listener for an amphora."""
+        """Execute updates per listener."""
         c = self.client_factory(vthunder)
         ListenersParent.set(self, c.slb.virtual_server.vport.create, loadbalancer, listeners, vthunder)
 
@@ -179,10 +179,10 @@ class ListenersCreate(BaseVThunderTask, ListenersParent):
 
 
 class ListenersUpdate(BaseVThunderTask, ListenersParent):
-    """Task to update listener with all specified listeners' configurations."""
+    """Task to update listener."""
 
     def execute(self, loadbalancer, listeners, vthunder, update_dict=None):
-        """Execute updates per listener for an amphora."""
+        """Execute updates per listener."""
         if update_dict:
              listeners[0].__dict__.update(update_dict)
         c = self.client_factory(vthunder)
@@ -200,10 +200,10 @@ class ListenersUpdate(BaseVThunderTask, ListenersParent):
 
 
 class ListenerDelete(BaseVThunderTask):
-    """Task to delete the listener on the vip."""
+    """Task to delete the listener."""
 
     def execute(self, loadbalancer, listener, vthunder):
-        """Execute listener delete routines for an amphora."""
+        """Execute listener delete routine."""
         try:
             c = self.client_factory(vthunder)
             name = loadbalancer.id + "_" + str(listener.protocol_port)

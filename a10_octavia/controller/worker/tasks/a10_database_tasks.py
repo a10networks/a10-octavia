@@ -54,14 +54,14 @@ class BaseDatabaseTask(task.Task):
 
 class GetVThunderTask(BaseDatabaseTask):
 
-    """Test Vthunder entry"""
+    """Test VThunder entry"""
 
     def execute(self, amphora):
         vthunder = self.vthunder_repo.get(db_apis.get_session(), id=123)
         return vthunder
 
 
-class CreateVthunderEntry(BaseDatabaseTask):
+class CreateVThunderEntry(BaseDatabaseTask):
 
     """ Create VThunder device entry in DB"""
 
@@ -113,7 +113,7 @@ class CreateVthunderEntry(BaseDatabaseTask):
         LOG.info("Successfully created vthunder entry in database.")
 
 
-class DeleteVthunderEntry(BaseDatabaseTask):
+class DeleteVThunderEntry(BaseDatabaseTask):
 
     """ Delete VThunder device entry in DB  """
 
@@ -229,7 +229,7 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
         LOG.info("Successfully created vthunder entry in database.")
 
 
-class CreateVthunderHealthEntry(BaseDatabaseTask):
+class CreateVThunderHealthEntry(BaseDatabaseTask):
 
     """ Create VThunder Health entry in DB """
 
@@ -263,7 +263,7 @@ class MarkVThunderStatusInDB(BaseDatabaseTask):
                       'for amphora: %s, skipping.', vthunder_id)
 
 
-class CreateSpareVthunderEntry(BaseDatabaseTask):
+class CreateSpareVThunderEntry(BaseDatabaseTask):
 
     def execute(self, amphora):
         vthunder_id = uuidutils.generate_uuid()

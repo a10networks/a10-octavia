@@ -82,7 +82,7 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.UPDATE_AMPHORA_INFO,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_OBJ),
             provides=constants.AMPHORA))
-        create_vthunder_flow.add(a10_database_tasks.CreateSpareVthunderEntry(
+        create_vthunder_flow.add(a10_database_tasks.CreateSpareVThunderEntry(
             name=sf_name + '-' + 'create_vThunder_entry_in_database',
             requires=(constants.AMPHORA),
             provides=a10constants.VTHUNDER))
@@ -242,7 +242,7 @@ class VThunderFlows(object):
             name=sf_name + '-' + 'reload_loadbalancer',
             requires=constants.LOADBALANCER_ID,
             provides=constants.LOADBALANCER))
-        create_amp_for_lb_subflow.add(a10_database_tasks.CreateVthunderEntry(
+        create_amp_for_lb_subflow.add(a10_database_tasks.CreateVThunderEntry(
             name=sf_name + '-' + 'create_vThunder_entry_in_database',
             requires=(constants.AMPHORA, constants.LOADBALANCER),
             inject={"role": role, "status":"CREATING"}))
@@ -322,7 +322,7 @@ class VThunderFlows(object):
             requires=(constants.AMPHORA_ID, constants.COMPUTE_OBJ),
             provides=constants.AMPHORA))
         # create vThunder entry in custom DB
-        vthunder_for_amphora_subflow.add(a10_database_tasks.CreateVthunderEntry(
+        vthunder_for_amphora_subflow.add(a10_database_tasks.CreateVThunderEntry(
             name=sf_name + '-' + 'create_vThunder_entry_in_database',
             requires=(constants.AMPHORA, constants.LOADBALANCER),
             inject={"role": role, "status":"CREATING"}))

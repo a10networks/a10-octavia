@@ -69,7 +69,7 @@ class LoadBalancerParent(object):
 
 
 class CreateVirtualServerTask(BaseVThunderTask, LoadBalancerParent):
-    """Task to create a virtual server in VThunder device."""
+    """Task to create a virtual server."""
 
     def execute(self, loadbalancer_id, loadbalancer, vthunder):
         c = self.client_factory(vthunder)
@@ -81,7 +81,7 @@ class CreateVirtualServerTask(BaseVThunderTask, LoadBalancerParent):
 
 
 class DeleteVirtualServerTask(BaseVThunderTask):
-    """Task to delete a virtual server in VThunder device."""
+    """Task to delete a virtual server."""
 
     def execute(self, loadbalancer, vthunder):
         loadbalancer_id = loadbalancer.id
@@ -102,7 +102,7 @@ class DeleteVirtualServerTask(BaseVThunderTask):
 
 
 class UpdateVirtualServerTask(BaseVThunderTask, LoadBalancerParent):
-    """Task to update a virtual server in VThunder device."""
+    """Task to update a virtual server."""
 
     def execute(self, loadbalancer, vthunder, update_dict):
         new_loadbalancer = loadbalancer.__dict__.update(update_dict)
