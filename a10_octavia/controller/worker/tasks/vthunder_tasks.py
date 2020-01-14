@@ -157,18 +157,33 @@ class EnableInterfaceForMembers(BaseVThunderTask):
             raise
 
 
-class ConfigureSubportVLANs(BaseVThunderTask):
-    """Task to configure vThunder VLAN"""
+class TagEthernetIfaces(BaseVThunderTask):
+    """Task to tag ethernet interface with """
 
-    def execute(self, vthunder, added_ports):
+    def execute(self, added_ports, loadbalancer, vthunder):
         """Execute to configure vlan on thunder device."""
+        amphora_id = loadbalancer.amphorae[0].id
+        subports = added_ports[amphora_id]
         c = self.client_factory(vthunder)
         vlan_client = acos_client.v30.vlan.Vlan(c)
-        for port_id, subports in six.iteritems(added_ports):
-            for subport in subports:
-                vlan_id = subport.segmentation_id
-                if not vlan_client.exists(subport.segmentation_id):
-                    vlan_client.create(subport.segmentation_id, tagged_eths=[1], veth=True)
+        for subport in subports:
+            vlan_id = subport.segmentation_id
+            if not vlan_client.exists(subport.segmentation_id):
+                vlan_client.create(subport.segmentation_id, tagged_eths=[1], veth=True)
+
+
+class ConfigureVirtEthIfaces(BaseVThunderTask):
+    """Task to configure VE interfaces"""
+
+    def execute(self, ve_interfaces, loadbalancer, vthunder):
+        """Execute to configure ve on thunder device."""
+        amphora_id = loadbalancer.amphorae[0].id
+        ve_segments = ve_interfaces[amphora_id]
+        c = self.client_factory(vthunder)
+        ve_client = acos_client.v30.interface.VirtualEthernet(c)
+        for segment, fixed_ip in six.iteritems(ve_segments):
+            ve_client.update(segment, ip_address=fixed_ip.ip_address,
+                             ip_netmask=fixed_ip.subnet.cidr)
 
 
 class ConfigureVRRP(BaseVThunderTask):
