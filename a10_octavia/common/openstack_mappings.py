@@ -18,8 +18,8 @@ def hm_type(c, os_hm_type):
         'PING': c.slb.hm.ICMP,
         'TCP': c.slb.hm.TCP,
         'HTTP': c.slb.hm.HTTP,
-        'HTTPS': c.slb.hm.HTTPS
-        # TODO: Support for UDP Health Monitor (at acos-client)
+        'HTTPS': c.slb.hm.HTTPS,
+        'UDP-CONNECT' : c.slb.hm.UDP_CONNECT
     }
     return hm_map[os_hm_type]
 
