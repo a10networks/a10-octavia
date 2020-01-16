@@ -451,12 +451,10 @@ class CreateHealthMonitorOnVthunder(BaseVThunderTask):
     def execute(self, vthunder):
         """ Execute create health monitor for master vthunder """
         # TODO : Length of name of healthmonitor for older vThunder devices
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
         try:
             method = None
             url = None
             expect_code = None
-            ##TODO : change this
             name = a10constants.VTHUNDER_UDP_HEARTBEAT 
             interval = CONF.health_manager.heartbeat_interval
             timeout = 3
@@ -474,7 +472,8 @@ class CreateHealthMonitorOnVthunder(BaseVThunderTask):
             try:
                 c = self.client_factory(vthunder)
                 name = a10constants.HM_SERVER
-                #ip_address = '172.17.20.52' ##hardcoded for now. # TODO can save this configuration in octavia.conf
+                # TODO: ip_address to be configured using a10-config file. To be taken care in a10-config implementation.
+                # For now using api_settings section to obtain local server ip_address.
                 ip_address = CONF.api_settings.bind_host
                 health_check = a10constants.VTHUNDER_UDP_HEARTBEAT
                 out = c.slb.server.create(name, ip_address, health_check=health_check)
