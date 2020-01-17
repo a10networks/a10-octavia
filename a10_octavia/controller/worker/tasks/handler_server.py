@@ -29,11 +29,7 @@ class MemberCreate(BaseVThunderTask):
         """Execute create member for an amphora."""
 
         conn_limit = CONF.SERVER.conn_limit
-        if conn_limit is not None:
-            conn_limit = int(conn_limit)
         conn_resume = CONF.SERVER.conn_resume
-        if conn_resume is not None:
-            conn_resume = int(conn_resume)
         server_args = self.meta(member, 'server', {})
         try:
             c = self.client_factory(vthunder)
@@ -59,7 +55,6 @@ class MemberCreate(BaseVThunderTask):
                 conf_templates = CONF.SERVER.templates
                 server_temp = {}
                 if conf_templates is not None:
-                    conf_templates = conf_templates.strip('"')
                     server_temp['template-server'] = conf_templates
             except:
                 server_temp = None
@@ -96,11 +91,7 @@ class MemberUpdate(BaseVThunderTask):
     def execute(self, member, vthunder, pool):
         """Execute create member for an amphora."""
         conn_limit = CONF.SERVER.conn_limit
-        if conn_limit is not None:
-            conn_limit = int(conn_limit)
         conn_resume = CONF.SERVER.conn_resume
-        if conn_resume is not None:
-            conn_resume = int(conn_resume)
         server_args = self.meta(member, 'server', {})
 
         try:
@@ -127,7 +118,6 @@ class MemberUpdate(BaseVThunderTask):
                 conf_templates = CONF.SERVER.templates
                 server_temp = {}
                 if conf_templates is not None:
-                    conf_templates = conf_templates.strip('"')
                     server_temp['template-server'] = conf_templates
             except:
                 server_temp = None

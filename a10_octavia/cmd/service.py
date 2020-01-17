@@ -22,7 +22,6 @@ from a10_octavia.common import a10_config
 
 def prepare_service(argv=None):
     """Sets global config from config file and sets up logging."""
-    import rpdb; rpdb.set_trace()
     argv = argv or []
     a10_config.init(argv[1:])
     log.set_defaults()

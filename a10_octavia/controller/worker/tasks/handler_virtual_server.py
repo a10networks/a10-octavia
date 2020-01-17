@@ -28,7 +28,6 @@ class LoadBalancerParent(object):
         virtual_server_templates = {}
         try:
             if conf_templates is not None:
-                conf_templates = conf_templates.strip('"')
                 virtual_server_templates['template-server'] = conf_templates
         except:
             virtual_server_templates = None
@@ -41,13 +40,7 @@ class LoadBalancerParent(object):
                 status = c.slb.DOWN
             vip_meta = self.meta(loadbalancer, 'virtual_server', {})
             arp_disable = CONF.SLB.arp_disable
-            if isinstance(arp_disable, str):
-                arp_disable = json.loads(arp_disable.lower())
-            else:
-                arp_disable = False
             vrid = CONF.SLB.default_virtual_server_vrid
-            if vrid is not None:
-                vrid = int(vrid)
             set_method(
                 loadbalancer_id,
                 loadbalancer.vip.ip_address,

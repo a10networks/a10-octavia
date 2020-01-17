@@ -25,8 +25,6 @@ from oslo_config import cfg
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 from a10_octavia.controller.worker.tasks import persist
-from a10_octavia import a10_config
-from a10_octavia.common.defaults import DEFAULT
 
 
 CONF = cfg.CONF
@@ -34,7 +32,6 @@ LOG = logging.getLogger(__name__)
 
 
 class BaseVThunderTask(task.Task):
-    """Base task to instansiate common classes."""
 
     def __init__(self, **kwargs):
         self.task_utils = task_utilities.TaskUtils()

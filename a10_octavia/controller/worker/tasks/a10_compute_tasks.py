@@ -29,7 +29,6 @@ from octavia.common.jinja import user_data_jinja_cfg
 from octavia.common import utils
 from octavia.controller.worker import amphora_rate_limit
 
-from a10_octavia import a10_config
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -42,7 +41,7 @@ class BaseComputeTask(task.Task):
         super(BaseComputeTask, self).__init__(**kwargs)
         self.compute = stevedore_driver.DriverManager(
             namespace='octavia.compute.drivers',
-            name=CONF.a10_octavia.compute_driver,
+            name=CONF.a10_controller_worker.compute_driver,
             invoke_on_load=True
         ).driver
         self.rate_limit = amphora_rate_limit.AmphoraBuildRateLimit()
@@ -59,20 +58,16 @@ class ComputeCreate(BaseComputeTask):
         :returns: an amphora
         """
         ports = ports or []
-        network_ids = CONF.a10_octavia.amp_boot_network_list[:]
+        network_ids = CONF.a10_controller_worker.amp_boot_network_list[:]
         config_drive_files = config_drive_files or {}
         user_data = None
         LOG.debug("Compute create execute for amphora with id ", amphora_id)
 
-        user_data_config_drive = CONF.a10_octavia.user_data_config_drive
+        user_data_config_drive = CONF.a10_controller_worker.user_data_config_drive
 
-        key_name = CONF.a10_octavia.amp_ssh_key_name
-        # TODO(rm_work): amp_ssh_access_allowed is deprecated in Pike.
-        # Remove the following two lines in the S release.
-        ssh_access = CONF.a10_controller_worker.amp_ssh_access_allowed
-        key_name = None if not ssh_access else key_name
+        key_name = CONF.a10_controller_worker.amp_ssh_key_name
         try:
-            if CONF.a10_haproxy_amphora.build_rate_limit != -1:
+            if CONF.haproxy_amphora.build_rate_limit != -1:
                 self.rate_limit.add_to_build_request_queue(
                     amphora_id, build_type_priority)
 
@@ -84,15 +79,15 @@ class ComputeCreate(BaseComputeTask):
                 user_data = udtemplater.build_user_data_config(
                     config_drive_files)
                 config_drive_files = None
-            
+
             compute_id = self.compute.build(
                 name="amphora-" + amphora_id,
-                amphora_flavor=CONF.a10_octavia.amp_flavor_id,
-                image_id=CONF.a10_octavia.amp_image_id,
-                image_tag=CONF.a10_octavia.amp_image_tag,
-                image_owner=CONF.a10_octavia.amp_image_owner_id,
+                amphora_flavor=CONF.a10_controller_worker.amp_flavor_id,
+                image_id=CONF.a10_controller_worker.amp_image_id,
+                image_tag=CONF.a10_controller_worker.amp_image_tag,
+                image_owner=CONF.a10_controller_worker.amp_image_owner_id,
                 key_name=key_name,
-                sec_groups=CONF.a10_octavia.amp_secgroup_list,
+                sec_groups=CONF.a10_controller_worker.amp_secgroup_list,
                 network_ids=network_ids,
                 port_ids=[port.id for port in ports],
                 config_drive_files=config_drive_files,
@@ -190,7 +185,7 @@ class ComputeActiveWait(BaseComputeTask):
         for i in range(CONF.a10_controller_worker.amp_active_retries):
             amp, fault = self.compute.get_amphora(compute_id)
             if amp.status == constants.ACTIVE:
-                if CONF.a10_haproxy_amphora.build_rate_limit != -1:
+                if CONF.haproxy_amphora.build_rate_limit != -1:
                     self.rate_limit.remove_from_build_req_queue(amphora_id)
                 return amp
             elif amp.status == constants.ERROR:
