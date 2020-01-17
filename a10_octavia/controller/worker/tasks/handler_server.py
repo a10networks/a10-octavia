@@ -37,25 +37,13 @@ class MemberCreate(BaseVThunderTask):
                 status = c.slb.DOWN
             else:
                 status = c.slb.UP
-            if conn_limit is not None:
-                if conn_limit < 1 or conn_limit > 8000000:
-                    LOG.warning("The specified member server connection limit " +
-                                "(configuration setting: conn-limit) is out of " +
-                                "bounds with value {0}. Please set to between " +
-                                "1-8000000. Defaulting to 8000000".format(conn_limit))
-                else:
-                    server_args['conn-limit'] = conn_limit
-            if conn_resume is not None:
-                if conn_resume < 1 or conn_resume > 1000000:
-                    LOG.warning("The specified conn_resume value is invalid. The value should be either 0 or 1")
-                else:
-                    server_args['conn-resume'] = conn_resume
+            server_args['conn-limit'] = conn_limit
+            server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}
             try:
                 conf_templates = CONF.SERVER.templates
                 server_temp = {}
-                if conf_templates is not None:
-                    server_temp['template-server'] = conf_templates
+                server_temp['template-server'] = conf_templates
             except:
                 server_temp = None
                 LOG.warning("Invalid definition of A10 config in Pool section.")
@@ -100,25 +88,13 @@ class MemberUpdate(BaseVThunderTask):
                 status = c.slb.DOWN
             else:
                 status = c.slb.UP
-            if conn_limit is not None:
-                if conn_limit < 1 or conn_limit > 8000000:
-                    LOG.warning("The specified member server connection limit " +
-                                "(configuration setting: conn-limit) is out of " +
-                                "bounds with value {0}. Please set to between " +
-                                "1-8000000. Defaulting to 8000000".format(conn_limit))
-                else:
-                    server_args['conn-limit'] = conn_limit
-            if conn_resume is not None:
-                if conn_resume < 1 or conn_resume > 1000000:
-                    LOG.warning("The specified conn_resume value is invalid. The value should be either 0 or 1")
-                else:
-                    server_args['conn-resume'] = conn_resume
+            server_args['conn-limit'] = conn_limit
+            server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}
             try:
                 conf_templates = CONF.SERVER.templates
                 server_temp = {}
-                if conf_templates is not None:
-                    server_temp['template-server'] = conf_templates
+                server_temp['template-server'] = conf_templates
             except:
                 server_temp = None
                 LOG.error("Invalid definition of A10 config in Member section.")

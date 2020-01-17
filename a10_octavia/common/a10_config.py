@@ -38,7 +38,7 @@ A10_VTHUNDER_OPTS = [
                default='a10',
                help=_('VThunder password')),
     cfg.IntOpt('DEFAULT_AXAPI_VERSION',
-               default='30',
+               default=30,
                help=_('VThunder axapi version')),
 
 ]
@@ -47,12 +47,16 @@ A10_SLB_OPTS = [
     cfg.BoolOpt('arp_disable', default=False,
                 help=_('slb arp_disable')),
     cfg.IntOpt('default_virtual_server_vrid',
+               default=0,
                help=_('default_virtual_server_vrid')),
     cfg.StrOpt('logging_template',
+               default=None,
                help=_('logging_template')),
     cfg.StrOpt('policy_template',
+               default=None,
                help=_('policy_template')),
     cfg.StrOpt('template_virtual_server',
+               default=None,
                help=_('template_virtual_server')),
 ]
 
@@ -60,48 +64,63 @@ A10_LISTENER_OPTS = [
     cfg.BoolOpt('ipinip', default=False,
                 help=_('ipinip')),
     cfg.BoolOpt('no_dest_nat',
+                default=False,
                 help=_('no_dest_nat')),
     cfg.BoolOpt('ha_conn_mirror',
+                default=False,
                 help=_('ha_conn_mirror')),
     cfg.StrOpt('template_virtual_port',
+               default=None,
                help=_('template_virtual_port')),
     cfg.StrOpt('template_tcp',
+               default=None,
                help=_('template_tcp')),
     cfg.StrOpt('template_policy',
+               default=None,
                help=_('template_policy')),
     cfg.BoolOpt('autosnat', default=True,
                 help=_('autosnat')),
-    cfg.IntOpt('conn_limit',
+    cfg.IntOpt('conn_limit', min=1, max=8000000,
+               default=8000000,
                help=_('conn_limit')),
     cfg.StrOpt('template_http',
+               default=None,
                help=_('template_http')),
 ]
 
 A10_SERVICE_GROUP_OPTS = [
     cfg.StrOpt('templates',
+               default=None,
                help=_('templates')),
 ]
 
 A10_L7_POLICY_OPTS = [
     cfg.StrOpt('P1',
+               default=None,
                help=_('P1')),
     cfg.StrOpt('P2',
+               default=None,
                help=_('P2')),
 ]
 
 A10_L7_RULE_OPTS = [
     cfg.StrOpt('R1',
+               default=None,
                help=_('R1')),
     cfg.StrOpt('R2',
+               default=None,
                help=_('R2')),
 ]
 
 A10_SERVER_OPTS = [
-    cfg.IntOpt('conn_limit',
+    cfg.IntOpt('conn_limit', min=1, max=8000000,
+               default=8000000,
                help=_('conn_limit')),
-    cfg.IntOpt('conn_resume',
+    cfg.IntOpt('conn_resume', min=1, max=1000000,
+               default=1000000,
                help=_('conn_resume')),
     cfg.StrOpt('templates',
+               default=None,
                help=_('templates')),
 ]
 

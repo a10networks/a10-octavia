@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* review comments, code optimization, some more validations
 * octavia config file changes
 * Changed variable names
 * Added changes for new service called a10-health-manager

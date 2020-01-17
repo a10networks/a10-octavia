@@ -29,34 +29,15 @@ class ListenersParent(object):
 
     def set(self, set_method, loadbalancer, listeners, vthunder):
         ipinip = CONF.LISTENER.ipinip
-        if ipinip is None:
-            ipinip = False
-        
         no_dest_nat = CONF.LISTENER.no_dest_nat
-        if no_dest_nat is None:
-            no_dest_nat = False
-        
         ha_conn_mirror = CONF.LISTENER.ha_conn_mirror
-        if ha_conn_mirror is None:
-            ha_conn_mirror = False
-
-        autosnat = bool(CONF.LISTENER.autosnat)
+        autosnat = CONF.LISTENER.autosnat
         conn_limit = CONF.LISTENER.conn_limit
         virtual_port_templates = {}
         template_virtual_port = CONF.LISTENER.template_virtual_port
-        if template_virtual_port is not None:
-            virtual_port_templates['template-virtual-port'] = template_virtual_port.strip('"')
-        else:
-            virtual_port_templates['template-virtual-port'] = None
+        virtual_port_templates['template-virtual-port'] = template_virtual_port
 
         template_args = {}
-        if conn_limit is not None:
-            conn_limit = int(conn_limit)
-            if conn_limit < 1 or conn_limit > 8000000:
-                LOG.warning("The specified member server connection limit " +
-                            "(configuration setting: conn-limit) is out of " +
-                            "bounds with value {0}. Please set to between " +
-                            "1-8000000. Defaulting to 8000000".format(conn_limit))
 
         try:
             c = self.client_factory(vthunder)
@@ -76,16 +57,10 @@ class ListenersParent(object):
                     # TODO work around for issue in acos client
                     listener.protocol = listener.protocol.lower()
                     virtual_port_template = CONF.LISTENER.template_http
-                    if virtual_port_template is not None:
-                        virtual_port_templates['template-http'] = virtual_port_template.strip('"')
-                    else:
-                        virtual_port_templates['template-http'] = None
+                    virtual_port_templates['template-http'] = virtual_port_template
                 else:
                     virtual_port_template = CONF.LISTENER.template_tcp
-                    if virtual_port_template is not None:
-                        virtual_port_templates['template-tcp'] = virtual_port_template.strip('"')
-                    else:
-                        virtual_port_templates['template-tcp'] = None
+                    virtual_port_templates['template-tcp'] = virtual_port_template
 
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 set_method(loadbalancer.id, name,
