@@ -70,6 +70,7 @@ class CreteVthunderEntry(BaseDatabaseTask):
         password = (CONF.VTHUNDER.DEFAULT_VTHUNDER_PASSWORD)
         axapi_version = (CONF.VTHUNDER.DEFAULT_AXAPI_VERSION)
 
+
         compute_id = None
         undercloud = True
         if amphora.compute_id:

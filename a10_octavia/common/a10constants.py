@@ -18,6 +18,7 @@ STATUS = 'status'
 ROLE = 'role'
 BACKUP_VTHUNDER = 'backup_vthunder'
 VRRP_STATUS = 'vrrp_status'
+
 FAILED = 'FAILED'
 VTHUNDER_UDP_HEARTBEAT = 'vthunder_udp_heartbeat'
 HM_SERVER = 'a10_hm_server'

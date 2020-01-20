@@ -31,6 +31,7 @@ from octavia.api.drivers import driver_lib
 from octavia.common import constants
 from octavia.common import base_taskflow
 from octavia.common import exceptions
+from a10_octavia.common import data_models
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 from a10_octavia.common import data_models
@@ -44,6 +45,7 @@ from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_l7policy_flows
 from a10_octavia.controller.worker.flows import a10_l7rule_flows
 from a10_octavia.controller.worker.flows import vthunder_flows
+
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -194,7 +196,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
         if not listener:
@@ -288,7 +289,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-
     def create_load_balancer(self, load_balancer_id):
         """Creates a load balancer by allocating Amphorae.
 
@@ -309,7 +309,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         topology = CONF.a10_controller_worker.loadbalancer_topology
         
         store[constants.UPDATE_DICT] = {
-            constants.LOADBALANCER_TOPOLOGY: topology
+            constants.TOPOLOGY: topology
         }
 
         if lb.project_id in CONF.RACK_VTHUNDER.devices:
@@ -352,6 +352,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         with tf_logging.DynamicLoggingListener(delete_lb_tf,
                                                log=LOG):
             delete_lb_tf.run()
+
         # IMP: Jacobs code
         # No exception even when acos fails...
         # try:
@@ -406,7 +407,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-
     def create_member(self, member_id):
         """Creates a pool member.
 
@@ -827,7 +827,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             lock_session.commit()
             LOG.info(str(status))
 
-
+ 
     def failover_amphora(self, vthunder_id):
         """Perform failover operations for an amphora.
         :param amphora_id: ID for amphora to failover
@@ -889,4 +889,3 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
     def _get_db_obj_until_pending_update(self, repo, id):
         return repo.get(db_apis.get_session(), id=id)
-

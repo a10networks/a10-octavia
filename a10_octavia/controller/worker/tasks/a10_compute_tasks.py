@@ -66,6 +66,8 @@ class ComputeCreate(BaseComputeTask):
         user_data_config_drive = CONF.a10_controller_worker.user_data_config_drive
 
         key_name = CONF.a10_controller_worker.amp_ssh_key_name
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
         try:
             if CONF.haproxy_amphora.build_rate_limit != -1:
                 self.rate_limit.add_to_build_request_queue(
@@ -73,7 +75,7 @@ class ComputeCreate(BaseComputeTask):
 
             agent_cfg = agent_jinja_cfg.AgentJinjaTemplater()
             config_drive_files['/etc/octavia/amphora-agent.conf'] = (
-                agent_cfg.build_agent_config(amphora_id))
+                agent_cfg.build_agent_config(amphora_id, topology))
             if user_data_config_drive:
                 udtemplater = user_data_jinja_cfg.UserDataJinjaCfg()
                 user_data = udtemplater.build_user_data_config(
