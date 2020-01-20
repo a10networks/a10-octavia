@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Some more optimization
 * review comments, code optimization, some more validations
 * octavia config file changes
 * Changed variable names

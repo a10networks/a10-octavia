@@ -62,6 +62,9 @@ class ListenersParent(object):
                     virtual_port_template = CONF.LISTENER.template_tcp
                     virtual_port_templates['template-tcp'] = virtual_port_template
 
+                virtual_port_template = CONF.LISTENER.template_policy
+                virtual_port_templates['template-policy'] = virtual_port_template
+                
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 set_method(loadbalancer.id, name,
                            listener.protocol,

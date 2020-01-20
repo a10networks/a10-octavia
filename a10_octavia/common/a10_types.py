@@ -12,6 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+""" This module defines and validates Rack VThunder Type of objects
+     passed during configuration in a10-octavia
+"""
+
+
 import json
 import netaddr
 import six
@@ -24,13 +29,32 @@ from a10_octavia.common import data_models
 
 LOG = logging.getLogger(__name__)
 
-
 class ListOfDictOpt(cfg.Opt):
+    """List of Dictionary Options
+
+    Option with ``type`` :class:`ListOfObjects`
+
+    :param name: the option's name
+    :param item_type: type of item (None)
+    :param bounds: if True the value should be inside "[" and "]" pair
+    :param \\*\\*kwargs: arbitrary keyword arguments passed to :class:`Opt`
+
+    """
     def __init__(self, name, item_type=None, bounds=None, **kwargs):
         super(ListOfDictOpt, self).__init__(name, type=ListOfObjects(item_type, bounds), **kwargs)
 
 
 class ListOfObjects(List):
+    """ List of Object Type
+
+    The value represents a list of objects of type
+    dictionary. eg - [{}, {}]
+    The value will be validated for their key values for vthunder params.
+
+    :param bounds: if True, value should be inside "[" and "]" pair
+    :param type_name: Type name to be used in the sample config file.
+
+    """
     def __init__(self, bounds=False, type_name='list of dict values'):
         super(ListOfObjects, self).__init__(bounds=bounds, type_name=type_name)
 
@@ -59,6 +83,9 @@ class ListOfObjects(List):
 
 
 def convert_to_rack_vthunder_conf(rack_list):
+    """ Validates for all vthunder nouns for rack devices
+        configurations.
+    """
     rack_dict = {}
     validation_flag = False
     try:
@@ -80,6 +107,8 @@ def convert_to_rack_vthunder_conf(rack_list):
 
 
 def validate_params(rack_info):
+    """Check for all the required parameters for rack configurations.
+    """
     if all(k in rack_info for k in ('project_id', 'ip_address',
                                     'username', 'password', 'device_name')):
         if all(rack_info[x] is not None for x in ('project_id', 'ip_address',
@@ -94,6 +123,7 @@ def validate_params(rack_info):
 
 
 def validate_ipv4(address):
+    """Validates for IP4 address format"""
     if not netaddr.valid_ipv4(address, netaddr.core.INET_PTON):
         return False
     return True

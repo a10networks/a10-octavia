@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+""" This module takes care of the Configuration Options set by config files for a10-octavia"""
 
 import sys
 
@@ -45,90 +46,107 @@ A10_VTHUNDER_OPTS = [
 
 A10_SLB_OPTS = [
     cfg.BoolOpt('arp_disable', default=False,
-                help=_('slb arp_disable')),
+                help=_('Disable Respond to Virtual Server ARP request')),
     cfg.IntOpt('default_virtual_server_vrid',
                default=0,
-               help=_('default_virtual_server_vrid')),
-    cfg.StrOpt('logging_template',
+               help=_('Default Virtual Server VRID')),
+    cfg.StrOpt('template_logging',
                default=None,
-               help=_('logging_template')),
-    cfg.StrOpt('policy_template',
+               max_length=63,
+               help=_('NAT Logging template (NAT Logging template name)')),
+    cfg.StrOpt('template_policy',
                default=None,
-               help=_('policy_template')),
+               max_length=127,
+               help=_('Policy Template')),
+    cfg.StrOpt('template_scaleout',
+               default=None,
+               max_length=127,
+               help=_('Scaleout template (Scaleout template name)')),
     cfg.StrOpt('template_virtual_server',
                default=None,
-               help=_('template_virtual_server')),
+               max_length=127,
+               help=_('Virtual server template (Virtual server template name)')),
 ]
 
 A10_LISTENER_OPTS = [
     cfg.BoolOpt('ipinip', default=False,
-                help=_('ipinip')),
+                help=_('Enable IP in IP.')),
     cfg.BoolOpt('no_dest_nat',
                 default=False,
-                help=_('no_dest_nat')),
+                help=_('Disable destination NAT')),
     cfg.BoolOpt('ha_conn_mirror',
                 default=False,
-                help=_('ha_conn_mirror')),
+                help=_('Enable for HA Conn sync')),
     cfg.StrOpt('template_virtual_port',
                default=None,
-               help=_('template_virtual_port')),
+               max_length=127,
+               help=_('Virtual port template (Virtual port template name)')),
     cfg.StrOpt('template_tcp',
                default=None,
-               help=_('template_tcp')),
+               max_length=127,
+               help=_('TCP Proxy Template name')),
     cfg.StrOpt('template_policy',
                default=None,
-               help=_('template_policy')),
+               max_length=127,
+               help=_('Policy Template (Policy template name).')),
     cfg.BoolOpt('autosnat', default=True,
-                help=_('autosnat')),
+                help=_('Enable autosnat')),
     cfg.IntOpt('conn_limit', min=1, max=8000000,
                default=8000000,
-               help=_('conn_limit')),
+               help=_('Connection Limit')),
     cfg.StrOpt('template_http',
                default=None,
-               help=_('template_http')),
+               max_length=127,
+               help=_('HTTP Template Name')),
 ]
 
 A10_SERVICE_GROUP_OPTS = [
-    cfg.StrOpt('templates',
+    cfg.StrOpt('template_server',
                default=None,
-               help=_('templates')),
+               help=_('Service Group Server Template')),
+    cfg.StrOpt('template_port',
+               default=None,
+               help=_('Service Group Port Template')),
+    cfg.StrOpt('template_policy',
+               default=None,
+               help=_('Service Group Policy Template')),
 ]
 
 A10_L7_POLICY_OPTS = [
     cfg.StrOpt('P1',
                default=None,
-               help=_('P1')),
+               help=_('For future reference')),
     cfg.StrOpt('P2',
                default=None,
-               help=_('P2')),
+               help=_('For future reference')),
 ]
 
 A10_L7_RULE_OPTS = [
     cfg.StrOpt('R1',
                default=None,
-               help=_('R1')),
+               help=_('For future reference')),
     cfg.StrOpt('R2',
                default=None,
-               help=_('R2')),
+               help=_('For future reference')),
 ]
 
 A10_SERVER_OPTS = [
     cfg.IntOpt('conn_limit', min=1, max=8000000,
                default=8000000,
-               help=_('conn_limit')),
+               help=_('Connection Limit')),
     cfg.IntOpt('conn_resume', min=1, max=1000000,
-               default=1000000,
-               help=_('conn_resume')),
-    cfg.StrOpt('templates',
+               default=1,
+               help=_('Connection Resume')),
+    cfg.StrOpt('template_server',
                default=None,
-               help=_('templates')),
+               help=_('Template Server')),
 ]
 
 A10_RACK_VTHUNDER_OPTS = [
     a10_types.ListOfDictOpt('devices', default=[],
                             item_type=a10_types.ListOfObjects(),
                             bounds=True,
-                            help=_('list of all device configuration'))
+                            help=_('List of all device configuration'))
 ]
 
 A10_HEALTH_MANAGER_OPTS = [
@@ -343,6 +361,7 @@ ks_loading.register_session_conf_options(cfg.CONF, constants.SERVICE_AUTH)
 
 
 def init(args, **kwargs):
+    """ Initialize the cfg.CONF object for octavia project"""
     cfg.CONF(args=args, project='octavia',
              version='%%prog %s' % version.version_info.release_string(),
              **kwargs)
