@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* doc strings, help doc, some more reference for rack, more validations
 * Some more optimization
 * review comments, code optimization, some more validations
 * octavia config file changes

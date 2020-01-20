@@ -24,15 +24,7 @@ LOG = logging.getLogger(__name__)
 
 class LoadBalancerParent(object):
     def set(self, set_method, loadbalancer_id, loadbalancer, vthunder):
-        conf_templates = CONF.SLB.template_virtual_server
-        logging_template = CONF.SLB.template_logging
-        policy_template = CONF.SLB.template_policy
-        scaleout_template = CONF.SLB.template_scaleout
-        virtual_server_templates = {}
-        virtual_server_templates['template-virtual-server'] = conf_templates
-        virtual_server_templates['template-logging'] = logging_template
-        virtual_server_templates['template-policy'] = policy_template
-        virtual_server_templates['template-scaleout'] = scaleout_template
+        virtual_server_templates = None
  
         try:
             c = self.client_factory(vthunder)
