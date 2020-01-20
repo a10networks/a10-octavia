@@ -40,7 +40,7 @@ Note down the `image ID` and `flavor ID` of created resources.
 
 ## STEP3: Update the Octavia config file
 
-Update the /etc/octavia/octavia.conf file with the following parameters:
+Update the /etc/a10/octavia.conf file with the following parameters:
 
 ```shell
 enabled_provider_drivers = a10:     'The A10 Octavia driver.',
@@ -51,12 +51,21 @@ enabled_provider_drivers = a10:     'The A10 Octavia driver.',
 default_provider_driver = a10
 ```
 
-Create [a10_octavia] section and add following details in /etc/octavia/octavia.conf file
+## STEP4: Add an Octavia config file 
+Create an `a10-octavia.conf` file at /etc/a10/ location with following paramaters:
 
 ```shell
-[a10_octavia]
+
+[VTHUNDER]
+DEFAULT_VTHUNDER_USERNAME = "admin"
+DEFAULT_VTHUNDER_PASSWORD = "a10"
+DEFAULT_AXAPI_VERSION = "30"
+```
+
+```shell
+[a10_controller_worker]
 amp_image_owner_id = <admin_project_id>
-amp_secgroup_list = lb-mgmt-sec-grp <or_you_can_create_custom> 
+amp_secgroup_list = lb-mgmt-sec-grp <or_you_can_create_custom>
 amp_flavor_id = <flavor_id_for_amphora>
 amp_boot_network_list = <netword_id_for_amphora_in_admin_project>
 amp_ssh_key_name = <ssh_key_for_amphora>
@@ -69,18 +78,6 @@ amp_active_wait_sec = 2
 amp_image_id = <vthunder_amphora_image_id>
 amp_image_tag = amphora
 user_data_config_drive = False
-```
-
-## STEP4: Add A10 config file 
-
-create `/etc/a10/config.py` with proper access for octavia/stack user.
-add following entries as default.
-
-```shell
-[DEFAULT]
-DEFAULT_VTHUNDER_USERNAME = "admin"
-DEFAULT_VTHUNDER_PASSWORD = "a10"
-DEFAULT_AXAPI_VERSION = "30"
 ```
 
 ## STEP5: Run database migrations
