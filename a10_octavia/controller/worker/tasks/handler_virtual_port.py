@@ -181,6 +181,7 @@ class ListenerDelete(BaseVThunderTask):
             name = loadbalancer.id + "_" + str(listener.protocol_port)
             c.slb.virtual_server.vport.delete(loadbalancer.id, name, listener.protocol,
                                               listener.protocol_port)
+
             LOG.info("Listener deleted successfully.")
         except Exception as e:
             LOG.error(str(e))
