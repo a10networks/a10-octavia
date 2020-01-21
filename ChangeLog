@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* stack-559 solution
 * Added Readme
 * removal of slb related templates
 * doc strings, help doc, some more reference for rack, more validations

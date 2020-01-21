@@ -309,7 +309,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         topology = CONF.a10_controller_worker.loadbalancer_topology
         
         store[constants.UPDATE_DICT] = {
-            constants.TOPOLOGY: topology
+            constants.LOADBALANCER_TOPOLOGY: topology
         }
 
         if lb.project_id in CONF.RACK_VTHUNDER.devices:
