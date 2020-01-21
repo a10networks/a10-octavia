@@ -40,7 +40,7 @@ Note down the `image ID` and `flavor ID` of created resources.
 
 ## STEP3: Update the Octavia config file
 
-Update the /etc/a10/octavia.conf file with the following parameters:
+Update the /etc/octavia/octavia.conf file with the following parameters:
 
 ```shell
 enabled_provider_drivers = a10:     'The A10 Octavia driver.',

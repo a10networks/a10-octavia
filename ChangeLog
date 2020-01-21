@@ -1,10 +1,15 @@
 CHANGES
 =======
 
+* Added Readme
+* removal of slb related templates
 * doc strings, help doc, some more reference for rack, more validations
 * Some more optimization
 * review comments, code optimization, some more validations
 * octavia config file changes
+* Added minor syntax fix
+* Made minor fixes based upon review feedback
+* Made a number of minor fixes
 * Made multiple small fixes
 * Added further QOL update for functional testing
 * QOL update for functional testing
