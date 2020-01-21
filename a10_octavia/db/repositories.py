@@ -16,22 +16,12 @@
 import datetime
 
 from oslo_config import cfg
-from oslo_db import api as oslo_db_api
-from oslo_db import exception as db_exception
 from oslo_log import log as logging
-from oslo_serialization import jsonutils
-from oslo_utils import excutils
-from oslo_utils import uuidutils
-from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import noload
-from sqlalchemy.orm import subqueryload
 from sqlalchemy import or_
 from sqlalchemy import and_
 
 from octavia.common import constants as consts
-from octavia.common import data_models
-from octavia.common import exceptions
-from octavia.common import validate
 from octavia.db import models as base_models
 from a10_octavia.db import models
 
@@ -122,7 +112,6 @@ class BaseRepository(object):
 
     def get_all(self, session, pagination_helper=None,
                 query_options=None, **filters):
-
         """Retrieves a list of entities from the database.
 
         :param session: A Sql Alchemy database session.
@@ -200,13 +189,13 @@ class VThunderRepository(BaseRepository):
         model = session.query(self.model_class).filter(
             self.model_class.last_udp_update < expired_time).filter(
                 self.model_class.status != 'FAILED').filter(
-                or_(self.model_class.role == "MASTER", 
-                self.model_class.role == "BACKUP")).first()
+                or_(self.model_class.role == "MASTER",
+                    self.model_class.role == "BACKUP")).first()
         if model is None:
             return None
         return model.to_data_model()
 
-    def getVThunderFromLB(self, session, lb_id):
+    def get_vthunder_from_lb(self, session, lb_id):
         model = session.query(self.model_class).filter(
             self.model_class.loadbalancer_id == lb_id).filter(or_(self.model_class.role == "STANDALONE",
                                                                   self.model_class.role == "MASTER")).first()
@@ -216,7 +205,7 @@ class VThunderRepository(BaseRepository):
 
         return model.to_data_model()
 
-    def getBackupVThunderFromLB(self, session, lb_id):
+    def get_backup_vthunder_from_lb(self, session, lb_id):
         model = session.query(self.model_class).filter(
             self.model_class.loadbalancer_id == lb_id).filter(or_(self.model_class.role == "STANDALONE",
                                                                   self.model_class.role == "BACKUP")).first()
@@ -226,7 +215,7 @@ class VThunderRepository(BaseRepository):
 
         return model.to_data_model()
 
-    def getVThunderByProjectID(self, session, project_id):
+    def get_vthunder_by_project_id(self, session, project_id):
         model = session.query(self.model_class).filter(
             self.model_class.project_id == project_id).filter(and_(self.model_class.status == "ACTIVE",
                                                                    or_(self.model_class.role == "STANDALONE",
@@ -237,7 +226,7 @@ class VThunderRepository(BaseRepository):
 
         return model.to_data_model()
 
-    def getDeleteComputeFlag(self, session, compute_id):
+    def get_delete_compute_flag(self, session, compute_id):
         if compute_id:
             count = session.query(self.model_class).filter(
                 self.model_class.compute_id == compute_id).count()
@@ -248,7 +237,7 @@ class VThunderRepository(BaseRepository):
                 return False
         else:
             return False
-    
+
     def get_vthunder_from_src_addr(self, session, srcaddr):
         model = session.query(self.model_class).filter(
             self.model_class.ip_address == srcaddr).first()
@@ -257,8 +246,7 @@ class VThunderRepository(BaseRepository):
             return None
         return model.id
 
-
-    def getSparevThunder(self, session):
+    def get_spare_vthunder(self, session):
         model = session.query(self.model_class).filter(
             self.model_class.status == "READY").first()
 
@@ -282,7 +270,8 @@ class VThunderRepository(BaseRepository):
             self.model_class.updated_at < expiry_time)
         query = session.query(self.model_class)
         if hasattr(self.model_class, 'status'):
-            query = query.filter(or_(self.model_class.status == "USED_SPARE", self.model_class.status == consts.DELETED))
+            query = query.filter(or_(self.model_class.status == "USED_SPARE",
+                                     self.model_class.status == consts.DELETED))
         else:
             query = query.filter_by(operating_status=consts.DELETED)
         # Do not load any relationship

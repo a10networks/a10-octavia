@@ -13,7 +13,6 @@
 #    under the License.
 
 
-
 from oslo_log import log as logging
 from oslo_config import cfg
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
@@ -51,7 +50,8 @@ class MemberCreate(BaseVThunderTask):
                     server_args['conn-limit'] = conn_limit
             if conn_resume is not None:
                 if conn_resume < 1 or conn_resume > 1000000:
-                    LOG.warning("The specified conn_resume value is invalid. The value should be either 0 or 1")
+                    LOG.warning(
+                        "The specified conn_resume value is invalid. The value should be either 0 or 1")
                 else:
                     server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}
@@ -94,9 +94,8 @@ class MemberDelete(BaseVThunderTask):
 class MemberUpdate(BaseVThunderTask):
     """ Task to update member """
 
-    def execute(self, member, vthunder, pool, update_dict):
+    def execute(self, member, vthunder):
         """ Execute update member """
-        member.__dict__.update(update_dict)
         conn_limit = self.readConf('SERVER', 'conn_limit')
         if conn_limit is not None:
             conn_limit = int(conn_limit)
@@ -121,7 +120,8 @@ class MemberUpdate(BaseVThunderTask):
                     server_args['conn-limit'] = conn_limit
             if conn_resume is not None:
                 if conn_resume < 1 or conn_resume > 1000000:
-                    LOG.warning("The specified conn_resume value is invalid. The value should be either 0 or 1")
+                    LOG.warning(
+                        "The specified conn_resume value is invalid. The value should be either 0 or 1")
                 else:
                     server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}

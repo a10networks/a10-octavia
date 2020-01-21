@@ -105,7 +105,7 @@ class CreateVThunderEntry(BaseDatabaseTask):
             project_id=loadbalancer.project_id,
             compute_id=compute_id,
             topology=topology,
-            role=role, 
+            role=role,
             last_udp_update=datetime.now(),
             status=status,
             updated_at=datetime.now())
@@ -132,7 +132,7 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
 
     def execute(self, loadbalancer):
         loadbalancer_id = loadbalancer.id
-        vthunder = self.vthunder_repo.getVThunderFromLB(
+        vthunder = self.vthunder_repo.get_vthunder_from_lb(
             db_apis.get_session(), loadbalancer_id)
         LOG.info("Successfully fetched vThunder details for LB")
         return vthunder
@@ -144,7 +144,7 @@ class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
 
     def execute(self, loadbalancer):
         loadbalancer_id = loadbalancer.id
-        vthunder = self.vthunder_repo.getBackupVThunderFromLB(
+        vthunder = self.vthunder_repo.get_backup_vthunder_from_lb(
             db_apis.get_session(), loadbalancer_id)
         return vthunder
         LOG.info("Successfully fetched vThunder details for LB")
@@ -152,7 +152,7 @@ class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
 # class GetVThunderByLoadBalancerID(BaseDatabaseTask):
 #     """ Get VThunder details from LoadBalancer ID """
 #     def execute(self, loadbalancer_id):
-#         vthunder = self.vthunder_repo.getVThunderFromLB(db_apis.get_session(), loadbalancer_id)
+#         vthunder = self.vthunder_repo.get_vthunder_from_lb(db_apis.get_session(), loadbalancer_id)
 #         return vthunder
 #         LOG.info("Successfully fetched vThunder details for LB")
 
@@ -162,10 +162,10 @@ class GetComputeForProject(BaseDatabaseTask):
     """ Get Compute details form Loadbalancer object -> project ID"""
 
     def execute(self, loadbalancer):
-        vthunder = self.vthunder_repo.getVThunderByProjectID(
+        vthunder = self.vthunder_repo.get_vthunder_by_project_id(
             db_apis.get_session(), loadbalancer.project_id)
         if vthunder is None:
-            vthunder = self.vthunder_repo.getSparevThunder(
+            vthunder = self.vthunder_repo.get_spare_vthunder(
                 db_apis.get_session())
             self.vthunder_repo.update(db_apis.get_session(), vthunder.id,
                                       status="USED_SPARE", updated_at=datetime.now())
@@ -192,13 +192,13 @@ class MapLoadbalancerToAmphora(BaseDatabaseTask):
                       "pool allocation.")
             return None
 
-        vthunder = self.vthunder_repo.getVThunderByProjectID(
+        vthunder = self.vthunder_repo.get_vthunder_by_project_id(
             db_apis.get_session(),
             loadbalancer.project_id)
 
         if vthunder is None:
             # Check for spare vthunder
-            vthunder = self.vthunder_repo.getSparevThunder(db_apis.get_session())
+            vthunder = self.vthunder_repo.get_spare_vthunder(db_apis.get_session())
             if vthunder is None:
                 LOG.debug("No Amphora available for load balancer with id %s",
                           loadbalancer.id)
@@ -235,7 +235,7 @@ class CreateVThunderHealthEntry(BaseDatabaseTask):
 
     def execute(self, loadbalancer, vthunder_config):
         vthunder = self.vthunder_repo.create(db_apis.get_session(),
-                                             vthunder_id= uuidutils.generate_uuid(),
+                                             vthunder_id=uuidutils.generate_uuid(),
                                              device_name=vthunder_config.device_name,
                                              username=vthunder_config.username,
                                              password=vthunder_config.password,
@@ -247,7 +247,7 @@ class CreateVThunderHealthEntry(BaseDatabaseTask):
                                              topology="STANDALONE",
                                              role="MASTER")
         LOG.info("Successfully created vthunder entry in database.")
-    
+
 
 class MarkVThunderStatusInDB(BaseDatabaseTask):
 

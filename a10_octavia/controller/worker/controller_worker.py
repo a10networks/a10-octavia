@@ -100,7 +100,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         return create_vthunder_tf.storage.fetch('amphora')
 
-
     def create_health_monitor(self, health_monitor_id):
         """Creates a health monitor.
 
@@ -208,7 +207,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         if listener.project_id in self.rack_dict:
             create_listener_tf = self._taskflow_load(self._listener_flows.
-                                                     get_rack_vthunder_create_listener_flow(listener.project_id),
+                                                     get_rack_vthunder_create_listener_flow(
+                                                         listener.project_id),
                                                      store={constants.LOADBALANCER:
                                                             load_balancer,
                                                             constants.LISTENERS:
@@ -338,12 +338,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         """
         lb = self._lb_repo.get(db_apis.get_session(),
                                id=load_balancer_id)
-        vthunder = self._vthunder_repo.getVThunderFromLB(db_apis.get_session(),
-                                                         load_balancer_id)
+        vthunder = self._vthunder_repo.get_vthunder_from_lb(db_apis.get_session(),
+                                                            load_balancer_id)
         deleteCompute = False
         if vthunder:
-            deleteCompute = self._vthunder_repo.getDeleteComputeFlag(db_apis.get_session(),
-                                                                     vthunder.compute_id)
+            deleteCompute = self._vthunder_repo.get_delete_compute_flag(db_apis.get_session(),
+                                                                        vthunder.compute_id)
         (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute)
         store.update({constants.LOADBALANCER: lb,
                       constants.SERVER_GROUP_ID: lb.server_group_id})
@@ -788,74 +788,72 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
     def _switch_roles_for_ha_flow(self, vthunder):
         lock_session = db_apis.get_session(autocommit=False)
         if vthunder.role == constants.ROLE_MASTER:
-            LOG.info("Master vthunder %s has failed, searching for existing backup vthunder.", 
-                    vthunder.ip_address)
-            backup_vthunder = self._vthunder_repo.getBackupVThunderFromLB(
-                                                lock_session,
-                                                 lb_id=vthunder.loadbalancer_id)
+            LOG.info("Master vthunder %s has failed, searching for existing backup vthunder.",
+                     vthunder.ip_address)
+            backup_vthunder = self._vthunder_repo.get_backup_vthunder_from_lb(
+                lock_session,
+                lb_id=vthunder.loadbalancer_id)
             if backup_vthunder:
-                LOG.info("Making Backup vthunder %s as MASTER NOW", 
-                          backup_vthunder.ip_address)
+                LOG.info("Making Backup vthunder %s as MASTER NOW",
+                         backup_vthunder.ip_address)
                 self._vthunder_repo.update(
-                        lock_session, 
-                        backup_vthunder.id, role=constants.ROLE_MASTER)
-                
-                LOG.info("Putting %s to failed amphoras", 
-                            vthunder.ip_address)
-                
+                    lock_session,
+                    backup_vthunder.id, role=constants.ROLE_MASTER)
+
+                LOG.info("Putting %s to failed amphoras",
+                         vthunder.ip_address)
+
                 self._vthunder_repo.update(
-                    lock_session, 
+                    lock_session,
                     vthunder.id, role=constants.ROLE_BACKUP, status=a10constants.FAILED)
-                
+
                 lock_session.commit()
                 LOG.info("Vthunder %s's status is FAILED", vthunder.ip_address)
-                status = { 'vthunders': [{"id": vthunder.vthunder_id,
-                       "status": a10constants.FAILED,
-                       "ip_address": vthunder.ip_address}]}
+                status = {'vthunders': [{"id": vthunder.vthunder_id,
+                                         "status": a10constants.FAILED,
+                                         "ip_address": vthunder.ip_address}]}
                 LOG.info(str(status))
-            else: 
+            else:
                 LOG.warning("No backup found for failed MASTER %s", vthunder.ip_address)
 
         elif vthunder.role == constants.ROLE_BACKUP:
             LOG.info("BACKUP vthunder %s has failed", vthunder.ip_address)
             self._vthunder_repo.update(
-                    lock_session, 
-                    vthunder.id, status=a10constants.FAILED)
+                lock_session,
+                vthunder.id, status=a10constants.FAILED)
             LOG.info("Vthunder %s's status is FAILED", vthunder.ip_address)
-            status = { 'vthunders': [{"id": vthunder.vthunder_id,
-                       "status": a10constants.FAILED, 
-                       "ip_address": vthunder.ip_address}]}
+            status = {'vthunders': [{"id": vthunder.vthunder_id,
+                                     "status": a10constants.FAILED,
+                                     "ip_address": vthunder.ip_address}]}
             lock_session.commit()
             LOG.info(str(status))
 
- 
     def failover_amphora(self, vthunder_id):
         """Perform failover operations for an amphora.
         :param amphora_id: ID for amphora to failover
         :returns: None
         :raises AmphoraNotFound: The referenced amphora was not found
         """
-        try: 
+        try:
             vthunder = self._vthunder_repo.get(db_apis.get_session(),
-                                         vthunder_id=vthunder_id)
+                                               vthunder_id=vthunder_id)
             if not vthunder:
                 LOG.warning("Could not fetch Amphora %s from DB, ignoring "
                             "failover request.", vthunder.vthunder_id)
                 return
-          
+
             LOG.info("Starting Failover process on %s", vthunder.ip_address)
-            #feature : db role switching for HA flow
+            # feature : db role switching for HA flow
             self._switch_roles_for_ha_flow(vthunder)
 
             # TODO: delete failed one
             # TODO: boot up new amps
             # TODO: vrrp sync
-        
+
         except Exception as e:
             with excutils.save_and_reraise_exception():
                 LOG.error("Vthunder %(id)s failover exception: %(exc)s",
                           {'id': vthunder_id, 'exc': e})
-
 
     def failover_loadbalancer(self, load_balancer_id):
         """Perform failover operations for a load balancer.
@@ -871,7 +869,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             operator_fault_string='This provider does not support loadbalancer '
                                   'failover yet.')
 
-       
     def amphora_cert_rotation(self, amphora_id):
         """Perform cert rotation for an amphora.
 
@@ -886,7 +883,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             operator_fault_string='This provider does not support rotating '
                                   'Amphora certs. We will use preconfigured '
                                   'devices.')
-
 
     def _get_db_obj_until_pending_update(self, repo, id):
         return repo.get(db_apis.get_session(), id=id)

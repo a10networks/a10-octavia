@@ -56,36 +56,31 @@ class L7RuleParent(object):
             kargs = {}
             kargs["aflex-scripts"] = aflex_scripts
 
-            update_listener = c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
-                                                                listener.protocol, listener.protocol_port, listener.default_pool_id,
-                                                                s_pers, c_pers, 1, **kargs)
+            c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
+                                              listener.protocol, listener.protocol_port, listener.default_pool_id,
+                                              s_pers, c_pers, 1, **kargs)
             LOG.info("Listener updated successfully.")
         except Exception as e:
             LOG.error(str(e))
             LOG.info("Error occurred")
 
 
-class CreateL7Rule(BaseVThunderTask, L7RuleParent):
+class CreateL7Rule(L7RuleParent, BaseVThunderTask):
     """ Task to create L7Rule """
 
     def execute(self, l7rule, listeners, vthunder):
-        c = self.client_factory(vthunder)
-        status = L7RuleParent.set(self,
-                                  l7rule,
-                                  listeners,
-                                  vthunder)
+        self.client_factory(vthunder)
+        self.set(l7rule, listeners, vthunder)
 
 
-class UpdateL7Rule(BaseVThunderTask, L7RuleParent):
+class UpdateL7Rule(L7RuleParent, BaseVThunderTask):
     """ Task to update L7Rule """
 
     def execute(self, l7rule, listeners, vthunder, update_dict):
         l7rule.__dict__.update(update_dict)
-        c = self.client_factory(vthunder)
-        status = L7RuleParent.set(self,
-                                  l7rule,
-                                  listeners,
-                                  vthunder)
+        self.client_factory(vthunder)
+        self.set(l7rule, listeners, vthunder)
+
 
 class DeleteL7Rule(BaseVThunderTask):
     """ Task to delete a L7rule and disassociate from provided pool """
@@ -131,9 +126,9 @@ class DeleteL7Rule(BaseVThunderTask):
             kargs = {}
             kargs["aflex-scripts"] = aflex_scripts
 
-            update_listener = c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
-                                                                listener.protocol, listener.protocol_port, listener.default_pool_id,
-                                                                s_pers, c_pers, 1, **kargs)
+            c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
+                                              listener.protocol, listener.protocol_port, listener.default_pool_id,
+                                              s_pers, c_pers, 1, **kargs)
             LOG.info("Listener updated successfully.")
         except Exception as e:
             LOG.error(str(e))

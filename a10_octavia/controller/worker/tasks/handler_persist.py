@@ -45,7 +45,7 @@ class PersistHandler(object):
             elif self.sp.type == 'SOURCE_IP':
                 self.s_pers = self.name
             else:
-                raise 
+                raise
         else:
             self.sp = None
 
@@ -59,11 +59,13 @@ class PersistHandler(object):
         if self.sp is None:
             return
         sp_type = self.sp.type
+        cookie_name = None
         if sp_type is not None and sp_type in self.sp_obj_dict:
             try:
-
+                if self.sp.cookie_name:
+                    cookie_name = self.sp.cookie_name
                 m = getattr(self.c.slb.template, self.sp_obj_dict[sp_type])
-                m.create(self.name)
+                m.create(self.name, cookie_name=cookie_name)
             except acos_errors.Exists:
                 pass
 
@@ -71,10 +73,9 @@ class PersistHandler(object):
         if self.sp is None:
             return
 
-        sp_type = self.sp.type
-        if sp_type in self.sp_obj_dict.keys():
+        for sp_type in ['cookie_persistence', 'src_ip_persistence']:
             try:
-                m = getattr(self.c.slb.template, self.sp_obj_dict[sp_type])
+                m = getattr(self.c.slb.template, sp_type)
                 m.delete(self.name)
-            except acos_errors.NotExists:
+            except acos_errors.NotFound:
                 pass

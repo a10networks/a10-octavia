@@ -26,7 +26,7 @@ LOG = logging.getLogger(__name__)
 class L7PolicyParent(object):
 
     def set(self, l7policy, listeners, vthunder):
-        
+
         try:
             filename = l7policy.id
             p = PolicyUtil()
@@ -62,30 +62,21 @@ class L7PolicyParent(object):
             LOG.info("Error occurred")
 
 
-
-class CreateL7Policy(BaseVThunderTask, L7PolicyParent):
+class CreateL7Policy(L7PolicyParent, BaseVThunderTask):
     """ Task to create a L7Policy """
 
     def execute(self, l7policy, listeners, vthunder):
         """ Execute create L7Policy """
-        c = self.client_factory(vthunder)
-        status = L7PolicyParent.set(self, 
-                                    l7policy,
-                                    listeners,
-                                    vthunder)
+        self.set(l7policy, listeners, vthunder)
 
 
-class UpdateL7Policy(BaseVThunderTask, L7PolicyParent):
+class UpdateL7Policy(L7PolicyParent, BaseVThunderTask):
     """ Task to update L7Policy """
 
     def execute(self, l7policy, listeners, vthunder, update_dict):
         """ Execute update L7Policy """
         l7policy.__dict__.update(update_dict)
-        c = self.client_factory(vthunder)
-        status = L7PolicyParent.set(self,
-                                    l7policy,
-                                    listeners,
-                                    vthunder)
+        self.set(l7policy, listeners, vthunder)
 
 
 class DeleteL7Policy(BaseVThunderTask):

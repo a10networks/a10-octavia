@@ -74,7 +74,8 @@ class ListenersParent(object):
                 c_pers = persistence.c_persistence()
                 if listener.protocol == "TERMINATED_HTTPS":
                     listener.protocol = 'HTTPS'
-                    template_args["template_client_ssl"] = self.cert_handler(loadbalancer, listener, vthunder)
+                    template_args["template_client_ssl"] = self.cert_handler(
+                        loadbalancer, listener, vthunder)
 
                 if listener.protocol.lower() == 'http':
                     # TODO work around for issue in acos client
@@ -160,12 +161,13 @@ class ListenersParent(object):
         return cert_data["template_name"]
 
 
-class ListenersCreate(BaseVThunderTask, ListenersParent):
+class ListenersCreate(ListenersParent, BaseVThunderTask):
     """ Task to create listener """
+
     def execute(self, loadbalancer, listeners, vthunder):
         """ Execute updates per listener """
         c = self.client_factory(vthunder)
-        ListenersParent.set(self, c.slb.virtual_server.vport.create, loadbalancer, listeners, vthunder)
+        self.set(c.slb.virtual_server.vport.create, loadbalancer, listeners, vthunder)
 
     def revert(self, loadbalancer, *args, **kwargs):
         """ Handle failed listeners updates """
@@ -177,15 +179,13 @@ class ListenersCreate(BaseVThunderTask, ListenersParent):
         return None
 
 
-class ListenersUpdate(BaseVThunderTask, ListenersParent):
+class ListenersUpdate(ListenersParent, BaseVThunderTask):
     """ Task to update listener """
 
-    def execute(self, loadbalancer, listeners, vthunder, update_dict=None):
+    def execute(self, loadbalancer, listeners, vthunder):
         """ Execute updates per listener """
-        if update_dict:
-             listeners[0].__dict__.update(update_dict)
         c = self.client_factory(vthunder)
-        ListenersParent.set(self, c.slb.virtual_server.vport.update, loadbalancer, listeners, vthunder)
+        self.set(c.slb.virtual_server.vport.update, loadbalancer, listeners, vthunder)
 
     def revert(self, loadbalancer, *args, **kwargs):
         """ Handle failed listeners updates """

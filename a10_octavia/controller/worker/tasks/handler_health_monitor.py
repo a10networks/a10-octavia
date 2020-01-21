@@ -84,7 +84,6 @@ class UpdateHealthMonitor(BaseVThunderTask):
             url = None
             expect_code = None
             #port = None
-            update = True
             if health_mon.type in ['HTTP', 'HTTPS']:
                 method = health_mon.http_method
                 url = health_mon.url_path

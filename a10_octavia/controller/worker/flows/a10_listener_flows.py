@@ -34,7 +34,6 @@ from a10_octavia.controller.worker.tasks import handler_virtual_port
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.common import a10constants
-from a10_octavia.common import data_models
 
 
 class ListenerFlows(object):
@@ -161,7 +160,7 @@ class ListenerFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_listener_flow.add(handler_virtual_port.ListenersUpdate(
-            requires=[constants.LOADBALANCER, a10constants.VTHUNDER, constants.UPDATE_DICT]))
+            requires=[constants.LOADBALANCER, a10constants.VTHUNDER]))
 
         update_listener_flow.add(database_tasks.UpdateListenerInDB(
             requires=[constants.LISTENER, constants.UPDATE_DICT]))
@@ -187,10 +186,9 @@ class ListenerFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
         if project_id is None:
             create_listener_flow.add(network_tasks.UpdateVIP(
-               requires=constants.LOADBALANCER))
+                requires=constants.LOADBALANCER))
         create_listener_flow.add(database_tasks.
                                  MarkLBAndListenersActiveInDB(
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENERS]))
         return create_listener_flow
-

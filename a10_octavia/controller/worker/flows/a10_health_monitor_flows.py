@@ -110,7 +110,7 @@ class HealthMonitorFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_hm_flow.add(handler_health_monitor.UpdateHealthMonitor(
-            requires=[constants.HEALTH_MON, a10constants.VTHUNDER, constants.UPDATE_DICT]))
+            requires=[constants.HEALTH_MON, a10constants.VTHUNDER]))
 
         update_hm_flow.add(database_tasks.UpdateHealthMonInDB(
             requires=[constants.HEALTH_MON, constants.UPDATE_DICT]))

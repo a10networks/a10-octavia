@@ -154,9 +154,9 @@ class MemberFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_member_flow.add(handler_server.MemberUpdate(
-            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL, constants.UPDATE_DICT)))
+            requires=(constants.MEMBER, a10constants.VTHUNDER)))
         update_member_flow.add(database_tasks.UpdateMemberInDB(
-            requires=[constants.MEMBER, constants.UPDATE_DICT]))
+            requires=[constants.MEMBER]))
         update_member_flow.add(database_tasks.MarkMemberActiveInDB(
             requires=constants.MEMBER))
         update_member_flow.add(database_tasks.MarkPoolActiveInDB(
@@ -284,4 +284,3 @@ class MemberFlows(object):
                                    requires=(constants.LOADBALANCER,
                                              constants.LISTENERS)))
         return create_member_flow
-

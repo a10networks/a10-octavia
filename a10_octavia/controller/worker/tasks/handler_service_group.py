@@ -25,11 +25,11 @@ LOG = logging.getLogger(__name__)
 
 class PoolParent(object):
 
-    def set(self, set_method, pool, vthunder, old_pool=None):
+    def set(self, set_method, pool, vthunder, update=False):
         args = {'service_group': self.meta(pool, 'service_group', {})}
         try:
             c = self.client_factory(vthunder)
-            self._update_session_persistence(pool, old_pool, c)
+            self._update_session_persistence(pool, c, update)
             conf_templates = self.readConf('SERVICE_GROUP', 'templates').strip('"')
             service_group_temp = {}
             service_group_temp['template-server'] = conf_templates
@@ -49,41 +49,22 @@ class PoolParent(object):
         except Exception as e:
             LOG.error(str(e))
 
-    def _update_session_persistence(self, pool, old_pool, c):
-        # didn't exist, does exist, create
-        if not old_pool or (not old_pool.session_persistence and pool.session_persistence):
-            p = handler_persist.PersistHandler(c,  pool)
-            p.create()
-            return
-
-        # existed, change, delete and recreate
-        if (old_pool.session_persistence and pool.session_persistence and
-                old_pool.session_persistence.type != pool.session_persistence.type):
-            p = handler_persist.PersistHandler(c, old_pool)
-            p.delete()
+    def _update_session_persistence(self, pool, c, update=False):
+        if pool.session_persistence:
             p = handler_persist.PersistHandler(c, pool)
+            if update:
+                p.delete()
             p.create()
             return
 
-        # didn't exist, does exist now, create
-        if old_pool.session_persistence and not pool.session_persistence:
-            p = handler_persist.PersistHandler(c, pool)
-            p.create()
-            return
 
-        # didn't exist, doesn't exist
-        # did exist, does exist, didn't change
-        return
-
-
-
-class PoolCreate(BaseVThunderTask, PoolParent):
+class PoolCreate(PoolParent, BaseVThunderTask):
     """ Task to create pool """
 
     def execute(self, pool, vthunder):
         """ Execute create pool """
         c = self.client_factory(vthunder)
-        PoolParent.set(self, c.slb.service_group.create, pool, vthunder)
+        self.set(c.slb.service_group.create, pool, vthunder)
 
 
 class PoolDelete(BaseVThunderTask):
@@ -92,7 +73,6 @@ class PoolDelete(BaseVThunderTask):
     def execute(self, pool, vthunder):
         """ Execute delete pool """
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             c = self.client_factory(vthunder)
             handler_persist.PersistHandler(c, pool).delete()
             c.slb.service_group.delete(pool.id)
@@ -101,15 +81,14 @@ class PoolDelete(BaseVThunderTask):
             LOG.error(str(e))
 
 
-class PoolUpdate(BaseVThunderTask, PoolParent):
+class PoolUpdate(PoolParent, BaseVThunderTask):
     """ Task to update pool """
 
     def execute(self, pool, vthunder, update_dict):
         """ Execute update pool """
-        old_pool = pool
+        c = self.client_factory(vthunder)
         if 'session_persistence' in update_dict:
             pool.session_persistence.__dict__.update(update_dict['session_persistence'])
             del update_dict['session_persistence']
         pool.__dict__.update(update_dict)
-        c = self.client_factory(vthunder)
-        PoolParent.set(self, c.slb.service_group.update, pool, vthunder, old_pool)
+        self.set(c.slb.service_group.update, pool, vthunder, update=True)
