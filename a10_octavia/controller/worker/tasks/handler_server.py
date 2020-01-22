@@ -92,7 +92,7 @@ class MemberUpdate(BaseVThunderTask):
             server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}
             try:
-                conf_templates = CONF.SERVER.templates
+                conf_templates = CONF.SERVER.template_server
                 server_temp = {}
                 server_temp['template-server'] = conf_templates
             except:
