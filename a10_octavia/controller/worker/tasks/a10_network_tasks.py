@@ -686,15 +686,19 @@ class AllocateTrunk(BaseNetworkTask):
         LOG.debug('Creating trunk for port with ID: {}'.format(parent_port_id))
         self.network_driver.allocate_trunk(parent_port_id)
 
-    def revert(self, result, *args, **kwargs):
-        pass 
-
+    def revert(self, result, vip, *args, **kwargs):
+        try:
+            parent_port = self.network_driver.get_plugged_parent_port(vip)
+            self.network_driver.deallocate_trunk(parent_port.trunk_id)
+        except Exception:
+            # log here
+            pass
 
 class GetParentPort(BaseNetworkTask):
 
     def execute(self, loadbalancer):
         LOG.debug('Getting parent port for loadbalancer {}', loadbalancer.id)
-        return self.network_driver.get_plugged_parent_port(loadbalancer)
+        return self.network_driver.get_plugged_parent_port(loadbalancer.vip)
 
 
 class FetchVirtEthIPs(BaseNetworkTask):

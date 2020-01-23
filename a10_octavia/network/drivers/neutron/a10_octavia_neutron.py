@@ -143,6 +143,14 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
 
         return new_trunk
 
+    def deallocate_trunk(self, trunk_id):
+        try:
+            self.neutron_client.delete_trunk(trunk_id)
+        except neutron_client_exceptions.NotFound:
+            message = _('Trunk {0} already deleted. '
+                        'Skipping. '.format(trunk_id))
+            LOG.debug(msg)
+
     def plug_trunk_subports(self, trunk_id, subports):
         payload = {'sub_ports': []}
         for subport in subports:
@@ -156,11 +164,11 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
 
         return updated_trunk
 
-    def get_plugged_parent_port(self, loadbalancer):
+    def get_plugged_parent_port(self, vip):
         try:
-            port = self.neutron_client.show_port(loadbalancer.vip.port_id)
+            port = self.neutron_client.show_port(vip.port_id)
             parent_port = self._port_to_parent_port(port.get("port"))
         except Exception:
-            LOG.debug('Couldn\'t retrieve port with id: {}'.format(loadbalancer.vip.port_id))
+            LOG.debug('Couldn\'t retrieve port with id: {}'.format(vip.port_id))
 
         return parent_port
