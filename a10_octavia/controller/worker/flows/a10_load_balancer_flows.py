@@ -195,7 +195,7 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
-            name="setting load balancer status PENDING_DELETE in database",
+            name="set load balancer status PENDING_DELETE",
             requires=a10constants.VTHUNDER,
             inject={"status": constants.PENDING_DELETE}))
         delete_LB_flow.add(a10_compute_tasks.NovaServerGroupDelete(
@@ -217,7 +217,7 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name="DELETED",
             requires=a10constants.VTHUNDER,
-            inject={"status": a10constants.DELETED}))
+            inject={"status": constants.DELETED}))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeDeletedInDB(
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.DisableLBAmphoraeHealthMonitoring(
@@ -306,7 +306,7 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
-            name="setting load balancer status PENDING_UPDATE in database",
+            name="set load balancer status PENDING_UPDATE",
             requires=a10constants.VTHUNDER,
             inject={"status": constants.PENDING_UPDATE}))
         update_LB_flow.add(network_tasks.ApplyQos(
