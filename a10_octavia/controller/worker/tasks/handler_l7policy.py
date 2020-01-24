@@ -23,11 +23,10 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class CreateL7Policy(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
+class L7PolicyParent(object):
 
-    def execute(self, l7policy, listeners, vthunder):
-        """ Execute create health monitor for amphora """
+    def set(self, l7policy, listeners, vthunder):
+
         try:
             filename = l7policy.id
             p = PolicyUtil()
@@ -36,7 +35,6 @@ class CreateL7Policy(BaseVThunderTask):
             c = self.client_factory(vthunder)
             c.slb.aflex_policy.create(file=filename, script=script, size=size, action="import")
             LOG.info("aFlex policy created successfully.")
-            # get SLB vPort
             listener = listeners[0]
 
             get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
@@ -64,11 +62,28 @@ class CreateL7Policy(BaseVThunderTask):
             LOG.info("Error occurred")
 
 
+class CreateL7Policy(L7PolicyParent, BaseVThunderTask):
+    """ Task to create a L7Policy """
+
+    def execute(self, l7policy, listeners, vthunder):
+        """ Execute create L7Policy """
+        self.set(l7policy, listeners, vthunder)
+
+
+class UpdateL7Policy(L7PolicyParent, BaseVThunderTask):
+    """ Task to update L7Policy """
+
+    def execute(self, l7policy, listeners, vthunder, update_dict):
+        """ Execute update L7Policy """
+        l7policy.__dict__.update(update_dict)
+        self.set(l7policy, listeners, vthunder)
+
+
 class DeleteL7Policy(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
+    """ Task to delete L7Policy """
 
     def execute(self, l7policy, vthunder):
-        """ Execute create health monitor for amphora """
+        """ Execute delete L7Policy """
         try:
             listener = l7policy.listener
             old_listener = l7policy.listener
@@ -77,7 +92,6 @@ class DeleteL7Policy(BaseVThunderTask):
                                            old_listener.name,
                                            old_listener.protocol,
                                            old_listener.protocol_port)
-            # removing listener attachment
             get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
                                                           listener.protocol, listener.protocol_port)
 

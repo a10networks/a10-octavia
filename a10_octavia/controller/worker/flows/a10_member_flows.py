@@ -18,6 +18,7 @@ from taskflow.patterns import unordered_flow
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.controller.worker.tasks import handler_server
 from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.common import a10constants
 from octavia.common import constants
 try:
@@ -55,10 +56,10 @@ class MemberFlows(object):
                       constants.POOL]))
         create_member_flow.add(database_tasks.MarkMemberPendingCreateInDB(
             requires=constants.MEMBER))
-        create_member_flow.add(network_tasks.CalculateDelta(
+        create_member_flow.add(a10_network_tasks.CalculateDelta(
             requires=constants.LOADBALANCER,
             provides=constants.DELTAS))
-        create_member_flow.add(network_tasks.HandleNetworkDeltas(
+        create_member_flow.add(a10_network_tasks.HandleNetworkDeltas(
             requires=constants.DELTAS, provides=constants.ADDED_PORTS))
         create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
@@ -153,7 +154,7 @@ class MemberFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_member_flow.add(handler_server.MemberUpdate(
-            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
+            requires=(constants.MEMBER, a10constants.VTHUNDER)))
         update_member_flow.add(database_tasks.UpdateMemberInDB(
             requires=[constants.MEMBER, constants.UPDATE_DICT]))
         update_member_flow.add(database_tasks.MarkMemberActiveInDB(
@@ -283,4 +284,3 @@ class MemberFlows(object):
                                    requires=(constants.LOADBALANCER,
                                              constants.LISTENERS)))
         return create_member_flow
-

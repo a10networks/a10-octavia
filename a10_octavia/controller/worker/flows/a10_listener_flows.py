@@ -32,8 +32,8 @@ except (ImportError, AttributeError):
 
 from a10_octavia.controller.worker.tasks import handler_virtual_port
 from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.common import a10constants
-from a10_octavia.common import data_models
 
 
 class ListenerFlows(object):
@@ -46,13 +46,12 @@ class ListenerFlows(object):
         create_listener_flow = linear_flow.Flow(constants.CREATE_LISTENER_FLOW)
         create_listener_flow.add(lifecycle_tasks.ListenersToErrorOnRevertTask(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        # Get VThunder details from database
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         create_listener_flow.add(handler_virtual_port.ListenersCreate(
             requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
-        create_listener_flow.add(network_tasks.UpdateVIP(
+        create_listener_flow.add(a10_network_tasks.UpdateVIP(
             requires=constants.LOADBALANCER))
         create_listener_flow.add(database_tasks.
                                  MarkLBAndListenersActiveInDB(
@@ -88,8 +87,6 @@ class ListenerFlows(object):
         delete_listener_flow = linear_flow.Flow(constants.DELETE_LISTENER_FLOW)
         delete_listener_flow.add(lifecycle_tasks.ListenerToErrorOnRevertTask(
             requires=constants.LISTENER))
-        # update delete flow task here
-        # Get VThunder details from database
         delete_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -137,7 +134,7 @@ class ListenerFlows(object):
         """
         delete_listener_flow = linear_flow.Flow(constants.DELETE_LISTENER_FLOW)
         # Should cascade delete all L7 policies
-        delete_listener_flow.add(network_tasks.UpdateVIPForDelete(
+        delete_listener_flow.add(a10_network_tasks.UpdateVIPForDelete(
             name='delete_update_vip_' + listener_name,
             requires=constants.LOADBALANCER))
         delete_listener_flow.add(database_tasks.DeleteListenerInDB(
@@ -189,10 +186,9 @@ class ListenerFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
         if project_id is None:
             create_listener_flow.add(network_tasks.UpdateVIP(
-               requires=constants.LOADBALANCER))
+                requires=constants.LOADBALANCER))
         create_listener_flow.add(database_tasks.
                                  MarkLBAndListenersActiveInDB(
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENERS]))
         return create_listener_flow
-

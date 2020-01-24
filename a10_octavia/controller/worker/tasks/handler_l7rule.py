@@ -23,11 +23,10 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class CreateL7Rule(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
+class L7RuleParent(object):
 
-    def execute(self, l7rule, listeners, vthunder):
-        """ Execute create health monitor for amphora """
+    def set(self, l7rule, listeners, vthunder):
+        """ Execute create l7rule """
         try:
             l7policy = l7rule.l7policy
             filename = l7policy.id
@@ -37,10 +36,8 @@ class CreateL7Rule(BaseVThunderTask):
             c = self.client_factory(vthunder)
             c.slb.aflex_policy.create(file=filename, script=script, size=size, action="import")
             LOG.info("aFlex policy created successfully.")
-            # get SLB vPort
             listener = listeners[0]
 
-            new_listener = listeners[0]
             get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
                                                           listener.protocol, listener.protocol_port)
 
@@ -59,20 +56,37 @@ class CreateL7Rule(BaseVThunderTask):
             kargs = {}
             kargs["aflex-scripts"] = aflex_scripts
 
-            update_listener = c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
-                                                                listener.protocol, listener.protocol_port, listener.default_pool_id,
-                                                                s_pers, c_pers, 1, **kargs)
+            c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
+                                              listener.protocol, listener.protocol_port, listener.default_pool_id,
+                                              s_pers, c_pers, 1, **kargs)
             LOG.info("Listener updated successfully.")
         except Exception as e:
             LOG.error(str(e))
             LOG.info("Error occurred")
 
 
-class DeleteL7Rule(BaseVThunderTask):
-    """ Task to delete a l7rule and associate it with provided pool. """
+class CreateL7Rule(L7RuleParent, BaseVThunderTask):
+    """ Task to create L7Rule """
 
     def execute(self, l7rule, listeners, vthunder):
-        """ Execute create health monitor for amphora """
+        self.client_factory(vthunder)
+        self.set(l7rule, listeners, vthunder)
+
+
+class UpdateL7Rule(L7RuleParent, BaseVThunderTask):
+    """ Task to update L7Rule """
+
+    def execute(self, l7rule, listeners, vthunder, update_dict):
+        l7rule.__dict__.update(update_dict)
+        self.client_factory(vthunder)
+        self.set(l7rule, listeners, vthunder)
+
+
+class DeleteL7Rule(BaseVThunderTask):
+    """ Task to delete a L7rule and disassociate from provided pool """
+
+    def execute(self, l7rule, listeners, vthunder):
+        """ Execute delete L7Rule """
         policy = l7rule.l7policy
         rules = policy.l7rules
 
@@ -94,7 +108,6 @@ class DeleteL7Rule(BaseVThunderTask):
             # get SLB vPort
             listener = listeners[0]
 
-            new_listener = listeners[0]
             get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
                                                           listener.protocol, listener.protocol_port)
 
@@ -113,9 +126,9 @@ class DeleteL7Rule(BaseVThunderTask):
             kargs = {}
             kargs["aflex-scripts"] = aflex_scripts
 
-            update_listener = c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
-                                                                listener.protocol, listener.protocol_port, listener.default_pool_id,
-                                                                s_pers, c_pers, 1, **kargs)
+            c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
+                                              listener.protocol, listener.protocol_port, listener.default_pool_id,
+                                              s_pers, c_pers, 1, **kargs)
             LOG.info("Listener updated successfully.")
         except Exception as e:
             LOG.error(str(e))

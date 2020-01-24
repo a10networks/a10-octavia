@@ -1,6 +1,43 @@
 CHANGES
 =======
 
+* added delete persist template support
+* updated doc string formats
+* Correction in class name and generalization of docstrings
+* Code refactor
+* a10\_octavia/common/openstack\_mappings.py
+* added persist file dependency
+* Handler Persists inclusion with minor code repairs for update functions
+* Changes required for corrections of CRUD functionalities in Octavia
+* Added minor syntax fix
+* Made minor fixes based upon review feedback
+* Made a number of minor fixes
+* Made multiple small fixes
+* Added further QOL update for functional testing
+* QOL update for functional testing
+* Refactored install script
+* Added QOL scripts for testing
+* Removed another change from rebase
+* Removed further unintended changes from rebase
+* Removed more intendation issues leftover from rebase
+* Fixed intendation
+* Removed further duplication
+* Removed duplication and other issues from rebase
+* Review changes for Afrin
+* Added update functions
+* Rack device code review 3
+* Added update functions
+* Review comments update 2
+* Review comments inclusion
+* support for rack vThunder devices
+* updated comments on file
+* Added custom network drivers for resolving multi-load-balancer config to vthunder
+* Doc update
+* Refactored install script
+* import fixes
+* Changed variable names
+* Added changes for new service called a10-health-manager
+* house keeper for a10-ocatvia
 * removed unwanted changes
 * removed unwanted changes
 * Added hm-phase1 changes
@@ -12,11 +49,13 @@ CHANGES
 * correction in data structure
 * removed non-required comment line
 * Rack device code review 3
+* Added update functions
 * removed changes in attempts
 * Review comments update 2
 * Adding VRRP synch correctin part
 * Review comments inclusion
 * Removal of swo file
+* Implemented stein support
 * added example config file
 * added example config
 * tested the RACK devices

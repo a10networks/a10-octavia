@@ -54,18 +54,18 @@ class BaseDatabaseTask(task.Task):
 
 class GetVThunderTask(BaseDatabaseTask):
 
-    """Test Vthunder entry"""
+    """Test VThunder entry"""
 
     def execute(self, amphora):
         vthunder = self.vthunder_repo.get(db_apis.get_session(), id=123)
         return vthunder
 
 
-class CreteVthunderEntry(BaseDatabaseTask):
+class CreateVThunderEntry(BaseDatabaseTask):
 
     """ Create VThunder device entry in DB"""
 
-    def execute(self, amphora, loadbalancer, role):
+    def execute(self, amphora, loadbalancer, role, status=constants.ACTIVE):
         vthunder_id = uuidutils.generate_uuid()
         self.config = self.a10_conf.get_conf()
 
@@ -74,7 +74,7 @@ class CreteVthunderEntry(BaseDatabaseTask):
         password = self.config.get(
             'DEFAULT', 'DEFAULT_VTHUNDER_PASSWORD').replace('"', '')
         axapi_version = int(
-            self.config.get('DEFAULT', 'DEFAULT_AXAPI_VERSION'))
+            self.config.get('DEFAULT', 'DEFAULT_AXAPI_VERSION').replace('"', ''))
 
         compute_id = None
         undercloud = True
@@ -105,15 +105,15 @@ class CreteVthunderEntry(BaseDatabaseTask):
             project_id=loadbalancer.project_id,
             compute_id=compute_id,
             topology=topology,
-            role=role, 
+            role=role,
             last_udp_update=datetime.now(),
-            status="ACTIVE",
+            status=status,
             updated_at=datetime.now())
 
         LOG.info("Successfully created vthunder entry in database.")
 
 
-class DeleteVthunderEntry(BaseDatabaseTask):
+class DeleteVThunderEntry(BaseDatabaseTask):
 
     """ Delete VThunder device entry in DB  """
 
@@ -132,7 +132,7 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
 
     def execute(self, loadbalancer):
         loadbalancer_id = loadbalancer.id
-        vthunder = self.vthunder_repo.getVThunderFromLB(
+        vthunder = self.vthunder_repo.get_vthunder_from_lb(
             db_apis.get_session(), loadbalancer_id)
         LOG.info("Successfully fetched vThunder details for LB")
         return vthunder
@@ -144,7 +144,7 @@ class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
 
     def execute(self, loadbalancer):
         loadbalancer_id = loadbalancer.id
-        vthunder = self.vthunder_repo.getBackupVThunderFromLB(
+        vthunder = self.vthunder_repo.get_backup_vthunder_from_lb(
             db_apis.get_session(), loadbalancer_id)
         return vthunder
         LOG.info("Successfully fetched vThunder details for LB")
@@ -152,7 +152,7 @@ class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
 # class GetVThunderByLoadBalancerID(BaseDatabaseTask):
 #     """ Get VThunder details from LoadBalancer ID """
 #     def execute(self, loadbalancer_id):
-#         vthunder = self.vthunder_repo.getVThunderFromLB(db_apis.get_session(), loadbalancer_id)
+#         vthunder = self.vthunder_repo.get_vthunder_from_lb(db_apis.get_session(), loadbalancer_id)
 #         return vthunder
 #         LOG.info("Successfully fetched vThunder details for LB")
 
@@ -162,10 +162,10 @@ class GetComputeForProject(BaseDatabaseTask):
     """ Get Compute details form Loadbalancer object -> project ID"""
 
     def execute(self, loadbalancer):
-        vthunder = self.vthunder_repo.getVThunderByProjectID(
+        vthunder = self.vthunder_repo.get_vthunder_by_project_id(
             db_apis.get_session(), loadbalancer.project_id)
         if vthunder is None:
-            vthunder = self.vthunder_repo.getSparevThunder(
+            vthunder = self.vthunder_repo.get_spare_vthunder(
                 db_apis.get_session())
             self.vthunder_repo.update(db_apis.get_session(), vthunder.id,
                                       status="USED_SPARE", updated_at=datetime.now())
@@ -192,13 +192,13 @@ class MapLoadbalancerToAmphora(BaseDatabaseTask):
                       "pool allocation.")
             return None
 
-        vthunder = self.vthunder_repo.getVThunderByProjectID(
+        vthunder = self.vthunder_repo.get_vthunder_by_project_id(
             db_apis.get_session(),
             loadbalancer.project_id)
 
         if vthunder is None:
             # Check for spare vthunder
-            vthunder = self.vthunder_repo.getSparevThunder(db_apis.get_session())
+            vthunder = self.vthunder_repo.get_spare_vthunder(db_apis.get_session())
             if vthunder is None:
                 LOG.debug("No Amphora available for load balancer with id %s",
                           loadbalancer.id)
@@ -229,13 +229,13 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
         LOG.info("Successfully created vthunder entry in database.")
 
 
-class CreateVthunderHealthEntry(BaseDatabaseTask):
+class CreateVThunderHealthEntry(BaseDatabaseTask):
 
     """ Create VThunder Health entry in DB """
 
     def execute(self, loadbalancer, vthunder_config):
         vthunder = self.vthunder_repo.create(db_apis.get_session(),
-                                             vthunder_id= uuidutils.generate_uuid(),
+                                             vthunder_id=uuidutils.generate_uuid(),
                                              device_name=vthunder_config.device_name,
                                              username=vthunder_config.username,
                                              password=vthunder_config.password,
@@ -247,9 +247,9 @@ class CreateVthunderHealthEntry(BaseDatabaseTask):
                                              topology="STANDALONE",
                                              role="MASTER")
         LOG.info("Successfully created vthunder entry in database.")
-    
 
-class MarkVthunderStatusInDB(BaseDatabaseTask):
+
+class MarkVThunderStatusInDB(BaseDatabaseTask):
 
     def execute(self, vthunder, status):
         try:
@@ -263,7 +263,7 @@ class MarkVthunderStatusInDB(BaseDatabaseTask):
                       'for amphora: %s, skipping.', vthunder_id)
 
 
-class CreateSpareVthunderEntry(BaseDatabaseTask):
+class CreateSpareVThunderEntry(BaseDatabaseTask):
 
     def execute(self, amphora):
         vthunder_id = uuidutils.generate_uuid()

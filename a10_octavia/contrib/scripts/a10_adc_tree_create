@@ -1,0 +1,21 @@
+#!/bin/bash
+if [[ $1 == "delete" ]]; then
+    echo "[-] Deleting L7Policy"
+    openstack loadbalancer l7policy delete policy1
+    echo "[-] Deleting health monitor"
+    openstack loadbalancer healthmonitor delete hm1
+    echo "[-] Deleting member"
+    openstack loadbalancer member delete pool1 mem1
+    echo "[-] Deleting pool"
+    openstack loadbalancer pool delete pool1
+    echo "[-] Deleting listener"
+    openstack loadbalancer listener delete l1
+else
+    openstack loadbalancer listener create --protocol HTTP --protocol-port 8080 --name l1 lb1
+    openstack loadbalancer pool create --protocol HTTP --lb-algorithm ROUND_ROBIN --listener l1 --name pool1
+    openstack loadbalancer member create --address 10.0.0.3 --protocol-port 80 --name mem1 pool1
+    openstack loadbalancer healthmonitor create --delay 10 --timeout 5  --max-retries 4 --type HTTP --http-method HEAD --url-path "/abc" --name hm1 --expected-codes 208 pool1
+    openstack loadbalancer l7policy create --action REJECT --name policy1 l1
+    openstack loadbalancer l7rule create --compare-type REGEX --value "abc" --type FILE_TYPE policy1
+
+fi

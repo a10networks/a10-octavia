@@ -18,10 +18,10 @@ from taskflow import task
 from octavia.controller.worker import task_utils as task_utilities
 from octavia.common import constants
 import acos_client
-from acos_client.errors import ACOSException 
+from acos_client.errors import ACOSException
 from octavia.amphorae.driver_exceptions import exceptions as driver_except
 import time
-from requests.exceptions import ConnectionError 
+from requests.exceptions import ConnectionError
 from requests.exceptions import ReadTimeout
 from httplib import BadStatusLine
 from octavia.db import api as db_apis
@@ -34,52 +34,9 @@ from a10_octavia.controller.worker.tasks import persist
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 
 
-
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
-class CreateVitualServerTask(BaseVThunderTask):
-    """Task to create a virtual server in vthunder device."""
-
-    def execute(self, loadbalancer_id, loadbalancer, vthunder):
-        try:
-            c = self.client_factory(vthunder)
-            r = c.slb.virtual_server.create(loadbalancer_id, loadbalancer.vip.ip_address)
-            status = { 'loadbalancers': [{"id": loadbalancer_id,
-                       "provisioning_status": constants.ACTIVE }]}
-            #LOG.info("vthunder details:" + str(vthunder))
-        except Exception as e:
-            r = str(e)
-            LOG.info(r)
-            status = { 'loadbalancers': [{"id": loadbalancer_id,
-                       "provisioning_status": constants.ERROR }]}
-        LOG.info(str(status))
-        return status
-
-
-    def revert(self, loadbalancer_id, *args, **kwargs):
-        pass
-
-class DeleteVitualServerTask(BaseVThunderTask):
-    """Task to delete a virtual server in vthunder device."""
-
-    def execute(self, loadbalancer, vthunder):
-        loadbalancer_id = loadbalancer.id
-        try:
-            c = self.client_factory(vthunder)
-            r = c.slb.virtual_server.delete(loadbalancer_id)
-            status = { 'loadbalancers': [{"id": loadbalancer_id,
-                       "provisioning_status": constants.DELETED }]}
-        except Exception as e:
-            r = str(e)
-            LOG.info(r)
-            status = { 'loadbalancers': [{"id": loadbalancer_id,
-                       "provisioning_status": constants.ERROR }]}
-        LOG.info(str(status))
-        return status
-
-    def revert(self, loadbalancer, *args, **kwargs):
-        pass
 
 class VThunderComputeConnectivityWait(BaseVThunderTask):
     """"Task to wait for the compute instance to be up."""
@@ -87,9 +44,9 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
     def execute(self, vthunder, amphora):
         """Execute get_info routine for a vThunder until it responds."""
         try:
-            
+
             LOG.info("Attempting to connect vThunder device for connection.")
-            attempts = 20
+            attempts = 30
             while attempts >= 0:
                 try:
                     attempts = attempts - 1
@@ -100,12 +57,12 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
                 except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
                     attemptid = 21 - attempts
                     time.sleep(20)
-                    LOG.info("VThunder connection attempt - "+ str(attemptid))
+                    LOG.info("VThunder connection attempt - " + str(attemptid))
                     pass
             if attempts < 0:
-               LOG.error("Failed to connect vThunder in expected amount of boot time.")
-               raise ConnectionError
-            
+                LOG.error("Failed to connect vThunder in expected amount of boot time.")
+                raise ConnectionError
+
         except driver_except.TimeOutException:
             LOG.error("Amphora compute instance failed to become reachable. "
                       "This either means the compute driver failed to fully "
@@ -114,6 +71,7 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
             self.amphora_repo.update(db_apis.get_session(), amphora.id,
                                      status=constants.ERROR)
             raise
+
 
 class AmphoraePostVIPPlug(BaseVThunderTask):
     """"Task to reboot and configure vThunder device"""
@@ -153,6 +111,7 @@ class AmphoraePostMemberNetworkPlug(BaseVThunderTask):
             LOG.info(str(e))
             raise
 
+
 class EnableInterface(BaseVThunderTask):
     """"Task to configure vThunder ports"""
 
@@ -165,30 +124,37 @@ class EnableInterface(BaseVThunderTask):
         except Exception as e:
             LOG.error("Unable to configure vthunder interface")
             LOG.info(str(e))
-            #raise
+
 
 class EnableInterfaceForMembers(BaseVThunderTask):
     """ Task to enable an interface associated with a member """
-    
+
     def execute(self, added_ports, loadbalancer, vthunder):
-        """ Enable specific interface of amphora """ 
+        """ Enable specific interface of amphora """
         try:
-            #TODO change if we go for active-passive infra
             amphora_id = loadbalancer.amphorae[0].id
             compute_id = loadbalancer.amphorae[0].compute_id
             network_driver = utils.get_network_driver()
             nics = network_driver.get_plugged_networks(compute_id)
             if len(added_ports[amphora_id]) > 0:
-                target_interface = len(nics)
-                c = self.client_factory(vthunder)
-                amp_info = c.system.action.setInterface(target_interface-1)
-                LOG.info("Configured the new interface required for member.")
+                configured_interface = False
+                attempts = 5
+                while attempts > 0 and configured_interface is False:
+                    try:
+                        target_interface = len(nics)
+                        c = self.client_factory(vthunder)
+                        amp_info = c.system.action.setInterface(target_interface - 1)
+                        configured_interface = True
+                        LOG.info("Configured the new interface required for member.")
+                    except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
+                        attempts = attempts - 1
             else:
-                LOG.info("Configuration of new interface is not required for member.")            
+                LOG.info("Configuration of new interface is not required for member.")
         except Exception as e:
             LOG.error("Unable to configure vthunder interface")
             LOG.info(str(e))
             raise
+
 
 class ConfigureVRRP(BaseVThunderTask):
     """"Task to configure vThunder VRRP """
@@ -200,28 +166,28 @@ class ConfigureVRRP(BaseVThunderTask):
         if not status:
             try:
                 c = self.client_factory(vthunder)
-                amp_info = c.system.action.configureVRRP(1,1)
+                amp_info = c.system.action.configureVRRP(1, 1)
                 LOG.info("Configured the master vThunder for VRRP")
             except Exception as e:
                 LOG.error("Unable to configure master vThunder VRRP")
                 LOG.info(str(e))
                 raise
-        
+
             try:
                 c = self.client_factory(backup_vthunder)
-                amp_info = c.system.action.configureVRRP(2,1)
+                amp_info = c.system.action.configureVRRP(2, 1)
                 LOG.info("Configured the backup vThunder for VRRP")
             except Exception as e:
                 LOG.error("Unable to configure backup vThunder VRRP")
                 LOG.info(str(e))
-                #raise
-        return status     
+                # TODO raise - To be handled in exception handling task
+        return status
 
 
 class ConfigureVRID(BaseVThunderTask):
     """"Task to configure vThunder VRRP """
 
-    def execute(self, vthunder, backup_vthunder, vrrp_status ):
+    def execute(self, vthunder, backup_vthunder, vrrp_status):
         """Execute to configure vrrp in two vThunder devices."""
         if not vrrp_status:
             try:
@@ -232,7 +198,7 @@ class ConfigureVRID(BaseVThunderTask):
                 LOG.error("Unable to configure master vThunder VRRP")
                 LOG.info(str(e))
                 raise
-        
+
             try:
                 c = self.client_factory(backup_vthunder)
                 amp_info = c.system.action.configureVRID(1)
@@ -240,7 +206,8 @@ class ConfigureVRID(BaseVThunderTask):
             except Exception as e:
                 LOG.error("Unable to configure backup vThunder VRRP")
                 LOG.info(str(e))
-                #raise
+                # raise
+
 
 class ConfigureVRRPSync(BaseVThunderTask):
     """"Task to sync vThunder VRRP """
@@ -258,7 +225,7 @@ class ConfigureVRRPSync(BaseVThunderTask):
             except Exception as e:
                 LOG.error("Unable to sync master vThunder VRRP")
                 LOG.info(str(e))
-                #raise
+                # raise
 
 
 class ConfigureaVCS(BaseVThunderTask):
@@ -445,320 +412,47 @@ class MemberDelete(BaseVThunderTask):
             LOG.info("Error occurred")
 
 
-class CreateHealthMonitorOnVthunder(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
+class CreateHealthMonitorOnVthunder(BaseVThunderTask):	
+    """ Task to create a healthmonitor and associate it with provided pool. """	
 
-    def execute(self, vthunder):
-        """ Execute create health monitor for master vthunder """
-        # TODO : Length of name of healthmonitor for older vThunder devices
-        try:
-            method = None
-            url = None
-            expect_code = None
-            name = a10constants.VTHUNDER_UDP_HEARTBEAT 
-            interval = CONF.health_manager.heartbeat_interval
-            timeout = 3
-            max_retries = 5
-            port = CONF.health_manager.bind_port
-            ipv4 = CONF.health_manager.bind_ip
-            c = self.client_factory(vthunder)
-            if interval < timeout:
-                LOG.warning("Interval should be greater than or equal to timeout(3 secs). Reverting to default(10 secs).")
-                interval = 10
-            out = c.slb.hm.create(name, openstack_mappings.hm_type(c, 'UDP'),
-                            interval, timeout, max_retries, method, url, expect_code,
-                            port, ipv4)
-            LOG.info("Health Monitor created successfully.")
-            try:
-                c = self.client_factory(vthunder)
-                name = a10constants.HM_SERVER
-                # TODO: ip_address to be configured using a10-config file. To be taken care in a10-config implementation.
-                # For now using api_settings section to obtain local server ip_address.
-                ip_address = CONF.api_settings.bind_host
-                health_check = a10constants.VTHUNDER_UDP_HEARTBEAT
-                out = c.slb.server.create(name, ip_address, health_check=health_check)
-                LOG.info("Server created successfully. Enabled health check for health monitor.")
-            except Exception as e:
-                LOG.info(str(e))
-        except Exception as e:
+    def execute(self, vthunder):	
+        """ Execute create health monitor for master vthunder """	
+        # TODO : Length of name of healthmonitor for older vThunder devices	
+        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30	
+        try:	
+            method = None	
+            url = None	
+            expect_code = None	
+            ##TODO : change this	
+            name = a10constants.VTHUNDER_UDP_HEARTBEAT 	
+            interval = CONF.health_manager.heartbeat_interval	
+            timeout = 3	
+            max_retries = 5	
+            port = CONF.health_manager.bind_port	
+            ipv4 = CONF.health_manager.bind_ip	
+            c = self.client_factory(vthunder)	
+            out = c.slb.hm.create(name, openstack_mappings.hm_type(c, 'UDP'),	
+                                interval, timeout, max_retries, method, url, expect_code,	
+                                port, ipv4)	
+            LOG.info("Heath Monitor created successfully.")	
+        except Exception as e:	
+            LOG.info(str(e))	
+        try:    	
+            c = self.client_factory(vthunder)	
+            name = a10constants.HM_SERVER	
+            ip_address = '172.17.20.52'	
+            health_check = a10constants.VTHUNDER_UDP_HEARTBEAT	
+            out = c.slb.server.create(name, ip_address, health_check=health_check)	
+            LOG.info("Server created successfully. Enabled health check for health monitor.")	
+        except Exception as e:	
             LOG.info(str(e))
-
-
-class CreateAndAssociateHealthMonitor(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
-
-    def execute(self, health_mon, vthunder):
-        """ Execute create health monitor for amphora """  
-        # TODO : Length of name of healthmonitor for older vThunder devices 
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-        try:
-            method = None
-            url = None
-            expect_code = None
-            port = None
-            if health_mon.type in ['HTTP', 'HTTPS']:
-                method = health_mon.http_method
-                url = health_mon.url_path
-                expect_code = health_mon.expected_codes
-            c = self.client_factory(vthunder)
-            out = c.slb.hm.create(health_mon.id[0:5], openstack_mappings.hm_type(c, health_mon.type), 
-                                         health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
-                                         method=method, url=url, expect_code=expect_code, port=port
-                                         ) 
-            LOG.info("Heath Monitor created successfully.")
-        except Exception as e:
-            print(str(e))
-        try:
-            c = self.client_factory(vthunder)
-            out = c.slb.service_group.update(health_mon.pool_id,
-                                                    health_monitor=health_mon.id[0:5],
-                                                    health_check_disable=0) 
-            LOG.info("Heath Monitor associated to pool successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")
- 
-class DeleteHealthMonitor(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
-
-    def execute(self, health_mon, vthunder):
-        """ Execute create health monitor for amphora """   
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-        try:
-            c = self.client_factory(vthunder)
-            out = c.slb.service_group.update(health_mon.pool_id,
-                                                    health_monitor="",
-                                                    health_check_disable=False) 
-            LOG.info("Heath Monitor disassociated to pool successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")
-        try:
-            c = self.client_factory(vthunder)
-            out = c.slb.hm.delete(health_mon.id)
-            LOG.info("Heath Monitor deleted successfully.")
-        except Exception as e:
-            print(str(e))
-
-
-class CreateL7Policy(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
-
-    def execute(self, l7policy, listeners, vthunder):
-        """ Execute create health monitor for amphora """   
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-        try:
-            filename = l7policy.id
-            action = "import"
-            p = PolicyUtil()
-            script = p.createPolicy(l7policy)
-            size = len(script.encode('utf-8'))
-            c = self.client_factory(vthunder)
-            out = c.slb.aflex_policy.create(file=filename, script=script, size=size, action=action)
-            LOG.info("aFlex policy created successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")
-        try:
-            # get SLB vPort 
-            listener = listeners[0]
-            
-            new_listener = listeners[0]
-            c = self.client_factory(vthunder)
-            get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
-                                                listener.protocol, listener.protocol_port)
-            
-            aflex_scripts = []
-            if 'aflex-scripts' in get_listener['port']:
-                aflex_scripts = get_listener['port']['aflex-scripts']
-                aflex_scripts.append({"aflex": filename})
-            else:
-                aflex_scripts = [{"aflex": filename}]
-            
-            persistence = persist.PersistHandler(
-            c, listener.default_pool)
-
-            s_pers = persistence.s_persistence()
-            c_pers = persistence.c_persistence()
-            kargs = {}
-            kargs["aflex-scripts"] = aflex_scripts
-
-            update_listener = c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
-                                                                listener.protocol, listener.protocol_port, listener.default_pool_id,
-                                                                s_pers, c_pers, 1, **kargs)
-            LOG.info("Listener updated successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")
-
-class DeleteL7Policy(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
-
-    def execute(self, l7policy, vthunder):
-        """ Execute create health monitor for amphora """   
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-        try:
-            listener = l7policy.listener
-            old_listener = l7policy.listener
-            c = self.client_factory(vthunder)
-            get_listener = c.slb.virtual_server.vport.get(old_listener.load_balancer_id,
-                                                                 old_listener.name,
-                                                                 old_listener.protocol,
-                                                                 old_listener.protocol_port)
-            # removing listener attachment
-            new_aflex_scripts = []
-            if 'aflex-scripts' in get_listener['port']:
-                aflex_scripts = get_listener['port']['aflex-scripts']
-                for aflex in aflex_scripts:
-                    if aflex['aflex'] != l7policy.id:
-                        new_aflex_scripts.append(aflex)
-            
-            persistence = persist.PersistHandler(
-            c, listener.default_pool)
-
-            s_pers = persistence.s_persistence()
-            c_pers = persistence.c_persistence()
-
-            kargs = {}
-            kargs["aflex-scripts"] = new_aflex_scripts
-
-            update_listener = c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
-                                                                listener.protocol, listener.protocol_port, listener.default_pool_id,
-                                                                s_pers, c_pers, 1, **kargs)
-            
-            LOG.info("aFlex policy detached from port successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")  
-
-        try:
-            c = self.client_factory(vthunder)
-            out = c.slb.aflex_policy.delete(l7policy.id)
-            LOG.info("aFlex policy deleted successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")       
-
-class CreateL7Rule(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
-
-    def execute(self, l7rule, listeners, vthunder):
-        """ Execute create health monitor for amphora """
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-        try:
-            l7policy = l7rule.l7policy
-            filename = l7policy.id
-            action = "import"
-            p = PolicyUtil()
-            script = p.createPolicy(l7policy)
-            size = len(script.encode('utf-8'))
-            c = self.client_factory(vthunder)
-            out = c.slb.aflex_policy.create(file=filename, script=script, size=size, action=action)
-            LOG.info("aFlex policy created successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")
-        try:
-            # get SLB vPort
-            listener = listeners[0]
-
-            new_listener = listeners[0]
-            c = self.client_factory(vthunder)
-            get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
-                                                listener.protocol, listener.protocol_port)
-
-            aflex_scripts = []
-            if 'aflex-scripts' in get_listener['port']:
-                aflex_scripts = get_listener['port']['aflex-scripts']
-                aflex_scripts.append({"aflex": filename})
-            else:
-                aflex_scripts = [{"aflex": filename}]
-
-            persistence = persist.PersistHandler(
-            c, listener.default_pool)
-
-            s_pers = persistence.s_persistence()
-            c_pers = persistence.c_persistence()
-
-            kargs = {}
-            kargs["aflex-scripts"] = aflex_scripts
-
-            update_listener = c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
-                                                                listener.protocol, listener.protocol_port, listener.default_pool_id,
-                                                                s_pers, c_pers, 1, **kargs)
-            LOG.info("Listener updated successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")
-
-
-class DeleteL7Rule(BaseVThunderTask):
-    """ Task to delete a l7rule and associate it with provided pool. """
-
-    def execute(self, l7rule, listeners, vthunder):
-        """ Execute create health monitor for amphora """
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-        policy = l7rule.l7policy
-        rules = policy.l7rules
-
-        for index, rule in enumerate(rules):
-                if rule.id == l7rule.id:
-                    del rules[index]
-                    break
-        policy.rules = rules
-        l7rule.l7policy = policy
-        try:
-            l7pol = l7rule.l7policy
-            filename = l7pol.id
-            action = "import"
-            p = PolicyUtil()
-            script = p.createPolicy(l7pol)
-            size = len(script.encode('utf-8'))
-            c = self.client_factory(vthunder)
-            out = c.slb.aflex_policy.create(file=filename, script=script, size=size, action=action)
-            LOG.info("aFlex policy created successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")
-        try:
-            # get SLB vPort
-            listener = listeners[0]
-
-            new_listener = listeners[0]
-            c = self.client_factory(vthunder)
-            get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
-                                                listener.protocol, listener.protocol_port)
-
-            aflex_scripts = []
-            if 'aflex-scripts' in get_listener['port']:
-                aflex_scripts = get_listener['port']['aflex-scripts']
-                aflex_scripts.append({"aflex": filename})
-            else:
-                aflex_scripts = [{"aflex": filename}]
-
-            persistence = persist.PersistHandler(
-            c, listener.default_pool)
-
-            s_pers = persistence.s_persistence()
-            c_pers = persistence.c_persistence()
-
-            kargs = {}
-            kargs["aflex-scripts"] = aflex_scripts
-
-            update_listener = c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
-                                                                listener.protocol, listener.protocol_port, listener.default_pool_id,
-                                                                s_pers, c_pers, 1, **kargs)
-            LOG.info("Listener updated successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")
+                
 
 class CheckVRRPStatus(BaseVThunderTask):
     """"Task to check VRRP status"""
+
     def execute(self, vthunder):
         """Execute to configure vrrp in two vThunder devices."""
         c = self.client_factory(vthunder)
         status = c.system.action.check_vrrp_status()
         return status
-
-

@@ -13,7 +13,6 @@
 #    under the License.
 
 
-
 from oslo_log import log as logging
 from oslo_config import cfg
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
@@ -23,10 +22,10 @@ LOG = logging.getLogger(__name__)
 
 
 class MemberCreate(BaseVThunderTask):
-    """Task to update amphora with all specified member configurations."""
+    """ Task to create member """
 
     def execute(self, member, vthunder, pool):
-        """Execute create member for an amphora."""
+        """ Execute create member """
 
         conn_limit = self.readConf('SERVER', 'conn_limit')
         if conn_limit is not None:
@@ -37,10 +36,10 @@ class MemberCreate(BaseVThunderTask):
         server_args = self.meta(member, 'server', {})
         try:
             c = self.client_factory(vthunder)
-            if not member.provisioning_status:
-                status = c.slb.DOWN
+            if not member.enabled:
+                status = False
             else:
-                status = c.slb.UP
+                status = True
             if conn_limit is not None:
                 if conn_limit < 1 or conn_limit > 8000000:
                     LOG.warning("The specified member server connection limit " +
@@ -51,7 +50,8 @@ class MemberCreate(BaseVThunderTask):
                     server_args['conn-limit'] = conn_limit
             if conn_resume is not None:
                 if conn_resume < 1 or conn_resume > 1000000:
-                    LOG.warning("The specified conn_resume value is invalid. The value should be either 0 or 1")
+                    LOG.warning(
+                        "The specified conn_resume value is invalid. The value should be either 0 or 1")
                 else:
                     server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}
@@ -76,14 +76,14 @@ class MemberCreate(BaseVThunderTask):
 
 
 class MemberDelete(BaseVThunderTask):
-    """Task to update amphora with all specified member configurations."""
+    """ Task to delete member """
 
     def execute(self, member, vthunder, pool):
-        """Execute delete member for an amphora."""
+        """ Execute delete member """
         try:
             c = self.client_factory(vthunder)
             c.slb.service_group.member.delete(pool.id, member.id, member.protocol_port)
-            LOG.info("Member de-associated to pool successfully.")
+            LOG.info("Member dissociated from pool successfully.")
             c.slb.server.delete(member.id)
             LOG.info("Member deleted successfully.")
         except Exception as e:
@@ -92,9 +92,10 @@ class MemberDelete(BaseVThunderTask):
 
 
 class MemberUpdate(BaseVThunderTask):
+    """ Task to update member """
 
-    def execute(self, member, vthunder, pool):
-        """Execute create member for an amphora."""
+    def execute(self, member, vthunder):
+        """ Execute update member """
         conn_limit = self.readConf('SERVER', 'conn_limit')
         if conn_limit is not None:
             conn_limit = int(conn_limit)
@@ -105,10 +106,10 @@ class MemberUpdate(BaseVThunderTask):
 
         try:
             c = self.client_factory(vthunder)
-            if not member.provisioning_status:
-                status = c.slb.DOWN
+            if not member.enabled:
+                status = False
             else:
-                status = c.slb.UP
+                status = True
             if conn_limit is not None:
                 if conn_limit < 1 or conn_limit > 8000000:
                     LOG.warning("The specified member server connection limit " +
@@ -119,7 +120,8 @@ class MemberUpdate(BaseVThunderTask):
                     server_args['conn-limit'] = conn_limit
             if conn_resume is not None:
                 if conn_resume < 1 or conn_resume > 1000000:
-                    LOG.warning("The specified conn_resume value is invalid. The value should be either 0 or 1")
+                    LOG.warning(
+                        "The specified conn_resume value is invalid. The value should be either 0 or 1")
                 else:
                     server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}
