@@ -84,7 +84,7 @@ class A10HealthManager(object):
             'failover_cancelled': 0,
         }
         futs = []
-        failover_wait_time = CONF.health_manager.heartbeat_timeout
+        failover_wait_time = CONF.a10_health_manager.heartbeat_timeout
         while not self.dead.is_set():
             lock_session = None
             try:
