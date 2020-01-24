@@ -243,9 +243,9 @@ class VThunderFlows(object):
             requires=constants.LOADBALANCER_ID,
             provides=constants.LOADBALANCER))
         create_amp_for_lb_subflow.add(a10_database_tasks.CreateVThunderEntry(
-            name=sf_name + '-' + 'create_vThunder_entry_in_database',
+            name=sf_name + '-' + 'set load balancer status PENDING_CREATE in database',
             requires=(constants.AMPHORA, constants.LOADBALANCER),
-            inject={"role": role, "status": a10constants.CREATING}))
+            inject={"role": role, "status": constants.PENDING_CREATE}))
         # Get VThunder details from database
         create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=sf_name + '-' + 'Get_Loadbalancer_from_db',
@@ -323,9 +323,9 @@ class VThunderFlows(object):
             provides=constants.AMPHORA))
         # create vThunder entry in custom DB
         vthunder_for_amphora_subflow.add(a10_database_tasks.CreateVThunderEntry(
-            name=sf_name + '-' + 'create_vThunder_entry_in_database',
+            name=sf_name + '-' + 'set load balancer status PENDING_CREATE in database',
             requires=(constants.AMPHORA, constants.LOADBALANCER),
-            inject={"role": role, "status": a10constants.CREATING}))
+            inject={"role": role, "status": constants.PENDING_CREATE}))
         # Get VThunder details from database
         vthunder_for_amphora_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=sf_name + '-' + 'Get_Loadbalancer_from_db',

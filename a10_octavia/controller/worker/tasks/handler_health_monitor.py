@@ -92,7 +92,7 @@ class UpdateHealthMonitor(BaseVThunderTask):
             c = self.client_factory(vthunder)
             c.slb.hm.update(health_mon.id[0:5], openstack_mappings.hm_type(c, health_mon.type),
                             health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
-                            method=method, url=url, expect_code=expect_code, port=None, 
+                            method=method, url=url, expect_code=expect_code, port=None,
                             axapi_args=args
                             )
             LOG.info("Health Monitor created successfully.")

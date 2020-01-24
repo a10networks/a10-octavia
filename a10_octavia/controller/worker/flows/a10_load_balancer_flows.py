@@ -195,9 +195,9 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
-            name="DELETING",
+            name="setting load balancer status PENDING_DELETE in database",
             requires=a10constants.VTHUNDER,
-            inject={"status": a10constants.DELETING}))
+            inject={"status": constants.PENDING_DELETE}))
         delete_LB_flow.add(a10_compute_tasks.NovaServerGroupDelete(
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
@@ -302,13 +302,17 @@ class LoadBalancerFlows(object):
         update_LB_flow = linear_flow.Flow(constants.UPDATE_LOADBALANCER_FLOW)
         update_LB_flow.add(lifecycle_tasks.LoadBalancerToErrorOnRevertTask(
             requires=constants.LOADBALANCER))
+        update_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        update_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
+            name="setting load balancer status PENDING_UPDATE in database",
+            requires=a10constants.VTHUNDER,
+            inject={"status": constants.PENDING_UPDATE}))
         update_LB_flow.add(network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.UPDATE_DICT)))
         # update_LB_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        update_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-            requires=constants.LOADBALANCER,
-            provides=a10constants.VTHUNDER))
         update_LB_flow.add(handler_virtual_server.UpdateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.STATUS))

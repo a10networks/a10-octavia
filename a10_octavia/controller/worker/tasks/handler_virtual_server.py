@@ -73,10 +73,10 @@ class CreateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
 
     def execute(self, loadbalancer_id, loadbalancer, vthunder):
         c = self.client_factory(vthunder)
-        status = LoadBalancerParent.set(self, c.slb.virtual_server.create,
-                                        loadbalancer_id,
-                                        loadbalancer,
-                                        vthunder)
+        status = self.set(c.slb.virtual_server.create,
+                          loadbalancer_id,
+                          loadbalancer,
+                          vthunder)
         return status
 
 
@@ -106,11 +106,10 @@ class UpdateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
 
     def execute(self, loadbalancer, vthunder):
         c = self.client_factory(vthunder)
-        status = LoadBalancerParent.set(self,
-                                        c.slb.virtual_server.update,
-                                        loadbalancer.id,
-                                        loadbalancer,
-                                        vthunder)
+        status = self.set(c.slb.virtual_server.update,
+                          loadbalancer.id,
+                          loadbalancer,
+                          vthunder)
         return status
 
     def revert(self, loadbalancer, vthunder, update_dict):
