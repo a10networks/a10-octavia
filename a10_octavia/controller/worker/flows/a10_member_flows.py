@@ -138,8 +138,6 @@ class MemberFlows(object):
                                                          constants.MEMBER}))
         delete_member_flow.add(database_tasks.DeleteMemberInDB(
             requires=constants.MEMBER))
-        # delete_member_flow.add(amphora_driver_tasks.ListenersUpdate(
-        #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
 
         # Get VThunder details from database
         delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
