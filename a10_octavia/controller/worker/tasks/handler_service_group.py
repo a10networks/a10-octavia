@@ -27,9 +27,9 @@ class PoolParent(object):
     def set(self, set_method, pool, vthunder):
         args = {'service_group': self.meta(pool, 'service_group', {})}
         try:
-            conf_templates = CONF.SERVICE_GROUP.template_server
-            port_templates = CONF.SERVICE_GROUP.template_port
-            policy_templates = CONF.SERVICE_GROUP.template_policy
+            conf_templates = CONF.service_group.template_server
+            port_templates = CONF.service_group.template_port
+            policy_templates = CONF.service_group.template_policy
             service_group_temp = {}
             service_group_temp['template-server'] = conf_templates
             service_group_temp['template-port'] = port_templates

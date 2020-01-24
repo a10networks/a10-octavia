@@ -18,14 +18,13 @@
 
 
 import json
-import netaddr
 import six
 
 from oslo_config import cfg
 from oslo_config.types import List
 from oslo_log import log as logging
 
-from a10_octavia.common import data_models
+from a10_octavia.common import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -79,51 +78,4 @@ class ListOfObjects(List):
             item = item.replace("\'", "\"")
             single_dict = json.loads(item)
             final_list.append(single_dict)
-        return convert_to_rack_vthunder_conf(final_list)
-
-
-def convert_to_rack_vthunder_conf(rack_list):
-    """ Validates for all vthunder nouns for rack devices
-        configurations.
-    """
-    rack_dict = {}
-    validation_flag = False
-    try:
-        for rack_device in rack_list:
-            validation_flag = validate_params(rack_device)
-            if validation_flag:
-                rack_device['undercloud'] = True
-                vthunder_conf = data_models.VThunder(**rack_device)
-                rack_dict[rack_device['project_id']] = vthunder_conf
-            else:
-                LOG.warning('Invalid definition of rack device for '
-                            'project ' + rack_device['project_id'])
-
-    except KeyError as err:
-        LOG.error("Invalid definition of rack device in configuration file."
-                  "The Loadbalancer you create shall boot as overcloud."
-                  "Check attribute: " + str(err))
-    return rack_dict
-
-
-def validate_params(rack_info):
-    """Check for all the required parameters for rack configurations.
-    """
-    if all(k in rack_info for k in ('project_id', 'ip_address',
-                                    'username', 'password', 'device_name')):
-        if all(rack_info[x] is not None for x in ('project_id', 'ip_address',
-                                                  'username', 'password', 'device_name')):
-            if validate_ipv4(rack_info['ip_address']):
-                return True
-            LOG.error('Invalid IP address given ' + rack_info['ip_address'])
-    LOG.error('Configuration of `devices` under [RACK_VTHUNDER] is invalid. '
-              'Please check your configuration. The params `project_id`, '
-              '`ip_address`, `username`, `password` and `device_name` cannot be None ')
-    return False
-
-
-def validate_ipv4(address):
-    """Validates for IP4 address format"""
-    if not netaddr.valid_ipv4(address, netaddr.core.INET_PTON):
-        return False
-    return True
+        return utils.convert_to_rack_vthunder_conf(final_list)

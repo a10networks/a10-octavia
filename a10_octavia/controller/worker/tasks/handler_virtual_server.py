@@ -32,8 +32,8 @@ class LoadBalancerParent(object):
             if not loadbalancer.provisioning_status:
                 status = c.slb.DOWN
             vip_meta = self.meta(loadbalancer, 'virtual_server', {})
-            arp_disable = CONF.SLB.arp_disable
-            vrid = CONF.SLB.default_virtual_server_vrid
+            arp_disable = CONF.slb.arp_disable
+            vrid = CONF.slb.default_virtual_server_vrid
             set_method(
                 loadbalancer_id,
                 loadbalancer.vip.ip_address,

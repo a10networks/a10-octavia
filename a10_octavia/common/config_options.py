@@ -26,19 +26,19 @@ import oslo_messaging as messaging
 from octavia.common import constants
 from octavia.i18n import _
 from octavia import version
-from a10_octavia.common import a10_types
+from a10_octavia.common import config_types
 
 LOG = logging.getLogger(__name__)
 
 
 A10_VTHUNDER_OPTS = [
-    cfg.StrOpt('DEFAULT_VTHUNDER_USERNAME',
+    cfg.StrOpt('default_vthunder_username',
                default='admin',
                help=_('VThunder username')),
-    cfg.StrOpt('DEFAULT_VTHUNDER_PASSWORD',
+    cfg.StrOpt('default_vthunder_password',
                default='a10',
                help=_('VThunder password')),
-    cfg.IntOpt('DEFAULT_AXAPI_VERSION',
+    cfg.IntOpt('default_axapi_version',
                default=30,
                help=_('VThunder axapi version')),
 
@@ -50,22 +50,6 @@ A10_SLB_OPTS = [
     cfg.IntOpt('default_virtual_server_vrid',
                default=0,
                help=_('Default Virtual Server VRID')),
-    cfg.StrOpt('template_logging',
-               default=None,
-               max_length=63,
-               help=_('NAT Logging template (NAT Logging template name)')),
-    cfg.StrOpt('template_policy',
-               default=None,
-               max_length=127,
-               help=_('Policy Template')),
-    cfg.StrOpt('template_scaleout',
-               default=None,
-               max_length=127,
-               help=_('Scaleout template (Scaleout template name)')),
-    cfg.StrOpt('template_virtual_server',
-               default=None,
-               max_length=127,
-               help=_('Virtual server template (Virtual server template name)')),
 ]
 
 A10_LISTENER_OPTS = [
@@ -113,19 +97,19 @@ A10_SERVICE_GROUP_OPTS = [
 ]
 
 A10_L7_POLICY_OPTS = [
-    cfg.StrOpt('P1',
+    cfg.StrOpt('p1',
                default=None,
                help=_('For future reference')),
-    cfg.StrOpt('P2',
+    cfg.StrOpt('p2',
                default=None,
                help=_('For future reference')),
 ]
 
 A10_L7_RULE_OPTS = [
-    cfg.StrOpt('R1',
+    cfg.StrOpt('r1',
                default=None,
                help=_('For future reference')),
-    cfg.StrOpt('R2',
+    cfg.StrOpt('r2',
                default=None,
                help=_('For future reference')),
 ]
@@ -143,10 +127,10 @@ A10_SERVER_OPTS = [
 ]
 
 A10_RACK_VTHUNDER_OPTS = [
-    a10_types.ListOfDictOpt('devices', default=[],
-                            item_type=a10_types.ListOfObjects(),
-                            bounds=True,
-                            help=_('List of all device configuration'))
+    config_types.ListOfDictOpt('devices', default=[],
+                               item_type=config_types.ListOfObjects(),
+                               bounds=True,
+                               help=_('List of all device configuration'))
 ]
 
 A10_HEALTH_MANAGER_OPTS = [
@@ -336,14 +320,14 @@ cfg.CONF.register_opts(A10_CONTROLLER_WORKER_OPTS, group='a10_controller_worker'
 cfg.CONF.register_opts(A10_HOUSE_KEEPING_OPTS, group='a10_house_keeping')
 cfg.CONF.register_cli_opts(A10_HEALTH_MANAGER_OPTS, group='a10_health_manager')
 cfg.CONF.register_opts(A10_NOVA_OPTS, group='a10_nova')
-cfg.CONF.register_opts(A10_VTHUNDER_OPTS, group='VTHUNDER')
-cfg.CONF.register_opts(A10_SLB_OPTS, group='SLB')
-cfg.CONF.register_opts(A10_LISTENER_OPTS, group='LISTENER')
-cfg.CONF.register_opts(A10_SERVICE_GROUP_OPTS, group='SERVICE-GROUP')
-cfg.CONF.register_opts(A10_L7_POLICY_OPTS, group='L7POLICY')
-cfg.CONF.register_opts(A10_L7_RULE_OPTS, group='L7RULE')
-cfg.CONF.register_opts(A10_SERVER_OPTS, group='SERVER')
-cfg.CONF.register_opts(A10_RACK_VTHUNDER_OPTS, group='RACK_VTHUNDER')
+cfg.CONF.register_opts(A10_VTHUNDER_OPTS, group='vthunder')
+cfg.CONF.register_opts(A10_SLB_OPTS, group='slb')
+cfg.CONF.register_opts(A10_LISTENER_OPTS, group='listener')
+cfg.CONF.register_opts(A10_SERVICE_GROUP_OPTS, group='service-group')
+cfg.CONF.register_opts(A10_L7_POLICY_OPTS, group='l7policy')
+cfg.CONF.register_opts(A10_L7_RULE_OPTS, group='l7rule')
+cfg.CONF.register_opts(A10_SERVER_OPTS, group='server')
+cfg.CONF.register_opts(A10_RACK_VTHUNDER_OPTS, group='rack_vthunder')
 
 
 # Ensure that the control exchange is set correctly
@@ -360,9 +344,9 @@ ks_loading.register_auth_conf_options(cfg.CONF, constants.SERVICE_AUTH)
 ks_loading.register_session_conf_options(cfg.CONF, constants.SERVICE_AUTH)
 
 
-def init(args, **kwargs):
+def init(*args, **kwargs):
     """ Initialize the cfg.CONF object for octavia project"""
-    cfg.CONF(args=args, project='octavia',
+    cfg.CONF(*args, project='octavia',
              version='%%prog %s' % version.version_info.release_string(),
              **kwargs)
 

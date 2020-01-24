@@ -28,13 +28,13 @@ LOG = logging.getLogger(__name__)
 class ListenersParent(object):
 
     def set(self, set_method, loadbalancer, listeners, vthunder):
-        ipinip = CONF.LISTENER.ipinip
-        no_dest_nat = CONF.LISTENER.no_dest_nat
-        ha_conn_mirror = CONF.LISTENER.ha_conn_mirror
-        autosnat = CONF.LISTENER.autosnat
-        conn_limit = CONF.LISTENER.conn_limit
+        ipinip = CONF.listener.ipinip
+        no_dest_nat = CONF.listener.no_dest_nat
+        ha_conn_mirror = CONF.listener.ha_conn_mirror
+        autosnat = CONF.listener.autosnat
+        conn_limit = CONF.listener.conn_limit
         virtual_port_templates = {}
-        template_virtual_port = CONF.LISTENER.template_virtual_port
+        template_virtual_port = CONF.listener.template_virtual_port
         virtual_port_templates['template-virtual-port'] = template_virtual_port
 
         template_args = {}
@@ -56,13 +56,13 @@ class ListenersParent(object):
                 if listener.protocol.lower() == 'http':
                     # TODO work around for issue in acos client
                     listener.protocol = listener.protocol.lower()
-                    virtual_port_template = CONF.LISTENER.template_http
+                    virtual_port_template = CONF.listener.template_http
                     virtual_port_templates['template-http'] = virtual_port_template
                 else:
-                    virtual_port_template = CONF.LISTENER.template_tcp
+                    virtual_port_template = CONF.listener.template_tcp
                     virtual_port_templates['template-tcp'] = virtual_port_template
 
-                virtual_port_template = CONF.LISTENER.template_policy
+                virtual_port_template = CONF.listener.template_policy
                 virtual_port_templates['template-policy'] = virtual_port_template
                 
                 name = loadbalancer.id + "_" + str(listener.protocol_port)

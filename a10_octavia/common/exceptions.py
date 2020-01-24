@@ -1,4 +1,5 @@
-#    Copyright 2019, A10 Networks
+# Copyright 2019 A10 Networks
+# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -12,19 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+A10 Octavia exception handling.
+"""
+from octavia.i18n import _
+from octavia.common import exceptions
 
-from oslo_config import cfg
-from oslo_log import log
-
-from octavia.common import config
-from octavia.common import rpc
-from a10_octavia.common import config_options
-
-def prepare_service(argv=None):
-    """Sets global config from config file and sets up logging."""
-    argv = argv or []
-    config_options.init(argv[1:])
-    log.set_defaults()
-    config_options.setup_logging(cfg.CONF)
-    rpc.init()
-
+class NoDatabaseURL(exceptions.OctaviaException):
+    message = _("Must set db connection url in configuration file.")

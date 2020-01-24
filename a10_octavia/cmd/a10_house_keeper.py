@@ -23,7 +23,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 
-from octavia.common import service
+from a10_octavia.cmd import service
 from a10_octavia.controller.housekeeping import house_keeping
 from octavia import version
 

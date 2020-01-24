@@ -66,9 +66,9 @@ class CreteVthunderEntry(BaseDatabaseTask):
     def execute(self, amphora, loadbalancer, role):
         vthunder_id = uuidutils.generate_uuid()
 
-        username = CONF.VTHUNDER.DEFAULT_VTHUNDER_USERNAME
-        password = CONF.VTHUNDER.DEFAULT_VTHUNDER_PASSWORD
-        axapi_version = CONF.VTHUNDER.DEFAULT_AXAPI_VERSION
+        username = CONF.vthunder.default_vthunder_username
+        password = CONF.vthunder.default_vthunder_password
+        axapi_version = CONF.vthunder.default_axapi_version
 
 
         compute_id = None
@@ -263,9 +263,9 @@ class CreateSpareVthunderEntry(BaseDatabaseTask):
     def execute(self, amphora):
         vthunder_id = uuidutils.generate_uuid()
 
-        username = CONF.VTHUNDER.DEFAULT_VTHUNDER_USERNAME
-        password = CONF.VTHUNDER.DEFAULT_VTHUNDER_PASSWORD
-        axapi_version = CONF.VTHUNDER.DEFAULT_AXAPI_VERSION
+        username = CONF.vthunder.default_vthunder_username
+        password = CONF.vthunder.default_vthunder_password
+        axapi_version = CONF.vthunder.default_axapi_version
         vthunder = self.vthunder_repo.create(
             db_apis.get_session(), vthunder_id=vthunder_id,
             amphora_id=amphora.id,

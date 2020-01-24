@@ -15,10 +15,10 @@
 import os
 import sys
 from oslo_log import log as logging
-from oslo_config import cfg
 from a10_octavia.etc import config as blank_config
 from a10_octavia.etc import defaults
 from a10_octavia.common.defaults import DEFAULT
+from a10_octavia.common import exceptions
 
 # This is ConfigParser pre-Python3
 if sys.version_info < (3,):
@@ -27,7 +27,6 @@ else:
     import configparser as ini
 
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -47,7 +46,7 @@ class ConfigModule(object):
                 self.__dict__[k] = v
 
     @classmethod
-    def load(cls, provider=None):
+    def load(cls, path, provider=None):
         d = dict()
         return ConfigModule(d, provider=provider)
 
@@ -62,7 +61,7 @@ class A10Config(object):
 
         self._conf = None
         self._config_dir = self._find_config_dir(config_dir)
-        self._config_path = os.path.join(self._config_dir, "config.py")
+        self._config_path = os.path.join(self._config_dir, "a10-octavia.conf")
 
         try:
             self._config = ConfigModule.load(self._config_path, provider=provider)
@@ -101,27 +100,43 @@ class A10Config(object):
 
     def _load_config(self):
         # Global defaults
-        for key, value in defaults.GLOBAL_DEFAULTS.items():
-            if not hasattr(self._config, key):
-                LOG.debug("setting global default %s=%s", key, value)
-                setattr(self._config, key, value)
+        for k, v in defaults.GLOBAL_DEFAULTS.items():
+            if not hasattr(self._config, k):
+                LOG.debug("setting global default %s=%s", k, v)
+                setattr(self._config, k, v)
             else:
-                LOG.debug("global setting %s=%s", key, getattr(self._config, key))
+                LOG.debug("global setting %s=%s", k, getattr(self._config, k))
 
         # Setup db foo
         if self._config.database_connection is None:
             self._config.database_connection = self._get_octavia_db_string()
 
         if self._config.keystone_auth_url is None:
-            self._config.keystone_auth_url = CONF.keystone_authtoken.auth_uri
+            self._config.keystone_auth_url = self.get_octavia_conf('keystone_authtoken', 'auth_uri')
+
+    def get_octavia_conf(self, section, option):	
+        octavia_conf_dir = os.environ.get('OCTAVIA_CONF_DIR', self._config.octavia_conf_dir)	
+        octavia_conf = '%s/octavia.conf' % octavia_conf_dir	
+
+        if os.path.exists(octavia_conf):	
+            LOG.debug("found octavia.conf file in /etc")	
+            n = ini.ConfigParser()	
+            n.read(octavia_conf)	
+            try:	
+                return n.get(section, option)	
+            except (ini.NoSectionError, ini.NoOptionError):	
+                pass	
+        else:	
+            raise Exception('FatalError: Octavia config directoty could not be found.')	
+            LOG.error("A10Config could not find %s", self._config_path)	
 
     def _get_octavia_db_string(self):
-        db_connection_url = CONF.database.connection
+        db_connection_url = self.get_octavia_conf('database', 'connection')
 
         if db_connection_url is None:
-            raise Exception('NoDatabaseURL : must set db connection url in configuration file')
+            raise exceptions.NoDatabaseURL()
 
-        LOG.debug("using %s as db connect string", db_connection_url)
+        LOG.debug("Using %s as db connect string", db_connection_url)
         return db_connection_url
 
     def get(self, key):
