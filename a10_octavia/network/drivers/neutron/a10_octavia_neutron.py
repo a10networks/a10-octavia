@@ -42,6 +42,14 @@ OCTAVIA_OWNER = 'Octavia'
 CONF = cfg.CONF
 
 
+class AllocateTrunkException(base.NetworkException):
+    pass
+
+
+class DeallocateTrunkException(base.NetworkException):
+    pass
+
+
 class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
 
     def __init__(self):
@@ -133,23 +141,24 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
         payload = {"trunk": { "port_id": parent_port_id,
                               "admin_state_up": "true"}}
         try:
-            new_trunk = self.neutron_client.create_trunk(payload) 
+            new_trunk = self.neutron_client.create_trunk(payload)
         except Exception:
             message = _('Error creating trunk on port '
                         '{port_id}'.format(
                             port_id=parent_port_id))
             LOG.exception(message)
-            # raise CustomTrunkException(msg) 
+            raise AllocateTrunkException(message)
 
         return new_trunk
 
     def deallocate_trunk(self, trunk_id):
         try:
             self.neutron_client.delete_trunk(trunk_id)
-        except neutron_client_exceptions.NotFound:
+        except Exception:
             message = _('Trunk {0} already deleted. '
                         'Skipping. '.format(trunk_id))
-            LOG.debug(msg)
+            LOG.exception(message)
+            raise DeallocateTrunkException(message)
 
     def plug_trunk_subports(self, trunk_id, subports):
         payload = {'sub_ports': []}

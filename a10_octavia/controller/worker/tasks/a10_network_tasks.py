@@ -683,7 +683,7 @@ class AllocateTrunk(BaseNetworkTask):
 
     def execute(self, vip):
         parent_port_id = vip.port_id
-        LOG.debug('Creating trunk for port with ID: {}'.format(parent_port_id))
+        LOG.debug('Creating trunk for port with ID: %s', parent_port_id)
         self.network_driver.allocate_trunk(parent_port_id)
 
     def revert(self, result, vip, *args, **kwargs):
