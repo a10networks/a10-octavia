@@ -17,7 +17,7 @@ then
 	ovs-vsctl set interface int-br-vlan options:peer=phy-br-vlan
 
         echo "[=] Assigning inet addr to br-vlan"
-        ip addr add 11.11.11.1/24 dev br-vlan        
+        ip addr add 11.11.11.1/24 dev br-vlan
 
 	echo "[=] VLAN bridge configured"
 fi
