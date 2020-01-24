@@ -31,7 +31,6 @@ from octavia.api.drivers import driver_lib
 from octavia.common import constants
 from octavia.common import base_taskflow
 from octavia.common import exceptions
-from a10_octavia.common import data_models
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 from a10_octavia.common import data_models
