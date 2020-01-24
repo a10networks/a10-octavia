@@ -82,7 +82,7 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.UPDATE_AMPHORA_INFO,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_OBJ),
             provides=constants.AMPHORA))
-        create_vthunder_flow.add(a10_database_tasks.CreateSpareVthunderEntry(
+        create_vthunder_flow.add(a10_database_tasks.CreateSpareVThunderEntry(
             name=sf_name + '-' + 'create_vThunder_entry_in_database',
             requires=(constants.AMPHORA),
             provides=a10constants.VTHUNDER))
@@ -242,10 +242,10 @@ class VThunderFlows(object):
             name=sf_name + '-' + 'reload_loadbalancer',
             requires=constants.LOADBALANCER_ID,
             provides=constants.LOADBALANCER))
-        create_amp_for_lb_subflow.add(a10_database_tasks.CreteVthunderEntry(
-            name=sf_name + '-' + 'create_vThunder_entry_in_database',
+        create_amp_for_lb_subflow.add(a10_database_tasks.CreateVThunderEntry(
+            name=sf_name + '-' + 'set load balancer status PENDING_CREATE',
             requires=(constants.AMPHORA, constants.LOADBALANCER),
-            inject={"role": role}))
+            inject={"role": role, "status": constants.PENDING_CREATE}))
         # Get VThunder details from database
         create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=sf_name + '-' + 'Get_Loadbalancer_from_db',
@@ -306,15 +306,6 @@ class VThunderFlows(object):
         vthunder_for_amphora_subflow.add(database_tasks.CreateAmphoraInDB(
             name=sf_name + '-' + constants.CREATE_AMPHORA_INDB,
             provides=constants.AMPHORA_ID))
-
-        require_server_group_id_condition = (
-            role in (constants.ROLE_BACKUP, constants.ROLE_MASTER) and
-            CONF.nova.enable_anti_affinity)
-        # Relaod LB
-        # vthunder_for_amphora_subflow.add(database_tasks.ReloadLoadBalancer(
-        #    name=sf_name + '-' + 'reload_loadbalancer',
-        #   requires=constants.LOADBALANCER_ID,
-        #   provides=constants.LOADBALANCER))
         vthunder_for_amphora_subflow.add(a10_database_tasks.GetComputeForProject(
             name=sf_name + '-' + 'get_compute_id',
             requires=constants.LOADBALANCER,
@@ -331,10 +322,10 @@ class VThunderFlows(object):
             requires=(constants.AMPHORA_ID, constants.COMPUTE_OBJ),
             provides=constants.AMPHORA))
         # create vThunder entry in custom DB
-        vthunder_for_amphora_subflow.add(a10_database_tasks.CreteVthunderEntry(
-            name=sf_name + '-' + 'create_vThunder_entry_in_database',
+        vthunder_for_amphora_subflow.add(a10_database_tasks.CreateVThunderEntry(
+            name=sf_name + '-' + 'set load balancer status PENDING_CREATE',
             requires=(constants.AMPHORA, constants.LOADBALANCER),
-            inject={"role": role}))
+            inject={"role": role, "status": constants.PENDING_CREATE}))
         # Get VThunder details from database
         vthunder_for_amphora_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=sf_name + '-' + 'Get_Loadbalancer_from_db',
@@ -366,7 +357,6 @@ class VThunderFlows(object):
     def get_vrrp_subflow(self, prefix):
         sf_name = prefix + '-' + constants.GET_VRRP_SUBFLOW
         vrrp_subflow = linear_flow.Flow(sf_name)
-        # Get VThunder details from database
         vrrp_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=sf_name + '-' + 'Get_Loadbalancer_from_db',
             requires=constants.LOADBALANCER,

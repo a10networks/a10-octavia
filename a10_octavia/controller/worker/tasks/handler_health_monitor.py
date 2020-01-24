@@ -26,7 +26,7 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
     """ Task to create a healthmonitor and associate it with provided pool. """
 
     def execute(self, health_mon, vthunder):
-        """ Execute create health monitor for amphora """
+        """ Execute create health monitor """
 
         # TODO : Length of name of healthmonitor for older vThunder devices
         try:
@@ -56,33 +56,34 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
 
 
 class DeleteHealthMonitor(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
+    """ Task to disassociate healthmonitor from pool and then delete a healthmonitor """
 
     def execute(self, health_mon, vthunder):
-        """ Execute create health monitor for amphora """
+        """ Execute delete health monitor  """
         try:
             c = self.client_factory(vthunder)
             c.slb.service_group.update(health_mon.pool_id,
                                        health_monitor="",
-                                       health_check_disable=False)
+                                       health_check_disable=True)
             LOG.info("Health Monitor disassociated to pool successfully.")
-            c.slb.hm.delete(health_mon.id)
+            c.slb.hm.delete(health_mon.id[0:5])
             LOG.info("Health Monitor deleted successfully.")
         except Exception as e:
             LOG.error(str(e))
 
 
 class UpdateHealthMonitor(BaseVThunderTask):
+    """ Task to update health monitor. """
 
-    def execute(self, health_mon, vthunder):
-        """ Execute create health monitor for amphora """
+    def execute(self, health_mon, vthunder, update_dict):
+        """ Execute update health monitor """
         # TODO : Length of name of healthmonitor for older vThunder devices
+        health_mon.__dict__.update(update_dict)
         try:
             method = None
             url = None
             expect_code = None
             #port = None
-            update = True
             if health_mon.type in ['HTTP', 'HTTPS']:
                 method = health_mon.http_method
                 url = health_mon.url_path
@@ -91,7 +92,7 @@ class UpdateHealthMonitor(BaseVThunderTask):
             c = self.client_factory(vthunder)
             c.slb.hm.update(health_mon.id[0:5], openstack_mappings.hm_type(c, health_mon.type),
                             health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
-                            method=method, url=url, expect_code=expect_code, port=None, 
+                            method=method, url=url, expect_code=expect_code, port=None,
                             axapi_args=args
                             )
             LOG.info("Health Monitor created successfully.")

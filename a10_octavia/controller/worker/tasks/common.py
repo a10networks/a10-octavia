@@ -43,7 +43,7 @@ class BaseVThunderTask(task.Task):
         super(BaseVThunderTask, self).__init__(**kwargs)
 
     def readConf(self, section, value):
-        if self.config.has_option(section,value) or self.config.has_section(section):
+        if self.config.has_option(section, value) or self.config.has_section(section):
             return self.config.get(section, value)
         else:
             return DEFAULT[value]
@@ -66,4 +66,3 @@ class BaseVThunderTask(task.Task):
         except Exception:
             return default
         return d.get(key, default)
-

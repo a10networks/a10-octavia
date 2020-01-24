@@ -1,6 +1,17 @@
 CHANGES
 =======
 
+* added delete persist template support
+* updated doc string formats
+* Correction in class name and generalization of docstrings
+* Code refactor
+* a10\_octavia/common/openstack\_mappings.py
+* added persist file dependency
+* Handler Persists inclusion with minor code repairs for update functions
+* Changes required for corrections of CRUD functionalities in Octavia
+* Added minor syntax fix
+* Made minor fixes based upon review feedback
+* Made a number of minor fixes
 * Made multiple small fixes
 * Added further QOL update for functional testing
 * QOL update for functional testing
