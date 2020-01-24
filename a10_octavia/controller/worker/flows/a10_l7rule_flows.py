@@ -73,7 +73,7 @@ class L7RuleFlows(object):
             requires=constants.L7RULE))
         delete_l7rule_flow.add(model_tasks.DeleteModelObject(
             rebind={constants.OBJECT: constants.L7RULE}))
-	delete_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+        delete_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER, provides=a10constants.VTHUNDER))
         delete_l7rule_flow.add(handler_l7rule.DeleteL7Rule(
             requires=[constants.L7RULE, constants.LISTENERS, a10constants.VTHUNDER]))
@@ -100,9 +100,8 @@ class L7RuleFlows(object):
         update_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        update_l7rule_flow.add(handler_l7rule.CreateL7Rule(
-            requires=[constants.L7RULE, constants.LISTENERS, a10constants.VTHUNDER]))
-
+        update_l7rule_flow.add(handler_l7rule.UpdateL7Rule(
+            requires=[constants.L7RULE, constants.LISTENERS, a10constants.VTHUNDER, constants.UPDATE_DICT]))
         update_l7rule_flow.add(database_tasks.UpdateL7RuleInDB(
             requires=[constants.L7RULE, constants.UPDATE_DICT]))
         update_l7rule_flow.add(database_tasks.MarkL7RuleActiveInDB(

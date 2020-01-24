@@ -42,11 +42,11 @@ class LoadBalancerParent(object):
                 virtual_server_templates=virtual_server_templates,
                 axapi_body=vip_meta)
             status = {'loadbalancers': [{"id": loadbalancer_id,
-                      "provisioning_status": constants.ACTIVE}]}
+                                         "provisioning_status": constants.ACTIVE}]}
         except Exception as e:
             LOG.error(str(e))
             status = {'loadbalancers': [{"id": loadbalancer_id,
-                      "provisioning_status": constants.ERROR}]}
+                                         "provisioning_status": constants.ERROR}]}
         LOG.info(str(status))
         return status
 
@@ -54,20 +54,20 @@ class LoadBalancerParent(object):
         pass
 
 
-class CreateVitualServerTask(BaseVThunderTask, LoadBalancerParent):
-    """Task to create a virtual server in vthunder device."""
+class CreateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
+    """ Task to create a virtual server """
 
     def execute(self, loadbalancer_id, loadbalancer, vthunder):
         c = self.client_factory(vthunder)
-        status = LoadBalancerParent.set(self, c.slb.virtual_server.create,
-                                        loadbalancer_id,
-                                        loadbalancer,
-                                        vthunder)
+        status = self.set(c.slb.virtual_server.create,
+                          loadbalancer_id,
+                          loadbalancer,
+                          vthunder)
         return status
 
 
-class DeleteVitualServerTask(BaseVThunderTask):
-    """Task to delete a virtual server in vthunder device."""
+class DeleteVirtualServerTask(BaseVThunderTask):
+    """ Task to delete a virtual server """
 
     def execute(self, loadbalancer, vthunder):
         loadbalancer_id = loadbalancer.id
@@ -75,11 +75,11 @@ class DeleteVitualServerTask(BaseVThunderTask):
             c = self.client_factory(vthunder)
             c.slb.virtual_server.delete(loadbalancer_id)
             status = {'loadbalancers': [{"id": loadbalancer_id,
-                      "provisioning_status": constants.DELETED}]}
+                                         "provisioning_status": constants.DELETED}]}
         except Exception as e:
             LOG.error(str(e))
             status = {'loadbalancers': [{"id": loadbalancer_id,
-                      "provisioning_status": constants.ERROR}]}
+                                         "provisioning_status": constants.ERROR}]}
         LOG.info(str(status))
         return status
 
@@ -87,14 +87,16 @@ class DeleteVitualServerTask(BaseVThunderTask):
         pass
 
 
-class UpdateVitualServerTask(BaseVThunderTask, LoadBalancerParent):
-    """Task to update a virtual server in vthunder device."""
+class UpdateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
+    """ Task to update a virtual server """
 
     def execute(self, loadbalancer, vthunder):
         c = self.client_factory(vthunder)
-        status = LoadBalancerParent.set(self,
-                                        c.slb.virtual_server.update,
-                                        loadbalancer.id,
-                                        loadbalancer,
-                                        vthunder)
+        status = self.set(c.slb.virtual_server.update,
+                          loadbalancer.id,
+                          loadbalancer,
+                          vthunder)
         return status
+
+    def revert(self, loadbalancer, vthunder, update_dict):
+        pass

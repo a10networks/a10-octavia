@@ -13,7 +13,6 @@
 #    under the License.
 
 
-
 from oslo_log import log as logging
 from oslo_config import cfg
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
@@ -23,20 +22,20 @@ LOG = logging.getLogger(__name__)
 
 
 class MemberCreate(BaseVThunderTask):
-    """Task to update amphora with all specified member configurations."""
+    """ Task to create member """
 
     def execute(self, member, vthunder, pool):
-        """Execute create member for an amphora."""
+        """ Execute create member """
 
         conn_limit = CONF.server.conn_limit
         conn_resume = CONF.server.conn_resume
         server_args = self.meta(member, 'server', {})
         try:
             c = self.client_factory(vthunder)
-            if not member.provisioning_status:
-                status = c.slb.DOWN
+            if not member.enabled:
+                status = False
             else:
-                status = c.slb.UP
+                status = True
             server_args['conn-limit'] = conn_limit
             server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}
@@ -59,14 +58,14 @@ class MemberCreate(BaseVThunderTask):
 
 
 class MemberDelete(BaseVThunderTask):
-    """Task to update amphora with all specified member configurations."""
+    """ Task to delete member """
 
     def execute(self, member, vthunder, pool):
-        """Execute delete member for an amphora."""
+        """ Execute delete member """
         try:
             c = self.client_factory(vthunder)
             c.slb.service_group.member.delete(pool.id, member.id, member.protocol_port)
-            LOG.info("Member de-associated to pool successfully.")
+            LOG.info("Member dissociated from pool successfully.")
             c.slb.server.delete(member.id)
             LOG.info("Member deleted successfully.")
         except Exception as e:
@@ -75,6 +74,7 @@ class MemberDelete(BaseVThunderTask):
 
 
 class MemberUpdate(BaseVThunderTask):
+    """ Task to update member """
 
     def execute(self, member, vthunder, pool):
         """Execute create member for an amphora."""
@@ -84,10 +84,10 @@ class MemberUpdate(BaseVThunderTask):
 
         try:
             c = self.client_factory(vthunder)
-            if not member.provisioning_status:
-                status = c.slb.DOWN
+            if not member.enabled:
+                status = False
             else:
-                status = c.slb.UP
+                status = True
             server_args['conn-limit'] = conn_limit
             server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}

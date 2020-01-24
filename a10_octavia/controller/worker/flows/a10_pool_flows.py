@@ -143,7 +143,7 @@ class PoolFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_pool_flow.add(handler_service_group.PoolUpdate(
-            requires=[constants.POOL, a10constants.VTHUNDER]))
+            requires=[constants.POOL, a10constants.VTHUNDER, constants.UPDATE_DICT]))
         update_pool_flow.add(handler_virtual_port.ListenersUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_pool_flow.add(database_tasks.UpdatePoolInDB(

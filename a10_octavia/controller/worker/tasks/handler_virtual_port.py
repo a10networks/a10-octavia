@@ -38,20 +38,27 @@ class ListenersParent(object):
         virtual_port_templates['template-virtual-port'] = template_virtual_port
 
         template_args = {}
-
         try:
             c = self.client_factory(vthunder)
             status = c.slb.UP
             for listener in listeners:
+                if listener.connection_limit != -1:
+                    conn_limit = listener.connection_limit
+                if conn_limit < 1 or conn_limit > 8000000:
+                    LOG.warning("The specified member server connection limit " +
+                                "(configuration setting: conn-limit) is out of " +
+                                "bounds with value {0}. Please set to between " +
+                                "1-8000000. Defaulting to 8000000".format(conn_limit))
                 listener.load_balancer = loadbalancer
-                if not listener.provisioning_status:
+                if not listener.enabled:
                     status = c.slb.DOWN
                 persistence = persist.PersistHandler(c, listener.default_pool)
                 s_pers = persistence.s_persistence()
                 c_pers = persistence.c_persistence()
                 if listener.protocol == "TERMINATED_HTTPS":
                     listener.protocol = 'HTTPS'
-                    template_args["template_client_ssl"] = self.cert_handler(loadbalancer, listener, vthunder)
+                    template_args["template_client_ssl"] = self.cert_handler(
+                        loadbalancer, listener, vthunder)
 
                 if listener.protocol.lower() == 'http':
                     # TODO work around for issue in acos client
@@ -134,16 +141,16 @@ class ListenersParent(object):
         return cert_data["template_name"]
 
 
-class ListenersCreate(BaseVThunderTask, ListenersParent):
-    """Task to update amphora with all specified listeners' configurations."""
+class ListenersCreate(ListenersParent, BaseVThunderTask):
+    """ Task to create listener """
+
     def execute(self, loadbalancer, listeners, vthunder):
-        """Execute updates per listener for an amphora."""
+        """ Execute updates per listener """
         c = self.client_factory(vthunder)
-        ListenersParent.set(self, c.slb.virtual_server.vport.create, loadbalancer, listeners, vthunder)
+        self.set(c.slb.virtual_server.vport.create, loadbalancer, listeners, vthunder)
 
     def revert(self, loadbalancer, *args, **kwargs):
-        """Handle failed listeners updates."""
-
+        """ Handle failed listeners updates """
         LOG.warning("Reverting listeners updates.")
 
         for listener in loadbalancer.listeners:
@@ -152,17 +159,16 @@ class ListenersCreate(BaseVThunderTask, ListenersParent):
         return None
 
 
-class ListenersUpdate(BaseVThunderTask, ListenersParent):
-    """Task to update amphora with all specified listeners' configurations."""
+class ListenersUpdate(ListenersParent, BaseVThunderTask):
+    """ Task to update listener """
 
     def execute(self, loadbalancer, listeners, vthunder):
-        """Execute updates per listener for an amphora."""
+        """ Execute updates per listener """
         c = self.client_factory(vthunder)
-        ListenersParent.set(self, c.slb.virtual_server.vport.update, loadbalancer, listeners, vthunder)
+        self.set(c.slb.virtual_server.vport.update, loadbalancer, listeners, vthunder)
 
     def revert(self, loadbalancer, *args, **kwargs):
-        """Handle failed listeners updates."""
-
+        """ Handle failed listeners updates """
         LOG.warning("Reverting listeners updates.")
 
         for listener in loadbalancer.listeners:
@@ -172,10 +178,10 @@ class ListenersUpdate(BaseVThunderTask, ListenersParent):
 
 
 class ListenerDelete(BaseVThunderTask):
-    """Task to delete the listener on the vip."""
+    """ Task to delete the listener """
 
     def execute(self, loadbalancer, listener, vthunder):
-        """Execute listener delete routines for an amphora."""
+        """ Execute listener delete """
         try:
             c = self.client_factory(vthunder)
             name = loadbalancer.id + "_" + str(listener.protocol_port)
@@ -188,8 +194,7 @@ class ListenerDelete(BaseVThunderTask):
             LOG.debug("Deleted the listener on the vip")
 
     def revert(self, listener, *args, **kwargs):
-        """Handle a failed listener delete."""
-
+        """ Handle a failed listener delete """
         LOG.warning("Reverting listener delete.")
 
         self.task_utils.mark_listener_prov_status_error(listener.id)

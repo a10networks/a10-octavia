@@ -16,6 +16,7 @@ from oslo_log import log as logging
 from oslo_config import cfg
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+from a10_octavia.controller.worker.tasks import handler_persist
 import acos_client
 
 CONF = cfg.CONF
@@ -24,12 +25,14 @@ LOG = logging.getLogger(__name__)
 
 class PoolParent(object):
 
-    def set(self, set_method, pool, vthunder):
+    def set(self, set_method, pool, vthunder, update=False):
         args = {'service_group': self.meta(pool, 'service_group', {})}
         try:
             conf_templates = CONF.service_group.template_server
             port_templates = CONF.service_group.template_port
             policy_templates = CONF.service_group.template_policy
+            c = self.client_factory(vthunder)
+            self._update_session_persistence(pool, c, update)
             service_group_temp = {}
             service_group_temp['template-server'] = conf_templates
             service_group_temp['template-port'] = port_templates
@@ -50,34 +53,46 @@ class PoolParent(object):
         except Exception as e:
             LOG.error(str(e))
 
+    def _update_session_persistence(self, pool, c, update=False):
+        if pool.session_persistence:
+            p = handler_persist.PersistHandler(c, pool)
+            if update:
+                p.delete()
+            p.create()
+            return
 
-class PoolCreate(BaseVThunderTask, PoolParent):
-    """Task to update amphora with all specified listeners' configurations."""
+
+class PoolCreate(PoolParent, BaseVThunderTask):
+    """ Task to create pool """
 
     def execute(self, pool, vthunder):
-        """Execute create pool for an amphora."""
+        """ Execute create pool """
         c = self.client_factory(vthunder)
-        PoolParent.set(self, c.slb.service_group.create, pool, vthunder)
+        self.set(c.slb.service_group.create, pool, vthunder)
 
 
 class PoolDelete(BaseVThunderTask):
-    """Task to update amphora with all specified listeners' configurations."""
+    """ Task to delete pool """
 
     def execute(self, pool, vthunder):
-        """Execute create pool for an amphora."""
+        """ Execute delete pool """
         try:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             c = self.client_factory(vthunder)
-            # need to put algorithm logic
+            handler_persist.PersistHandler(c, pool).delete()
             c.slb.service_group.delete(pool.id)
             LOG.info("Pool deleted successfully.")
         except Exception as e:
             LOG.error(str(e))
 
 
-class PoolUpdate(BaseVThunderTask, PoolParent):
+class PoolUpdate(PoolParent, BaseVThunderTask):
+    """ Task to update pool """
 
-    def execute(self, pool, vthunder):
-        """Execute update pool for an amphora."""
+    def execute(self, pool, vthunder, update_dict):
+        """ Execute update pool """
         c = self.client_factory(vthunder)
-        PoolParent.set(self, c.slb.service_group.update, pool, vthunder)
+        if 'session_persistence' in update_dict:
+            pool.session_persistence.__dict__.update(update_dict['session_persistence'])
+            del update_dict['session_persistence']
+        pool.__dict__.update(update_dict)
+        self.set(c.slb.service_group.update, pool, vthunder, update=True)

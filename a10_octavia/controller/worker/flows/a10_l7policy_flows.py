@@ -101,8 +101,8 @@ class L7PolicyFlows(object):
         update_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        update_l7policy_flow.add(handler_l7policy.CreateL7Policy(
-            requires=[constants.L7POLICY, a10constants.VTHUNDER]))
+        update_l7policy_flow.add(handler_l7policy.UpdateL7Policy(
+            requires=[constants.L7POLICY, constants.LISTENERS, a10constants.VTHUNDER, constants.UPDATE_DICT]))
 
         update_l7policy_flow.add(database_tasks.UpdateL7PolicyInDB(
             requires=[constants.L7POLICY, constants.UPDATE_DICT]))

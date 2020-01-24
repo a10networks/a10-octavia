@@ -55,4 +55,3 @@ class BaseVThunderTask(task.Task):
         except Exception:
             return default
         return d.get(key, default)
-
