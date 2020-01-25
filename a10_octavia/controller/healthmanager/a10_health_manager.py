@@ -84,12 +84,15 @@ class A10HealthManager(object):
             'failover_cancelled': 0,
         }
         futs = []
-        
+        failover_wait_time = CONF.a10_health_manager.heartbeat_timeout
         while not self.dead.is_set():
             lock_session = None
             try:
                 lock_session = db_apis.get_session()
-                vthunder = self.vthunder_repo.get_stale_vthunders(lock_session)
+                expired_time = datetime.datetime.utcnow() - datetime.timedelta(
+                   seconds=failover_wait_time)
+
+                vthunder = self.vthunder_repo.get_stale_vthunders(lock_session, expired_time)
             
             except Exception:
                 with excutils.save_and_reraise_exception():

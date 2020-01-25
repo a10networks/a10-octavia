@@ -181,10 +181,7 @@ class BaseRepository(object):
 class VThunderRepository(BaseRepository):
     model_class = models.VThunder
 
-    def get_stale_vthunders(self, session):
-        failover_wait_time = CONF.health_manager.heartbeat_timeout
-        expired_time = datetime.datetime.utcnow() - datetime.timedelta(
-            seconds=failover_wait_time)
+    def get_stale_vthunders(self, session, expired_time):
 
         model = session.query(self.model_class).filter(
             self.model_class.last_udp_update < expired_time).filter(
