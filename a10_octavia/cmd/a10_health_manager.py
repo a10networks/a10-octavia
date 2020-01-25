@@ -27,7 +27,7 @@ from oslo_reports import guru_meditation_report as gmr
 
 from a10_octavia.cmd import vthunder_heartbeat_udp as heartbeat_udp
 from a10_octavia.controller.healthmanager import a10_health_manager as health_manager
-from octavia.common import service
+from a10_octavia.cmd import service
 from octavia import version
 
 
@@ -58,7 +58,7 @@ def hm_health_check(exit_event):
     hm = health_manager.A10HealthManager(exit_event)
     signal.signal(signal.SIGHUP, _mutate_config)
 
-    @periodics.periodic(CONF.health_manager.health_check_interval,
+    @periodics.periodic(CONF.a10_health_manager.health_check_interval,
                         run_immediately=True)
     def periodic_health_check():
         hm.health_check()
@@ -72,7 +72,7 @@ def hm_health_check(exit_event):
         hm.executor.shutdown()
     signal.signal(signal.SIGINT, hm_exit)
     LOG.debug("Pausing before starting health check")
-    exit_event.wait(CONF.health_manager.heartbeat_timeout)
+    exit_event.wait(CONF.a10_health_manager.heartbeat_timeout)
     health_check.start()
 
 

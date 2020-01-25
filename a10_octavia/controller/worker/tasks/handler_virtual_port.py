@@ -28,33 +28,16 @@ LOG = logging.getLogger(__name__)
 class ListenersParent(object):
 
     def set(self, set_method, loadbalancer, listeners, vthunder):
-        ipinip = self.readConf('LISTENER', 'ipinip')
-        if isinstance(ipinip, str):
-            ipinip = json.loads(ipinip.lower())
-
-        no_dest_nat = self.readConf('LISTENER', 'no_dest_nat')
-        if no_dest_nat is not None:
-            no_dest_nat = json.loads(no_dest_nat.lower())
-        else:
-            no_dest_nat = False
-
-        ha_conn_mirror = self.readConf('LISTENER', 'ha_conn_mirror')
-        if ha_conn_mirror is not None:
-            ha_conn_mirror = json.loads(ha_conn_mirror.lower())
-        else:
-            ha_conn_mirror = False
-
-        autosnat = bool(self.readConf('LISTENER', 'autosnat'))
+        ipinip = CONF.listener.ipinip
+        no_dest_nat = CONF.listener.no_dest_nat
+        ha_conn_mirror = CONF.listener.ha_conn_mirror
+        autosnat = CONF.listener.autosnat
+        conn_limit = CONF.listener.conn_limit
         virtual_port_templates = {}
-        template_virtual_port = self.readConf('LISTENER', 'template_virtual_port')
-        if template_virtual_port is not None:
-            virtual_port_templates['template-virtual-port'] = template_virtual_port.strip('"')
-        else:
-            virtual_port_templates['template-virtual-port'] = None
-        conn_limit = self.readConf('LISTENER', 'conn_limit')
+        template_virtual_port = CONF.listener.template_virtual_port
+        virtual_port_templates['template-virtual-port'] = template_virtual_port
+
         template_args = {}
-        if conn_limit is not None:
-            conn_limit = int(conn_limit)
         try:
             c = self.client_factory(vthunder)
             status = c.slb.UP
@@ -80,18 +63,15 @@ class ListenersParent(object):
                 if listener.protocol.lower() == 'http':
                     # TODO work around for issue in acos client
                     listener.protocol = listener.protocol.lower()
-                    virtual_port_template = self.readConf('LISTENER', 'template_http')
-                    if virtual_port_template is not None:
-                        virtual_port_templates['template-http'] = virtual_port_template.strip('"')
-                    else:
-                        virtual_port_templates['template-http'] = None
+                    virtual_port_template = CONF.listener.template_http
+                    virtual_port_templates['template-http'] = virtual_port_template
                 else:
-                    virtual_port_template = self.readConf('LISTENER', 'template_tcp')
-                    if virtual_port_template is not None:
-                        virtual_port_templates['template-tcp'] = virtual_port_template.strip('"')
-                    else:
-                        virtual_port_templates['template-tcp'] = None
+                    virtual_port_template = CONF.listener.template_tcp
+                    virtual_port_templates['template-tcp'] = virtual_port_template
 
+                virtual_port_template = CONF.listener.template_policy
+                virtual_port_templates['template-policy'] = virtual_port_template
+                
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 set_method(loadbalancer.id, name,
                            listener.protocol,

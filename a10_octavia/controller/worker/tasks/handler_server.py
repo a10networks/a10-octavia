@@ -27,12 +27,8 @@ class MemberCreate(BaseVThunderTask):
     def execute(self, member, vthunder, pool):
         """ Execute create member """
 
-        conn_limit = self.readConf('SERVER', 'conn_limit')
-        if conn_limit is not None:
-            conn_limit = int(conn_limit)
-        conn_resume = self.readConf('SERVER', 'conn_resume')
-        if conn_resume is not None:
-            conn_resume = int(conn_resume)
+        conn_limit = CONF.server.conn_limit
+        conn_resume = CONF.server.conn_resume
         server_args = self.meta(member, 'server', {})
         try:
             c = self.client_factory(vthunder)
@@ -40,27 +36,13 @@ class MemberCreate(BaseVThunderTask):
                 status = False
             else:
                 status = True
-            if conn_limit is not None:
-                if conn_limit < 1 or conn_limit > 8000000:
-                    LOG.warning("The specified member server connection limit " +
-                                "(configuration setting: conn-limit) is out of " +
-                                "bounds with value {0}. Please set to between " +
-                                "1-8000000. Defaulting to 8000000".format(conn_limit))
-                else:
-                    server_args['conn-limit'] = conn_limit
-            if conn_resume is not None:
-                if conn_resume < 1 or conn_resume > 1000000:
-                    LOG.warning(
-                        "The specified conn_resume value is invalid. The value should be either 0 or 1")
-                else:
-                    server_args['conn-resume'] = conn_resume
+            server_args['conn-limit'] = conn_limit
+            server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}
             try:
-                conf_templates = self.readConf('SERVER', 'templates')
+                conf_templates = CONF.server.template_server
                 server_temp = {}
-                if conf_templates is not None:
-                    conf_templates = conf_templates.strip('"')
-                    server_temp['template-server'] = conf_templates
+                server_temp['template-server'] = conf_templates
             except:
                 server_temp = None
                 LOG.warning("Invalid definition of A10 config in Pool section.")
@@ -94,14 +76,10 @@ class MemberDelete(BaseVThunderTask):
 class MemberUpdate(BaseVThunderTask):
     """ Task to update member """
 
-    def execute(self, member, vthunder):
-        """ Execute update member """
-        conn_limit = self.readConf('SERVER', 'conn_limit')
-        if conn_limit is not None:
-            conn_limit = int(conn_limit)
-        conn_resume = self.readConf('SERVER', 'conn_resume')
-        if conn_resume is not None:
-            conn_resume = int(conn_resume)
+    def execute(self, member, vthunder, pool):
+        """Execute create member for an amphora."""
+        conn_limit = CONF.server.conn_limit
+        conn_resume = CONF.server.conn_resume
         server_args = self.meta(member, 'server', {})
 
         try:
@@ -110,27 +88,13 @@ class MemberUpdate(BaseVThunderTask):
                 status = False
             else:
                 status = True
-            if conn_limit is not None:
-                if conn_limit < 1 or conn_limit > 8000000:
-                    LOG.warning("The specified member server connection limit " +
-                                "(configuration setting: conn-limit) is out of " +
-                                "bounds with value {0}. Please set to between " +
-                                "1-8000000. Defaulting to 8000000".format(conn_limit))
-                else:
-                    server_args['conn-limit'] = conn_limit
-            if conn_resume is not None:
-                if conn_resume < 1 or conn_resume > 1000000:
-                    LOG.warning(
-                        "The specified conn_resume value is invalid. The value should be either 0 or 1")
-                else:
-                    server_args['conn-resume'] = conn_resume
+            server_args['conn-limit'] = conn_limit
+            server_args['conn-resume'] = conn_resume
             server_args = {'server': server_args}
             try:
-                conf_templates = self.readConf('SERVER', 'templates')
+                conf_templates = CONF.server.template_server
                 server_temp = {}
-                if conf_templates is not None:
-                    conf_templates = conf_templates.strip('"')
-                    server_temp['template-server'] = conf_templates
+                server_temp['template-server'] = conf_templates
             except:
                 server_temp = None
                 LOG.error("Invalid definition of A10 config in Member section.")

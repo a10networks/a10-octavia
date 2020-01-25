@@ -44,9 +44,9 @@ class UDPStatusGetter(object):
     and absorb them
     """
     def __init__(self):
-        self.key = cfg.CONF.health_manager.heartbeat_key
-        self.ip = cfg.CONF.health_manager.bind_ip
-        self.port = cfg.CONF.health_manager.bind_port
+        self.key = cfg.CONF.a10_health_manager.heartbeat_key
+        self.ip = cfg.CONF.a10_health_manager.bind_ip
+        self.port = cfg.CONF.a10_health_manager.bind_port
         self.sockaddr = None
         LOG.info('attempting to listen on %(ip)s port %(port)s',
                  {'ip': self.ip, 'port': self.port})
@@ -54,7 +54,7 @@ class UDPStatusGetter(object):
         self.update(self.key, self.ip, self.port)
 
         self.health_executor = futures.ProcessPoolExecutor(
-            max_workers=CONF.health_manager.health_update_threads)
+            max_workers=CONF.a10_health_manager.health_update_threads)
         self.vthunder_repo = a10repo.VThunderRepository()
 
     def update(self, key, ip, port):
@@ -74,8 +74,8 @@ class UDPStatusGetter(object):
             self.sock = socket.socket(ai_family, socket.SOCK_DGRAM)
             self.sock.settimeout(1)
             self.sock.bind(self.sockaddr)
-            if cfg.CONF.health_manager.sock_rlimit > 0:
-                rlimit = cfg.CONF.health_manager.sock_rlimit
+            if cfg.CONF.a10_health_manager.sock_rlimit > 0:
+                rlimit = cfg.CONF.a10_health_manager.sock_rlimit
                 LOG.info("setting sock rlimit to %s", rlimit)
                 self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF,
                                      rlimit)

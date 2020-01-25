@@ -34,7 +34,6 @@ from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 from a10_octavia.db import repositories as a10_repo
 from octavia.api.drivers import driver_lib
-from a10_octavia import a10_config
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -48,7 +47,6 @@ class BaseDatabaseTask(task.Task):
         self.repos = repo.Repositories()
         self.vthunder_repo = a10_repo.VThunderRepository()
         self.amphora_repo = repo.AmphoraRepository()
-        self.a10_conf = a10_config.A10Config()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -67,14 +65,11 @@ class CreateVThunderEntry(BaseDatabaseTask):
 
     def execute(self, amphora, loadbalancer, role, status=constants.ACTIVE):
         vthunder_id = uuidutils.generate_uuid()
-        self.config = self.a10_conf.get_conf()
 
-        username = self.config.get(
-            'DEFAULT', 'DEFAULT_VTHUNDER_USERNAME').replace('"', '')
-        password = self.config.get(
-            'DEFAULT', 'DEFAULT_VTHUNDER_PASSWORD').replace('"', '')
-        axapi_version = int(
-            self.config.get('DEFAULT', 'DEFAULT_AXAPI_VERSION').replace('"', ''))
+        username = CONF.vthunder.default_vthunder_username
+        password = CONF.vthunder.default_vthunder_password
+        axapi_version = CONF.vthunder.default_axapi_version
+
 
         compute_id = None
         undercloud = True
@@ -267,14 +262,10 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
 
     def execute(self, amphora):
         vthunder_id = uuidutils.generate_uuid()
-        self.config = self.a10_conf.get_conf()
 
-        username = self.config.get(
-            'DEFAULT', 'DEFAULT_VTHUNDER_USERNAME').replace('"', '')
-        password = self.config.get(
-            'DEFAULT', 'DEFAULT_VTHUNDER_PASSWORD').replace('"', '')
-        axapi_version = int(
-            self.config.get('DEFAULT', 'DEFAULT_AXAPI_VERSION'))
+        username = CONF.vthunder.default_vthunder_username
+        password = CONF.vthunder.default_vthunder_password
+        axapi_version = CONF.vthunder.default_axapi_version
         vthunder = self.vthunder_repo.create(
             db_apis.get_session(), vthunder_id=vthunder_id,
             amphora_id=amphora.id,

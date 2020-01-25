@@ -28,11 +28,15 @@ class PoolParent(object):
     def set(self, set_method, pool, vthunder, update=False):
         args = {'service_group': self.meta(pool, 'service_group', {})}
         try:
+            conf_templates = CONF.service_group.template_server
+            port_templates = CONF.service_group.template_port
+            policy_templates = CONF.service_group.template_policy
             c = self.client_factory(vthunder)
             self._update_session_persistence(pool, c, update)
-            conf_templates = self.readConf('SERVICE_GROUP', 'templates').strip('"')
             service_group_temp = {}
             service_group_temp['template-server'] = conf_templates
+            service_group_temp['template-port'] = port_templates
+            service_group_temp['template-policy'] = policy_templates
         except:
             service_group_temp = None
 

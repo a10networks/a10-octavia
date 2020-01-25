@@ -121,7 +121,7 @@ class LoadBalancerFlows(object):
         # we should leverage the Nova anti-affinity capabilities
         # to place the amphora on different hosts, also we need to check
         # if anti-affinity-flag is enabled or not:
-        anti_affinity = CONF.nova.enable_anti_affinity
+        anti_affinity = CONF.a10_nova.enable_anti_affinity
         flows = []
         if anti_affinity:
             # we need to create a server group first
@@ -250,7 +250,7 @@ class LoadBalancerFlows(object):
         new_LB_net_subflow.add(a10_network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.AMPS_DATA,
                       constants.UPDATE_DICT)))
-        new_LB_net_subflow.add(database_tasks.UpdateAmphoraeVIPData(
+        new_LB_net_subflow.add(database_tasks.UpdateAmphoraVIPData(
             requires=constants.AMPS_DATA))
         new_LB_net_subflow.add(database_tasks.ReloadLoadBalancer(
             name=constants.RELOAD_LB_AFTER_PLUG_VIP,

@@ -24,30 +24,16 @@ LOG = logging.getLogger(__name__)
 
 class LoadBalancerParent(object):
     def set(self, set_method, loadbalancer_id, loadbalancer, vthunder):
-        conf_templates = self.readConf('SLB', 'template_virtual_server')
-        virtual_server_templates = {}
-        try:
-            if conf_templates is not None:
-                conf_templates = conf_templates.strip('"')
-                virtual_server_templates['template-server'] = conf_templates
-        except:
-            virtual_server_templates = None
-            LOG.warning("Invalid definition of A10 config in Pool section.")
-
+        virtual_server_templates = None
+ 
         try:
             c = self.client_factory(vthunder)
             status = c.slb.UP
             if not loadbalancer.provisioning_status:
                 status = c.slb.DOWN
             vip_meta = self.meta(loadbalancer, 'virtual_server', {})
-            arp_disable = self.readConf('SLB', 'arp_disable')
-            if isinstance(arp_disable, str):
-                arp_disable = json.loads(arp_disable.lower())
-            else:
-                arp_disable = False
-            vrid = self.readConf('SLB', 'default_virtual_server_vrid')
-            if vrid is not None:
-                vrid = int(vrid)
+            arp_disable = CONF.slb.arp_disable
+            vrid = CONF.slb.default_virtual_server_vrid
             set_method(
                 loadbalancer_id,
                 loadbalancer.vip.ip_address,

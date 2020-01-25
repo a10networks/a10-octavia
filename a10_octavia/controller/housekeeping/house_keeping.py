@@ -42,7 +42,7 @@ class SpareAmphora(object):
         If it's less than the requirement, starts new amphora.
         """
         session = db_api.get_session()
-        conf_spare_cnt = CONF.house_keeping.spare_amphora_pool_size
+        conf_spare_cnt = CONF.a10_house_keeping.spare_amphora_pool_size
         curr_spare_cnt = self.vthunder_repo.get_spare_vthunder_count(session)
         LOG.debug("Required Spare vThunder count : %d", conf_spare_cnt)
         LOG.debug("Current Spare vThunder count : %d", curr_spare_cnt)
@@ -54,7 +54,7 @@ class SpareAmphora(object):
 
             # Call Amphora Create Flow diff_count times
             with futures.ThreadPoolExecutor(
-                    max_workers=CONF.house_keeping.spare_amphora_pool_size
+                    max_workers=CONF.a10_house_keeping.spare_amphora_pool_size
             ) as executor:
                 for i in range(1, diff_count + 1):
                     LOG.debug("Starting amphorae number %d ...", i)
@@ -71,7 +71,7 @@ class DatabaseCleanup(object):
     def delete_old_amphorae(self):
         """Checks the DB for old amphora and deletes them based on its age."""
         exp_age = datetime.timedelta(
-            seconds=CONF.house_keeping.amphora_expiry_age)
+            seconds=CONF.a10_house_keeping.amphora_expiry_age)
 
         session = db_api.get_session()
         amp_ids = self.vthunder_repo.get_all_deleted_expiring(session,
@@ -87,7 +87,7 @@ class DatabaseCleanup(object):
     def cleanup_load_balancers(self):
         """Checks the DB for old load balancers and triggers their removal."""
         exp_age = datetime.timedelta(
-            seconds=CONF.house_keeping.load_balancer_expiry_age)
+            seconds=CONF.a10_house_keeping.load_balancer_expiry_age)
 
         session = db_api.get_session()
         lb_ids = self.lb_repo.get_all_deleted_expiring(session,

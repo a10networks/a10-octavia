@@ -25,8 +25,6 @@ from oslo_config import cfg
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 from a10_octavia.controller.worker.tasks import persist
-from a10_octavia import a10_config
-from a10_octavia.common.defaults import DEFAULT
 
 
 CONF = cfg.CONF
@@ -34,19 +32,10 @@ LOG = logging.getLogger(__name__)
 
 
 class BaseVThunderTask(task.Task):
-    """Base task to instansiate common classes."""
 
     def __init__(self, **kwargs):
-        a10_conf = a10_config.A10Config()
-        self.config = a10_conf.get_conf()
         self.task_utils = task_utilities.TaskUtils()
         super(BaseVThunderTask, self).__init__(**kwargs)
-
-    def readConf(self, section, value):
-        if self.config.has_option(section, value) or self.config.has_section(section):
-            return self.config.get(section, value)
-        else:
-            return DEFAULT[value]
 
     def client_factory(self, vthunder):
         axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30

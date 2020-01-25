@@ -34,7 +34,7 @@ def main():
     octavia_service.prepare_service(sys.argv)
     gmr.TextGuruMeditation.setup_autorun(version)
     sm = cotyledon.ServiceManager()
-    sm.add(consumer.ConsumerService, workers=CONF.controller_worker.workers,
+    sm.add(consumer.ConsumerService, workers=CONF.a10_controller_worker.workers,
            args=(CONF,))
     oslo_config_glue.setup(sm, CONF, reload_method="mutate")
     sm.run()
