@@ -1,0 +1,65 @@
+#!/bin/bash
+
+VLAN_EXISTS=$(sudo ovs-vsctl list-br | grep "br-vlan")
+if [ -z "$VLAN_EXISTS" ]
+then
+	echo "[+] Creating vlan bridge"
+	ovs-vsctl add-br br-vlan
+
+	echo "[=] Attaching patch ports"
+	ovs-vsctl add-port br-vlan phy-br-vlan
+	ovs-vsctl add-port br-int int-br-vlan
+
+	echo "[=] Connecting patch ports"
+	ovs-vsctl set interface phy-br-vlan type=patch
+	ovs-vsctl set interface phy-br-vlan options:peer=int-br-vlan
+	ovs-vsctl set interface int-br-vlan type=patch
+	ovs-vsctl set interface int-br-vlan options:peer=phy-br-vlan
+
+        echo "[=] Assigning inet addr to br-vlan"
+        ip addr add 11.11.11.1/24 dev br-vlan        
+
+	echo "[=] VLAN bridge configured"
+fi
+
+HOST_IP=$(ifconfig eth0 | grep "inet " | awk '{print $2}')
+echo "[+] Appending segment section to /etc/neutron/neutron.conf"
+sed "s/HOST/$HOST_IP/g" segment.txt >> /etc/neutron/neutron.conf 
+
+
+echo "[-] Overwriting service_plugins in /etc/neutron/neutron.conf"
+sed -i "s/service_plugins = router,qos/service_plugins = qos,router,segments,trunk/" /etc/neutron/neutron.conf
+
+echo "[-] Overwriting tenant_network_types in /etc/neutron/plugins/ml2/ml2_conf.ini"
+sed -i "s/tenant_network_types = vxlan/tenant_network_types = vlan/" /etc/neutron/plugins/ml2/ml2_conf.ini
+
+echo "[-] Overwriting network_vlan_ranges /etc/neutron/plugins/ml2/ml2_conf.ini"
+sed -i "s/#network_vlan_ranges =/network_vlan_ranges = vlanNet:10:15/" /etc/neutron/plugins/ml2/ml2_conf.ini
+
+echo "[-] Overwriting bridge_mappings in /etc/neutron/plugins/ml2/ml2_conf.ini"
+sed -i "s/bridge_mappings = .*/bridge_mappings = public:br-ex,vlanNet:br-vlan/" /etc/neutron/plugins/ml2/ml2_conf.ini
+
+sudo systemctl restart devstack@o-* devstack@neutron-*
+
+NETWORK_A_EXISTS=$(openstack network list | grep "networkA")
+if [ -z "$NETWORK_A_EXISTS" ]
+then
+	echo "[+] Creating NetworkA"
+	openstack network create --provider-segment 11 --provider-network-type vlan --provider-physical-network vlanNet networkA
+fi
+
+
+NETWORK_SEG_EXIST=$(openstack network list | grep "segmentA")
+if [ -z "$NETWORK_SEG_EXISTS" ]
+then
+        SEG_ID=$(openstack network segment list | grep "vlan" | awk '{print $2}')
+	echo "[=] Renaming vlan segment 11 to segmentA"
+	openstack network segment set --name segmentA $SEG_ID
+fi
+
+SUBNET_A_EXISTS=$(openstack network list | grep "subnetA")
+if [ -z "$SUBNET_A_EXISTS" ]
+then
+	echo "[+] Creating SubnetA"
+	openstack subnet create --network networkA --network-segment segmentA --subnet-range 11.11.11.0/24 subnetA
+fi

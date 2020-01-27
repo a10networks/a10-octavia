@@ -38,6 +38,8 @@ class VThunder(base_models.BASE):
     username = sa.Column(sa.String(1024), nullable=False)
     password = sa.Column(sa.String(50), nullable=False)
     axapi_version = sa.Column(sa.Integer, default=30, nullable=False)
+    port = sa.Column(sa.Integer, default=443, nullable=False)
+    protocol = sa.Column(sa.String(10), default='https', nullable=False)
     undercloud = sa.Column(sa.Boolean(), default=False, nullable=False)
     loadbalancer_id = sa.Column(sa.String(36))
     compute_id = sa.Column(sa.String(36))

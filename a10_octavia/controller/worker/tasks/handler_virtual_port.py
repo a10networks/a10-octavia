@@ -33,6 +33,7 @@ class ListenersParent(object):
         ha_conn_mirror = CONF.listener.ha_conn_mirror
         autosnat = CONF.listener.autosnat
         conn_limit = CONF.listener.conn_limit
+
         virtual_port_templates = {}
         template_virtual_port = CONF.listener.template_virtual_port
         virtual_port_templates['template-virtual-port'] = template_virtual_port

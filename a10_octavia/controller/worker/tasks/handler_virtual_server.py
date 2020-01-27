@@ -23,6 +23,7 @@ LOG = logging.getLogger(__name__)
 
 
 class LoadBalancerParent(object):
+
     def set(self, set_method, loadbalancer_id, loadbalancer, vthunder):
         virtual_server_templates = None
  

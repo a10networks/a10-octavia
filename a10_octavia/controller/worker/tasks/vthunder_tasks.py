@@ -20,6 +20,7 @@ from octavia.common import constants
 import acos_client
 from acos_client.errors import ACOSException
 from octavia.amphorae.driver_exceptions import exceptions as driver_except
+import six
 import time
 from requests.exceptions import ConnectionError
 from requests.exceptions import ReadTimeout
@@ -55,14 +56,14 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
                     LOG.info(str(amp_info))
                     break
                 except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
-                    attemptid = 21 - attempts
-                    time.sleep(20)
+                    attemptid = 31 - attempts
+                    time.sleep(30)
                     LOG.info("VThunder connection attempt - " + str(attemptid))
                     pass
             if attempts < 0:
-                LOG.error("Failed to connect vThunder in expected amount of boot time.")
-                raise ConnectionError
-
+               LOG.error("Failed to connect vThunder in expected amount of boot time.")
+               #raise ConnectionError
+            
         except driver_except.TimeOutException:
             LOG.error("Amphora compute instance failed to become reachable. "
                       "This either means the compute driver failed to fully "
@@ -154,6 +155,36 @@ class EnableInterfaceForMembers(BaseVThunderTask):
             LOG.error("Unable to configure vthunder interface")
             LOG.info(str(e))
             raise
+
+
+class TagEthernetIfaces(BaseVThunderTask):
+    """Task to tag ethernet interface with """
+
+    def execute(self, added_ports, loadbalancer, vthunder):
+        """Execute to configure vlan on thunder device."""
+        amphora_id = loadbalancer.amphorae[0].id
+        subports = added_ports[amphora_id]
+        c = self.client_factory(vthunder)
+        vlan_client = acos_client.v30.vlan.Vlan(c)
+        for subport in subports:
+            vlan_id = subport.segmentation_id
+            if not vlan_client.exists(subport.segmentation_id):
+                vlan_client.create(subport.segmentation_id, tagged_eths=[1], veth=True)
+
+
+class ConfigureVirtEthIfaces(BaseVThunderTask):
+    """Task to configure VE interfaces"""
+
+    def execute(self, ve_interfaces, loadbalancer, vthunder):
+        """Execute to configure ve on thunder device."""
+        amphora_id = loadbalancer.amphorae[0].id
+        ve_segments = ve_interfaces[amphora_id]
+        c = self.client_factory(vthunder)
+        ve_client = acos_client.v30.interface.VirtualEthernet(c)
+        for segment, fixed_ip in six.iteritems(ve_segments):
+            netmask = '/' + fixed_ip.subnet.cidr.split('/')[1]
+            ve_client.update(segment, ip_address=fixed_ip.ip_address,
+                             ip_netmask=netmask)
 
 
 class ConfigureVRRP(BaseVThunderTask):

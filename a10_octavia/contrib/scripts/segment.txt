@@ -1,0 +1,10 @@
+[placement]
+www_authenticate_uri = http://HOST/identity
+project_domain_name = Default
+project_name = admin
+user_domain_name = Default
+password = admin 
+username = nova
+auth_url = http://HOST/identity_admin
+auth_type = password
+region_name = RegionOne

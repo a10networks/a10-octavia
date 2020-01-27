@@ -24,6 +24,47 @@ CHANGES
 * QOL update for functional testing
 * Refactored install script
 * Added QOL scripts for testing
+* Added network type consideratin to subport creation
+* Added conversion to subport to dict
+* Renamed ChildPort to Subport
+* Added request to add subports to trunk
+* Added to subport delta calculation and handling
+* Altered tree creation to work with actual instance
+* Added ip addr assignment vlan bridge
+* Fixed syntax error
+* Included appending of segment section to neutron.conf
+* Added HOST\_IP to demo script
+* Added subnet creationg to demo script
+* Updated demo script
+* Updated demo script
+* Updated demo script
+* Added quick script to setup ovs bridge
+* Implemented subport calculation
+* Modified NIC/Port subflows and tasks
+* Leveraged inheritance from aap driver
+* Added targetflow link
+* Added seperate calculation for ports and nics
+* Removed parent port arg
+* Added deciders for vlan and flat networks
+* Updated port data model
+* Added stricter implementation of data model
+* Added targeted flow for members
+* Refactored codeblock into subflow for flat networks
+* Fixed syntax error
+* Added parent and child port data models used for trunking
+* Added port/protocol to creates
+* Added support for port and protocol
+* Added import back. Added function sig
+* Added ability overwrite of lb status
+* Added database level delete for last resolt
+* Fixed typing issue
+* Updating QOL script
+* Added QOL scripts
+* Established trunk and port association
+* Started adding network handler flow
+* Made minor fixes
+* Fixed naming typo
+* Made numerous minor fixex
 * Removed another change from rebase
 * Removed further unintended changes from rebase
 * Removed more intendation issues leftover from rebase
@@ -35,6 +76,7 @@ CHANGES
 * Rack device code review 3
 * Added update functions
 * Review comments update 2
+* Adding VRRP synch correctin part
 * Review comments inclusion
 * support for rack vThunder devices
 * updated comments on file

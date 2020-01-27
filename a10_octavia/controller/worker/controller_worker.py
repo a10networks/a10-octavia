@@ -44,7 +44,6 @@ from a10_octavia.controller.worker.flows import a10_pool_flows
 from a10_octavia.controller.worker.flows import vthunder_flows
 from a10_octavia.db import repositories as a10repo
 
-
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 RETRY_ATTEMPTS = 15
