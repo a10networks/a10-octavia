@@ -101,7 +101,6 @@ class A10Base(Base):
         db.delete(self)
 
 
-
 class A10BaseMixin(object):
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False, default=_uuid_str)
