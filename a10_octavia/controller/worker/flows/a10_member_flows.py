@@ -66,9 +66,9 @@ class MemberFlows(object):
 
         create_member_flow.add(parent_port, vlan_subflow, flat_subflow)
         create_member_flow.link(parent_port, vlan_subflow,
-                                decider=self._create_new_subport_decider)
+                                decider=self._is_vlan_net_decider)
         create_member_flow.link(parent_port, flat_subflow,
-                                decider=self._create_new_nic_decider)
+                                decider=self._is_vlan_net_decider)
 
         create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
@@ -83,9 +83,9 @@ class MemberFlows(object):
 
         create_member_flow.add(get_vthunder, iface_flat_subflow, iface_vlan_subflow)
         create_member_flow.link(get_vthunder, iface_vlan_subflow,
-                                decider=self._create_new_subport_decider)
+                                decider=self._is_vlan_net_decider)
         create_member_flow.link(get_vthunder, iface_flat_subflow,
-                                decider=self._create_new_nic_decider)
+                                decider=self._is_vlan_net_decider)
 
         # configure member flow for HA
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
@@ -110,14 +110,11 @@ class MemberFlows(object):
         create_member_flow.add(final_state)
         return create_member_flow
 
-    def _create_new_nic_decider(self, history):
-        """Decides if a new nic will be added in the
-           event a member subnet is outside current subnet scope"""
-        return history[history.keys()[0]] == None
+    def _is_vlan_net_decider(self, history):
+        """Decides if the current network topology is type vlan
 
-    def _create_new_subport_decider(self, history):
-        """Decides if the current nic will be tagged in the event
-           a member subnet is outside current subnet scope"""
+        :returns: True if the parent port is associated with a trunk 
+        """ 
         return history[history.keys()[0]] != None
 
     def get_delete_member_flow(self):
