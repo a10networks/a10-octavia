@@ -28,6 +28,7 @@ from a10_octavia.common import utils
 
 LOG = logging.getLogger(__name__)
 
+
 class ListOfDictOpt(cfg.Opt):
     """List of Dictionary Options
 
@@ -39,6 +40,7 @@ class ListOfDictOpt(cfg.Opt):
     :param \\*\\*kwargs: arbitrary keyword arguments passed to :class:`Opt`
 
     """
+
     def __init__(self, name, item_type=None, bounds=None, **kwargs):
         super(ListOfDictOpt, self).__init__(name, type=ListOfObjects(item_type, bounds), **kwargs)
 
@@ -54,6 +56,7 @@ class ListOfObjects(List):
     :param type_name: Type name to be used in the sample config file.
 
     """
+
     def __init__(self, bounds=False, type_name='list of dict values'):
         super(ListOfObjects, self).__init__(bounds=bounds, type_name=type_name)
 

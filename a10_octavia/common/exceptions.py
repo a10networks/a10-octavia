@@ -19,5 +19,6 @@ A10 Octavia exception handling.
 from octavia.i18n import _
 from octavia.common import exceptions
 
+
 class NoDatabaseURL(exceptions.OctaviaException):
     message = _("Must set db connection url in configuration file.")

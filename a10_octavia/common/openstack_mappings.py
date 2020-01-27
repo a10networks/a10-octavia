@@ -19,12 +19,13 @@ def hm_type(c, os_hm_type):
         'TCP': c.slb.hm.TCP,
         'HTTP': c.slb.hm.HTTP,
         'HTTPS': c.slb.hm.HTTPS,
-        'UDP-CONNECT' : c.slb.hm.UDP_CONNECT,
-        'UDP' : c.slb.hm.UDP
+        'UDP-CONNECT': c.slb.hm.UDP_CONNECT,
+        'UDP': c.slb.hm.UDP
     }
     return hm_map[os_hm_type]
 
-def service_group_lb_method(c,os_method):
+
+def service_group_lb_method(c, os_method):
     z = c.slb.service_group
     lb_methods = {
         'ROUND_ROBIN': z.ROUND_ROBIN,
@@ -47,6 +48,7 @@ def service_group_lb_method(c,os_method):
             z.STATELESS_PER_PACKET_ROUND_ROBIN,
     }
     return lb_methods[os_method]
+
 
 def service_group_protocol(c, os_protocol):
     z = c.slb.service_group
