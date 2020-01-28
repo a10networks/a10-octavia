@@ -50,4 +50,3 @@ class VThunder(base_models.BASE):
     @classmethod
     def find_by_loadbalancer_id(cls, loadbalancer_id, db_session=None):
         return cls.find_by_attribute('loadbalancer_id', loadbalancer_id, db_session)
-

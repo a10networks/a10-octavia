@@ -27,12 +27,12 @@ from octavia.i18n import _
 from octavia.db.migration.cli import do_alembic_command, do_check_migration, do_upgrade, no_downgrade, do_stamp, do_revision, add_command_parsers
 
 
-
 CONF = cfg.CONF
 options.set_defaults(CONF)
 log.set_defaults()
 log.register_options(CONF)
 log.setup(CONF, 'a10-octavia-db-manage')
+
 
 def main():
     config = alembic_cfg.Config(

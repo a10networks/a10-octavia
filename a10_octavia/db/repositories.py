@@ -194,8 +194,9 @@ class VThunderRepository(BaseRepository):
 
     def get_vthunder_from_lb(self, session, lb_id):
         model = session.query(self.model_class).filter(
-            self.model_class.loadbalancer_id == lb_id).filter(or_(self.model_class.role == "STANDALONE",
-                                                                  self.model_class.role == "MASTER")).first()
+            self.model_class.loadbalancer_id == lb_id).filter(
+                or_(self.model_class.role == "STANDALONE",
+                    self.model_class.role == "MASTER")).first()
 
         if not model:
             return None
@@ -204,8 +205,9 @@ class VThunderRepository(BaseRepository):
 
     def get_backup_vthunder_from_lb(self, session, lb_id):
         model = session.query(self.model_class).filter(
-            self.model_class.loadbalancer_id == lb_id).filter(or_(self.model_class.role == "STANDALONE",
-                                                                  self.model_class.role == "BACKUP")).first()
+            self.model_class.loadbalancer_id == lb_id).filter(
+                or_(self.model_class.role == "STANDALONE",
+                    self.model_class.role == "BACKUP")).first()
 
         if not model:
             return None
@@ -214,9 +216,10 @@ class VThunderRepository(BaseRepository):
 
     def get_vthunder_by_project_id(self, session, project_id):
         model = session.query(self.model_class).filter(
-            self.model_class.project_id == project_id).filter(and_(self.model_class.status == "ACTIVE",
-                                                                   or_(self.model_class.role == "STANDALONE",
-                                                                       self.model_class.role == "MASTER"))).first()
+            self.model_class.project_id == project_id).filter(
+                and_(self.model_class.status == "ACTIVE",
+                     or_(self.model_class.role == "STANDALONE",
+                         self.model_class.role == "MASTER"))).first()
 
         if not model:
             return None
