@@ -42,6 +42,14 @@ OCTAVIA_OWNER = 'Octavia'
 CONF = cfg.CONF
 
 
+class AllocateTrunkException(base.NetworkException):
+    pass
+
+
+class DeallocateTrunkException(base.NetworkException):
+    pass
+
+
 class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
 
     def __init__(self):
@@ -133,15 +141,24 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
         payload = {"trunk": { "port_id": parent_port_id,
                               "admin_state_up": "true"}}
         try:
-            new_trunk = self.neutron_client.create_trunk(payload) 
+            new_trunk = self.neutron_client.create_trunk(payload)
         except Exception:
             message = _('Error creating trunk on port '
                         '{port_id}'.format(
                             port_id=parent_port_id))
             LOG.exception(message)
-            # raise CustomTrunkException(msg) 
+            raise AllocateTrunkException(message)
 
         return new_trunk
+
+    def deallocate_trunk(self, trunk_id):
+        try:
+            self.neutron_client.delete_trunk(trunk_id)
+        except Exception:
+            message = _('Trunk {0} already deleted. '
+                        'Skipping. '.format(trunk_id))
+            LOG.exception(message)
+            raise DeallocateTrunkException(message)
 
     def plug_trunk_subports(self, trunk_id, subports):
         payload = {'sub_ports': []}
@@ -156,11 +173,11 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
 
         return updated_trunk
 
-    def get_plugged_parent_port(self, loadbalancer):
+    def get_plugged_parent_port(self, vip):
         try:
-            port = self.neutron_client.show_port(loadbalancer.vip.port_id)
+            port = self.neutron_client.show_port(vip.port_id)
             parent_port = self._port_to_parent_port(port.get("port"))
         except Exception:
-            LOG.debug('Couldn\'t retrieve port with id: {}'.format(loadbalancer.vip.port_id))
+            LOG.debug('Couldn\'t retrieve port with id: {}'.format(vip.port_id))
 
         return parent_port

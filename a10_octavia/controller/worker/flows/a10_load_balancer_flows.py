@@ -377,5 +377,4 @@ class LoadBalancerFlows(object):
             network_handler_subflow.add(a10_network_tasks.AllocateTrunk(
                 requires=constants.VIP,
                 provides=a10constants.TRUNK))
-
         return network_handler_subflow

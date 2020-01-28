@@ -683,18 +683,24 @@ class AllocateTrunk(BaseNetworkTask):
 
     def execute(self, vip):
         parent_port_id = vip.port_id
-        LOG.debug('Creating trunk for port with ID: {}'.format(parent_port_id))
+        LOG.debug('Creating trunk for port with ID: %s', parent_port_id)
         self.network_driver.allocate_trunk(parent_port_id)
 
-    def revert(self, result, *args, **kwargs):
-        pass 
+    def revert(self, result, vip, *args, **kwargs):
+        try:
+            parent_port = self.network_driver.get_plugged_parent_port(vip)
+            self.network_driver.deallocate_trunk(parent_port.trunk_id)
+        except Exception:
+            LOG.warning('Failed to deallocate trunk port: %(trunk)s '
+                        ' and remove from parent port: %(port)s',
+                        {'trunk': parent_port.trunk_id, 'port': parent_port.id})
 
 
 class GetParentPort(BaseNetworkTask):
 
     def execute(self, loadbalancer):
         LOG.debug('Getting parent port for loadbalancer {}', loadbalancer.id)
-        return self.network_driver.get_plugged_parent_port(loadbalancer)
+        return self.network_driver.get_plugged_parent_port(loadbalancer.vip)
 
 
 class FetchVirtEthIPs(BaseNetworkTask):
@@ -710,6 +716,7 @@ class FetchVirtEthIPs(BaseNetworkTask):
                 ve_interfaces[amp_id] = {subport.segmentation_id: port.fixed_ips[0]}
 
         return ve_interfaces
+
 
 class WaitForPortDetach(BaseNetworkTask):
     """Task to wait for the neutron ports to detach from an amphora."""
