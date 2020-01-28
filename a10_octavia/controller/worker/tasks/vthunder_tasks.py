@@ -267,18 +267,17 @@ class ListenersCreate(BaseVThunderTask):
         axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
         for listener in listeners:
             listener.load_balancer = loadbalancer
-            #self.amphora_driver.update(listener, loadbalancer.vip)
+            # self.amphora_driver.update(listener, loadbalancer.vip)
             try:
                 c = self.client_factory(vthunder)
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
-                out = c.slb.virtual_server.vport.create(loadbalancer.id, name, listener.protocol, 
-                                                listener.protocol_port, listener.default_pool_id,
-                                                autosnat=True )
+                out = c.slb.virtual_server.vport.create(loadbalancer.id, name, listener.protocol,
+                                                        listener.protocol_port, listener.default_pool_id,
+                                                        autosnat=True)
                 LOG.info("Listener created successfully.")
             except Exception as e:
                 print(str(e))
                 LOG.info("Error occurred")
-            
 
     def revert(self, loadbalancer, *args, **kwargs):
         """Handle failed listeners updates."""
@@ -298,12 +297,12 @@ class ListenersUpdate(BaseVThunderTask):
         """Execute updates per listener for an amphora."""
         for listener in listeners:
             listener.load_balancer = loadbalancer
-            #self.amphora_driver.update(listener, loadbalancer.vip)
+            # self.amphora_driver.update(listener, loadbalancer.vip)
             try:
                 c = self.client_factory(vthunder)
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 out = c.slb.virtual_server.vport.update(loadbalancer.id, name, listener.protocol,
-                                                listener.protocol_port, listener.default_pool_id)
+                                                        listener.protocol_port, listener.default_pool_id)
                 LOG.info("Listener created successfully.")
             except Exception as e:
                 print(str(e))
@@ -319,17 +318,18 @@ class ListenersUpdate(BaseVThunderTask):
 
         return None
 
+
 class ListenerDelete(BaseVThunderTask):
     """Task to delete the listener on the vip."""
 
     def execute(self, loadbalancer, listener, vthunder):
         """Execute listener delete routines for an amphora."""
-        #self.amphora_driver.delete(listener, loadbalancer.vip)
+        # self.amphora_driver.delete(listener, loadbalancer.vip)
         try:
             c = self.client_factory(vthunder)
             name = loadbalancer.id + "_" + str(listener.protocol_port)
             out = c.slb.virtual_server.vport.delete(loadbalancer.id, name, listener.protocol,
-                                            listener.protocol_port)
+                                                    listener.protocol_port)
             LOG.info("Listener deleted successfully.")
         except Exception as e:
             print(str(e))
@@ -351,12 +351,13 @@ class PoolCreate(BaseVThunderTask):
         """Execute create pool for an amphora."""
         try:
             c = self.client_factory(vthunder)
-            #need to put algorithm logic
+            # need to put algorithm logic
             out = c.slb.service_group.create(pool.id, pool.protocol)
             LOG.info("Pool created successfully.")
         except Exception as e:
             print(str(e))
             LOG.info("Error occurred")
+
 
 class PoolDelete(BaseVThunderTask):
     """Task to update amphora with all specified listeners' configurations."""
@@ -365,7 +366,7 @@ class PoolDelete(BaseVThunderTask):
         """Execute create pool for an amphora."""
         try:
             c = self.client_factory(vthunder)
-            #need to put algorithm logic
+            # need to put algorithm logic
             out = c.slb.service_group.delete(pool.id)
             LOG.info("Pool deleted successfully.")
         except Exception as e:
@@ -392,6 +393,7 @@ class MemberCreate(BaseVThunderTask):
             print(str(e))
             LOG.info("Error occurred")
 
+
 class MemberDelete(BaseVThunderTask):
     """Task to update amphora with all specified member configurations."""
 
@@ -412,41 +414,41 @@ class MemberDelete(BaseVThunderTask):
             LOG.info("Error occurred")
 
 
-class CreateHealthMonitorOnVthunder(BaseVThunderTask):	
-    """ Task to create a healthmonitor and associate it with provided pool. """	
+class CreateHealthMonitorOnVthunder(BaseVThunderTask):
+    """ Task to create a healthmonitor and associate it with provided pool. """
 
-    def execute(self, vthunder):	
-        """ Execute create health monitor for master vthunder """	
-        # TODO : Length of name of healthmonitor for older vThunder devices	
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30	
-        try:	
-            method = None	
-            url = None	
-            expect_code = None	
-            ##TODO : change this	
-            name = a10constants.VTHUNDER_UDP_HEARTBEAT 	
-            interval = CONF.a10_health_manager.heartbeat_interval	
-            timeout = 3	
-            max_retries = 5	
-            port = CONF.a10_health_manager.bind_port	
-            ipv4 = CONF.a10_health_manager.bind_ip	
-            c = self.client_factory(vthunder)	
-            out = c.slb.hm.create(name, openstack_mappings.hm_type(c, 'UDP'),	
-                                interval, timeout, max_retries, method, url, expect_code,	
-                                port, ipv4)	
-            LOG.info("Heath Monitor created successfully.")	
-        except Exception as e:	
-            LOG.info(str(e))	
-        try:    	
-            c = self.client_factory(vthunder)	
-            name = a10constants.HM_SERVER	
-            ip_address = CONF.a10_health_manager.udp_server_ip_address
-            health_check = a10constants.VTHUNDER_UDP_HEARTBEAT	
-            out = c.slb.server.create(name, ip_address, health_check=health_check)	
-            LOG.info("Server created successfully. Enabled health check for health monitor.")	
-        except Exception as e:	
+    def execute(self, vthunder):
+        """ Execute create health monitor for master vthunder """
+        # TODO : Length of name of healthmonitor for older vThunder devices
+        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+        try:
+            method = None
+            url = None
+            expect_code = None
+            # TODO : change this
+            name = a10constants.VTHUNDER_UDP_HEARTBEAT
+            interval = CONF.a10_health_manager.heartbeat_interval
+            timeout = 3
+            max_retries = 5
+            port = CONF.a10_health_manager.bind_port
+            ipv4 = CONF.a10_health_manager.bind_ip
+            c = self.client_factory(vthunder)
+            out = c.slb.hm.create(name, openstack_mappings.hm_type(c, 'UDP'),
+                                  interval, timeout, max_retries, method, url, expect_code,
+                                  port, ipv4)
+            LOG.info("Heath Monitor created successfully.")
+        except Exception as e:
             LOG.info(str(e))
-                
+        try:
+            c = self.client_factory(vthunder)
+            name = a10constants.HM_SERVER
+            ip_address = CONF.a10_health_manager.udp_server_ip_address
+            health_check = a10constants.VTHUNDER_UDP_HEARTBEAT
+            out = c.slb.server.create(name, ip_address, health_check=health_check)
+            LOG.info("Server created successfully. Enabled health check for health monitor.")
+        except Exception as e:
+            LOG.info(str(e))
+
 
 class CheckVRRPStatus(BaseVThunderTask):
     """"Task to check VRRP status"""

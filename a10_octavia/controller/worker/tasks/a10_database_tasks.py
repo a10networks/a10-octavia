@@ -70,7 +70,6 @@ class CreateVThunderEntry(BaseDatabaseTask):
         password = CONF.vthunder.default_vthunder_password
         axapi_version = CONF.vthunder.default_axapi_version
 
-
         compute_id = None
         undercloud = True
         if amphora.compute_id:
