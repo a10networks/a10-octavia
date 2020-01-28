@@ -20,6 +20,7 @@ from octavia.common import config
 from octavia.common import rpc
 from a10_octavia.common import config_options
 
+
 def prepare_service(argv=None):
     """Sets global config from config file and sets up logging."""
     argv = argv or []
@@ -27,4 +28,3 @@ def prepare_service(argv=None):
     log.set_defaults()
     config_options.setup_logging(cfg.CONF)
     rpc.init()
-

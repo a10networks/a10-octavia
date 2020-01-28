@@ -23,11 +23,13 @@ from a10_octavia.common import data_models
 
 LOG = logging.getLogger(__name__)
 
+
 def validate_ipv4(address):
     """Validates for IP4 address format"""
     if not netaddr.valid_ipv4(address, netaddr.core.INET_PTON):
         return False
     return True
+
 
 def validate_params(rack_info):
     """Check for all the required parameters for rack configurations.
@@ -43,6 +45,7 @@ def validate_params(rack_info):
               'Please check your configuration. The params `project_id`, '
               '`ip_address`, `username`, `password` and `device_name` cannot be None ')
     return False
+
 
 def convert_to_rack_vthunder_conf(rack_list):
     """ Validates for all vthunder nouns for rack devices

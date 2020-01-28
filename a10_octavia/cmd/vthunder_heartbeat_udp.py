@@ -43,6 +43,7 @@ class UDPStatusGetter(object):
     The heartbeats are transmitted via UDP and this class will bind to a port
     and absorb them
     """
+
     def __init__(self):
         self.key = cfg.CONF.a10_health_manager.heartbeat_key
         self.ip = cfg.CONF.a10_health_manager.bind_ip
@@ -94,14 +95,15 @@ class UDPStatusGetter(object):
         """
         (data, srcaddr) = self.sock.recvfrom(UDP_MAX_SIZE)
         ip, port = srcaddr
-        LOG.warning('Received packet from %s', ip) 
+        LOG.warning('Received packet from %s', ip)
         # get record id of first vthunder from srcaddr
         record_id = self.vthunder_repo.get_vthunder_from_src_addr(db_api.get_session(), ip)
-       
+
         if record_id:
             last_udp_update = datetime.datetime.utcnow()
-            self.vthunder_repo.update(db_api.get_session(), record_id, last_udp_update=last_udp_update) 
-        
+            self.vthunder_repo.update(db_api.get_session(), record_id,
+                                      last_udp_update=last_udp_update)
+
         return srcaddr[0]
 
     def check(self):
