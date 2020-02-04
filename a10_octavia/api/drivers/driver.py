@@ -19,7 +19,7 @@ import oslo_messaging as messaging
 from octavia.api.drivers import exceptions
 from octavia.api.drivers import provider_base as driver_base
 from octavia.api.drivers import utils as driver_utils
-from octavia.common import constants 
+from octavia.common import constants
 from octavia.common import data_models
 from octavia.common import utils
 from octavia.db import api as db_apis
@@ -128,8 +128,8 @@ class A10ProviderDriver(driver_base.ProviderDriver):
 
         payload = {constants.POOL_ID: pool_id,
                    constants.POOL_UPDATES: pool_dict}
-        self.client.cast({}, 'update_pool', **payload)  
-  
+        self.client.cast({}, 'update_pool', **payload)
+
     def member_create(self, member):
         payload = {constants.MEMBER_ID: member.member_id}
         self.client.cast({}, 'create_member', **payload)
@@ -138,7 +138,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         member_id = member.member_id
         payload = {constants.MEMBER_ID: member_id}
         self.client.cast({}, 'delete_member', **payload)
-    
+
     def member_update(self, old_member, new_member):
         member_dict = new_member.to_dict()
         if 'admin_state_up' in member_dict:
@@ -157,8 +157,8 @@ class A10ProviderDriver(driver_base.ProviderDriver):
     def health_monitor_delete(self, healthmonitor):
         healthmonitor_id = healthmonitor.healthmonitor_id
         payload = {constants.HEALTH_MONITOR_ID: healthmonitor_id}
-        self.client.cast({}, 'delete_health_monitor', **payload) 
-    
+        self.client.cast({}, 'delete_health_monitor', **payload)
+
     def health_monitor_update(self, old_healthmonitor, new_healthmonitor):
         healthmon_dict = new_healthmonitor.to_dict()
         if 'admin_state_up' in healthmon_dict:
@@ -174,9 +174,8 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.HEALTH_MONITOR_ID: healthmon_id,
                    constants.HEALTH_MONITOR_UPDATES: healthmon_dict}
         self.client.cast({}, 'update_health_monitor', **payload)
- 
 
-    #L7Policy 
+    # L7Policy
 
     def l7policy_create(self, l7policy):
         payload = {constants.L7POLICY_ID: l7policy.l7policy_id}
@@ -197,8 +196,8 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                    constants.L7POLICY_UPDATES: l7policy_dict}
         self.client.cast({}, 'update_l7policy', **payload)
 
-
     # L7 Rule
+
     def l7rule_create(self, l7rule):
         payload = {constants.L7RULE_ID: l7rule.l7rule_id}
         self.client.cast({}, 'create_l7rule', **payload)
@@ -207,7 +206,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         l7rule_id = l7rule.l7rule_id
         payload = {constants.L7RULE_ID: l7rule_id}
         self.client.cast({}, 'delete_l7rule', **payload)
-    
+
     def l7rule_update(self, old_l7rule, new_l7rule):
         l7rule_dict = new_l7rule.to_dict()
         if 'admin_state_up' in l7rule_dict:
@@ -217,4 +216,3 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.L7RULE_ID: l7rule_id,
                    constants.L7RULE_UPDATES: l7rule_dict}
         self.client.cast({}, 'update_l7rule', **payload)
-

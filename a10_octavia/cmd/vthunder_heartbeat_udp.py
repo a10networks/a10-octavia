@@ -29,6 +29,7 @@ LOG = logging.getLogger(__name__)
 class VThunderUDPStatusGetter(object):
     """This class defines methods that will gather heatbeats.
     """
+
     def __init__(self):
         self.key = CONF.a10_health_manager.heartbeat_key
         self.ip = CONF.a10_health_manager.bind_ip

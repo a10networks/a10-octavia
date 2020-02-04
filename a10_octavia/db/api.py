@@ -19,11 +19,9 @@ import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 from a10_octavia import a10_config
-#from a10_neutron_lbaas import a10_exceptions as ex
 
 A10_CFG = None
 Base = sqlalchemy.ext.declarative.declarative_base()
-
 
 
 def get_base():
@@ -46,11 +44,13 @@ def get_session(url=None, **kwargs):
     DBSession = sqlalchemy.orm.sessionmaker(bind=get_engine(url=url))
     return DBSession(**kwargs)
 
+
 def close_session(session):
     try:
         session.commit()
     finally:
         session.close()
+
 
 @contextmanager
 def magic_session(db_session=None, url=None):

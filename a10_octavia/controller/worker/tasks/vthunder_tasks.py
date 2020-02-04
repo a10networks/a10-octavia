@@ -414,7 +414,6 @@ class CreateHealthMonitorOnVThunder(BaseVThunderTask):
 
     def execute(self, vthunder):
         """ Execute create health monitor for master vthunder """
-        # TODO : Length of name of healthmonitor for older vThunder devices
         try:
             method = None
             url = None

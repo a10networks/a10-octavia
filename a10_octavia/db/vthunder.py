@@ -23,4 +23,3 @@ models.VThunder.create_and_save(amphora_id_id='112', device_name='somename',
                                 status='ACTIVE', updated_at=datetime.now(),
                                 last_udp_update=datetime.utcnow(),
                                 db_session=None)
-

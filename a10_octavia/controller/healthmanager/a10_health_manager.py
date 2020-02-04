@@ -50,6 +50,7 @@ class A10HealthManager(health_manager.HealthManager):
                     seconds=failover_wait_time)
 
                 vthunder = self.vthunder_repo.get_stale_vthunders(lock_session, expired_time)
+
             except Exception:
                 with excutils.save_and_reraise_exception():
                     if lock_session:

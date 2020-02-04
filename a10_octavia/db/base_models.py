@@ -129,4 +129,5 @@ class A10Base(models.ModelBase):
             query = query.join(getattr(model, k)).filter_by(**v)
         return query
 
+
 BASE = declarative.declarative_base(cls=A10Base)

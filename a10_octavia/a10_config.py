@@ -114,21 +114,21 @@ class A10Config(object):
         if self._config.keystone_auth_url is None:
             self._config.keystone_auth_url = self.get_octavia_conf('keystone_authtoken', 'auth_uri')
 
-    def get_octavia_conf(self, section, option):	
-        octavia_conf_dir = os.environ.get('OCTAVIA_CONF_DIR', self._config.octavia_conf_dir)	
-        octavia_conf = '%s/octavia.conf' % octavia_conf_dir	
+    def get_octavia_conf(self, section, option):
+        octavia_conf_dir = os.environ.get('OCTAVIA_CONF_DIR', self._config.octavia_conf_dir)
+        octavia_conf = '%s/octavia.conf' % octavia_conf_dir
 
-        if os.path.exists(octavia_conf):	
-            LOG.debug("found octavia.conf file in /etc")	
-            n = ini.ConfigParser()	
-            n.read(octavia_conf)	
-            try:	
-                return n.get(section, option)	
-            except (ini.NoSectionError, ini.NoOptionError):	
-                pass	
-        else:	
-            raise Exception('FatalError: Octavia config directoty could not be found.')	
-            LOG.error("A10Config could not find %s", self._config_path)	
+        if os.path.exists(octavia_conf):
+            LOG.debug("found octavia.conf file in /etc")
+            n = ini.ConfigParser()
+            n.read(octavia_conf)
+            try:
+                return n.get(section, option)
+            except (ini.NoSectionError, ini.NoOptionError):
+                pass
+        else:
+            raise Exception('FatalError: Octavia config directoty could not be found.')
+            LOG.error("A10Config could not find %s", self._config_path)
 
     def _get_octavia_db_string(self):
         db_connection_url = self.get_octavia_conf('database', 'connection')
