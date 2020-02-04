@@ -140,6 +140,10 @@ A10_HEALTH_MANAGER_OPTS = [
     cfg.IPOpt('bind_ip', default='127.0.0.1',
               help=_('IP address the controller will listen on for '
                      'heart beats')),
+    cfg.IntOpt('hm_start_timeout',
+               default=600,
+               help=_('Interval(in seconds) to wait before starting health '
+                      'manager.')),
     cfg.PortOpt('bind_port', default=5550,
                 help=_('Port number the controller will listen on'
                        'for heart beats')),

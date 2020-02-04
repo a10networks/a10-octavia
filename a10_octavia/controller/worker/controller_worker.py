@@ -19,11 +19,11 @@
 # from octavia.common import base_taskflow
 # from octavia.api.drivers import exceptions
 
+import tenacity
+import urllib3
 from oslo_config import cfg
 from oslo_log import log as logging
 from sqlalchemy.orm import exc as db_exceptions
-import tenacity
-import urllib3
 from taskflow.listeners import logging as tf_logging
 
 from octavia.api.drivers import driver_lib
@@ -66,7 +66,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._health_mon_repo = repo.HealthMonitorRepository()
         self._l7policy_repo = repo.L7PolicyRepository()
         self._l7rule_repo = repo.L7RuleRepository()
-        self._octavia_driver_db = driver_lib.DriverLibrary()
         self._lb_flows = a10_load_balancer_flows.LoadBalancerFlows()
         self._listener_flows = a10_listener_flows.ListenerFlows()
         self._pool_flows = a10_pool_flows.PoolFlows()
@@ -201,7 +200,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             raise db_exceptions.NoResultFound
 
         load_balancer = listener.load_balancer
-
         if listener.project_id in CONF.rack_vthunder.devices:
             create_listener_tf = self._taskflow_load(self._listener_flows.
                                                      get_rack_vthunder_create_listener_flow(
@@ -307,7 +305,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
         store[constants.UPDATE_DICT] = {
-            constants.LOADBALANCER_TOPOLOGY: topology
+            constants.TOPOLOGY: topology
         }
         if lb.project_id in CONF.rack_vthunder.devices:
             LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'
@@ -784,19 +782,19 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
     def _switch_roles_for_ha_flow(self, vthunder):
         lock_session = db_apis.get_session(autocommit=False)
         if vthunder.role == constants.ROLE_MASTER:
-            LOG.info("Master vthunder %s has failed, searching for existing backup vthunder.",
+            LOG.info("Master vThunder %s has failed, searching for existing backup vThunder.",
                      vthunder.ip_address)
             backup_vthunder = self._vthunder_repo.get_backup_vthunder_from_lb(
                 lock_session,
                 lb_id=vthunder.loadbalancer_id)
             if backup_vthunder:
-                LOG.info("Making Backup vthunder %s as MASTER NOW",
+                LOG.info("Making Backup vThunder %s as MASTER NOW",
                          backup_vthunder.ip_address)
                 self._vthunder_repo.update(
                     lock_session,
                     backup_vthunder.id, role=constants.ROLE_MASTER)
 
-                LOG.info("Putting %s to failed amphoras",
+                LOG.info("Putting %s to failed vThunders",
                          vthunder.ip_address)
 
                 self._vthunder_repo.update(
@@ -804,7 +802,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                     vthunder.id, role=constants.ROLE_BACKUP, status=a10constants.FAILED)
 
                 lock_session.commit()
-                LOG.info("Vthunder %s's status is FAILED", vthunder.ip_address)
+                LOG.info("VThunder %s's status is FAILED", vthunder.ip_address)
                 status = {'vthunders': [{"id": vthunder.vthunder_id,
                                          "status": a10constants.FAILED,
                                          "ip_address": vthunder.ip_address}]}
@@ -813,11 +811,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 LOG.warning("No backup found for failed MASTER %s", vthunder.ip_address)
 
         elif vthunder.role == constants.ROLE_BACKUP:
-            LOG.info("BACKUP vthunder %s has failed", vthunder.ip_address)
+            LOG.info("BACKUP vThunder %s has failed", vthunder.ip_address)
             self._vthunder_repo.update(
                 lock_session,
                 vthunder.id, status=a10constants.FAILED)
-            LOG.info("Vthunder %s's status is FAILED", vthunder.ip_address)
+            LOG.info("VThunder %s's status is FAILED", vthunder.ip_address)
             status = {'vthunders': [{"id": vthunder.vthunder_id,
                                      "status": a10constants.FAILED,
                                      "ip_address": vthunder.ip_address}]}
@@ -825,16 +823,15 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             LOG.info(str(status))
 
     def failover_amphora(self, vthunder_id):
-        """Perform failover operations for an amphora.
-        :param amphora_id: ID for amphora to failover
+        """Perform failover operations for an vThunder.
+        :param vthunder_id: ID for vThunder to failover
         :returns: None
-        :raises AmphoraNotFound: The referenced amphora was not found
         """
         try:
             vthunder = self._vthunder_repo.get(db_apis.get_session(),
                                                vthunder_id=vthunder_id)
             if not vthunder:
-                LOG.warning("Could not fetch Amphora %s from DB, ignoring "
+                LOG.warning("Could not fetch VThunder %s from DB, ignoring "
                             "failover request.", vthunder.vthunder_id)
                 return
 
@@ -848,7 +845,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         except Exception as e:
             with excutils.save_and_reraise_exception():
-                LOG.error("Vthunder %(id)s failover exception: %(exc)s",
+                LOG.error("VThunder %(id)s failover exception: %(exc)s",
                           {'id': vthunder_id, 'exc': e})
 
     def failover_loadbalancer(self, load_balancer_id):

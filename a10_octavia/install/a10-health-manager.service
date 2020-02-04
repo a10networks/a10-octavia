@@ -1,5 +1,5 @@
 [Unit]
-Description = Devstack devstack@o-a10hm.service
+Description = Devstack a10-health-manager.service
 
 [Service]
 ExecReload = /bin/kill -HUP $MAINPID

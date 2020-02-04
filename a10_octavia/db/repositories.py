@@ -185,7 +185,7 @@ class VThunderRepository(BaseRepository):
 
         model = session.query(self.model_class).filter(
             self.model_class.last_udp_update < expired_time).filter(
-                self.model_class.status != 'FAILED').filter(
+                self.model_class.status == 'ACTIVE').filter(
                 or_(self.model_class.role == "MASTER",
                     self.model_class.role == "BACKUP")).first()
         if model is None:

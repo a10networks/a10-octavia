@@ -20,6 +20,7 @@ BACKUP_VTHUNDER = 'backup_vthunder'
 VRRP_STATUS = 'vrrp_status'
 
 FAILED = 'FAILED'
+USED_SPARE = 'USED_SPARE'
 VTHUNDER_UDP_HEARTBEAT = 'vthunder_udp_heartbeat'
 HM_SERVER = 'a10_hm_server'
 VTHUNDER_CONFIG = 'vthunder_config'
