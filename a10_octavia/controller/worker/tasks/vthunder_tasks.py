@@ -428,12 +428,12 @@ class CreateHealthMonitorOnVThunder(BaseVThunderTask):
             c = self.client_factory(vthunder)
             if interval < timeout:
                 LOG.warning(
-                    "Interval should be greater than or equal to timeout(3 secs). Reverting to default(10 secs).")
+                    "Interval should be greater than or equal to timeout(3 seconds). Reverting to default(10 seconds).")
                 interval = 10
             out = c.slb.hm.create(name, openstack_mappings.hm_type(c, 'UDP'),
                                   interval, timeout, max_retries, method, url, expect_code,
                                   port, ipv4)
-            LOG.info("Heath Monitor created successfully.")
+            LOG.info("Health Monitor created successfully.")
             try:
                 c = self.client_factory(vthunder)
                 name = a10constants.HM_SERVER
