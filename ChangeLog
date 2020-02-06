@@ -1,6 +1,16 @@
 CHANGES
 =======
 
+* Fixed some comment's typos
+* Fixed some comment's typos
+* refactored hm service
+* Update README.md
+* pep8 for a10\_config
+* pep8 for db module
+* pep8 for api,common and cmd
+* pep8 for controller-worker
+* pep8 for tasks
+* pep8 for flows
 * remove extra import
 * minor fix
 * Incorporated review comments

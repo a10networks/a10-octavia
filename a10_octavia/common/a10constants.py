@@ -21,7 +21,7 @@ VRRP_STATUS = 'vrrp_status'
 
 FAILED = 'FAILED'
 USED_SPARE = 'USED_SPARE'
-VTHUNDER_UDP_HEARTBEAT = 'vthunder_udp_heartbeat'
-HM_SERVER = 'a10_hm_server'
+OCTAVIA_HEALTH_MANAGER_CONTROLLER = 'octavia_health_manager_controller'
+OCTAVIA_HEALTH_MONITOR = 'octavia_health_monitor'
 VTHUNDER_CONFIG = 'vthunder_config'
 VTHUNDER_ID = "vthunder_id"

@@ -72,7 +72,7 @@ class VThunderUDPStatusGetter(object):
            vThunder repositories.
         """
         try:
-            (data, srcaddr) = self.sock.recvfrom(UDP_MAX_SIZE)
+            data, srcaddr = self.sock.recvfrom(UDP_MAX_SIZE)
             ip, port = srcaddr
             LOG.warning('Received packet from %s', ip)
             # get record id of first vThunder from srcaddr
