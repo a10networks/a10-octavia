@@ -305,7 +305,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
         store[constants.UPDATE_DICT] = {
-            constants.TOPOLOGY: topology
+            constants.LOADBALANCER_TOPOLOGY: topology
         }
         if lb.project_id in CONF.rack_vthunder.devices:
             LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'
@@ -802,7 +802,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                     vthunder.id, role=constants.ROLE_BACKUP, status=a10constants.FAILED)
 
                 lock_session.commit()
-                LOG.info("VThunder %s's status is FAILED", vthunder.ip_address)
+                LOG.info("vThunder %s's status is FAILED", vthunder.ip_address)
                 status = {'vthunders': [{"id": vthunder.vthunder_id,
                                          "status": a10constants.FAILED,
                                          "ip_address": vthunder.ip_address}]}
@@ -815,7 +815,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             self._vthunder_repo.update(
                 lock_session,
                 vthunder.id, status=a10constants.FAILED)
-            LOG.info("VThunder %s's status is FAILED", vthunder.ip_address)
+            LOG.info("vThunder %s's status is FAILED", vthunder.ip_address)
             status = {'vthunders': [{"id": vthunder.vthunder_id,
                                      "status": a10constants.FAILED,
                                      "ip_address": vthunder.ip_address}]}
@@ -831,7 +831,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             vthunder = self._vthunder_repo.get(db_apis.get_session(),
                                                vthunder_id=vthunder_id)
             if not vthunder:
-                LOG.warning("Could not fetch VThunder %s from DB, ignoring "
+                LOG.warning("Could not fetch vThunder %s from DB, ignoring "
                             "failover request.", vthunder.vthunder_id)
                 return
 
@@ -845,7 +845,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         except Exception as e:
             with excutils.save_and_reraise_exception():
-                LOG.error("VThunder %(id)s failover exception: %(exc)s",
+                LOG.error("vThunder %(id)s failover exception: %(exc)s",
                           {'id': vthunder_id, 'exc': e})
 
     def failover_loadbalancer(self, load_balancer_id):

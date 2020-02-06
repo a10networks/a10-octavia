@@ -414,37 +414,39 @@ class CreateHealthMonitorOnVThunder(BaseVThunderTask):
 
     def execute(self, vthunder):
         """ Execute create health monitor for master vthunder """
+        method = None
+        url = None
+        expect_code = None
+        name = a10constants.OCTAVIA_HEALTH_MANAGER_CONTROLLER
+        health_check = a10constants.OCTAVIA_HEALTH_MONITOR
+        interval = CONF.a10_health_manager.heartbeat_interval
+        timeout = 3
+        max_retries = 5
+        port = CONF.a10_health_manager.bind_port
+        ipv4 = CONF.a10_health_manager.bind_ip
+        c = self.client_factory(vthunder)
+        if interval < timeout:
+            LOG.warning(
+                "Interval should be greater than or equal to timeout(3 seconds). Reverting to default(10 seconds).")
+            interval = 10
+
+        result = None
         try:
-            method = None
-            url = None
-            expect_code = None
-            name = a10constants.VTHUNDER_UDP_HEARTBEAT
-            interval = CONF.a10_health_manager.heartbeat_interval
-            timeout = 3
-            max_retries = 5
-            port = CONF.a10_health_manager.bind_port
-            ipv4 = CONF.a10_health_manager.bind_ip
-            c = self.client_factory(vthunder)
-            if interval < timeout:
-                LOG.warning(
-                    "Interval should be greater than or equal to timeout(3 seconds). Reverting to default(10 seconds).")
-                interval = 10
-            out = c.slb.hm.create(name, openstack_mappings.hm_type(c, 'UDP'),
-                                  interval, timeout, max_retries, method, url, expect_code,
-                                  port, ipv4)
+            result = c.slb.hm.create(health_check, openstack_mappings.hm_type(c, 'UDP'),
+                                     interval, timeout, max_retries, method, url, expect_code,
+                                     port, ipv4)
             LOG.info("Health Monitor created successfully.")
-            try:
-                c = self.client_factory(vthunder)
-                name = a10constants.HM_SERVER
-                ip_address = CONF.a10_health_manager.udp_server_ip_address
-                health_check = a10constants.VTHUNDER_UDP_HEARTBEAT
-                out = c.slb.server.create(name, ip_address, health_check=health_check)
-                LOG.info("Server created successfully. Enabled health check for health monitor.")
-            except Exception as e:
-                LOG.info(str(e))
         except Exception as e:
             LOG.info(str(e))
 
+        if result:
+            ip_address = CONF.a10_health_manager.udp_server_ip_address
+            health_check = a10constants.OCTAVIA_HEALTH_MONITOR
+            try:
+                c.slb.server.create(name, ip_address, health_check=health_check)
+                LOG.info("Server created successfully. Enabled health check for health monitor.")
+            except Exception as e:
+                LOG.info(str(e))
 
 class CheckVRRPStatus(BaseVThunderTask):
     """"Task to check VRRP status"""
