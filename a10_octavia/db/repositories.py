@@ -182,7 +182,6 @@ class VThunderRepository(BaseRepository):
     model_class = models.VThunder
 
     def get_stale_vthunders(self, session, initial_setup_wait_time, failover_wait_time):
-#        import rpdb; rpdb.set_trace()
         model = session.query(self.model_class).filter(
             self.model_class.created_at < initial_setup_wait_time).filter(
             self.model_class.last_udp_update < failover_wait_time).filter(
