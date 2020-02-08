@@ -41,15 +41,15 @@ class A10HealthManager(health_manager.HealthManager):
 
     def health_check(self):
         futs = []
-        failover_wait_time = CONF.a10_health_manager.heartbeat_timeout
         while not self.dead.is_set():
             lock_session = None
             try:
                 lock_session = db_apis.get_session()
-                expired_time = datetime.datetime.utcnow() - datetime.timedelta(
-                    seconds=failover_wait_time)
-
-                vthunder = self.vthunder_repo.get_stale_vthunders(lock_session, expired_time)
+                failover_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
+                    seconds=CONF.a10_health_manager.heartbeat_timeout)
+                initial_setup_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
+                    seconds=CONF.a10_health_manager.failover_timeout)
+                vthunder = self.vthunder_repo.get_stale_vthunders(lock_session, initial_setup_wait_time, failover_wait_time)
 
             except Exception:
                 with excutils.save_and_reraise_exception():

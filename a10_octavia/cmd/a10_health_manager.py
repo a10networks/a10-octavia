@@ -66,7 +66,7 @@ def hm_health_check(exit_event):
         hm.executor.shutdown()
     signal.signal(signal.SIGINT, hm_exit)
     LOG.warning("Pausing before starting health check")
-    exit_event.wait(CONF.a10_health_manager.hm_start_timeout)
+    exit_event.wait(CONF.a10_health_manager.heartbeat_timeout)
     health_check.start()
 
 

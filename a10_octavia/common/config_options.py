@@ -140,10 +140,10 @@ A10_HEALTH_MANAGER_OPTS = [
     cfg.IPOpt('bind_ip', default='127.0.0.1',
               help=_('IP address the controller will listen on for '
                      'heart beats')),
-    cfg.IntOpt('hm_start_timeout',
+    cfg.IntOpt('failover_timeout',
                default=600,
-               help=_('Interval(in seconds) to wait before starting health '
-                      'manager.')),
+               help=_('Interval(in seconds) to wait before considering '
+                       'a vthunder eligible for failover.')),
     cfg.PortOpt('bind_port', default=5550,
                 help=_('Port number the controller will listen on'
                        'for heart beats')),
@@ -163,15 +163,14 @@ A10_HEALTH_MANAGER_OPTS = [
                help=_('key used to validate vthunder sending'
                       'the message'), secret=True),
     cfg.IntOpt('heartbeat_timeout',
-               default=60,
-               help=_('Interval, in seconds, to wait before failing over an '
+               default=90,
+               help=_('Interval(in seconds) to wait before failing over a '
                       'vthunder.')),
     cfg.IntOpt('health_check_interval',
                default=3,
                help=_('Sleep time between health checks in seconds.')),
     cfg.IntOpt('sock_rlimit', default=0,
                help=_(' sets the value of the heartbeat recv buffer')),
-
     cfg.ListOpt('controller_ip_port_list',
                 help=_('List of controller ip and port pairs for the '
                        'heartbeat receivers. Example 127.0.0.1:5550, '
