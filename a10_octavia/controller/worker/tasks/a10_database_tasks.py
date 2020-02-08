@@ -100,9 +100,10 @@ class CreateVThunderEntry(BaseDatabaseTask):
             compute_id=compute_id,
             topology=topology,
             role=role,
-            last_udp_update=datetime.now(),
+            last_udp_update=datetime.utcnow(),
             status=status,
-            updated_at=datetime.now())
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow())
 
         LOG.info("Successfully created vthunder entry in database.")
 
@@ -162,7 +163,7 @@ class GetComputeForProject(BaseDatabaseTask):
             vthunder = self.vthunder_repo.get_spare_vthunder(
                 db_apis.get_session())
             self.vthunder_repo.update(db_apis.get_session(), vthunder.id,
-                                      status="USED_SPARE", updated_at=datetime.now())
+                                      status="USED_SPARE", updated_at=datetime.utcnow())
         amphora_id = vthunder.amphora_id
         amphora = self.amphora_repo.get(db_apis.get_session(), id=amphora_id)
         compute_id = vthunder.compute_id
@@ -219,7 +220,9 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                                              topology="STANDALONE",
                                              role="MASTER",
                                              status="ACTIVE",
-                                             updated_at=datetime.now())
+                                             last_udp_update=datetime.utcnow(),
+                                             created_at=datetime.utcnow(),
+                                             updated_at=datetime.utcnow())
         LOG.info("Successfully created vthunder entry in database.")
 
 
@@ -250,7 +253,7 @@ class MarkVThunderStatusInDB(BaseDatabaseTask):
             if vthunder:
                 self.vthunder_repo.update(db_apis.get_session(),
                                           vthunder.id,
-                                          status=status, updated_at=datetime.now())
+                                          status=status, updated_at=datetime.utcnow())
         except (sqlalchemy.orm.exc.NoResultFound,
                 sqlalchemy.orm.exc.UnmappedInstanceError):
             LOG.debug('No existing amphora health record to mark busy '
@@ -277,6 +280,8 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
             topology="SINGLE",
             role="MASTER",
             status="READY",
-            updated_at=datetime.now())
+            created_at=datetime.utcnow(),
+            last_udp_update=datetime.utcnow(),
+            updated_at=datetime.utcnow())
         LOG.info("Successfully created vthunder entry in database.")
         return vthunder

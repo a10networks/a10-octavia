@@ -139,7 +139,7 @@ class VThunder(BaseDataModel):
                  password=None, axapi_version=None, undercloud=None,
                  loadbalancer_id=None, project_id=None, compute_id=None,
                  topology="STANDALONE", role="MASTER", last_udp_update=None, status="ACTIVE",
-                 updated_at=datetime.now()):
+                 created_at=datetime.utcnow(), updated_at=datetime.utcnow()):
         self.id = id
         self.vthunder_id = vthunder_id
         self.amphora_id = amphora_id
@@ -156,4 +156,5 @@ class VThunder(BaseDataModel):
         self.role = role
         self.last_udp_update = last_udp_update
         self.status = status
-        updated_at = datetime.now()
+        self.created_at = created_at,
+        self.updated_at = updated_at

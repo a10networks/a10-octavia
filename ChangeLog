@@ -1,6 +1,8 @@
 CHANGES
 =======
 
+* Fixed backup active issue for ha
+* constant change as per stein support
 * Added health monitor constants
 * Refactored LOG messages and re-added stein support
 * Fixed some comment's typos
