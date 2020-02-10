@@ -414,7 +414,7 @@ class MemberDelete(BaseVThunderTask):
             LOG.info("Error occurred")
 
 
-class CreateHealthMonitorOnVthunder(BaseVThunderTask):
+class CreateHealthMonitorOnVThunder(BaseVThunderTask):
     """ Task to create a healthmonitor and associate it with provided pool. """
 
     def execute(self, vthunder):

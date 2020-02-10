@@ -6,7 +6,7 @@
 A10 Networks Octavia Driver for Thunder, vThunder and AX Series Appliances 
 Supported releases:
 
-* OpenStack: Rocky Releases
+* OpenStack: Stein Releases
 * Octavie versions: v2
 * ACOS versions: ACOS 2/AxAPI 2.1 (ACOS 2.7.2+), ACOS 4/AxAPI 3.0 (ACOS 4.0.1-GA +)
 
@@ -17,7 +17,7 @@ Clone the repository and run the following command to install
 ### Register the A10 driver and plugin
 `sudo python ./setup.py install`
 
-Clone the acos client and install it from https://github.com/a10networks/acos-client
+Clone the acos client and install it from https://github.com/a10networks/acos-client.(Checkout `octavia-fixes` branch)
 
 ### Register acos clint by running following command in acos-client folder
 
@@ -91,7 +91,7 @@ if older migrations not found, trucate `alembic_migrations` table from ocatvia d
 
 ## STEP6: Allow security group to access vThunder AXAPIs port
 
-As `admin` OpenStack user, update security group `lb-mgmt-sec-grp` (security group of which ID is provided in octavia.conf) and allow `PORT 80` and `PORT 443` ingress traffic to allow AXAPI communication with vThunder instances.
+As `admin` OpenStack user, update security group `lb-mgmt-sec-grp` (security group of which ID is provided in a10-octavia.conf) and allow `TCP PORT 80`, `TCP PORT 443` and `UDP PORT 5555`  ingress traffic to allow AXAPI communication with vThunder instances.
 
 ## STEP7: Restart Related Octavia Services
 ### devstack development environment
@@ -106,9 +106,11 @@ From a10-octavia/a10_octavia/install folder run `install_service.sh` file.
 chmod +X install_service.sh
 ./install_service.sh
 ```
-This will install systemd service with name - 'a10-controller-worker'. Make sure service is up and running.
+This will install systemd services with name - 'a10-controller-worker, a10-health-manager.service, a10-housekeeper-manager.service'. Make sure service is up and running.
 You can start/stop service using systemctl/service commands.
 You can check logs of service using following command:
 ```shell
 journalctl -af --unit a10-controller-worker.service
+journalctl -af --unit a10-health-manager.service
+journalctl -af --unit a10-housekeeper-manager.service
 ```
