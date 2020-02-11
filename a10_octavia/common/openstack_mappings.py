@@ -19,8 +19,8 @@ def hm_type(c, os_hm_type):
         'TCP': c.slb.hm.TCP,
         'HTTP': c.slb.hm.HTTP,
         'HTTPS': c.slb.hm.HTTPS,
-        'UDP-CONNECT' : c.slb.hm.UDP,
-        'UDP' : c.slb.hm.UDP
+        'UDP-CONNECT': c.slb.hm.UDP,
+        'UDP': c.slb.hm.UDP
     }
     return hm_map[os_hm_type]
 
