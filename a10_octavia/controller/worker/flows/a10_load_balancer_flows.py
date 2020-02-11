@@ -269,15 +269,15 @@ class LoadBalancerFlows(object):
         new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
             requires=a10constants.VTHUNDER))
         new_LB_net_subflow.add(a10_database_tasks.MarkVThunderStatusInDB(
-            name="set_vThunder_entry_active",
+            name=a10constants.MARK_VTHUNDER_MASTER_ACTIVE_INDB,
             requires=a10constants.VTHUNDER,
             inject={"status": constants.ACTIVE}))
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             new_LB_net_subflow.add(vthunder_tasks.CreateHealthMonitorOnVThunder(
-                name='creating health monitor to master vthunder',
-                requires=(a10constants.VTHUNDER)))
+                name=a10constants.CREATE_HEALTH_MONITOR_ON_VTHUNDER_MASTER,
+                requires=a10constants.VTHUNDER))
             new_LB_net_subflow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
-                name="get_backup_vThunder",
+                name=a10constants.GET_BACKUP_VTHUNDER_BY_LB,
                 requires=constants.LOADBALANCER,
                 provides=a10constants.BACKUP_VTHUNDER))
             new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
@@ -291,7 +291,7 @@ class LoadBalancerFlows(object):
                 name="backup_enable_interface",
                 rebind=[a10constants.BACKUP_VTHUNDER]))
             new_LB_net_subflow.add(a10_database_tasks.MarkVThunderStatusInDB(
-                name="Set_backup_vThunder_entry_active",
+                name=a10constants.MARK_VTHUNDER_BACKUP_ACTIVE_INDB,
                 rebind=[a10constants.BACKUP_VTHUNDER],
                 inject={"status": constants.ACTIVE}))
         return new_LB_net_subflow
