@@ -29,7 +29,7 @@ VTHUNDER_ID = "vthunder_id"
 
 # Taskflow flow and task names
 
-MARK_VTHUNDER_MASTER_ACTIVE_INDB = 'mark-vthunder-master-active-indb'
-MARK_VTHUNDER_BACKUP_ACTIVE_INDB = 'mark-vthunder-backup-active-indb'
+MARK_VTHUNDER_MASTER_ACTIVE_IN_DB = 'mark-vthunder-master-active-in-db'
+MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB = 'mark-vthunder-backup-active-in-db'
 GET_BACKUP_VTHUNDER_BY_LB = 'get-backup-vthunder-by-lb'
 CREATE_HEALTH_MONITOR_ON_VTHUNDER_MASTER = 'create-health-monitor-on-vthunder-master'
