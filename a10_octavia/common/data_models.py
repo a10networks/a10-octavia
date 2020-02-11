@@ -156,5 +156,5 @@ class VThunder(BaseDataModel):
         self.role = role
         self.last_udp_update = last_udp_update
         self.status = status
-        self.created_at = created_at,
+        self.created_at = created_at
         self.updated_at = updated_at
