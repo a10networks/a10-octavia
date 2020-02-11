@@ -143,7 +143,15 @@ A10_HEALTH_MANAGER_OPTS = [
     cfg.IntOpt('failover_timeout',
                default=600,
                help=_('Interval(in seconds) to wait before considering '
-                       'a vthunder eligible for failover.')),
+                      'a vthunder eligible for failover.')),
+    cfg.IntOpt('health_check_timeout', min=1, max=180,
+               default=3,
+               help=_('Specify the Healthcheck timeout(in seconds) in '
+                      ' vThunder. ')),
+    cfg.IntOpt('health_check_max_retries', min=1, max=10,
+               default=3,
+               help=_('Specify the Healthcheck Retries in '
+                      'a vThunder. ')),
     cfg.PortOpt('bind_port', default=5550,
                 help=_('Port number the controller will listen on'
                        'for heart beats')),

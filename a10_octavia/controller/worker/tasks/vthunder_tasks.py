@@ -420,15 +420,17 @@ class CreateHealthMonitorOnVThunder(BaseVThunderTask):
         name = a10constants.OCTAVIA_HEALTH_MANAGER_CONTROLLER
         health_check = a10constants.OCTAVIA_HEALTH_MONITOR
         interval = CONF.a10_health_manager.heartbeat_interval
-        timeout = 3
-        max_retries = 5
+        timeout = CONF.a10_health_manager.health_check_timeout
+        max_retries = CONF.a10_health_manager.health_check_max_retries
         port = CONF.a10_health_manager.bind_port
         ipv4 = CONF.a10_health_manager.bind_ip
         c = self.client_factory(vthunder)
         if interval < timeout:
             LOG.warning(
-                "Interval should be greater than or equal to timeout(3 seconds). Reverting to default(10 seconds).")
+                "Interval should be greater than or equal to timeout. Reverting to default values. "
+                "Setting interval to 10 seconds and timeout to 3 seconds.")
             interval = 10
+            timeout = 3
 
         result = None
         try:
