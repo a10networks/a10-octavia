@@ -6,7 +6,7 @@
 A10 Networks Octavia Driver for Thunder, vThunder and AX Series Appliances 
 Supported releases:
 
-* OpenStack: Stein Releases
+* OpenStack: Rocky Releases
 * Octavie versions: v2
 * ACOS versions: ACOS 2/AxAPI 2.1 (ACOS 2.7.2+), ACOS 4/AxAPI 3.0 (ACOS 4.0.1-GA +)
 
@@ -17,7 +17,7 @@ Clone the repository and run the following command to install
 ### Register the A10 driver and plugin
 `sudo python ./setup.py install`
 
-Clone the acos client and install it from https://github.com/a10networks/acos-client. (Checkout `octavia-fixes` branch)
+Clone the acos client and install it from https://github.com/a10networks/acos-client
 
 ### Register acos clint by running following command in acos-client folder
 
@@ -79,26 +79,6 @@ amp_image_tag = amphora
 user_data_config_drive = False
 ```
 
-```shell
-[a10_health_manager]
-udp_server_ip_address = <server_ip_address_for_health_monitor>
-bind_port = 5550 <or_any_other_port>
-bind_ip = <controller_ip_configured_to_listen_for_udp>
-heartbeat_interval = 5
-heartbeat_key = insecure
-heartbeat_timeout = 90
-health_check_interval = 3
-failover_timeout = 600
-health_check_timeout = 3
-health_check_max_retries = 5
-```
-
-```shell
-[a10_house_keeping]
-load_balancer_expiry_age = 3600
-amphora_expiry_age = 3600
-```
-
 ## STEP5: Run database migrations
 
 from `a10-octavia/a10_octavia/db/migration` folder run 
@@ -111,7 +91,7 @@ if older migrations not found, trucate `alembic_migrations` table from ocatvia d
 
 ## STEP6: Allow security group to access vThunder AXAPIs port
 
-As `admin` OpenStack user, update security group `lb-mgmt-sec-grp` (security group of which ID is provided in a10-octavia.conf) and allow `TCP PORT 80` and `TCP PORT 443` ingress traffic to allow AXAPI communication with vThunder instances. Also update security group `lb-health-mgr-sec-grp` to allow `UDP PORT 5550` ingress traffic to allow UDP packets from vThunder instances.
+As `admin` OpenStack user, update security group `lb-mgmt-sec-grp` (security group of which ID is provided in octavia.conf) and allow `PORT 80` and `PORT 443` ingress traffic to allow AXAPI communication with vThunder instances.
 
 ## STEP7: Restart Related Octavia Services
 ### devstack development environment
@@ -126,12 +106,9 @@ From a10-octavia/a10_octavia/install folder run `install_service.sh` file.
 chmod +X install_service.sh
 ./install_service.sh
 ```
-This will install systemd services with name - 'a10-controller-worker, a10-health-manager.service, a10-housekeeper-manager.service'. Make sure service is up and running.
+This will install systemd service with name - 'a10-controller-worker'. Make sure service is up and running.
 You can start/stop service using systemctl/service commands.
 You can check logs of service using following command:
 ```shell
 journalctl -af --unit a10-controller-worker.service
-journalctl -af --unit a10-health-manager.service
-journalctl -af --unit a10-housekeeper-manager.service
 ```
-
