@@ -247,12 +247,21 @@ class ConfigureaVCS(BaseVThunderTask):
                 raise
 
             try:
-                bc = self.client_factory(backup_vthunder)
-                bc.system.action.set_vcs_device(2, 100)
-                bc.system.action.set_vcs_para("192.168.0.100", "255.255.255.0")
-                bc.system.action.vcs_enable()
-                bc.system.action.vcs_reload()
-                LOG.info("Configured the backup vThunder for aVCS")
+                attempts = 10
+                while attempts > 0:
+                    # TODO: Need this loop to be moved in acos_client with
+                    # proper exception handling with all other API call loops.
+                    # Currently resolves "System is Busy" error
+                    try:
+                        bc = self.client_factory(backup_vthunder)
+                        bc.system.action.set_vcs_device(2, 100)
+                        bc.system.action.set_vcs_para("192.168.0.100", "255.255.255.0")
+                        bc.system.action.vcs_enable()
+                        bc.system.action.vcs_reload()
+                        attempts = 0
+                        LOG.info("Configured the backup vThunder for aVCS")
+                    except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
+                        attempts = attempts - 1
             except Exception as e:
                 LOG.error("Unable to configure backup vThunder aVCS")
                 LOG.info(str(e))
