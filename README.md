@@ -1,5 +1,5 @@
 # A10 Networks Openstack Octavia Driver
-===========================================
+=====================================================
 
 **This is currently in beta stage with limited support. Our next dev release is tentative for early 2020**
 
@@ -118,13 +118,13 @@ if older migrations not found, trucate `alembic_migrations` table from ocatvia d
 
 ## STEP6: Allow security group to access vThunder AXAPIs port
 
-Update security group `lb-mgmt-sec-grp` (ID of security group provided in a10-octavia.conf) and allow `TCP PORT 80`, `TCP PORT 443` and `Custom UDP PORT 5555`  ingress traffic to allow AXAPI communication with vThunder instances.
+Update security group `lb-mgmt-sec-grp` (ID of security group provided in a10-octavia.conf) and allow `TCP PORT 80`, `TCP PORT 443` and `Custom UDP PORT 5550` ingress traffic to allow AXAPI communication with vThunder instances. Also update security group `lb-health-mgr-sec-grp` to allow `UDP PORT5550` ingress traffic to allow UDP packets from vThunder instances.
 
 ## STEP7: Restart Related Octavia Services
-### devstack development environment
-`sudo systemctl restart devstack@o-api.service devstack@o-cw.service devstack@o-hk.service devstack@o-hm.service devstack@q-svc.service`
+### For devstack development environment
+`sudo systemctl restart devstack@o-api.service devstack@o-cw.service devstack@o-hk.service devstack@o-hm.service`
 
-## other environments
+### For other environments
 Use `systemctl` or similar function to restart Octavia controller and health services. 
 
 ## STEP 8: [FOR ROCKY AND STEIN RELEASE] Create octavia service worker
