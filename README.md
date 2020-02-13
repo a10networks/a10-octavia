@@ -10,22 +10,25 @@ Supported releases:
 * Octavie versions: v2
 * ACOS versions: ACOS 2/AxAPI 2.1 (ACOS 2.7.2+), ACOS 4/AxAPI 3.0 (ACOS 4.0.1-GA +)
 
+**Note: Following Configurations should be done as an OpenStack admin user**
+
 ## STEP1: Installation
 
-Clone the repository and run the following command to install
+Clone the repository and run the following command to install the plugin
 
 ### Register the A10 driver and plugin
 `sudo python ./setup.py install`
 
-Clone the acos client and install it from https://github.com/a10networks/acos-client.(Checkout `octavia-fixes` branch)
+Clone the `acos-client` from https://github.com/a10networks/acos-client.(Checkout `octavia-fixes` branch)
 
-### Register acos clint by running following command in acos-client folder
+### Register acos client by running following command in acos-client folder
 
 `sudo python ./setup.py install`
 
-## STEP2: Upload vThunder image and create vThunder flavor
+## STEP2: Upload vThunder image and create a vThunder flavor for amphorae devices
 
-Upload provided vThunder image in QCOW2 and create OpenStack flavor with minimum 8 vcpus, 8GB RAM and 30GB disk as admin user of OpenStack environment.
+Upload provided vThunder image (QCOW2) and create nova flavor with required resources.
+Minimum recommandation is 8 vcpus, 8GB RAM and 30GB disk.
 
 Use below commands for reference:
 
@@ -39,13 +42,13 @@ Note down the `image ID` and `flavor ID` of created resources.
 
 ## STEP3: Update the Octavia config file
 
-Update the /etc/octavia/octavia.conf file with the following parameters:
+Enable a10 provider driver in the api-settings section of `/etc/octavia/octavia.conf`.
+
+Add `a10` driver to the `enabled_provider_drivers` list in `/etc/octavia/octavia.conf`.
+Change `default_provider_driver` to `a10`
 
 ```shell
-enabled_provider_drivers = a10:     'The A10 Octavia driver.',
-                           noop_driver: 'The no-op driver.',
-                           amphora: 'The Octavia Amphora driver.',
-                           octavia: 'Deprecated alias of the Octavia Amphora driver.'
+enabled_provider_drivers = a10: 'The A10 Octavia driver.',
 
 default_provider_driver = a10
 ```
@@ -61,6 +64,7 @@ DEFAULT_VTHUNDER_PASSWORD = "a10"
 DEFAULT_AXAPI_VERSION = "30"
 ```
 
+Sample Configurations for a10_controller_worker:
 ```shell
 [a10_controller_worker]
 amp_image_owner_id = <admin_project_id>
@@ -79,6 +83,29 @@ amp_image_tag = amphora
 user_data_config_drive = False
 ```
 
+Sample Configurations for a10_health_manager:
+```shell
+[a10_health_manager]
+udp_server_ip_address = <server_ip_address_for_health_monitor>
+bind_port = 5550 <or_any_other_port>
+bind_ip = <controller_ip_configured_to_listen_for_udp>
+heartbeat_interval = 5
+heartbeat_key = insecure
+heartbeat_timeout = 90
+health_check_interval = 3
+failover_timeout = 600
+health_check_timeout = 3
+health_check_max_retries = 5
+```
+
+Sample Configurations for a10_house_keeping: 
+```shell
+[a10_house_keeping]
+load_balancer_expiry_age = 3600
+amphora_expiry_age = 3600
+```
+
+
 ## STEP5: Run database migrations
 
 from `a10-octavia/a10_octavia/db/migration` folder run 
@@ -91,7 +118,7 @@ if older migrations not found, trucate `alembic_migrations` table from ocatvia d
 
 ## STEP6: Allow security group to access vThunder AXAPIs port
 
-As `admin` OpenStack user, update security group `lb-mgmt-sec-grp` (security group of which ID is provided in a10-octavia.conf) and allow `TCP PORT 80`, `TCP PORT 443` and `UDP PORT 5555`  ingress traffic to allow AXAPI communication with vThunder instances.
+Update security group `lb-mgmt-sec-grp` (ID of security group provided in a10-octavia.conf) and allow `TCP PORT 80`, `TCP PORT 443` and `Custom UDP PORT 5555`  ingress traffic to allow AXAPI communication with vThunder instances.
 
 ## STEP7: Restart Related Octavia Services
 ### devstack development environment
