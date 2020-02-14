@@ -7,7 +7,7 @@ A10 Networks Octavia Driver for Thunder, vThunder and AX Series Appliances
 Supported releases:
 
 * OpenStack: Stein Releases
-* Octavia versions: Stein 4.1.0
+* Octavia version: Stein 4.1.0
 * ACOS versions: AxAPI 2.1 (ACOS 2.7.2+), ACOS 4/AxAPI 3.0 (ACOS 4.0.1-GA +)
 
 **Note: Following Configurations should be done as an OpenStack admin user**
@@ -70,22 +70,22 @@ amp_secgroup_list = lb-mgmt-sec-grp <or_you_can_create_custom>
 amp_flavor_id = <flavor_id_for_amphora>
 amp_boot_network_list = <netword_id_for_amphora_in_admin_project>
 amp_ssh_key_name = <ssh_key_for_amphora>
-network_driver = allowed_address_pairs_driver
+network_driver = a10_octavia_neutron_driver
 compute_driver = compute_nova_driver
-amphora_driver = amphora_haproxy_rest_driver
 workers = 2
 amp_active_retries = 100
 amp_active_wait_sec = 2
 amp_image_id = <vthunder_amphora_image_id>
-amp_image_tag = amphora
 user_data_config_drive = False
+loadbalancer_topology = SINGLE
 ```
+Load balancer topology options are `SINGLE` and `ACTIVE_STANDBY`. The plugin boots 2 vThunders and use aVCS to provide high availability.
 
 Sample Configurations for a10_health_manager:
 ```shell
 [a10_health_manager]
 udp_server_ip_address = <server_ip_address_for_health_monitor>
-bind_port = 5550 <or_any_other_port>
+bind_port = 5550
 bind_ip = <controller_ip_configured_to_listen_for_udp>
 heartbeat_interval = 5
 heartbeat_key = insecure
