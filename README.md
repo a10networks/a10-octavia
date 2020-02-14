@@ -21,14 +21,14 @@ Clone the repository and run the following command to install the plugin
 
 Clone the `acos-client` from https://github.com/a10networks/acos-client and checkout `octavia-fixes` branch
 
-#### Register `acos_client` by running following command in acos-client folder
+#### Register `acos-client` by running following command in acos-client folder
 
 `sudo python ./setup.py install`
 
 ## STEP 2: Upload vThunder image and create a nova flavor for amphorae devices
 
 Upload a vThunder image (QCOW2) and create nova flavor with required resources.
-Minimum recommendation for vThunder instance is 8 vcpus, 8GB RAM and 30GB disk.
+Minimum recommendation for vThunder instance is 8 vCPUs, 8GB RAM and 30GB disk.
 
 Use below commands for reference:
 
@@ -54,6 +54,7 @@ default_provider_driver = a10
 ## STEP 4: Add A10-Octavia config file
 Create a `a10-octavia.conf` file at /etc/a10/ location with proper permissions including following configuration sections.
 
+Sample Configurations for vThunder device:
 ```shell
 [VTHUNDER]
 DEFAULT_VTHUNDER_USERNAME = "admin"
@@ -61,7 +62,7 @@ DEFAULT_VTHUNDER_PASSWORD = "a10"
 DEFAULT_AXAPI_VERSION = "30"
 ```
 
-Sample Configurations for a10_controller_worker:
+Sample configurations for a10_controller_worker:
 ```shell
 [a10_controller_worker]
 amp_image_owner_id = <admin_project_id>
@@ -80,12 +81,12 @@ loadbalancer_topology = SINGLE
 ```
 Load balancer topology options are `SINGLE` and `ACTIVE_STANDBY`. In `ACTIVE_STANDBY` topology, the plugin boots 2 vThunders and uses aVCS to provide high availability.
 
-Sample Configurations for a10_health_manager:
+Sample configurations for a10_health_manager:
 ```shell
 [a10_health_manager]
 udp_server_ip_address = <server_ip_address_for_health_monitor>
 bind_port = 5550
-bind_ip = <controller_ip_configured_to_listen_for_udp>
+bind_ip = <controller_ip_configured_to_listen_for_udp_health_packets>
 heartbeat_interval = 5
 heartbeat_key = insecure
 heartbeat_timeout = 90
@@ -95,7 +96,7 @@ health_check_timeout = 3
 health_check_max_retries = 5
 ```
 
-Sample Configurations for a10_house_keeping: 
+Sample configurations for a10_house_keeping: 
 ```shell
 [a10_house_keeping]
 load_balancer_expiry_age = 3600
@@ -131,9 +132,9 @@ From a10-octavia/a10_octavia/install folder run `install_service.sh` script.
 chmod +X install_service.sh
 ./install_service.sh
 ```
-This will install systemd services with name - 'a10-controller-worker, a10-health-manager.service, a10-housekeeper-manager.service'. Make sure the services are up and running.
+This will install systemd services with names - `a10-controller-worker`, `a10-health-manager.service` and `a10-housekeeper-manager.service`. Make sure the services are up and running.
 You can start/stop the services using systemctl/service commands.
-You may check logs of the services using `journalctl` commands. For example,
+You may check logs of the services using `journalctl` commands. For example:
 ```shell
 journalctl -af --unit a10-controller-worker.service
 journalctl -af --unit a10-health-manager.service
