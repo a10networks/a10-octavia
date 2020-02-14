@@ -7,44 +7,42 @@ A10 Networks Octavia Driver for Thunder, vThunder and AX Series Appliances
 Supported releases:
 
 * OpenStack: Stein Releases
-* Octavie versions: v2
-* ACOS versions: ACOS 2/AxAPI 2.1 (ACOS 2.7.2+), ACOS 4/AxAPI 3.0 (ACOS 4.0.1-GA +)
+* Octavia versions: Stein 4.1.0
+* ACOS versions: AxAPI 2.1 (ACOS 2.7.2+), ACOS 4/AxAPI 3.0 (ACOS 4.0.1-GA +)
 
 **Note: Following Configurations should be done as an OpenStack admin user**
 
-## STEP1: Installation
+## STEP 1: Installation
 
 Clone the repository and run the following command to install the plugin
 
-### Register the A10 driver and plugin
+#### Register the A10 provider driver and controller worker plugin
 `sudo python ./setup.py install`
 
-Clone the `acos-client` from https://github.com/a10networks/acos-client.(Checkout `octavia-fixes` branch)
+Clone the `acos-client` from https://github.com/a10networks/acos-client and checkout `octavia-fixes` branch
 
-### Register acos client by running following command in acos-client folder
+#### Register `acos_client` by running following command in acos-client folder
 
 `sudo python ./setup.py install`
 
 ## STEP2: Upload vThunder image and create a vThunder flavor for amphorae devices
 
-Upload provided vThunder image (QCOW2) and create nova flavor with required resources.
-Minimum recommandation is 8 vcpus, 8GB RAM and 30GB disk.
+Upload a vThunder image (QCOW2) and create nova flavor with required resources.
+Minimum recommandation for vThunder instance is 8 vcpus, 8GB RAM and 30GB disk.
 
 Use below commands for reference:
 
 ```shell
-openstack image create --disk-format qcow2 --container-format bare   --public --file vThunder410.qcow2 vThunder.qcow2
+openstack image create --disk-format qcow2 --container-format bare --public --file vThunder410.qcow2 vThunder.qcow2
 
 openstack flavor create --vcpu 8 --ram 8196 --disk 30 vThunder_flavor
 ```
 
 Note down the `image ID` and `flavor ID` of created resources.
 
-## STEP3: Update the Octavia config file
+## STEP 3: Enable A10 provider driver in Octavia config file
 
-Enable a10 provider driver in the api-settings section of `/etc/octavia/octavia.conf`.
-
-Add `a10` driver to the `enabled_provider_drivers` list in `/etc/octavia/octavia.conf`.
+Add `a10` driver to the `enabled_provider_drivers` list in the `api-settings` section of `/etc/octavia/octavia.conf`.
 Change `default_provider_driver` to `a10`
 
 ```shell
@@ -53,8 +51,8 @@ enabled_provider_drivers = a10: 'The A10 Octavia driver.',
 default_provider_driver = a10
 ```
 
-## STEP4: Add an Octavia config file 
-Create an `a10-octavia.conf` file at /etc/a10/ location with following paramaters:
+## STEP 4: Add A10-Octavia config file 
+Create a `a10-octavia.conf` file at /etc/a10/ location with following paramaters.
 
 ```shell
 
@@ -106,7 +104,7 @@ amphora_expiry_age = 3600
 ```
 
 
-## STEP5: Run database migrations
+## STEP 5: Run database migrations
 
 from `a10-octavia/a10_octavia/db/migration` folder run 
 
@@ -114,21 +112,22 @@ from `a10-octavia/a10_octavia/db/migration` folder run
 alembic upgrade head
 ```
 
-if older migrations not found, trucate `alembic_migrations` table from ocatvia database and re-run the above command.
+if older migrations not found, truncate `alembic_migrations` table from octavia database and re-run the above command.
 
-## STEP6: Allow security group to access vThunder AXAPIs port
+## STEP 6: Update security group to access vThunder AXAPIs port
 
-Update security group `lb-mgmt-sec-grp` (ID of security group provided in a10-octavia.conf) and allow `TCP PORT 80`, `TCP PORT 443` and `Custom UDP PORT 5550` ingress traffic to allow AXAPI communication with vThunder instances. Also update security group `lb-health-mgr-sec-grp` to allow `UDP PORT5550` ingress traffic to allow UDP packets from vThunder instances.
+Update security group `lb-mgmt-sec-grp` (or custom security group configured in a10-octavia.conf file) and allow `TCP PORT 80` and `TCP PORT 443` ingress traffic to allow AXAPI communication with vThunder instances. Also update security group `lb-health-mgr-sec-grp` to allow `UDP PORT 5550` ingress traffic to allow UDP packets from vThunder instances.
 
-## STEP7: Restart Related Octavia Services
-### For devstack development environment
+## STEP 7: Restart Related Octavia Services
+#### For devstack development environment
 `sudo systemctl restart devstack@o-api.service devstack@o-cw.service devstack@o-hk.service devstack@o-hm.service`
 
-### For other environments
+#### For other environments
 Use `systemctl` or similar function to restart Octavia controller and health services. 
 
-## STEP 8: [FOR ROCKY AND STEIN RELEASE] Create octavia service worker
-From a10-octavia/a10_octavia/install folder run `install_service.sh` file.
+## STEP 8: [FOR ROCKY AND STEIN RELEASE] Create a10-octavia services
+From a10-octavia/a10_octavia/install folder run `install_service.sh` script.
+
 ```shell
 chmod +X install_service.sh
 ./install_service.sh
