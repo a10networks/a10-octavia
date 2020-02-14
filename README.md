@@ -25,10 +25,10 @@ Clone the `acos-client` from https://github.com/a10networks/acos-client and chec
 
 `sudo python ./setup.py install`
 
-## STEP2: Upload vThunder image and create a vThunder flavor for amphorae devices
+## STEP 2: Upload vThunder image and create a vThunder flavor for amphorae devices
 
 Upload a vThunder image (QCOW2) and create nova flavor with required resources.
-Minimum recommandation for vThunder instance is 8 vcpus, 8GB RAM and 30GB disk.
+Minimum recommendation for vThunder instance is 8 vcpus, 8GB RAM and 30GB disk.
 
 Use below commands for reference:
 
@@ -52,7 +52,7 @@ default_provider_driver = a10
 ```
 
 ## STEP 4: Add A10-Octavia config file 
-Create a `a10-octavia.conf` file at /etc/a10/ location with following paramaters.
+Create a `a10-octavia.conf` file at /etc/a10/ location with following parameters.
 
 ```shell
 
