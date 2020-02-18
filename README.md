@@ -54,7 +54,7 @@ default_provider_driver = a10
 ## STEP 4: Add A10-Octavia config file
 Create a `a10-octavia.conf` file at /etc/a10/ location with proper permissions including following configuration sections.
 
-Sample Configurations for vThunder device:
+### vThunder sample config
 ```shell
 [VTHUNDER]
 DEFAULT_VTHUNDER_USERNAME = "admin"
@@ -62,7 +62,7 @@ DEFAULT_VTHUNDER_PASSWORD = "a10"
 DEFAULT_AXAPI_VERSION = "30"
 ```
 
-Sample configurations for a10_controller_worker:
+### Controller worker sample config
 ```shell
 [a10_controller_worker]
 amp_image_owner_id = <admin_project_id>
@@ -81,7 +81,7 @@ loadbalancer_topology = SINGLE
 ```
 Load balancer topology options are `SINGLE` and `ACTIVE_STANDBY`. In `ACTIVE_STANDBY` topology, the plugin boots 2 vThunders and uses aVCS to provide high availability.
 
-Sample configurations for a10_health_manager:
+### Health manager sample config
 ```shell
 [a10_health_manager]
 udp_server_ip_address = <server_ip_address_for_health_monitor>
@@ -96,7 +96,7 @@ health_check_timeout = 3
 health_check_max_retries = 5
 ```
 
-Sample configurations for a10_house_keeping: 
+### Housekeeper sample config
 ```shell
 [a10_house_keeping]
 load_balancer_expiry_age = 3600
