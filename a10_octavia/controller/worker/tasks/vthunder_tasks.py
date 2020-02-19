@@ -247,12 +247,21 @@ class ConfigureaVCS(BaseVThunderTask):
                 raise
 
             try:
-                bc = self.client_factory(backup_vthunder)
-                bc.system.action.set_vcs_device(2, 100)
-                bc.system.action.set_vcs_para("192.168.0.100", "255.255.255.0")
-                bc.system.action.vcs_enable()
-                bc.system.action.vcs_reload()
-                LOG.info("Configured the backup vThunder for aVCS")
+                attempts = 10
+                while attempts > 0:
+                    # TODO: Need this loop to be moved in acos_client with
+                    # proper exception handling with all other API call loops.
+                    # Currently resolves "System is Busy" error
+                    try:
+                        bc = self.client_factory(backup_vthunder)
+                        bc.system.action.set_vcs_device(2, 100)
+                        bc.system.action.set_vcs_para("192.168.0.100", "255.255.255.0")
+                        bc.system.action.vcs_enable()
+                        bc.system.action.vcs_reload()
+                        attempts = 0
+                        LOG.info("Configured the backup vThunder for aVCS")
+                    except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
+                        attempts = attempts - 1
             except Exception as e:
                 LOG.error("Unable to configure backup vThunder aVCS")
                 LOG.info(str(e))
@@ -267,7 +276,6 @@ class ListenersCreate(BaseVThunderTask):
         axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
         for listener in listeners:
             listener.load_balancer = loadbalancer
-            # self.amphora_driver.update(listener, loadbalancer.vip)
             try:
                 c = self.client_factory(vthunder)
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
@@ -297,7 +305,6 @@ class ListenersUpdate(BaseVThunderTask):
         """Execute updates per listener for an amphora."""
         for listener in listeners:
             listener.load_balancer = loadbalancer
-            # self.amphora_driver.update(listener, loadbalancer.vip)
             try:
                 c = self.client_factory(vthunder)
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
@@ -324,7 +331,6 @@ class ListenerDelete(BaseVThunderTask):
 
     def execute(self, loadbalancer, listener, vthunder):
         """Execute listener delete routines for an amphora."""
-        # self.amphora_driver.delete(listener, loadbalancer.vip)
         try:
             c = self.client_factory(vthunder)
             name = loadbalancer.id + "_" + str(listener.protocol_port)
@@ -351,7 +357,6 @@ class PoolCreate(BaseVThunderTask):
         """Execute create pool for an amphora."""
         try:
             c = self.client_factory(vthunder)
-            # need to put algorithm logic
             out = c.slb.service_group.create(pool.id, pool.protocol)
             LOG.info("Pool created successfully.")
         except Exception as e:
@@ -366,7 +371,6 @@ class PoolDelete(BaseVThunderTask):
         """Execute create pool for an amphora."""
         try:
             c = self.client_factory(vthunder)
-            # need to put algorithm logic
             out = c.slb.service_group.delete(pool.id)
             LOG.info("Pool deleted successfully.")
         except Exception as e:
@@ -419,36 +423,41 @@ class CreateHealthMonitorOnVThunder(BaseVThunderTask):
 
     def execute(self, vthunder):
         """ Execute create health monitor for master vthunder """
-        # TODO : Length of name of healthmonitor for older vThunder devices
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-        try:
-            method = None
-            url = None
-            expect_code = None
-            # TODO : change this
-            name = a10constants.VTHUNDER_UDP_HEARTBEAT
-            interval = CONF.a10_health_manager.heartbeat_interval
+        method = None
+        url = None
+        expect_code = None
+        name = a10constants.OCTAVIA_HEALTH_MANAGER_CONTROLLER
+        health_check = a10constants.OCTAVIA_HEALTH_MONITOR
+        interval = CONF.a10_health_manager.heartbeat_interval
+        timeout = CONF.a10_health_manager.health_check_timeout
+        max_retries = CONF.a10_health_manager.health_check_max_retries
+        port = CONF.a10_health_manager.bind_port
+        ipv4 = CONF.a10_health_manager.bind_ip
+        c = self.client_factory(vthunder)
+        if interval < timeout:
+            LOG.warning(
+                "Interval should be greater than or equal to timeout. Reverting to default values. "
+                "Setting interval to 10 seconds and timeout to 3 seconds.")
+            interval = 10
             timeout = 3
-            max_retries = 5
-            port = CONF.a10_health_manager.bind_port
-            ipv4 = CONF.a10_health_manager.bind_ip
-            c = self.client_factory(vthunder)
-            out = c.slb.hm.create(name, openstack_mappings.hm_type(c, 'UDP'),
-                                  interval, timeout, max_retries, method, url, expect_code,
-                                  port, ipv4)
-            LOG.info("Heath Monitor created successfully.")
-        except Exception as e:
-            LOG.info(str(e))
+
+        result = None
         try:
-            c = self.client_factory(vthunder)
-            name = a10constants.HM_SERVER
-            ip_address = CONF.a10_health_manager.udp_server_ip_address
-            health_check = a10constants.VTHUNDER_UDP_HEARTBEAT
-            out = c.slb.server.create(name, ip_address, health_check=health_check)
-            LOG.info("Server created successfully. Enabled health check for health monitor.")
+            result = c.slb.hm.create(health_check, openstack_mappings.hm_type(c, 'UDP'),
+                                     interval, timeout, max_retries, method, url, expect_code,
+                                     port, ipv4)
+            LOG.info("Health Monitor created successfully.")
         except Exception as e:
             LOG.info(str(e))
 
+        if result:
+            ip_address = CONF.a10_health_manager.udp_server_ip_address
+            health_check = a10constants.OCTAVIA_HEALTH_MONITOR
+            try:
+                c.slb.server.create(name, ip_address, health_check=health_check)
+                LOG.info("Server created successfully. Enabled health check for health monitor.")
+            except Exception as e:
+                LOG.info(str(e))
 
 class CheckVRRPStatus(BaseVThunderTask):
     """"Task to check VRRP status"""

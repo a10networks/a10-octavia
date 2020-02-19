@@ -13,6 +13,7 @@
 #    under the License.
 
 GET_VTHUNDER_FOR_LB_SUBFLOW = 'octavia-get-vthunder-for-lb-subflow'
+
 VTHUNDER = 'vthunder'
 STATUS = 'status'
 ROLE = 'role'
@@ -20,7 +21,15 @@ BACKUP_VTHUNDER = 'backup_vthunder'
 VRRP_STATUS = 'vrrp_status'
 
 FAILED = 'FAILED'
-VTHUNDER_UDP_HEARTBEAT = 'vthunder_udp_heartbeat'
-HM_SERVER = 'a10_hm_server'
+USED_SPARE = 'USED_SPARE'
+OCTAVIA_HEALTH_MANAGER_CONTROLLER = 'octavia_health_manager_controller'
+OCTAVIA_HEALTH_MONITOR = 'octavia_health_monitor'
 VTHUNDER_CONFIG = 'vthunder_config'
 VTHUNDER_ID = "vthunder_id"
+
+# Taskflow flow and task names
+
+MARK_VTHUNDER_MASTER_ACTIVE_IN_DB = 'mark-vthunder-master-active-in-db'
+MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB = 'mark-vthunder-backup-active-in-db'
+GET_BACKUP_VTHUNDER_BY_LB = 'get-backup-vthunder-by-lb'
+CREATE_HEALTH_MONITOR_ON_VTHUNDER_MASTER = 'create-health-monitor-on-vthunder-master'

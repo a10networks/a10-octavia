@@ -1,12 +1,41 @@
 CHANGES
 =======
 
+* Fixed backup active issue for ha
+* constant change as per stein support
+* Added health monitor constants
+* Refactored LOG messages and re-added stein support
+* Fixed some comment's typos
+* Fixed some comment's typos
+* refactored hm service
+* Update README.md
+* pep8 for a10\_config
+* pep8 for db module
+* pep8 for api,common and cmd
+* pep8 for controller-worker
+* pep8 for tasks
+* pep8 for flows
+* remove extra import
+* minor fix
+* Incorporated review comments
+* update a10\_health\_manager
+* Removed excess constants from a10constants
+* Included review comment feedback with minor changes
+* minor fixes
+* adding missing dependency for member flow
+* Update corrections, review feedback, full session persistence support
+* Added stein support changes
 * stack-559 solution
 * Added Readme
 * removal of slb related templates
 * doc strings, help doc, some more reference for rack, more validations
 * Some more optimization
 * review comments, code optimization, some more validations
+* Added UDP support
+* Reverted delete of CreateHealthMonitor class
+* PR Reviews + added support for UDP HM
+* internal review comments for vthunder\_tasks
+* Added changes for stack-485 along with some modification
 * octavia config file changes
 * added delete persist template support
 * updated doc string formats

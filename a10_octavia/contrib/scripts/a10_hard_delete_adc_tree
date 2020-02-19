@@ -2,6 +2,8 @@
 mysql -u$1 -p$2 <<EOF
 USE octavia;
 DELETE FROM member WHERE name = "mem1";
+DELETE l7r FROM l7rule l7r INNER JOIN l7policy l7p ON l7r.l7policy_id = l7p.id WHERE l7p.name = "policy1";
+DELETE FROM l7policy WHERE name = "policy1";
 DELETE FROM listener WHERE name = "l1";
 DELETE FROM pool WHERE name = "pool1";
 UPDATE load_balancer SET provisioning_status = "ACTIVE" WHERE name = "lb1";

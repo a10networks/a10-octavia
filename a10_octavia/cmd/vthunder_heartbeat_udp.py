@@ -12,18 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from concurrent import futures
-import binascii
-import hashlib
 import socket
-import time
-import hmac
-import zlib
 import datetime
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_utils import secretutils
-from stevedore import driver as stevedore_driver
 
 from octavia.common import exceptions
 from octavia.db import api as db_api
@@ -33,29 +25,20 @@ UDP_MAX_SIZE = 64 * 1024
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
-hash_len = 32
-hex_hash_len = 64
 
-
-class UDPStatusGetter(object):
-    """This class defines methods that will gather heatbeats
-
-    The heartbeats are transmitted via UDP and this class will bind to a port
-    and absorb them
+class VThunderUDPStatusGetter(object):
+    """This class defines methods that will gather heatbeats.
     """
 
     def __init__(self):
-        self.key = cfg.CONF.a10_health_manager.heartbeat_key
-        self.ip = cfg.CONF.a10_health_manager.bind_ip
-        self.port = cfg.CONF.a10_health_manager.bind_port
+        self.key = CONF.a10_health_manager.heartbeat_key
+        self.ip = CONF.a10_health_manager.bind_ip
+        self.port = CONF.a10_health_manager.bind_port
         self.sockaddr = None
         LOG.info('attempting to listen on %(ip)s port %(port)s',
                  {'ip': self.ip, 'port': self.port})
         self.sock = None
         self.update(self.key, self.ip, self.port)
-
-        self.health_executor = futures.ProcessPoolExecutor(
-            max_workers=CONF.a10_health_manager.health_update_threads)
         self.vthunder_repo = a10repo.VThunderRepository()
 
     def update(self, key, ip, port):
@@ -75,47 +58,36 @@ class UDPStatusGetter(object):
             self.sock = socket.socket(ai_family, socket.SOCK_DGRAM)
             self.sock.settimeout(1)
             self.sock.bind(self.sockaddr)
-            if cfg.CONF.a10_health_manager.sock_rlimit > 0:
-                rlimit = cfg.CONF.a10_health_manager.sock_rlimit
+            if CONF.a10_health_manager.sock_rlimit > 0:
+                rlimit = CONF.a10_health_manager.sock_rlimit
                 LOG.info("setting sock rlimit to %s", rlimit)
                 self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF,
                                      rlimit)
             break  # just used the first addr getaddrinfo finds
         if self.sock is None:
-            raise exceptions.NetworkConfig("unable to find suitable socket")
-
-    def dorecv(self, *args, **kw):
-        """Waits for a UDP heart beat to be sent.
-
-        :return: Returns the unwrapped payload and addr that sent the
-                 heartbeat. The format of the obj from the UDP sender
-                 can be seen below. Note that listener_1 has no pools
-                 and listener_4 has no members.
-
-        """
-        (data, srcaddr) = self.sock.recvfrom(UDP_MAX_SIZE)
-        ip, port = srcaddr
-        LOG.warning('Received packet from %s', ip)
-        # get record id of first vthunder from srcaddr
-        record_id = self.vthunder_repo.get_vthunder_from_src_addr(db_api.get_session(), ip)
-
-        if record_id:
-            last_udp_update = datetime.datetime.utcnow()
-            self.vthunder_repo.update(db_api.get_session(), record_id,
-                                      last_udp_update=last_udp_update)
-
-        return srcaddr[0]
+            raise exceptions.NetworkConfig("Unable to find suitable socket")
 
     def check(self):
+        """Wait and obtain the source address of UDP packet and updates its time in
+           vThunder repositories.
+        """
         try:
-            srcaddr = self.dorecv()
+            data, srcaddr = self.sock.recvfrom(UDP_MAX_SIZE)
+            ip, port = srcaddr
+            LOG.warning('Received packet from %s', ip)
+            # get record id of first vThunder from srcaddr
+            record_id = self.vthunder_repo.get_vthunder_from_src_addr(db_api.get_session(), ip)
+
+            if record_id:
+                last_udp_update = datetime.datetime.utcnow()
+                self.vthunder_repo.update(db_api.get_session(), record_id, last_udp_update=last_udp_update)
         except socket.timeout:
             # Pass here as this is an expected cycling of the listen socket
             pass
         except exceptions.InvalidHMACException:
             # Pass here as the packet was dropped and logged already
             pass
-        except Exception as e:
+        except Exception as ex:
             LOG.warning('Health Manager experienced an exception processing a'
                         'heartbeat packet. Ignoring this packet. '
-                        'Exception: %s', e)
+                        'Exception: %s', ex)
