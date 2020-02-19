@@ -48,7 +48,7 @@ class MemberFlows(object):
 
         :returns: The flow for creating a member
         """
-        create_member_flow = graph_flow.Flow(constants.CREATE_MEMBER_FLOW)
+        create_member_flow = linear.Flow(constants.CREATE_MEMBER_FLOW)
         create_member_flow.add(lifecycle_tasks.MemberToErrorOnRevertTask(
             requires=[constants.MEMBER,
                       constants.LISTENERS,
@@ -57,6 +57,25 @@ class MemberFlows(object):
         create_member_flow.add(database_tasks.MarkMemberPendingCreateInDB(
             requires=constants.MEMBER))
 
+        create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPHORA))
+
+        create_member_flow.add(*self._get_member_networking_subflow(topology))
+        create_member_flow.add(handler_server.MemberCreate(
+            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
+        create_member_flow.add(database_tasks.MarkMemberActiveInDB(
+            requires=constants.MEMBER))
+        create_member_flow.add(database_tasks.MarkPoolActiveInDB(
+            requires=constants.POOL))
+        create_member_flow.add(database_tasks.
+                               MarkLBAndListenersActiveInDB(
+                                   requires=(constants.LOADBALANCER,
+                                             constants.LISTENERS)))
+        return create_member_flow
+
+    def _get_member_networking_subflow(self, topology):
+        create_member_net_flow = graph_flow.Flow(a10constants.CREATE_MEMBER_NET_FLOW)
         parent_port = a10_network_tasks.GetParentPort(
             requires=constants.LOADBALANCER,
             provides=a10constants.PARENT_PORT)
@@ -64,15 +83,11 @@ class MemberFlows(object):
         vlan_subflow = self.get_vlan_network_handler_subflow()
         flat_subflow = self.get_flat_network_handler_subflow()
 
-        create_member_flow.add(parent_port, vlan_subflow, flat_subflow)
-        create_member_flow.link(parent_port, vlan_subflow,
+        create_member_net_flow.add(parent_port, vlan_subflow, flat_subflow)
+        create_member_net_flow.link(parent_port, vlan_subflow,
                                 decider=self._is_vlan_net_decider)
-        create_member_flow.link(parent_port, flat_subflow,
-                                decider=self._is_vlan_net_decider)
-
-        create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER,
-            provides=constants.AMPHORA))
+        create_member_net_flow.link(parent_port, flat_subflow,
+                                decider=self._is_not_vlan_net_decider)
 
         get_vthunder = a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
@@ -81,34 +96,13 @@ class MemberFlows(object):
             enable_iface=True)
         iface_vlan_subflow = self.get_vthunder_interface_vlan_subflow(a10constants.VTHUNDER)
 
-        create_member_flow.add(get_vthunder, iface_flat_subflow, iface_vlan_subflow)
-        create_member_flow.link(get_vthunder, iface_vlan_subflow,
+        create_member_net_flow.add(get_vthunder, iface_flat_subflow, iface_vlan_subflow)
+        create_member_net_flow.link(get_vthunder, iface_vlan_subflow,
                                 decider=self._is_vlan_net_decider)
-        create_member_flow.link(get_vthunder, iface_flat_subflow,
-                                decider=self._is_vlan_net_decider)
+        create_member_net_flow.link(get_vthunder, iface_flat_subflow,
+                                decider=self._is_not_vlan_net_decider)
+        return create_member_net_flow
 
-        # configure member flow for HA
-        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
-            vthunder_network_subflow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
-                name="get_{}".format(a10constants.BACKUP_VTHUNDER),
-                requires=constants.LOADBALANCER,
-                provides=a10constants.BACKUP_VTHUNDER))
-            create_member_flow.add(self.get_vthunder_interface_subflow_flat(a10constants.BACKUP_VTHUNDER,
-                enable_iface=True))
-
-        create_member_flow.add(handler_server.MemberCreate(
-            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
-        create_member_flow.add(database_tasks.MarkMemberActiveInDB(
-            requires=constants.MEMBER))
-        create_member_flow.add(database_tasks.MarkPoolActiveInDB(
-            requires=constants.POOL))
-        final_state = database_tasks.MarkLBAndListenersActiveInDB(
-                              name="member_mark_lb_and_listener_active",
-                              requires=(constants.LOADBALANCER,
-                                        constants.LISTENERS))
-
-        create_member_flow.add(final_state)
-        return create_member_flow
 
     def _is_vlan_net_decider(self, history):
         """Decides if the current network topology is type vlan
@@ -116,6 +110,15 @@ class MemberFlows(object):
         :returns: True if the parent port is associated with a trunk 
         """ 
         return history[history.keys()[0]] != None
+
+
+    def _is_not_vlan_net_decider(self, history):
+        """Decides if the current network topology is type flat
+
+        :returns: True if the parent port is not associated with a trunk 
+        """
+        return history[history.keys()[0]] == None
+
 
     def get_delete_member_flow(self):
         """Create a flow to delete a member

@@ -47,7 +47,7 @@ class BaseNetworkTask(task.Task):
         return self._network_driver
 
 
-class CalculateAmphoraDelta(BaseNetworkTask):
+class CalculateAmphoraNICDelta(BaseNetworkTask):
 
     default_provides = a10constants.NIC_DELTA
 
@@ -92,7 +92,6 @@ class CalculateAmphoraPortDelta(BaseNetworkTask):
         LOG.debug("Calculating network delta for amphora id: %s", amphora.id)
         # Figure out what networks we want
         # seed with lb network(s)
-
         desired_network_ids = set([])
         for pool in loadbalancer.pools:
             member_networks = [
@@ -104,7 +103,7 @@ class CalculateAmphoraPortDelta(BaseNetworkTask):
 
         connected_subports = {}
         for subport in parent_port.subports:
-            net_id = self.network_driver.get_port(subport.port_id).network
+            net_id = self.network_driver.get_port(subport.port_id).network_id
             connected_subports[net_id] = subport
 
         del_ids = set(connected_subports) - desired_network_ids
@@ -160,7 +159,6 @@ class CalculateNICDelta(BaseNetworkTask):
         :returns: dict of octavia.network.data_models.Delta keyed off amphora
                   id
         """
-
         calculate_amp = CalculateAmphoraNICDelta()
         return _amp_intermediary_executor(calculate_amp.execute, loadbalancer)
 
@@ -553,7 +551,7 @@ class HandleNICDeltas(BaseNetworkTask):
     def execute(self, nic_deltas):
         """Handle network plugging based off deltas."""
         added_ports = {}
-        for amp_id, delta in six.iteritems(deltas):
+        for amp_id, delta in six.iteritems(nic_deltas):
             added_ports[amp_id] = []
             for nic in delta.add_nics:
                 interface = self.network_driver.plug_network(delta.compute_id,
@@ -579,7 +577,7 @@ class HandleNICDeltas(BaseNetworkTask):
 
         if isinstance(result, failure.Failure):
             return
-        for amp_id, delta in six.iteritems(deltas):
+        for amp_id, delta in six.iteritems(nic_deltas):
             LOG.warning("Unable to plug networks for amp id %s",
                         delta.amphora_id)
             if not delta:
@@ -624,15 +622,14 @@ class HandlePortDeltas(BaseNetworkTask):
             #    LOG.exception("Unable to unplug subports")
 
             added_ports[amp_id] = delta.add_subports
-
         return added_ports
 
-    def revert(self, result, port_deltas, *args, **kwargs):
+'''    def revert(self, result, port_deltas, *args, **kwargs):
         """Handle a network plug or unplug failures."""
 
         if isinstance(result, failure.Failure):
             return
-        for amp_id, delta in six.iteritems(deltas):
+        for amp_id, delta in six.iteritems(port_deltas):
             LOG.warning("Unable to plug networks for amp id %s",
                         delta.amphora_id)
             if not delta:
@@ -644,6 +641,7 @@ class HandlePortDeltas(BaseNetworkTask):
                                                        nic.network_id)
                 except base.NetworkNotFound:
                     pass
+'''
 
 
 class PlugPorts(BaseNetworkTask):
@@ -691,9 +689,7 @@ class AllocateTrunk(BaseNetworkTask):
             parent_port = self.network_driver.get_plugged_parent_port(vip)
             self.network_driver.deallocate_trunk(parent_port.trunk_id)
         except Exception:
-            LOG.warning('Failed to deallocate trunk port: %(trunk)s '
-                        ' and remove from parent port: %(port)s',
-                        {'trunk': parent_port.trunk_id, 'port': parent_port.id})
+            LOG.warning('Failed to deallocate a trunk with vip ')
 
 
 class GetParentPort(BaseNetworkTask):

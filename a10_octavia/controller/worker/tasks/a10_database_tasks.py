@@ -95,7 +95,7 @@ class CreateVThunderEntry(BaseDatabaseTask):
             device_name=vthunder_id, username=username,
             password=password, ip_address=amphora.lb_network_ip,
             undercloud=False, axapi_version=axapi_version,
-            port=port, protocol=protocol,
+            port=443, protocol='https',
             loadbalancer_id=loadbalancer.id,
             project_id=loadbalancer.project_id,
             compute_id=compute_id,
