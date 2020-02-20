@@ -21,7 +21,10 @@ GET_VLAN_NET_SUBFLOW = 'octavia-get-vlan-net-subflow'
 NETWORK_TYPE_HANDLER_SUBFLOW = 'octavia-get-network-type-handler-subflow'
 FLAT_NET_HANDLER_SUBFLOW = 'octavia-get-flat-net-handler-sublow'
 VLAN_NET_HANDLER_SUBFLOW = 'octavia-get-vlan-net-handler-subflow'
-
+VLAN_DELETE_NET_HANDLER_SUBFLOW = 'octavia-delete-vlan-net-handler-subflow'
+FLAT_DELETE_NET_HANDLER_SUBFLOW = 'octavia-delete-flat-net-handler-subflow'
+CREATE_MEMBER_NET_FLOW = 'octavia-create-member-net-flow'
+DELETE_MEMBER_NET_FLOW = 'octavia-delete-member-net-flow'
 
 # Flow constants
 BACKUP_VTHUNDER = 'backup_vthunder'
@@ -34,6 +37,7 @@ NIC_DELTAS  = 'nic_deltas'
 PORT_DELTA = 'port_delta'
 NIC_DELTA = 'nic_delta'
 VE_INTERFACES = 've_interfaces'
+DELETED_PORTS = 'deleted_ports'
 
 # Constant values
 STATUS = 'status'

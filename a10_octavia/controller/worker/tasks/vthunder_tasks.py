@@ -172,6 +172,20 @@ class TagEthernetIfaces(BaseVThunderTask):
                 vlan_client.create(subport.segmentation_id, tagged_eths=[1], veth=True)
 
 
+class UnTagEthernetIfaces(BaseVThunderTask):
+    """Task to untag ethernet interface on vThunder device"""
+
+    def execute(self, deleted_ports, loadbalancer, vthunder):
+        """Execute to delete vlan config on vThunder device."""
+        amphora_id = loadbalancer.amphorae[0].id
+        subports = deleted_ports[amphora_id]
+        c = self.client_factory(vthunder)
+        vlan_client = acos_client.v30.vlan.Vlan(c)
+        for subport in subports:
+            if vlan_client.exists(subport.segmentation_id):
+                vlan_client.delete(subport.segmentation_id)
+
+
 class ConfigureVirtEthIfaces(BaseVThunderTask):
     """Task to configure VE interfaces"""
 
@@ -185,6 +199,20 @@ class ConfigureVirtEthIfaces(BaseVThunderTask):
             netmask = '/' + fixed_ip.subnet.cidr.split('/')[1]
             ve_client.update(segment, ip_address=fixed_ip.ip_address,
                              ip_netmask=netmask)
+
+
+class DeleteVirtEthIfaces(BaseVThunderTask):
+    """Task to delete VE interfaces"""
+
+    def execute(self, ve_interfaces, loadbalancer, vthunder):
+        """Execute to delete ve on vThunder device."""
+        amphora_id = loadbalancer.amphorae[0].id
+        if ve_interfaces:
+            ve_segments = ve_interfaces[amphora_id]
+            c = self.client_factory(vthunder)
+            ve_client = acos_client.v30.interface.VirtualEthernet(c)
+            for segment in six.iterkeys(ve_segments):
+                ve_client.delete(segment)
 
 
 class ConfigureVRRP(BaseVThunderTask):
