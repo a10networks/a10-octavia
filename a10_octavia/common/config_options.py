@@ -41,7 +41,11 @@ A10_VTHUNDER_OPTS = [
     cfg.IntOpt('default_axapi_version',
                default=30,
                help=_('VThunder axapi version')),
-
+    cfg.PortOpt('port', default=443,
+               help=_('VThunder port')),
+    cfg.StrOpt('protocol', default='https',
+               choices=['http', 'https'],
+               help=_('VThunder protocol')),
 ]
 
 A10_SLB_OPTS = [

@@ -69,6 +69,8 @@ class CreateVThunderEntry(BaseDatabaseTask):
         username = CONF.vthunder.default_vthunder_username
         password = CONF.vthunder.default_vthunder_password
         axapi_version = CONF.vthunder.default_axapi_version
+        port = CONF.vthunder.port
+        protocol = CONF.vthunder.protocol
 
         compute_id = None
         undercloud = True
@@ -95,7 +97,7 @@ class CreateVThunderEntry(BaseDatabaseTask):
             device_name=vthunder_id, username=username,
             password=password, ip_address=amphora.lb_network_ip,
             undercloud=False, axapi_version=axapi_version,
-            port=443, protocol='https',
+            port=port, protocol=protocol,
             loadbalancer_id=loadbalancer.id,
             project_id=loadbalancer.project_id,
             compute_id=compute_id,
