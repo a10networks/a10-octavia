@@ -69,6 +69,8 @@ class CreateVThunderEntry(BaseDatabaseTask):
         username = CONF.vthunder.default_vthunder_username
         password = CONF.vthunder.default_vthunder_password
         axapi_version = CONF.vthunder.default_axapi_version
+        port = CONF.vthunder.port
+        protocol = CONF.vthunder.protocol
 
         compute_id = None
         undercloud = True

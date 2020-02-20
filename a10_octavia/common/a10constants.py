@@ -21,7 +21,7 @@ GET_VLAN_NET_SUBFLOW = 'octavia-get-vlan-net-subflow'
 NETWORK_TYPE_HANDLER_SUBFLOW = 'octavia-get-network-type-handler-subflow'
 FLAT_NET_HANDLER_SUBFLOW = 'octavia-get-flat-net-handler-sublow'
 VLAN_NET_HANDLER_SUBFLOW = 'octavia-get-vlan-net-handler-subflow'
-
+CREATE_MEMBER_NET_FLOW = 'octavia-create-member-net-flow'
 
 # Flow constants
 BACKUP_VTHUNDER = 'backup_vthunder'
