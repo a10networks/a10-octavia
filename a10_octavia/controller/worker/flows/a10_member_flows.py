@@ -103,7 +103,6 @@ class MemberFlows(object):
                                 decider=self._is_not_vlan_net_decider)
         return create_member_net_flow
 
-
     def _is_vlan_net_decider(self, history):
         """Decides if the current network topology is type vlan
 
@@ -111,14 +110,12 @@ class MemberFlows(object):
         """ 
         return history[history.keys()[0]] != None
 
-
     def _is_not_vlan_net_decider(self, history):
         """Decides if the current network topology is type flat
 
         :returns: True if the parent port is not associated with a trunk 
         """
         return history[history.keys()[0]] == None
-
 
     def get_delete_member_flow(self):
         """Create a flow to delete a member

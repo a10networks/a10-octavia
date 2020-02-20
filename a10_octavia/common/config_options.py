@@ -34,18 +34,18 @@ LOG = logging.getLogger(__name__)
 A10_VTHUNDER_OPTS = [
     cfg.StrOpt('default_vthunder_username',
                default='admin',
-               help=_('VThunder username')),
+               help=_('vThunder username')),
     cfg.StrOpt('default_vthunder_password',
                default='a10',
-               help=_('VThunder password')),
+               help=_('vThunder password')),
     cfg.IntOpt('default_axapi_version',
                default=30,
-               help=_('VThunder axapi version')),
+               help=_('vThunder AXAPI version')),
     cfg.PortOpt('port', default=443,
-               help=_('VThunder port')),
+               help=_('vThunder AXAPI port')),
     cfg.StrOpt('protocol', default='https',
                choices=['http', 'https'],
-               help=_('VThunder protocol')),
+               help=_('vThunder AXAPI protocol')),
 ]
 
 A10_SLB_OPTS = [
