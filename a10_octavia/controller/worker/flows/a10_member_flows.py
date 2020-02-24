@@ -139,7 +139,7 @@ class MemberFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
 
-        delete_member_flow.add(*self._get_delete_member_networking_subflow())
+        delete_member_flow.add(self._get_delete_member_networking_subflow())
 
         delete_member_flow.add(handler_server.MemberDelete(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
