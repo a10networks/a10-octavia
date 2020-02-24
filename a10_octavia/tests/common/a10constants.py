@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# -*- coding: utf-8 -*-
-
 SEGMENTATION_ID = 23
 VLAN_ID = 22
 SUBNET_IP = '10.10.10.10'

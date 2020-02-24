@@ -44,6 +44,11 @@ class TestVThunderTasks(base.TestCase):
         eth.execute(ve_interfaces, LB, VTHUNDER)
         acos_client_mock.assert_called_with(a10_test_constants.VLAN_ID)
 
+        ve_interfaces_none = None
+        acos_client_mock.reset_mock()
+        eth.execute(ve_interfaces_none, LB, VTHUNDER)
+        acos_client_mock.assert_not_called()
+
     @mock.patch('a10_octavia.controller.worker.tasks.common.BaseVThunderTask.client_factory')
     @mock.patch('acos_client.v30.vlan.Vlan')
     def test_untag_ethernet_ifaces(self, acos_client_mock, client_factory_mock):
@@ -53,3 +58,8 @@ class TestVThunderTasks(base.TestCase):
         eth = vthunder_tasks.UnTagEthernetIfaces()
         eth.execute(deleted_ports, LB, VTHUNDER)
         mock_obj.delete.assert_called_with(a10_test_constants.SEGMENTATION_ID)
+
+        mock_obj.reset_mock()
+        empty_deleted_ports = {t_constants.MOCK_AMP_ID1: []}
+        eth.execute(empty_deleted_ports, LB, VTHUNDER)
+        mock_obj.delete.assert_not_called()
