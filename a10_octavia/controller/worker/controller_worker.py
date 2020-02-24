@@ -306,7 +306,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
         store[constants.UPDATE_DICT] = {
-            constants.LOADBALANCER_TOPOLOGY: topology
+            constants.TOPOLOGY: topology
         }
         if lb.project_id in CONF.rack_vthunder.devices:
             LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'
