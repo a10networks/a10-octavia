@@ -24,7 +24,7 @@ import six
 import time
 from requests.exceptions import ConnectionError
 from requests.exceptions import ReadTimeout
-from httplib import BadStatusLine
+from http.client import BadStatusLine
 from octavia.db import api as db_apis
 from oslo_log import log as logging
 from oslo_config import cfg
@@ -193,7 +193,7 @@ class ConfigureVirtEthIfaces(BaseVThunderTask):
         """Execute to configure ve on thunder device."""
         amphora_id = loadbalancer.amphorae[0].id
         if ve_interfaces:
-	    ve_segments = ve_interfaces[amphora_id]
+            ve_segments = ve_interfaces[amphora_id]
             c = self.client_factory(vthunder)
             ve_client = acos_client.v30.interface.VirtualEthernet(c)
             for segment, fixed_ip in six.iteritems(ve_segments):
