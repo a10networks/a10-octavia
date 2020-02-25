@@ -1,35 +1,46 @@
 CHANGES
 =======
 
-* stack-559 solution
-* Added Readme
-* removal of slb related templates
-* doc strings, help doc, some more reference for rack, more validations
-* Some more optimization
-* review comments, code optimization, some more validations
-* octavia config file changes
-* added delete persist template support
-* updated doc string formats
-* Correction in class name and generalization of docstrings
-* Code refactor
-* a10\_octavia/common/openstack\_mappings.py
-* added persist file dependency
-* Handler Persists inclusion with minor code repairs for update functions
-* Changes required for corrections of CRUD functionalities in Octavia
-* Added minor syntax fix
-* Made minor fixes based upon review feedback
-* Made a number of minor fixes
-* Made multiple small fixes
-* Added further QOL update for functional testing
-* QOL update for functional testing
-* Refactored install script
-* Added QOL scripts for testing
+* Added delete member flows for VLAN solution
+* Improved exceptiong handling for trunk alloc/dealloc
+* Added warning log to AllocateTrunk revert
+* Added revert function for task AllocateTrunk
+* Updated demo script
+* Added seperate calculation for ports and nics
+* Added targeted flow for members
+* Refactored codeblock into subflow for flat networks
+* Removed further duplication
+* Removed duplication and other issues from rebase
+* Added update functions
+* Added update functions
+* Review comments update 2
+* Review comments inclusion
+* support for rack vThunder devices
+* Added custom network drivers for resolving multi-load-balancer config to vthunder
+* Refactored deciders
+* Removed code adding during rebase
+* Removed commented code blocks
+* Various syntax error fixes
+* Added support for netmask on ve
+* Added task to update ve with ip addr
+* Renamed constant for ve interface
+* Associated subnet to fixed ip
+* Added task to associate fixed ips to segment ids
+* Fixed syntax error
+* Added flows for VE interface configuration
+* Added subflow for vlan topology
+* Added task to assign vlan tags and create ve ifaces
+* Temporarily ommitted mac address copying for subport
+* Added vlan task
+* Made child port mac equal parent port mac
+* Added fixed ip support
+* Made fixes so that subports are now associated with trunk
+* Fixed issue arising from left over naming
 * Added network type consideratin to subport creation
 * Added conversion to subport to dict
 * Renamed ChildPort to Subport
 * Added request to add subports to trunk
 * Added to subport delta calculation and handling
-* Altered tree creation to work with actual instance
 * Added ip addr assignment vlan bridge
 * Fixed syntax error
 * Included appending of segment section to neutron.conf
@@ -55,7 +66,6 @@ CHANGES
 * Added parent and child port data models used for trunking
 * Added port/protocol to creates
 * Added support for port and protocol
-* Added import back. Added function sig
 * Added ability overwrite of lb status
 * Added database level delete for last resolt
 * Updating QOL script
@@ -73,6 +83,36 @@ CHANGES
 * Review comments inclusion
 * support for rack vThunder devices
 * Added custom network drivers for resolving multi-load-balancer config to vthunder
+* remove extra import
+* minor fix
+* Incorporated review comments
+* update a10\_health\_manager
+* Removed excess constants from a10constants
+* Included review comment feedback with minor changes
+* minor fixes
+* adding missing dependency for member flow
+* Update corrections, review feedback, full session persistence support
+* Added stein support changes
+* stack-559 solution
+* Added Readme
+* removal of slb related templates
+* doc strings, help doc, some more reference for rack, more validations
+* Some more optimization
+* review comments, code optimization, some more validations
+* Added UDP support
+* Reverted delete of CreateHealthMonitor class
+* PR Reviews + added support for UDP HM
+* internal review comments for vthunder\_tasks
+* Added changes for stack-485 along with some modification
+* octavia config file changes
+* added delete persist template support
+* updated doc string formats
+* Correction in class name and generalization of docstrings
+* Code refactor
+* a10\_octavia/common/openstack\_mappings.py
+* added persist file dependency
+* Handler Persists inclusion with minor code repairs for update functions
+* Changes required for corrections of CRUD functionalities in Octavia
 * Added minor syntax fix
 * Made minor fixes based upon review feedback
 * Made a number of minor fixes

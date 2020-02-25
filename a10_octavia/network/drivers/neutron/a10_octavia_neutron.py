@@ -160,11 +160,16 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
             LOG.exception(message)
             raise DeallocateTrunkException(message)
 
-    def plug_trunk_subports(self, trunk_id, subports):
+    def _build_subport_payload(self, subports):
         payload = {'sub_ports': []}
         for subport in subports:
             payload['sub_ports'].append(self._subport_model_to_dict(subport))
+        return payload
 
+    def plug_trunk_subports(self, trunk_id, subports):
+        payload = self._build_subport_payload(subports)
+
+        updated_trunk = None
         try:
             updated_trunk = self.neutron_client.trunk_add_subports(trunk_id, payload)
         except Exception:
@@ -172,6 +177,15 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
             LOG.exception(message)
 
         return updated_trunk
+
+    def unplug_trunk_subports(self, trunk_id, subports):
+        payload = self._build_subport_payload(subports)
+
+        try:
+            self.neutron_client.trunk_remove_subports(trunk_id, payload)
+        except Exception:
+            message = _('Error deleting subports')
+            LOG.exception(message)
 
     def get_plugged_parent_port(self, vip):
         try:

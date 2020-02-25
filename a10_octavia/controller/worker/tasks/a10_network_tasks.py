@@ -613,14 +613,6 @@ class HandlePortDeltas(BaseNetworkTask):
                 self.network_driver.plug_trunk_subports(parent_port.trunk_id, delta.add_subports)
             except Exception:
                 LOG.exception("Unable to plug subports")
-
-            #try:
-            #    self.network_driver.unplug_trunk_subports(parent_port.trunk_id, delta.delete_subports)
-            #except base.NetworkNotFound:
-            #    LOG.debug("Network %d not found ", nic.network_id)
-            #except Exception:
-            #    LOG.exception("Unable to unplug subports")
-
             added_ports[amp_id] = delta.add_subports
         return added_ports
 
@@ -642,6 +634,20 @@ class HandlePortDeltas(BaseNetworkTask):
                 except base.NetworkNotFound:
                     pass
 '''
+
+
+class HandleDeletePortDeltas(BaseNetworkTask):
+    """Task to delete subports for VLAN network flow"""
+
+    def execute(self, parent_port, port_deltas):
+        deleted_ports = {}
+        for amp_id, delta in six.iteritems(port_deltas):
+            try:
+                self.network_driver.unplug_trunk_subports(parent_port.trunk_id, delta.delete_subports)
+            except Exception:
+                LOG.exception("Unable to unplug subports")
+            deleted_ports[amp_id] = delta.delete_subports
+        return deleted_ports
 
 
 class PlugPorts(BaseNetworkTask):

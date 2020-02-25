@@ -135,11 +135,12 @@ class MemberFlows(object):
                                                          constants.MEMBER}))
         delete_member_flow.add(database_tasks.DeleteMemberInDB(
             requires=constants.MEMBER))
-
-        # Get VThunder details from database
         delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+
+        delete_member_flow.add(self._get_delete_member_networking_subflow())
+
         delete_member_flow.add(handler_server.MemberDelete(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
         delete_member_flow.add(database_tasks.DecrementMemberQuota(
@@ -152,6 +153,51 @@ class MemberFlows(object):
                                              constants.LISTENERS]))
 
         return delete_member_flow
+
+    def _get_delete_member_networking_subflow(self):
+        delete_member_net_flow = graph_flow.Flow(a10constants.DELETE_MEMBER_NET_FLOW)
+
+        parent_port = a10_network_tasks.GetParentPort(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.PARENT_PORT)
+
+        vlan_subflow = self._get_delete_vlan_network_handler_subflow()
+        flat_subflow = self._get_delete_flat_network_handler_subflow()
+
+        delete_member_net_flow.add(parent_port, vlan_subflow, flat_subflow)
+        delete_member_net_flow.link(parent_port, vlan_subflow,
+                                decider=self._is_vlan_net_decider)
+        delete_member_net_flow.link(parent_port, flat_subflow,
+                                decider=self._is_not_vlan_net_decider)
+        return delete_member_net_flow
+
+    def _get_delete_flat_network_handler_subflow(self):
+        flat_network_handler_subflow = linear_flow.Flow(a10constants.FLAT_DELETE_NET_HANDLER_SUBFLOW)
+        # TODO: Add flat network member delete logic here
+        return flat_network_handler_subflow
+
+    def _get_delete_vlan_network_handler_subflow(self):
+        vlan_network_handler_subflow = linear_flow.Flow(a10constants.VLAN_DELETE_NET_HANDLER_SUBFLOW)
+        vlan_network_handler_subflow.add(a10_network_tasks.CalculatePortDelta(
+            requires=[constants.LOADBALANCER,
+                      a10constants.PARENT_PORT],
+            provides=a10constants.PORT_DELTAS))
+        vlan_network_handler_subflow.add(a10_network_tasks.HandleDeletePortDeltas(
+            requires=[a10constants.PARENT_PORT,
+                      a10constants.PORT_DELTAS],
+            provides=a10constants.DELETED_PORTS))
+        vlan_network_handler_subflow.add(a10_network_tasks.FetchVirtEthIPs(
+            rebind=[a10constants.DELETED_PORTS],
+            provides=a10constants.VE_INTERFACES))
+        vlan_network_handler_subflow.add(vthunder_tasks.DeleteVirtEthIfaces(
+            requires=[a10constants.VTHUNDER,
+                      a10constants.VE_INTERFACES,
+                      constants.LOADBALANCER]))
+        vlan_network_handler_subflow.add(vthunder_tasks.UnTagEthernetIfaces(
+            requires=[a10constants.VTHUNDER,
+                      a10constants.DELETED_PORTS,
+                      constants.LOADBALANCER]))
+        return vlan_network_handler_subflow
 
     def get_update_member_flow(self):
         """Create a flow to update a member
