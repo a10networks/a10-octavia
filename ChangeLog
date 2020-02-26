@@ -1,6 +1,7 @@
 CHANGES
 =======
 
+* Refactored compute tasks
 * Removed unwanted alias name
 * Update README.md
 * Removed non-required file

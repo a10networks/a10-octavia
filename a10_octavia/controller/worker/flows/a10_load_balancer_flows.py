@@ -35,7 +35,6 @@ try:
     from octavia.controller.worker.v2.tasks import database_tasks
     from octavia.controller.worker.v2.tasks import lifecycle_tasks
     from octavia.controller.worker.v2.tasks import network_tasks
-    from octavia.controller.worker.v2.tasks import compute_tasks
 except (ImportError, AttributeError):
     pass
 
@@ -48,6 +47,7 @@ try:
     from octavia.controller.worker.tasks import database_tasks
     from octavia.controller.worker.tasks import lifecycle_tasks
     from octavia.controller.worker.tasks import network_tasks
+    from octavia.controller.worker.tasks import compute_tasks
 except (ImportError, AttributeError):
     pass
 
