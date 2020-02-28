@@ -411,13 +411,7 @@ class DeallocateVIP(BaseNetworkTask):
 
     def execute(self, loadbalancer):
         """Deallocate a VIP."""
-
-        LOG.debug("Deallocating a VIP %s", loadbalancer.vip.ip_address)
-
-        # NOTE(blogan): this is kind of ugly but sufficient for now.  Drivers
-        # will need access to the load balancer that the vip is/was attached
-        # to.  However the data model serialization for the vip does not give a
-        # backref to the loadbalancer if accessed through the loadbalancer.
+        LOG.info("Deallocating a VIP %s", loadbalancer.vip.ip_address)
         vip = loadbalancer.vip
         vip.load_balancer = loadbalancer
         self.network_driver.deallocate_vip(vip)
@@ -682,12 +676,24 @@ class PlugVIPPort(BaseNetworkTask):
                         '%(amp)s', {'port': vrrp_port.id, 'amp': amphora.id})
 
 
+class DeallocateTrunk(BaseNetworkTask):
+    """Task to delete a neutron trunk using parent port"""
+    
+    def execute(self, loadbalancer):
+        try:
+            parent_port = self.network_driver.get_plugged_parent_port(loadbalancer.vip)
+            LOG.info('Deleting trunk with id %s', parent_port.trunk_id)
+            self.network_driver.deallocate_trunk(parent_port.trunk_id)
+        except Exception:
+            LOG.warning('Failed to deallocate a trunk with vip ')
+
+
 class AllocateTrunk(BaseNetworkTask):
     """Task to create a neutron trunk and attach a port to it."""
 
     def execute(self, vip):
         parent_port_id = vip.port_id
-        LOG.debug('Creating trunk for port with ID: %s', parent_port_id)
+        LOG.info('Creating trunk for port with ID: %s', parent_port_id)
         self.network_driver.allocate_trunk(parent_port_id)
 
     def revert(self, result, vip, *args, **kwargs):

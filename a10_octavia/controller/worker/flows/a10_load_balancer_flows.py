@@ -206,12 +206,17 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.STATUS))
 
-        # delete_LB_flow.add(listeners_delete)
-        # delete_LB_flow.add(network_tasks.UnplugVIP(
-        #    requires=constants.LOADBALANCER))
-        # delete_LB_flow.add(network_tasks.DeallocateVIP(
-        #    requires=constants.LOADBALANCER))
+        # TODO: delete flow for flat network
+        network_type = 'vlan'
         if deleteCompute:
+            if network_type == 'vlan':
+                delete_LB_flow.add(a10_network_tasks.DeallocateTrunk(
+                    requires=constants.LOADBALANCER,
+                    provides=a10constants.TRUNK))
+                delete_LB_flow.add(a10_network_tasks.UnplugVIP(
+                    requires=constants.LOADBALANCER))
+                delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
+                    requires=constants.LOADBALANCER))
             delete_LB_flow.add(a10_compute_tasks.DeleteAmphoraeOnLoadBalancer(
                 requires=constants.LOADBALANCER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
