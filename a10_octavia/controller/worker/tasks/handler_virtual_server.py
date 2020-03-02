@@ -21,6 +21,7 @@ LOG = logging.getLogger(__name__)
 
 
 class LoadBalancerParent(object):
+
     def set(self, set_method, loadbalancer, vthunder):
         c = self.client_factory(vthunder)
         status = c.slb.UP
@@ -38,13 +39,14 @@ class LoadBalancerParent(object):
                 status=status, vrid=vrid,
                 axapi_body=vip_meta)
             LOG.debug("LoadBalancer created/updated succesfully: %s",
-                     loadbalancer.id)
+                      loadbalancer.id)
         except Exception as e:
             LOG.exception("Failed to create/update load balancer: %s", str(e))
             raise
 
 
 class CreateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
+
     """ Task to create a virtual server """
 
     def execute(self, loadbalancer, vthunder):
@@ -60,6 +62,7 @@ class CreateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
 
 
 class DeleteVirtualServerTask(BaseVThunderTask):
+
     """ Task to delete a virtual server """
 
     def execute(self, loadbalancer, vthunder):
@@ -71,6 +74,7 @@ class DeleteVirtualServerTask(BaseVThunderTask):
 
 
 class UpdateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
+
     """ Task to update a virtual server """
 
     def execute(self, loadbalancer, vthunder):
@@ -79,5 +83,6 @@ class UpdateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
                           loadbalancer,
                           vthunder)
 
-    def revert(self, loadbalancer, vthunder, update_dict, *args, **kwargs):
-        LOG.error("Failed to revert update load balancer: %s ", loadbalancer.id)
+    def revert(self, loadbalancer, vthunder, *args, **kwargs):
+        LOG.warning(
+            "Failed to revert update load balancer: %s ", loadbalancer.id)

@@ -12,20 +12,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import acos_client
 import mock
 from unittest.mock import patch
-
 from octavia.tests.unit import base
-
+import acos_client
+from a10_octavia.common.data_models import VThunder
 from a10_octavia.controller.worker.tasks.handler_virtual_server import CreateVirtualServerTask
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
-from a10_octavia.common.data_models import VThunder
+from a10_octavia.tests.common import a10constants
 
 AMPHORA = o_data_models.Amphora(id=t_constants.MOCK_AMP_ID1)
 VTHUNDER = VThunder()
-LB = o_data_models.LoadBalancer(id=123, amphorae=[AMPHORA])
+LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID, amphorae=[AMPHORA])
 
 class TestCreateVirtualServerTask(base.TestCase):
 
@@ -37,6 +36,6 @@ class TestCreateVirtualServerTask(base.TestCase):
         super(TestCreateVirtualServerTask, self).setUp()
 
     def test_revert_create_virtual_server_task(self):
-        net = CreateVirtualServerTask()
-        net.revert(LB, VTHUNDER)
+        mock_load_balancer = CreateVirtualServerTask()
+        mock_load_balancer.revert(LB, VTHUNDER)
         self.client_factory_mock.return_value.slb.virtual_server.delete.assert_called_with(LB.id)
