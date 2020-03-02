@@ -107,6 +107,14 @@ class CreateVThunderEntry(BaseDatabaseTask):
 
         LOG.info("Successfully created vthunder entry in database.")
 
+    def revert(self, amphora, loadbalancer, role, status=constants.ACTIVE,
+               *args, **kwargs):
+        try:
+            self.vthunder_repo.delete(
+                db_apis.get_session(), loadbalancer_id=loadbalancer.id)
+        except NoResultFound:
+            LOG.info("Could not find vThunder entry to delete.")
+
 
 class DeleteVThunderEntry(BaseDatabaseTask):
 

@@ -12,79 +12,62 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
 from oslo_log import log as logging
 from oslo_config import cfg
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
-from octavia.common import constants
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
 class LoadBalancerParent(object):
-    def set(self, set_method, loadbalancer_id, loadbalancer, vthunder):
-        virtual_server_templates = None
+    def set(self, set_method, loadbalancer, vthunder):
+        c = self.client_factory(vthunder)
+        status = c.slb.UP
+        if not loadbalancer.provisioning_status:
+            status = c.slb.DOWN
+        vip_meta = self.meta(loadbalancer, 'virtual_server', {})
+        arp_disable = CONF.slb.arp_disable
+        vrid = CONF.slb.default_virtual_server_vrid
 
         try:
-            c = self.client_factory(vthunder)
-            status = c.slb.UP
-            if not loadbalancer.provisioning_status:
-                status = c.slb.DOWN
-            vip_meta = self.meta(loadbalancer, 'virtual_server', {})
-            arp_disable = CONF.slb.arp_disable
-            vrid = CONF.slb.default_virtual_server_vrid
             set_method(
-                loadbalancer_id,
+                loadbalancer.id,
                 loadbalancer.vip.ip_address,
                 arp_disable=arp_disable,
                 status=status, vrid=vrid,
-                virtual_server_templates=virtual_server_templates,
                 axapi_body=vip_meta)
-            status = {'loadbalancers': [{"id": loadbalancer_id,
-                                         "provisioning_status": constants.ACTIVE}]}
+            LOG.debug("LoadBalancer created/updated succesfully: %s",
+                     loadbalancer.id)
         except Exception as e:
-            LOG.error(str(e))
-            status = {'loadbalancers': [{"id": loadbalancer_id,
-                                         "provisioning_status": constants.ERROR}]}
-        LOG.info(str(status))
-        return status
-
-    def revert(self, loadbalancer_id, *args, **kwargs):
-        pass
+            LOG.exception("Failed to create/update load balancer: %s", str(e))
+            raise
 
 
 class CreateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
     """ Task to create a virtual server """
 
-    def execute(self, loadbalancer_id, loadbalancer, vthunder):
+    def execute(self, loadbalancer, vthunder):
         c = self.client_factory(vthunder)
-        status = self.set(c.slb.virtual_server.create,
-                          loadbalancer_id,
-                          loadbalancer,
-                          vthunder)
-        return status
+        self.set(c.slb.virtual_server.create, loadbalancer, vthunder)
+
+    def revert(self, loadbalancer, vthunder, *args, **kwargs):
+        c = self.client_factory(vthunder)
+        try:
+            c.slb.virtual_server.delete(loadbalancer.id)
+        except Exception as e:
+            LOG.exception("Failed to revert create load balancer: %s", str(e))
 
 
 class DeleteVirtualServerTask(BaseVThunderTask):
     """ Task to delete a virtual server """
 
     def execute(self, loadbalancer, vthunder):
-        loadbalancer_id = loadbalancer.id
+        c = self.client_factory(vthunder)
         try:
-            c = self.client_factory(vthunder)
-            c.slb.virtual_server.delete(loadbalancer_id)
-            status = {'loadbalancers': [{"id": loadbalancer_id,
-                                         "provisioning_status": constants.DELETED}]}
+            c.slb.virtual_server.delete(loadbalancer.id)
         except Exception as e:
-            LOG.error(str(e))
-            status = {'loadbalancers': [{"id": loadbalancer_id,
-                                         "provisioning_status": constants.ERROR}]}
-        LOG.info(str(status))
-        return status
-
-    def revert(self, loadbalancer, *args, **kwargs):
-        pass
+            LOG.warning("Failed to delete load balancer: %s", str(e))
 
 
 class UpdateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
@@ -93,10 +76,8 @@ class UpdateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
     def execute(self, loadbalancer, vthunder):
         c = self.client_factory(vthunder)
         status = self.set(c.slb.virtual_server.update,
-                          loadbalancer.id,
                           loadbalancer,
                           vthunder)
-        return status
 
-    def revert(self, loadbalancer, vthunder, update_dict):
-        pass
+    def revert(self, loadbalancer, vthunder, update_dict, *args, **kwargs):
+        LOG.error("Failed to revert update load balancer: %s ", loadbalancer.id)
