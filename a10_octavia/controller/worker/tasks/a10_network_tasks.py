@@ -411,7 +411,7 @@ class DeallocateVIP(BaseNetworkTask):
 
     def execute(self, loadbalancer):
         """Deallocate a VIP."""
-        LOG.info("Deallocating a VIP %s", loadbalancer.vip.ip_address)
+        LOG.debug("Deallocating a VIP %s", loadbalancer.vip.ip_address)
         vip = loadbalancer.vip
         vip.load_balancer = loadbalancer
         self.network_driver.deallocate_vip(vip)
@@ -682,10 +682,10 @@ class DeallocateTrunk(BaseNetworkTask):
     def execute(self, loadbalancer):
         try:
             parent_port = self.network_driver.get_plugged_parent_port(loadbalancer.vip)
-            LOG.info('Deleting trunk with id %s', parent_port.trunk_id)
+            LOG.debug('Deleting trunk with id %s', parent_port.trunk_id)
             self.network_driver.deallocate_trunk(parent_port.trunk_id)
         except Exception:
-            LOG.warning('Failed to deallocate a trunk with vip ')
+            LOG.warning('Failed to deallocate a trunk with vip %s', loadbalancer.vip)
 
 
 class AllocateTrunk(BaseNetworkTask):
@@ -693,7 +693,7 @@ class AllocateTrunk(BaseNetworkTask):
 
     def execute(self, vip):
         parent_port_id = vip.port_id
-        LOG.info('Creating trunk for port with ID: %s', parent_port_id)
+        LOG.debug('Creating trunk for port with ID: %s', parent_port_id)
         self.network_driver.allocate_trunk(parent_port_id)
 
     def revert(self, result, vip, *args, **kwargs):
@@ -701,7 +701,7 @@ class AllocateTrunk(BaseNetworkTask):
             parent_port = self.network_driver.get_plugged_parent_port(vip)
             self.network_driver.deallocate_trunk(parent_port.trunk_id)
         except Exception:
-            LOG.warning('Failed to deallocate a trunk with vip ')
+            LOG.warning('Failed to deallocate a trunk with vip %s', loadbalancer.vip)
 
 
 class GetParentPort(BaseNetworkTask):
