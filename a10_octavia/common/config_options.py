@@ -222,15 +222,6 @@ A10_CONTROLLER_WORKER_OPTS = [
     cfg.StrOpt('amp_ssh_key_name',
                default='',
                help=_('SSH key name used to boot the VThunder')),
-    cfg.BoolOpt('amp_ssh_access_allowed',
-                default=True,
-                deprecated_for_removal=True,
-                deprecated_reason='This option and amp_ssh_key_name overlap '
-                                  'in functionality, and only one is needed. '
-                                  'SSH access can be enabled/disabled simply '
-                                  'by setting amp_ssh_key_name, or not.',
-                help=_('Determines whether or not to allow access '
-                       'to the VThunder')),
     cfg.ListOpt('amp_boot_network_list',
                 default='',
                 help=_('List of networks to attach to the VThunder. '
@@ -239,32 +230,19 @@ A10_CONTROLLER_WORKER_OPTS = [
     cfg.ListOpt('amp_secgroup_list',
                 default='',
                 help=_('List of security groups to attach to the VThunder.')),
-    cfg.StrOpt('client_ca',
-               default='/etc/octavia/certs/ca_01.pem',
-               help=_('Client CA for the vthunder agent to use')),
-    cfg.StrOpt('amphora_driver',
-               default='amphora_noop_driver',
-               help=_('Name of the vthunder driver to use')),
-    cfg.StrOpt('compute_driver',
-               default='compute_noop_driver',
-               help=_('Name of the compute driver to use')),
+    cfg.IntOpt('build_rate_limit',
+               default=-1,
+               help=_('Number of vThunders that could be built per controller '
+                      'worker, simultaneously.')),
     cfg.StrOpt('network_driver',
                default='network_noop_driver',
                help=_('Name of the network driver to use')),
-    cfg.StrOpt('distributor_driver',
-               default='distributor_noop_driver',
-               help=_('Name of the distributor driver to use')),
     cfg.StrOpt('loadbalancer_topology',
                default=constants.TOPOLOGY_SINGLE,
                choices=constants.SUPPORTED_LB_TOPOLOGIES,
                help=_('Load balancer topology configuration. '
                       'SINGLE - One vthunder per load balancer. '
-                      'ACTIVE_STANDBY - Two vthunder per load balancer.')),
-    cfg.BoolOpt('user_data_config_drive', default=False,
-                help=_('If True, build cloud-init user-data that is passed '
-                       'to the config drive on VThunder boot instead of '
-                       'personality files. If False, utilize personality '
-                       'files.'))
+                      'ACTIVE_STANDBY - Two vthunder per load balancer.'))
 ]
 
 A10_HOUSE_KEEPING_OPTS = [

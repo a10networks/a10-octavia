@@ -47,6 +47,7 @@ try:
     from octavia.controller.worker.tasks import database_tasks
     from octavia.controller.worker.tasks import lifecycle_tasks
     from octavia.controller.worker.tasks import network_tasks
+    from octavia.controller.worker.tasks import compute_tasks
 except (ImportError, AttributeError):
     pass
 
@@ -189,7 +190,7 @@ class LoadBalancerFlows(object):
             name="set load balancer status PENDING_DELETE",
             requires=a10constants.VTHUNDER,
             inject={"status": constants.PENDING_DELETE}))
-        delete_LB_flow.add(a10_compute_tasks.NovaServerGroupDelete(
+        delete_LB_flow.add(compute_tasks.NovaServerGroupDelete(
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
             requires=constants.LOADBALANCER))
@@ -203,7 +204,7 @@ class LoadBalancerFlows(object):
         # delete_LB_flow.add(network_tasks.DeallocateVIP(
         #    requires=constants.LOADBALANCER))
         if deleteCompute:
-            delete_LB_flow.add(a10_compute_tasks.DeleteAmphoraeOnLoadBalancer(
+            delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
                 requires=constants.LOADBALANCER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name="DELETED",

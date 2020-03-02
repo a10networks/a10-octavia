@@ -71,12 +71,10 @@ amp_flavor_id = <flavor_id_for_amphorae>
 amp_boot_network_list = <netword_id_to_boot_amphorae_in_admin_project>
 amp_ssh_key_name = <ssh_key_for_amphorae>
 network_driver = a10_octavia_neutron_driver
-compute_driver = compute_nova_driver
 workers = 2
 amp_active_retries = 100
 amp_active_wait_sec = 2
 amp_image_id = <vthunder_amphorae_image_id>
-user_data_config_drive = False
 loadbalancer_topology = SINGLE
 ```
 Load balancer topology options are `SINGLE` and `ACTIVE_STANDBY`. In `ACTIVE_STANDBY` topology, the plugin boots 2 vThunders and uses aVCS to provide high availability.

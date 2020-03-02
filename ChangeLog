@@ -1,6 +1,31 @@
 CHANGES
 =======
 
+* Refactored compute tasks
+* Removed unwanted alias name
+* Update README.md
+* Removed non-required file
+* Update README.md
+* Made minor changes after review
+* Added changes for adding section for HA
+* Update README.md
+* Review Changes
+* Minor changes to README.md
+* Creating a WIKI file for a10-octavia
+* Reverting README.md to master
+* Updated README.md
+* Revert "Updated README"
+* Resolved ACOSException (System is busy) error
+* Modified constants name for taskflows
+* Updated README
+* Removed typo
+* Made timeout and retry variable configurable
+* Added taskflow constants for create lb
+* Updated ReadME, some more stein fixes
+* Corrected rebase issues with stein support
+* removed pdb statement
+* Added created\_at to vthunder table, changed datetime.now() to datetime.utcnow()
+* Modified config option and changed failover logic for hm
 * Fixed backup active issue for ha
 * constant change as per stein support
 * Added health monitor constants
