@@ -53,7 +53,7 @@ class MemberCreate(BaseVThunderTask):
             LOG.debug("Member %s associated to pool %s successfully",
                       member.id, pool.id)
         except Exception as e:
-            LOG.exception("Failed to create pool: %s", str(e))
+            LOG.exception("Failed to associate member to pool: %s", str(e))
             raise
 
     def revert(self, member, vthunder, pool, *args, **kwargs):
@@ -79,9 +79,9 @@ class MemberDelete(BaseVThunderTask):
         try:
             c.slb.service_group.member.delete(
                 pool.id, member.id, member.protocol_port)
-            LOG.debug("Member dissociated from pool successfully.")
+            LOG.debug("Member %s is dissociated from pool %s successfully.", member.id, pool.id)
             c.slb.server.delete(member.id)
-            LOG.debug("Member deleted successfully.")
+            LOG.debug("Member %s is deleted successfully.", member.id)
         except Exception as e:
             LOG.warning("Failed to delete member: %s", str(e))
 
@@ -90,7 +90,7 @@ class MemberUpdate(BaseVThunderTask):
     """ Task to update member """
 
     def execute(self, member, vthunder, pool):
-        """Execute create member for an amphora."""
+        """Execute update member """
         server_args = self.meta(member, 'server', {})
         server_args['conn-limit'] = CONF.server.conn_limit
         server_args['conn-resume'] = CONF.server.conn_resume
@@ -108,7 +108,6 @@ class MemberUpdate(BaseVThunderTask):
                                 server_templates=server_temp,
                                 axapi_args=server_args)
             LOG.debug("Member updated successfully: %s", member.id)
-            raise
         except Exception as e:
             LOG.exception("Failed to update member: %s", str(e))
             raise
