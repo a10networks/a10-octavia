@@ -12,7 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-SEGMENTATION_ID = 23
+SEGMENTATION_ID1 = 23
+SEGMENTATION_ID2 = 24
 VLAN_ID = 22
 SUBNET_IP = '10.10.10.10'
 TRUNK_ID = 11
