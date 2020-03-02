@@ -113,7 +113,7 @@ class CreateVThunderEntry(BaseDatabaseTask):
             self.vthunder_repo.delete(
                 db_apis.get_session(), loadbalancer_id=loadbalancer.id)
         except NoResultFound:
-            LOG.info("Could not find vThunder entry to delete.")
+            LOG.error("Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
 
 
 class DeleteVThunderEntry(BaseDatabaseTask):

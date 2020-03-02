@@ -39,4 +39,4 @@ class TestCreateVirtualServerTask(base.TestCase):
     def test_revert_create_virtual_server_task(self):
         net = CreateVirtualServerTask()
         net.revert(LB, VTHUNDER)
-        self.client_factory_mock.return_value.slb.virtual_server.delete.assert_called_with(LB.id) 
+        self.client_factory_mock.return_value.slb.virtual_server.delete.assert_called_with(LB.id)
