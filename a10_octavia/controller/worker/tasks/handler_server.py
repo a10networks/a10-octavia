@@ -22,39 +22,52 @@ LOG = logging.getLogger(__name__)
 
 
 class MemberCreate(BaseVThunderTask):
-    """ Task to create member """
+    """ Task to create a member and associate to pool """
 
     def execute(self, member, vthunder, pool):
         """ Execute create member """
-
-        conn_limit = CONF.server.conn_limit
-        conn_resume = CONF.server.conn_resume
         server_args = self.meta(member, 'server', {})
+        server_args['conn-limit'] = CONF.server.conn_limit
+        server_args['conn-resume'] = CONF.server.conn_resume
+        server_args = {'server': server_args}
+        server_temp = {}
+        server_temp['template-server'] = CONF.server.template_server
+        if not member.enabled:
+            status = False
+        else:
+            status = True
+        c = self.client_factory(vthunder)
+
         try:
-            c = self.client_factory(vthunder)
-            if not member.enabled:
-                status = False
-            else:
-                status = True
-            server_args['conn-limit'] = conn_limit
-            server_args['conn-resume'] = conn_resume
-            server_args = {'server': server_args}
-            try:
-                conf_templates = CONF.server.template_server
-                server_temp = {}
-                server_temp['template-server'] = conf_templates
-            except:
-                server_temp = None
-                LOG.warning("Invalid definition of A10 config in Pool section.")
             c.slb.server.create(member.id, member.ip_address, status=status,
                                 server_templates=server_temp,
                                 axapi_args=server_args)
-            LOG.info("Member created successfully.")
-            c.slb.service_group.member.create(pool.id, member.id, member.protocol_port)
-            LOG.info("Member associated to pool successfully.")
+            LOG.debug("Member created successfully: %s", member.id)
         except Exception as e:
-            LOG.error(str(e))
-            LOG.info("Error occurred")
+            LOG.exception("Failed to create member: %s", str(e))
+            raise
+
+        try:
+            c.slb.service_group.member.create(
+                pool.id, member.id, member.protocol_port)
+            LOG.debug("Member %s associated to pool %s successfully",
+                      member.id, pool.id)
+        except Exception as e:
+            LOG.exception("Failed to create pool: %s", str(e))
+            raise
+
+    def revert(self, member, vthunder, pool, *args, **kwargs):
+        c = self.client_factory(vthunder)
+        try:
+            c.slb.service_group.member.delete(
+                pool.id, member.id, member.protocol_port)
+        except Exception as e:
+            LOG.exception("Failed to revert create pool: %s", str(e))
+
+        try:
+            c.slb.server.delete(member.id)
+        except Exception as e:
+            LOG.exception("Failed to revert create member: %s", str(e))
 
 
 class MemberDelete(BaseVThunderTask):
@@ -62,15 +75,15 @@ class MemberDelete(BaseVThunderTask):
 
     def execute(self, member, vthunder, pool):
         """ Execute delete member """
+        c = self.client_factory(vthunder)
         try:
-            c = self.client_factory(vthunder)
-            c.slb.service_group.member.delete(pool.id, member.id, member.protocol_port)
-            LOG.info("Member dissociated from pool successfully.")
+            c.slb.service_group.member.delete(
+                pool.id, member.id, member.protocol_port)
+            LOG.debug("Member dissociated from pool successfully.")
             c.slb.server.delete(member.id)
-            LOG.info("Member deleted successfully.")
+            LOG.debug("Member deleted successfully.")
         except Exception as e:
-            LOG.error(str(e))
-            LOG.info("Error occurred")
+            LOG.warning("Failed to delete member: %s", str(e))
 
 
 class MemberUpdate(BaseVThunderTask):
@@ -78,31 +91,27 @@ class MemberUpdate(BaseVThunderTask):
 
     def execute(self, member, vthunder, pool):
         """Execute create member for an amphora."""
-        conn_limit = CONF.server.conn_limit
-        conn_resume = CONF.server.conn_resume
         server_args = self.meta(member, 'server', {})
+        server_args['conn-limit'] = CONF.server.conn_limit
+        server_args['conn-resume'] = CONF.server.conn_resume
+        server_args = {'server': server_args}
+        server_temp = {}
+        server_temp['template-server'] = CONF.server.template_server
+        if not member.enabled:
+            status = False
+        else:
+            status = True
+        c = self.client_factory(vthunder)
 
         try:
-            c = self.client_factory(vthunder)
-            if not member.enabled:
-                status = False
-            else:
-                status = True
-            server_args['conn-limit'] = conn_limit
-            server_args['conn-resume'] = conn_resume
-            server_args = {'server': server_args}
-            try:
-                conf_templates = CONF.server.template_server
-                server_temp = {}
-                server_temp['template-server'] = conf_templates
-            except:
-                server_temp = None
-                LOG.error("Invalid definition of A10 config in Member section.")
-
             c.slb.server.update(member.id, member.ip_address, status=status,
                                 server_templates=server_temp,
                                 axapi_args=server_args)
-            LOG.info("Member updated successfully.")
+            LOG.debug("Member updated successfully: %s", member.id)
+            raise
         except Exception as e:
-            LOG.error(str(e))
-            LOG.info("Error occurred")
+            LOG.exception("Failed to update member: %s", str(e))
+            raise
+
+    def revert(self, member, vthunder, pool, *args, **kwargs):
+        LOG.warning("Failed to revert update member: %s", member.id)
