@@ -246,7 +246,7 @@ class UnPlugNetworks(BaseNetworkTask):
             except base.NetworkNotFound:
                 LOG.debug("Network %d not found", nic.network_id)
             except Exception:
-                LOG.exception("Unable to unplug network")
+                LOG.error("Unable to unplug network")
 
 
 class GetMemberPorts(BaseNetworkTask):
@@ -373,7 +373,7 @@ class UnplugVIP(BaseNetworkTask):
         try:
             self.network_driver.unplug_vip(loadbalancer, loadbalancer.vip)
         except Exception:
-            LOG.exception("Unable to unplug vip from load balancer %s",
+            LOG.error("Unable to unplug vip from load balancer %s",
                           loadbalancer.id)
 
 
@@ -513,7 +513,7 @@ class HandleNetworkDelta(BaseNetworkTask):
             except base.NetworkNotFound:
                 LOG.debug("Network %d not found ", nic.network_id)
             except Exception:
-                LOG.exception("Unable to unplug network")
+                LOG.error("Unable to unplug network")
         return added_ports
 
     def revert(self, result, amphora, delta, *args, **kwargs):
@@ -563,7 +563,7 @@ class HandleNICDeltas(BaseNetworkTask):
                 except base.NetworkNotFound:
                     LOG.debug("Network %d not found ", nic.network_id)
                 except Exception:
-                    LOG.exception("Unable to unplug network")
+                    LOG.error("Unable to unplug network")
         return added_ports
 
     def revert(self, result, nic_deltas, *args, **kwargs):
@@ -606,7 +606,7 @@ class HandlePortDeltas(BaseNetworkTask):
             try:
                 self.network_driver.plug_trunk_subports(parent_port.trunk_id, delta.add_subports)
             except Exception:
-                LOG.exception("Unable to plug subports")
+                LOG.error("Unable to plug subports")
             added_ports[amp_id] = delta.add_subports
         return added_ports
 
@@ -639,7 +639,7 @@ class HandleDeletePortDeltas(BaseNetworkTask):
             try:
                 self.network_driver.unplug_trunk_subports(parent_port.trunk_id, delta.delete_subports)
             except Exception:
-                LOG.exception("Unable to unplug subports")
+                LOG.error("Unable to unplug subports")
             deleted_ports[amp_id] = delta.delete_subports
         return deleted_ports
 
@@ -672,7 +672,7 @@ class PlugVIPPort(BaseNetworkTask):
             vrrp_port = amphorae_network_config.get(amphora.id).vrrp_port
             self.network_driver.unplug_port(amphora, vrrp_port)
         except Exception:
-            LOG.warning('Failed to unplug vrrp port: %(port)s from amphora: '
+            LOG.error('Failed to unplug vrrp port: %(port)s from amphora: '
                         '%(amp)s', {'port': vrrp_port.id, 'amp': amphora.id})
 
 
@@ -701,7 +701,7 @@ class AllocateTrunk(BaseNetworkTask):
             parent_port = self.network_driver.get_plugged_parent_port(vip)
             self.network_driver.deallocate_trunk(parent_port.trunk_id)
         except Exception:
-            LOG.warning('Failed to deallocate the trunk %s with vip', parent_port.trunk_id)
+            LOG.error('Failed to deallocate the trunk %s with vip', parent_port.trunk_id)
 
 
 class GetParentPort(BaseNetworkTask):
@@ -786,7 +786,7 @@ class ApplyQosAmphora(BaseNetworkTask):
             if not is_revert:
                 raise
             else:
-                LOG.warning('Failed to undo qos policy %(qos_id)s '
+                LOG.error('Failed to undo qos policy %(qos_id)s '
                             'on vrrp port: %(port)s from '
                             'amphorae: %(amp)s',
                             {'qos_id': request_qos_id,
