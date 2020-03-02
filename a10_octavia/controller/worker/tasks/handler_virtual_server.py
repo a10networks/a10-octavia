@@ -85,4 +85,4 @@ class UpdateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
 
     def revert(self, loadbalancer, vthunder, *args, **kwargs):
         LOG.warning(
-            "Failed to revert update load balancer: %s ", loadbalancer.id)
+            "Failed to revert update load balancer: %s", loadbalancer.id)

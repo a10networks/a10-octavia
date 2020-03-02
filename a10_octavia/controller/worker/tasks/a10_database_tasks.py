@@ -63,7 +63,7 @@ class CreateVThunderEntry(BaseDatabaseTask):
 
     """ Create VThunder device entry in DB"""
 
-    def execute(self, amphora, loadbalancer, role, status=constants.ACTIVE):
+    def execute(self, amphora, loadbalancer, role, status):
         vthunder_id = uuidutils.generate_uuid()
 
         username = CONF.vthunder.default_vthunder_username

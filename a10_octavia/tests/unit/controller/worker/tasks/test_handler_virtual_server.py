@@ -12,15 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 from unittest.mock import patch
-from octavia.tests.unit import base
-import acos_client
+import mock
 from a10_octavia.common.data_models import VThunder
 from a10_octavia.controller.worker.tasks.handler_virtual_server import CreateVirtualServerTask
+from a10_octavia.tests.common import a10constants
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
-from a10_octavia.tests.common import a10constants
+from octavia.tests.unit import base
 
 AMPHORA = o_data_models.Amphora(id=t_constants.MOCK_AMP_ID1)
 VTHUNDER = VThunder()
