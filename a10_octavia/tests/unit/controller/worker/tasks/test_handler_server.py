@@ -12,17 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import acos_client
-import mock
-from unittest.mock import patch
 
-from octavia.tests.unit import base
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
 
 from a10_octavia.controller.worker.tasks.handler_server import MemberCreate
 from a10_octavia.common.data_models import VThunder
 from a10_octavia.tests.common import a10constants
+from a10_octavia.tests.unit.base import BaseTaskTestCase
 
 VTHUNDER = VThunder()
 POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID)
@@ -30,19 +27,12 @@ MEMBER = o_data_models.Member(
     id=a10constants.MOCK_MEMBER_ID, protocol_port=t_constants.MOCK_PORT_ID)
 
 
-class TestMemberCreate(base.TestCase):
+class TestHandlerServerTasks(BaseTaskTestCase):
 
-    def setUp(self):
-        patcher = patch(
-            'a10_octavia.controller.worker.tasks.common.BaseVThunderTask.client_factory')
-        self.client_factory_mock = patcher.start()
-        self.client_factory_mock.return_value = mock.Mock()
-        super(TestMemberCreate, self).setUp()
-
-    def test_revert_create_server_task(self):
+    def test_revert_member_create_task(self):
         mock_member = MemberCreate()
         mock_member.revert(MEMBER, VTHUNDER, POOL)
-        self.client_factory_mock.return_value.slb.service_group.member.delete.assert_called_with(
+        self.client_mock.slb.service_group.member.delete.assert_called_with(
             POOL.id, MEMBER.id, MEMBER.protocol_port)
-        self.client_factory_mock.return_value.slb.server.delete.assert_called_with(
+        self.client_mock.slb.server.delete.assert_called_with(
             MEMBER.id)

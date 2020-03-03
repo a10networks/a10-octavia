@@ -22,6 +22,7 @@ LOG = logging.getLogger(__name__)
 
 
 class MemberCreate(BaseVThunderTask):
+
     """ Task to create a member and associate to pool """
 
     def execute(self, member, vthunder, pool):
@@ -71,6 +72,7 @@ class MemberCreate(BaseVThunderTask):
 
 
 class MemberDelete(BaseVThunderTask):
+
     """ Task to delete member """
 
     def execute(self, member, vthunder, pool):
@@ -79,7 +81,8 @@ class MemberDelete(BaseVThunderTask):
         try:
             c.slb.service_group.member.delete(
                 pool.id, member.id, member.protocol_port)
-            LOG.debug("Member %s is dissociated from pool %s successfully.", member.id, pool.id)
+            LOG.debug(
+                "Member %s is dissociated from pool %s successfully.", member.id, pool.id)
             c.slb.server.delete(member.id)
             LOG.debug("Member %s is deleted successfully.", member.id)
         except Exception as e:
@@ -87,6 +90,7 @@ class MemberDelete(BaseVThunderTask):
 
 
 class MemberUpdate(BaseVThunderTask):
+
     """ Task to update member """
 
     def execute(self, member, vthunder, pool):
@@ -111,6 +115,3 @@ class MemberUpdate(BaseVThunderTask):
         except Exception as e:
             LOG.exception("Failed to update member: %s", str(e))
             raise
-
-    def revert(self, member, vthunder, pool, *args, **kwargs):
-        LOG.warning("Failed to revert update member: %s", member.id)
