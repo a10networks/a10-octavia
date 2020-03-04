@@ -246,7 +246,7 @@ class UnPlugNetworks(BaseNetworkTask):
             except base.NetworkNotFound:
                 LOG.debug("Network %d not found", nic.network_id)
             except Exception:
-                LOG.error("Unable to unplug network")
+                LOG.exception("Unable to unplug network")
 
 
 class GetMemberPorts(BaseNetworkTask):
@@ -361,20 +361,6 @@ class PlugVIPAmpphora(BaseNetworkTask):
         except Exception as e:
             LOG.error('Failed to unplug AAP port. Resources may still be in '
                       'use for VIP: %s due to error: %s', loadbalancer.vip, e)
-
-
-class UnplugVIP(BaseNetworkTask):
-    """Task to unplug the vip."""
-
-    def execute(self, loadbalancer):
-        """Unplug the vip."""
-
-        LOG.debug("Unplug vip on amphora")
-        try:
-            self.network_driver.unplug_vip(loadbalancer, loadbalancer.vip)
-        except Exception:
-            LOG.error("Unable to unplug vip from load balancer %s",
-                          loadbalancer.id)
 
 
 class AllocateVIP(BaseNetworkTask):
@@ -513,7 +499,7 @@ class HandleNetworkDelta(BaseNetworkTask):
             except base.NetworkNotFound:
                 LOG.debug("Network %d not found ", nic.network_id)
             except Exception:
-                LOG.error("Unable to unplug network")
+                LOG.exception("Unable to unplug network")
         return added_ports
 
     def revert(self, result, amphora, delta, *args, **kwargs):
@@ -685,7 +671,7 @@ class DeallocateTrunk(BaseNetworkTask):
             LOG.debug('Deleting trunk with id %s', parent_port.trunk_id)
             self.network_driver.deallocate_trunk(parent_port.trunk_id)
         except Exception:
-            LOG.error('Failed to deallocate the trunk %s with vip', parent_port.trunk_id)
+            LOG.error('Failed to deallocate the trunk with vip')
 
 
 class AllocateTrunk(BaseNetworkTask):
@@ -701,7 +687,7 @@ class AllocateTrunk(BaseNetworkTask):
             parent_port = self.network_driver.get_plugged_parent_port(vip)
             self.network_driver.deallocate_trunk(parent_port.trunk_id)
         except Exception:
-            LOG.error('Failed to deallocate the trunk %s with vip', parent_port.trunk_id)
+            LOG.error('Failed to deallocate the trunk with vip')
 
 
 class GetParentPort(BaseNetworkTask):

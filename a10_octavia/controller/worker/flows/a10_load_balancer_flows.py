@@ -213,9 +213,9 @@ class LoadBalancerFlows(object):
                 delete_LB_flow.add(a10_network_tasks.DeallocateTrunk(
                     requires=constants.LOADBALANCER,
                     provides=a10constants.TRUNK))
-                delete_LB_flow.add(a10_network_tasks.UnplugVIP(
+                delete_LB_flow.add(network_tasks.UnplugVIP(
                     requires=constants.LOADBALANCER))
-                delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
+                delete_LB_flow.add(network_tasks.DeallocateVIP(
                     requires=constants.LOADBALANCER))
             delete_LB_flow.add(a10_compute_tasks.DeleteAmphoraeOnLoadBalancer(
                 requires=constants.LOADBALANCER))

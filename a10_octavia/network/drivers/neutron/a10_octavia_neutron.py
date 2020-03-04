@@ -189,7 +189,7 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
     def get_plugged_parent_port(self, vip):
         parent_port = None
         try:
-            port = self.neutron_client.show_port(vip.port_id)
+            port = self.get_port(vip.port_id)
             parent_port = self._port_to_parent_port(port.get("port"))
         except Exception:
             LOG.debug('Couldn\'t retrieve port with id: {}'.format(vip.port_id))
