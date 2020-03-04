@@ -33,6 +33,7 @@ VIP = o_data_models.Vip(port_id=t_constants.MOCK_PORT_ID,
                         qos_policy_id=t_constants.MOCK_QOS_POLICY_ID1)
 LB = o_data_models.LoadBalancer(vip=VIP)
 PARENT_PORT = data_models.ParentPort(trunk_id=a10_test_constants.TRUNK_ID)
+EMPTY_PARENT_PORT = data_models.ParentPort()
 DELETE_SUBPORTS = {t_constants.MOCK_AMP_ID1: [SUBPORT1]}
 MULTIPLE_DELETE_SUBPORTS = {t_constants.MOCK_AMP_ID1: [SUBPORT1, SUBPORT2]}
 
@@ -72,12 +73,6 @@ class TestNetworkTasks(base.TestCase):
         self.network_driver_mock.unplug_trunk_subports.assert_called_with(
             PARENT_PORT.trunk_id, MULTIPLE_DELETE_SUBPORTS)
 
-
-    def test_deallocate_vip(self):
-        network_task = a10_network_tasks.DeallocateVIP()
-        network_task.execute(LB)
-        self.network_driver_mock.deallocate_vip.assert_called_with(LB.vip) 
-
     def test_deallocate_trunk(self):
         network_task =  a10_network_tasks.DeallocateTrunk()
         self.network_driver_mock.get_plugged_parent_port.return_value = PARENT_PORT
@@ -85,7 +80,8 @@ class TestNetworkTasks(base.TestCase):
         self.network_driver_mock.get_plugged_parent_port.assert_called_with(LB.vip)
         self.network_driver_mock.deallocate_trunk.assert_called_with(PARENT_PORT.trunk_id)
 
-    def test_unplug_vip(self):
-        network_task = a10_network_tasks.UnplugVIP()
+    def test_deallocate_trunk_not_found(self):
+        network_task =  a10_network_tasks.DeallocateTrunk()
         network_task.execute(LB)
-        self.network_driver_mock.unplug_vip.assert_called_with(LB, LB.vip) 
+        self.network_driver_mock.deallocate_trunk.side_effect = Exception()
+        self.assertRaises(Exception, self.network_driver_mock.deallocate_trunk, EMPTY_PARENT_PORT.trunk_id)
