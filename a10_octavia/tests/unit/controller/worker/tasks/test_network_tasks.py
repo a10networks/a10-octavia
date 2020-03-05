@@ -74,7 +74,7 @@ class TestNetworkTasks(base.TestCase):
             PARENT_PORT.trunk_id, MULTIPLE_DELETE_SUBPORTS)
 
     def test_deallocate_trunk(self):
-        network_task =  a10_network_tasks.DeallocateTrunk()
+        network_task = a10_network_tasks.DeallocateTrunk()
         self.network_driver_mock.get_plugged_parent_port.return_value = PARENT_PORT
         network_task.execute(LB)
         self.network_driver_mock.get_plugged_parent_port.assert_called_with(LB.vip)
@@ -82,6 +82,7 @@ class TestNetworkTasks(base.TestCase):
 
     def test_deallocate_trunk_not_found(self):
         network_task =  a10_network_tasks.DeallocateTrunk()
+        self.network_driver_mock.get_plugged_parent_port.return_value = EMPTY_PARENT_PORT
         network_task.execute(LB)
-        self.network_driver_mock.deallocate_trunk.side_effect = Exception()
-        self.assertRaises(Exception, self.network_driver_mock.deallocate_trunk, EMPTY_PARENT_PORT.trunk_id)
+        self.network_driver_mock.get_plugged_parent_port.assert_called_with(LB.vip)
+        self.network_driver_mock.deallocate_trunk.assert_called_with(EMPTY_PARENT_PORT.trunk_id)
