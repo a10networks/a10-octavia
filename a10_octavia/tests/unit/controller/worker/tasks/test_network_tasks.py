@@ -13,6 +13,7 @@
 #    under the License.
 
 
+import copy
 import mock
 from unittest.mock import patch
 
@@ -34,12 +35,10 @@ VIP = o_data_models.Vip(port_id=t_constants.MOCK_PORT_ID,
 LB = o_data_models.LoadBalancer(vip=VIP)
 PARENT_PORT = data_models.ParentPort(trunk_id=a10_test_constants.TRUNK_ID)
 EMPTY_PARENT_PORT = data_models.ParentPort()
-DELETE_SUBPORTS = {t_constants.MOCK_AMP_ID1: [SUBPORT1]}
-MULTIPLE_DELETE_SUBPORTS = {t_constants.MOCK_AMP_ID1: [SUBPORT1, SUBPORT2]}
 
 PORT_DELTA = data_models.PortDelta(
-            amphora_id=t_constants.MOCK_AMP_ID1, compute_id=t_constants.MOCK_AMP_COMPUTE_ID1,
-            add_subports=[], delete_subports=[])
+    amphora_id=t_constants.MOCK_AMP_ID1, compute_id=t_constants.MOCK_AMP_COMPUTE_ID1,
+    add_subports=[], delete_subports=[])
 
 
 class TestNetworkTasks(base.TestCase):
@@ -48,7 +47,6 @@ class TestNetworkTasks(base.TestCase):
         patcher = patch(
             'a10_octavia.controller.worker.tasks.a10_network_tasks.BaseNetworkTask.network_driver')
         self.network_driver_mock = patcher.start()
-        self.network_driver_mock.return_value = mock.Mock()
         super(TestNetworkTasks, self).setUp()
 
     def test_handle_delete_port_deltas_with_empty_port_deltas(self):
@@ -58,20 +56,22 @@ class TestNetworkTasks(base.TestCase):
             PARENT_PORT, empty_mock_port_deltas))
 
     def test_handle_delete_port_deltas_with_port_deltas(self):
-        PORT_DELTA.delete_subports = DELETE_SUBPORTS
-        mock_port_deltas = {t_constants.MOCK_AMP_ID1: PORT_DELTA}
+        port_delta = copy.deepcopy(PORT_DELTA)
+        port_delta.delete_subports = {t_constants.MOCK_AMP_ID1: [SUBPORT1]}
+        mock_port_deltas = {t_constants.MOCK_AMP_ID1: port_delta}
         network_task = a10_network_tasks.HandleDeletePortDeltas()
         network_task.execute(PARENT_PORT, mock_port_deltas)
         self.network_driver_mock.unplug_trunk_subports.assert_called_with(
-            PARENT_PORT.trunk_id, DELETE_SUBPORTS)
+            PARENT_PORT.trunk_id, port_delta.delete_subports)
 
     def test_handle_delete_port_deltas_with_multiple_port_deltas(self):
-        PORT_DELTA.delete_subports = MULTIPLE_DELETE_SUBPORTS
-        mock_port_deltas = {t_constants.MOCK_AMP_ID1: PORT_DELTA}
+        port_delta = copy.deepcopy(PORT_DELTA)
+        port_delta.delete_subports = {t_constants.MOCK_AMP_ID1: [SUBPORT1, SUBPORT2]}
+        mock_port_deltas = {t_constants.MOCK_AMP_ID1: port_delta}
         network_task = a10_network_tasks.HandleDeletePortDeltas()
         network_task.execute(PARENT_PORT, mock_port_deltas)
         self.network_driver_mock.unplug_trunk_subports.assert_called_with(
-            PARENT_PORT.trunk_id, MULTIPLE_DELETE_SUBPORTS)
+            PARENT_PORT.trunk_id, port_delta.delete_subports)
 
     def test_deallocate_trunk(self):
         network_task = a10_network_tasks.DeallocateTrunk()
@@ -81,7 +81,7 @@ class TestNetworkTasks(base.TestCase):
         self.network_driver_mock.deallocate_trunk.assert_called_with(PARENT_PORT.trunk_id)
 
     def test_deallocate_trunk_not_found(self):
-        network_task =  a10_network_tasks.DeallocateTrunk()
+        network_task = a10_network_tasks.DeallocateTrunk()
         self.network_driver_mock.get_plugged_parent_port.return_value = EMPTY_PARENT_PORT
         network_task.execute(LB)
         self.network_driver_mock.get_plugged_parent_port.assert_called_with(LB.vip)
