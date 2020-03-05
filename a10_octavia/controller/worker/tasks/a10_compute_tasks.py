@@ -26,11 +26,13 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
+
 class ComputeCreate(BaseComputeTask):
     """Create the compute instance for a new amphora."""
 
     def execute(self, amphora_id, build_type_priority=constants.LB_CREATE_NORMAL_PRIORITY,
                 server_group_id=None, ports=None):
+        import rpdb; rpdb.set_trace()
         ports = ports or []
         network_ids = CONF.a10_controller_worker.amp_boot_network_list[:]
         LOG.debug("Compute create execute for amphora with id %s", amphora_id)
