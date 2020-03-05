@@ -14,10 +14,10 @@
 
 from oslo_log import log as logging
 from oslo_config import cfg
+import acos_client
+
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
-from a10_octavia.controller.worker.tasks import handler_persist
-import acos_client
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -26,40 +26,26 @@ LOG = logging.getLogger(__name__)
 class PoolParent(object):
 
     def set(self, set_method, pool, vthunder, update=False):
-        args = {'service_group': self.meta(pool, 'service_group', {})}
-        try:
-            conf_templates = CONF.service_group.template_server
-            port_templates = CONF.service_group.template_port
-            policy_templates = CONF.service_group.template_policy
-            c = self.client_factory(vthunder)
-            self._update_session_persistence(pool, c, update)
-            service_group_temp = {}
-            service_group_temp['template-server'] = conf_templates
-            service_group_temp['template-port'] = port_templates
-            service_group_temp['template-policy'] = policy_templates
-        except:
-            service_group_temp = None
 
+        args = {'service_group': self.meta(pool, 'service_group', {})}
+        service_group_temp = {}
+        service_group_temp['template-server'] = CONF.service_group.template_server
+        service_group_temp['template-port'] = CONF.service_group.template_port
+        service_group_temp['template-policy'] = CONF.service_group.template_policy
+        axapi_client = self.client_factory(vthunder)
+        protocol = openstack_mappings.service_group_protocol(axapi_client, pool.protocol)
+        lb_method = openstack_mappings.service_group_lb_method(axapi_client, pool.lb_algorithm)
         try:
-            c = self.client_factory(vthunder)
-            protocol = openstack_mappings.service_group_protocol(c, pool.protocol)
-            lb_method = openstack_mappings.service_group_lb_method(c, pool.lb_algorithm)
             set_method(pool.id,
                        protocol=protocol,
                        lb_method=lb_method,
                        service_group_templates=service_group_temp,
                        axapi_args=args)
-            LOG.info("Pool created successfully.")
+            LOG.debug("Pool created successfully: %s", pool.id)
+            return pool
         except Exception as e:
-            LOG.error(str(e))
-
-    def _update_session_persistence(self, pool, c, update=False):
-        if pool.session_persistence:
-            p = handler_persist.PersistHandler(c, pool)
-            if update:
-                p.delete()
-            p.create()
-            return
+            LOG.exception("Failed to create pool: %s", str(e))
+            raise
 
 
 class PoolCreate(PoolParent, BaseVThunderTask):
@@ -67,8 +53,8 @@ class PoolCreate(PoolParent, BaseVThunderTask):
 
     def execute(self, pool, vthunder):
         """ Execute create pool """
-        c = self.client_factory(vthunder)
-        self.set(c.slb.service_group.create, pool, vthunder)
+        axapi_client = self.client_factory(vthunder)
+        return self.set(axapi_client.slb.service_group.create, pool, vthunder)
 
 
 class PoolDelete(BaseVThunderTask):
@@ -77,12 +63,11 @@ class PoolDelete(BaseVThunderTask):
     def execute(self, pool, vthunder):
         """ Execute delete pool """
         try:
-            c = self.client_factory(vthunder)
-            handler_persist.PersistHandler(c, pool).delete()
-            c.slb.service_group.delete(pool.id)
-            LOG.info("Pool deleted successfully.")
+            axapi_client = self.client_factory(vthunder)
+            axapi_client.slb.service_group.delete(pool.id)
+            LOG.debug("Pool deleted successfully: %s", pool.id)
         except Exception as e:
-            LOG.error(str(e))
+            LOG.warning("Failed to delete pool: %s", str(e))
 
 
 class PoolUpdate(PoolParent, BaseVThunderTask):
@@ -90,9 +75,9 @@ class PoolUpdate(PoolParent, BaseVThunderTask):
 
     def execute(self, pool, vthunder, update_dict):
         """ Execute update pool """
-        c = self.client_factory(vthunder)
+        axapi_client = self.client_factory(vthunder)
         if 'session_persistence' in update_dict:
             pool.session_persistence.__dict__.update(update_dict['session_persistence'])
             del update_dict['session_persistence']
         pool.__dict__.update(update_dict)
-        self.set(c.slb.service_group.update, pool, vthunder, update=True)
+        self.set(axapi_client.slb.service_group.update, pool, vthunder, update=True)

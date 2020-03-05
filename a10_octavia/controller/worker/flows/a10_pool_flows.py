@@ -13,12 +13,14 @@
 #    under the License.
 
 
-from taskflow.patterns import linear_flow
+from taskflow.patterns import linear_flow, graph_flow
+from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import service_group_tasks
 from a10_octavia.controller.worker.tasks import virtual_port_tasks
-from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.controller.worker.tasks import persist_tasks
 from a10_octavia.common import a10constants
 from octavia.common import constants
+
 try:
     from octavia.controller.worker.v2.tasks import database_tasks
     from octavia.controller.worker.v2.tasks import lifecycle_tasks
@@ -52,8 +54,10 @@ class PoolFlows(object):
         create_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_pool_flow.add(service_group_tasks.PoolCreate(
-            requires=[constants.POOL, a10constants.VTHUNDER]))
+        create_pool = service_group_tasks.PoolCreate(
+            requires=[constants.POOL, a10constants.VTHUNDER],
+            provides=constants.POOL)
+        create_pool_flow.add(*self._get_sess_pers_subflow(create_pool))
         create_pool_flow.add(virtual_port_tasks.ListenersUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_pool_flow.add(database_tasks.MarkPoolActiveInDB(
@@ -85,6 +89,8 @@ class PoolFlows(object):
             provides=a10constants.VTHUNDER))
         delete_pool_flow.add(virtual_port_tasks.ListenersUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
+        delete_pool_flow.add(persist_tasks.DeleteSessionPersistence(
+            requires=[a10constants.VTHUNDER, constants.POOL]))
         delete_pool_flow.add(service_group_tasks.PoolDelete(
             requires=[constants.POOL, a10constants.VTHUNDER]))
         delete_pool_flow.add(database_tasks.DeletePoolInDB(
@@ -142,8 +148,10 @@ class PoolFlows(object):
         update_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        update_pool_flow.add(service_group_tasks.PoolUpdate(
-            requires=[constants.POOL, a10constants.VTHUNDER, constants.UPDATE_DICT]))
+        update_pool = service_group_tasks.PoolUpdate(
+            requires=[constants.POOL, a10constants.VTHUNDER, constants.UPDATE_DICT],
+            provides=constants.POOL)
+        update_pool_flow.add(*self._get_sess_pers_subflow(update_pool))
         update_pool_flow.add(virtual_port_tasks.ListenersUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_pool_flow.add(database_tasks.UpdatePoolInDB(
@@ -154,3 +162,18 @@ class PoolFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
 
         return update_pool_flow
+
+    def _get_sess_pers_subflow(self, pool_task):
+        get_pool_create_with_sess_pers = graph_flow.Flow(a10constants.HANDLE_SESS_PERS)
+        sess_pers = persist_tasks.HandleSessionPersistenceDelta(
+            requires=[a10constants.VTHUNDER, constants.POOL])
+        get_pool_create_with_sess_pers.add(pool_task, sess_pers)
+        get_pool_create_with_sess_pers.link(pool_task, sess_pers,
+                                            decider=self._is_sess_pers_decider)
+        return get_pool_create_with_sess_pers
+
+    def _is_sess_pers_decider(self, history):
+        """Decides if the pool has session persistence
+        :returns: True if if pool has session persistence
+        """
+        return history[history.keys()[0]].session_persistence != None

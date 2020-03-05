@@ -12,23 +12,22 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-import uuid
-from a10_octavia.controller.worker.tasks.virtual_server_tasks import CreateVirtualServerTask, DeleteVirtualServerTask
-from a10_octavia.tests.test_base import TestBase
 
-USERNAME = "user"
-PASSWORD = "pass"
+from octavia.common import data_models as o_data_models
+from octavia.tests.common import constants as t_constants
+from a10_octavia.common.data_models import VThunder
+from a10_octavia.controller.worker.tasks.virtual_server_tasks import CreateVirtualServerTask
+from a10_octavia.tests.common import a10constants
+from a10_octavia.tests.unit.base import BaseTaskTestCase
 
 
-class TestCreateVirtualServerTask(TestBase):
-    def setUp(self):
-        super(TestCreateVirtualServerTask, self).setUp()
-        self.lb_mock = mock.MagicMock()
-        self.vthunder_mock = mock.MagicMock(username=USERNAME, password=PASSWORD)
-        self.lb_id = str(uuid.uuid4())
+AMPHORA = o_data_models.Amphora(id=t_constants.MOCK_AMP_ID1)
+VTHUNDER = VThunder()
+LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID, amphorae=[AMPHORA])
+
+class TestHandlerVirtualServerTasks(BaseTaskTestCase):
 
     def test_revert_create_virtual_server_task(self):
-        target = CreateVirtualServerTask()
-        actual = target.execute(self.lb_id, self.lb_mock, self.vthunder_mock)
-        self.assertEqual(self.lb_id, actual["loadbalancers"][0]["id"])
+        mock_load_balancer = CreateVirtualServerTask()
+        mock_load_balancer.revert(LB, VTHUNDER)
+        self.client_mock.slb.virtual_server.delete.assert_called_with(LB.id)
