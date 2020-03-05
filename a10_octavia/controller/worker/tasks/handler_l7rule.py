@@ -28,19 +28,23 @@ class L7RuleParent(object):
 
     def set(self, l7rule, listeners, vthunder):
         """ Execute create l7rule """
-        try:
-            l7policy = l7rule.l7policy
-            filename = l7policy.id
-            p = PolicyUtil()
-            script = p.createPolicy(l7policy)
-            size = len(script.encode('utf-8'))
-            c = self.client_factory(vthunder)
-            c.slb.aflex_policy.create(file=filename, script=script, size=size, action="import")
-            LOG.info("aFlex policy created successfully.")
-            listener = listeners[0]
+        l7policy = l7rule.l7policy
+        filename = l7policy.id
+        p = PolicyUtil()
+        script = p.createPolicy(l7policy)
+        size = len(script.encode('utf-8'))
+        listener = listeners[0]
+        c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
 
-            get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
-                                                          listener.protocol, listener.protocol_port)
+        try:
+            axapi_client = self.client_factory(vthunder)
+            axapi_client.slb.aflex_policy.create(
+                file=filename, script=script, size=size, action="import")
+            LOG.debug("aFlex policy created successfully.")
+
+            get_listener = axapi_client.slb.virtual_server.vport.get(
+                listener.load_balancer_id, listener.name,
+                listener.protocol, listener.protocol_port)
 
             aflex_scripts = []
             if 'aflex-scripts' in get_listener['port']:
@@ -48,20 +52,21 @@ class L7RuleParent(object):
                 aflex_scripts.append({"aflex": filename})
             else:
                 aflex_scripts = [{"aflex": filename}]
-            c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
             kargs = {}
             kargs["aflex-scripts"] = aflex_scripts
 
-            c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
-                                              listener.protocol, listener.protocol_port, listener.default_pool_id,
-                                              s_pers, c_pers, 1, **kargs)
-            LOG.info("Listener updated successfully.")
+            axapi_client.slb.virtual_server.vport.update(
+                listener.load_balancer_id, listener.name,
+                listener.protocol, listener.protocol_port,
+                listener.default_pool_id, s_pers,
+                c_pers, 1, **kargs)
+            LOG.debug("Listener updated successfully: %s", listener.id)
         except Exception as e:
-            LOG.error(str(e))
-            LOG.info("Error occurred")
+            LOG.exception("Failed to create/update l7rule: %s", str(e))
 
 
 class CreateL7Rule(L7RuleParent, BaseVThunderTask):
+
     """ Task to create L7Rule """
 
     def execute(self, l7rule, listeners, vthunder):
@@ -70,6 +75,7 @@ class CreateL7Rule(L7RuleParent, BaseVThunderTask):
 
 
 class UpdateL7Rule(L7RuleParent, BaseVThunderTask):
+
     """ Task to update L7Rule """
 
     def execute(self, l7rule, listeners, vthunder, update_dict):
@@ -79,6 +85,7 @@ class UpdateL7Rule(L7RuleParent, BaseVThunderTask):
 
 
 class DeleteL7Rule(BaseVThunderTask):
+
     """ Task to delete a L7rule and disassociate from provided pool """
 
     def execute(self, l7rule, listeners, vthunder):
@@ -92,21 +99,22 @@ class DeleteL7Rule(BaseVThunderTask):
                     break
         policy.rules = rules
         l7rule.l7policy = policy
+        l7pol = l7rule.l7policy
+        filename = l7pol.id
+        p = PolicyUtil()
+        script = p.createPolicy(l7pol)
+        size = len(script.encode('utf-8'))
+        listener = listeners[0]
+        c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         try:
-            l7pol = l7rule.l7policy
-            filename = l7pol.id
-            p = PolicyUtil()
-            script = p.createPolicy(l7pol)
-            size = len(script.encode('utf-8'))
-            c = self.client_factory(vthunder)
-            c.slb.aflex_policy.create(file=filename, script=script, size=size, action="import")
-            LOG.info("aFlex policy created successfully.")
+            axapi_client = self.client_factory(vthunder)
+            axapi_client.slb.aflex_policy.create(
+                file=filename, script=script, size=size, action="import")
+            LOG.debug("aFlex policy created successfully.")
             # get SLB vPort
-            listener = listeners[0]
-
-            get_listener = c.slb.virtual_server.vport.get(listener.load_balancer_id, listener.name,
-                                                          listener.protocol, listener.protocol_port)
-
+            get_listener = axapi_client.slb.virtual_server.vport.get(
+                listener.load_balancer_id, listener.name,
+                listener.protocol, listener.protocol_port)
             aflex_scripts = []
             if 'aflex-scripts' in get_listener['port']:
                 aflex_scripts = get_listener['port']['aflex-scripts']
@@ -114,14 +122,12 @@ class DeleteL7Rule(BaseVThunderTask):
             else:
                 aflex_scripts = [{"aflex": filename}]
 
-            c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
             kargs = {}
             kargs["aflex-scripts"] = aflex_scripts
-
-            c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
-                                              listener.protocol, listener.protocol_port, listener.default_pool_id,
-                                              s_pers, c_pers, 1, **kargs)
-            LOG.info("Listener updated successfully.")
+            axapi_client.slb.virtual_server.vport.update(
+                listener.load_balancer_id, listener.name,
+                listener.protocol, listener.protocol_port, listener.default_pool_id,
+                s_pers, c_pers, 1, **kargs)
+            LOG.debug("Listener updated successfully: %s", listener.id)
         except Exception as e:
-            LOG.error(str(e))
-            LOG.info("Error occurred")
+            LOG.exception("Failed to delete l7rule: %s", str(e))
