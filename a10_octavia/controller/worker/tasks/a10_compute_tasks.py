@@ -26,16 +26,13 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class A10BaseComputeTask(BaseComputeTask):
-    def __init__(self, **kwargs):
-        super(A10BaseComputeTask, self).__init__(**kwargs)
 
-
-class ComputeCreate(A10BaseComputeTask):
+class ComputeCreate(BaseComputeTask):
     """Create the compute instance for a new amphora."""
 
     def execute(self, amphora_id, build_type_priority=constants.LB_CREATE_NORMAL_PRIORITY,
                 server_group_id=None, ports=None):
+        import rpdb; rpdb.set_trace()
         ports = ports or []
         network_ids = CONF.a10_controller_worker.amp_boot_network_list[:]
         LOG.debug("Compute create execute for amphora with id %s", amphora_id)
@@ -85,7 +82,7 @@ class ComputeCreate(A10BaseComputeTask):
             LOG.exception("Reverting compute create failed")
 
 
-class ComputeActiveWait(A10BaseComputeTask):
+class ComputeActiveWait(BaseComputeTask):
     """Wait for the compute driver to mark the amphora active."""
 
     def execute(self, compute_id, amphora_id):
@@ -107,7 +104,7 @@ class ComputeActiveWait(A10BaseComputeTask):
         raise exceptions.ComputeWaitTimeoutException(id=compute_id)
 
 
-class NovaServerGroupCreate(A10BaseComputeTask):
+class NovaServerGroupCreate(BaseComputeTask):
     def execute(self, loadbalancer_id):
         """Create a server group by nova client api
 
