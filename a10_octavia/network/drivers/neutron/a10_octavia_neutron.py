@@ -168,7 +168,6 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
 
     def plug_trunk_subports(self, trunk_id, subports):
         payload = self._build_subport_payload(subports)
-
         updated_trunk = None
         try:
             updated_trunk = self.neutron_client.trunk_add_subports(trunk_id, payload)
@@ -188,6 +187,7 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
             LOG.exception(message)
 
     def get_plugged_parent_port(self, vip):
+        parent_port = None
         try:
             port = self.neutron_client.show_port(vip.port_id)
             parent_port = self._port_to_parent_port(port.get("port"))

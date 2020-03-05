@@ -48,7 +48,7 @@ class MemberFlows(object):
 
         :returns: The flow for creating a member
         """
-        create_member_flow = linear.Flow(constants.CREATE_MEMBER_FLOW)
+        create_member_flow = linear_flow.Flow(constants.CREATE_MEMBER_FLOW)
         create_member_flow.add(lifecycle_tasks.MemberToErrorOnRevertTask(
             requires=[constants.MEMBER,
                       constants.LISTENERS,
