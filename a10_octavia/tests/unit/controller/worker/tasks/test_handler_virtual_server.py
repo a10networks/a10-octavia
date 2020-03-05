@@ -1,7 +1,7 @@
 import mock
 import uuid
 
-from a10_octavia.controller.worker.tasks.handler_virtual_server import CreateVitualServerTask, DeleteVitualServerTask
+from a10_octavia.controller.worker.tasks.virtual_server_tasks import CreateVitualServerTask, DeleteVitualServerTask
 from a10_octavia.tests.test_base import TestBase
 
 USERNAME = "user"

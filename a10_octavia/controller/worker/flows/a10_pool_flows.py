@@ -14,8 +14,8 @@
 
 
 from taskflow.patterns import linear_flow
-from a10_octavia.controller.worker.tasks import handler_service_group
-from a10_octavia.controller.worker.tasks import handler_virtual_port
+from a10_octavia.controller.worker.tasks import service_group_tasks
+from a10_octavia.controller.worker.tasks import virtual_port_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.common import a10constants
 from octavia.common import constants
@@ -52,9 +52,9 @@ class PoolFlows(object):
         create_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_pool_flow.add(handler_service_group.PoolCreate(
+        create_pool_flow.add(service_group_tasks.PoolCreate(
             requires=[constants.POOL, a10constants.VTHUNDER]))
-        create_pool_flow.add(handler_virtual_port.ListenersUpdate(
+        create_pool_flow.add(virtual_port_tasks.ListenersUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_pool_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
@@ -83,9 +83,9 @@ class PoolFlows(object):
         delete_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_pool_flow.add(handler_virtual_port.ListenersUpdate(
+        delete_pool_flow.add(virtual_port_tasks.ListenersUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
-        delete_pool_flow.add(handler_service_group.PoolDelete(
+        delete_pool_flow.add(service_group_tasks.PoolDelete(
             requires=[constants.POOL, a10constants.VTHUNDER]))
         delete_pool_flow.add(database_tasks.DeletePoolInDB(
             requires=constants.POOL))
@@ -142,9 +142,9 @@ class PoolFlows(object):
         update_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        update_pool_flow.add(handler_service_group.PoolUpdate(
+        update_pool_flow.add(service_group_tasks.PoolUpdate(
             requires=[constants.POOL, a10constants.VTHUNDER, constants.UPDATE_DICT]))
-        update_pool_flow.add(handler_virtual_port.ListenersUpdate(
+        update_pool_flow.add(virtual_port_tasks.ListenersUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_pool_flow.add(database_tasks.UpdatePoolInDB(
             requires=[constants.POOL, constants.UPDATE_DICT]))

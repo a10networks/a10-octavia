@@ -13,7 +13,7 @@
 #    under the License.
 
 from taskflow.patterns import linear_flow
-from a10_octavia.controller.worker.tasks import handler_l7rule
+from a10_octavia.controller.worker.tasks import l7rule_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.common import a10constants
 from octavia.common import constants
@@ -49,7 +49,7 @@ class L7RuleFlows(object):
         create_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_l7rule_flow.add(handler_l7rule.CreateL7Rule(
+        create_l7rule_flow.add(l7rule_tasks.CreateL7Rule(
             requires=[constants.L7RULE, constants.LISTENERS, a10constants.VTHUNDER]))
         create_l7rule_flow.add(database_tasks.MarkL7RuleActiveInDB(
             requires=constants.L7RULE))
@@ -75,7 +75,7 @@ class L7RuleFlows(object):
             rebind={constants.OBJECT: constants.L7RULE}))
         delete_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER, provides=a10constants.VTHUNDER))
-        delete_l7rule_flow.add(handler_l7rule.DeleteL7Rule(
+        delete_l7rule_flow.add(l7rule_tasks.DeleteL7Rule(
             requires=[constants.L7RULE, constants.LISTENERS, a10constants.VTHUNDER]))
         delete_l7rule_flow.add(database_tasks.DeleteL7RuleInDB(
             requires=constants.L7RULE))
@@ -100,7 +100,7 @@ class L7RuleFlows(object):
         update_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        update_l7rule_flow.add(handler_l7rule.UpdateL7Rule(
+        update_l7rule_flow.add(l7rule_tasks.UpdateL7Rule(
             requires=[constants.L7RULE, constants.LISTENERS, a10constants.VTHUNDER, constants.UPDATE_DICT]))
         update_l7rule_flow.add(database_tasks.UpdateL7RuleInDB(
             requires=[constants.L7RULE, constants.UPDATE_DICT]))

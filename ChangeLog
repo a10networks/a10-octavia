@@ -1,6 +1,9 @@
 CHANGES
 =======
 
+* Added travis
+* Removed the custom base A10ComputeBase class created
+* Updated README and corrected import in delete flows
 * Refactored compute tasks
 * Removed unwanted alias name
 * Update README.md

@@ -18,7 +18,7 @@ from taskflow.patterns import linear_flow
 from taskflow.patterns import unordered_flow
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.flows import vthunder_flows
-from a10_octavia.controller.worker.tasks import handler_virtual_server
+from a10_octavia.controller.worker.tasks import virtual_server_tasks
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.controller.worker.tasks import a10_compute_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
@@ -94,7 +94,7 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(
             self.get_post_lb_vthunder_association_flow(
                 post_amp_prefix, topology, mark_active=(not listeners)))
-        lb_create_flow.add(handler_virtual_server.CreateVirtualServerTask(
+        lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
             requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER,
                            a10constants.VTHUNDER),
             provides=a10constants.STATUS))
@@ -194,7 +194,7 @@ class LoadBalancerFlows(object):
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
             requires=constants.LOADBALANCER))
-        delete_LB_flow.add(handler_virtual_server.DeleteVirtualServerTask(
+        delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.STATUS))
 
@@ -315,7 +315,7 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER, constants.UPDATE_DICT)))
         # update_LB_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        update_LB_flow.add(handler_virtual_server.UpdateVirtualServerTask(
+        update_LB_flow.add(virtual_server_tasks.UpdateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.STATUS))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
@@ -344,7 +344,7 @@ class LoadBalancerFlows(object):
             self.get_post_lb_rack_vthunder_association_flow(
                 post_amp_prefix, topology, mark_active=(not listeners)))
 
-        lb_create_flow.add(handler_virtual_server.CreateVitualServerTask(
+        lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
             requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.STATUS))
 
