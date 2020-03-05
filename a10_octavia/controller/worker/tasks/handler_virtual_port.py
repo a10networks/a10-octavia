@@ -15,11 +15,12 @@
 import json
 from oslo_log import log as logging
 from oslo_config import cfg
-from a10_octavia.controller.worker.tasks import persist
-from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
-import acos_client.errors as acos_errors
-from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
 
+from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
+import acos_client.errors as acos_errors
+
+from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -52,9 +53,7 @@ class ListenersParent(object):
                 listener.load_balancer = loadbalancer
                 if not listener.enabled:
                     status = c.slb.DOWN
-                persistence = persist.PersistHandler(c, listener.default_pool)
-                s_pers = persistence.s_persistence()
-                c_pers = persistence.c_persistence()
+                c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
                 if listener.protocol == "TERMINATED_HTTPS":
                     listener.protocol = 'HTTPS'
                     template_args["template_client_ssl"] = self.cert_handler(

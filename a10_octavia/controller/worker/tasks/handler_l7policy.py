@@ -15,9 +15,10 @@
 
 from oslo_log import log as logging
 from oslo_config import cfg
+
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
-from a10_octavia.controller.worker.tasks import persist
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -46,11 +47,7 @@ class L7PolicyParent(object):
                 aflex_scripts.append({"aflex": filename})
             else:
                 aflex_scripts = [{"aflex": filename}]
-
-            persistence = persist.PersistHandler(c, listener.default_pool)
-
-            s_pers = persistence.s_persistence()
-            c_pers = persistence.c_persistence()
+            c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
             kargs = {}
             kargs["aflex-scripts"] = aflex_scripts
             c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
@@ -102,16 +99,13 @@ class DeleteL7Policy(BaseVThunderTask):
                     if aflex['aflex'] != l7policy.id:
                         new_aflex_scripts.append(aflex)
 
-            persistence = persist.PersistHandler(c, listener.default_pool)
-
-            s_pers = persistence.s_persistence()
-            c_pers = persistence.c_persistence()
-
+            c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
             kargs = {}
             kargs["aflex-scripts"] = new_aflex_scripts
 
             c.slb.virtual_server.vport.update(listener.load_balancer_id, listener.name,
-                                              listener.protocol, listener.protocol_port, listener.default_pool_id,
+                                              listener.protocol, listener.protocol_port,
+                                              listener.default_pool_id,
                                               s_pers, c_pers, 1, **kargs)
 
             LOG.info("aFlex policy detached from port successfully.")

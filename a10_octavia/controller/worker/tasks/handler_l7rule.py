@@ -15,9 +15,10 @@
 
 from oslo_log import log as logging
 from oslo_config import cfg
+
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
-from a10_octavia.controller.worker.tasks import persist
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -47,12 +48,7 @@ class L7RuleParent(object):
                 aflex_scripts.append({"aflex": filename})
             else:
                 aflex_scripts = [{"aflex": filename}]
-
-            persistence = persist.PersistHandler(c, listener.default_pool)
-
-            s_pers = persistence.s_persistence()
-            c_pers = persistence.c_persistence()
-
+            c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
             kargs = {}
             kargs["aflex-scripts"] = aflex_scripts
 
@@ -118,11 +114,7 @@ class DeleteL7Rule(BaseVThunderTask):
             else:
                 aflex_scripts = [{"aflex": filename}]
 
-            persistence = persist.PersistHandler(c, listener.default_pool)
-
-            s_pers = persistence.s_persistence()
-            c_pers = persistence.c_persistence()
-
+            c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
             kargs = {}
             kargs["aflex-scripts"] = aflex_scripts
 
