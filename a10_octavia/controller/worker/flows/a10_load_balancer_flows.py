@@ -95,9 +95,8 @@ class LoadBalancerFlows(object):
             self.get_post_lb_vthunder_association_flow(
                 post_amp_prefix, topology, mark_active=(not listeners)))
         lb_create_flow.add(handler_virtual_server.CreateVirtualServerTask(
-            requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER,
-                           a10constants.VTHUNDER),
-            provides=a10constants.STATUS))
+            requires=(constants.LOADBALANCER,
+                           a10constants.VTHUNDER)))
 
         return lb_create_flow
 
@@ -195,8 +194,7 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(handler_virtual_server.DeleteVirtualServerTask(
-            requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
-            provides=a10constants.STATUS))
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
 
         # delete_LB_flow.add(listeners_delete)
         # delete_LB_flow.add(network_tasks.UnplugVIP(
@@ -316,8 +314,7 @@ class LoadBalancerFlows(object):
         # update_LB_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_LB_flow.add(handler_virtual_server.UpdateVirtualServerTask(
-            requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
-            provides=a10constants.STATUS))
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         update_LB_flow.add(database_tasks.MarkLBActiveInDB(

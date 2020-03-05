@@ -63,7 +63,7 @@ class CreateVThunderEntry(BaseDatabaseTask):
 
     """ Create VThunder device entry in DB"""
 
-    def execute(self, amphora, loadbalancer, role, status=constants.ACTIVE):
+    def execute(self, amphora, loadbalancer, role, status):
         vthunder_id = uuidutils.generate_uuid()
 
         username = CONF.vthunder.default_vthunder_username
@@ -106,6 +106,14 @@ class CreateVThunderEntry(BaseDatabaseTask):
             updated_at=datetime.utcnow())
 
         LOG.info("Successfully created vthunder entry in database.")
+
+    def revert(self, amphora, loadbalancer, role, status=constants.ACTIVE,
+               *args, **kwargs):
+        try:
+            self.vthunder_repo.delete(
+                db_apis.get_session(), loadbalancer_id=loadbalancer.id)
+        except NoResultFound:
+            LOG.error("Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
 
 
 class DeleteVThunderEntry(BaseDatabaseTask):
