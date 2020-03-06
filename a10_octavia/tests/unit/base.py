@@ -15,6 +15,7 @@
 
 import mock
 from unittest.mock import patch
+import acos_client.errors as acos_errors
 from octavia.tests.unit import base
 
 

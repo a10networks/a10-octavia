@@ -12,46 +12,115 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import acos_client
+import acos_client.errors as acos_errors
+import copy
 import mock
 from unittest.mock import patch
-from acos_client.v30.slb.template.persistence import CookiePersistence
 
-import octavia.tests.unit.base as base
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
+import octavia.tests.unit.base as base
 
-from a10_octavia.common.data_models import VThunder
-from a10_octavia.controller.worker.tasks.persist_tasks import HandleSessionPersistenceDelta
 from a10_octavia.tests.common import a10constants as a10_test_constants
-
-from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+from a10_octavia.common.data_models import VThunder
+from a10_octavia.controller.worker.tasks.persist_tasks import DeleteSessionPersistence
+from a10_octavia.controller.worker.tasks.persist_tasks import HandleSessionPersistenceDelta
 from a10_octavia.tests.unit.base import BaseTaskTestCase
-
 
 VTHUNDER = VThunder()
 POOL = o_data_models.Pool(id=a10_test_constants.MOCK_POOL_ID)
-SESSION_PERSISTENCE = o_data_models.SessionPersistence(
-    pool_id=a10_test_constants.MOCK_POOL_ID, cookie_name=a10_test_constants.MOCK_COOKIE_NAME)
+SOURCE_IP_SESS_PERS = o_data_models.SessionPersistence(
+    pool_id=a10_test_constants.MOCK_POOL_ID,
+    type='SOURCE_IP')
+APP_COOKIE_SESS_PERS = o_data_models.SessionPersistence(
+    pool_id=a10_test_constants.MOCK_POOL_ID,
+    type='APP_COOKIE', cookie_name=a10_test_constants.MOCK_COOKIE_NAME)
+HTTP_COOKIE_SESS_PERS = o_data_models.SessionPersistence(
+    pool_id=a10_test_constants.MOCK_POOL_ID,
+    type='HTTP_COOKIE', cookie_name=a10_test_constants.MOCK_COOKIE_NAME)
+APP_COOKIE_SESS_PERS_WITH_NO_TYPE = o_data_models.SessionPersistence(
+    pool_id=a10_test_constants.MOCK_POOL_ID,
+    cookie_name=a10_test_constants.MOCK_COOKIE_NAME)
+
 
 class TestPersistTasks(BaseTaskTestCase):
 
-    '''@mock.patch('acos_client.v30.slb.template', 'create')
-    def test_handle_session_persistence_delta(self, mock_cp):
+    def test_handle_session_persistence_with_source_ip(self):
         mock_session_persist = HandleSessionPersistenceDelta()
-        mock_session_persist.execute(VTHUNDER, POOL)
-        
-        mock_cp = mock.patch.object(CookiePersistence, 'get')
-        # mock_cp.create.assert_called_with(POOL.id, cookie_name=SESSION_PERSISTENCE.cookie_name)
-        # self.client_mock.slb.template.create.assert_called_with(POOL.id, cookie_name=SESSION_PERSISTENCE.cookie_name)'''
+        pool = copy.deepcopy(POOL)
+        pool.session_persistence = SOURCE_IP_SESS_PERS
+        mock_session_persist.execute(VTHUNDER, pool)
+        self.client_mock.slb.template.src_ip_persistence.delete.assert_called_with(
+            POOL.id)
+        self.client_mock.slb.template.src_ip_persistence.create.assert_called_with(
+            POOL.id)
 
-
-    @mock.patch('acos_client.v30.slb.template.CookiePersistence', 'create')
-    def test_handle_session_persistence_delta(self):
-        # import pdb; pdb.set_trace()
+    def test_handle_session_persistence_with_app_cookie(self):
         mock_session_persist = HandleSessionPersistenceDelta()
-        mock_session_persist.execute(VTHUNDER, POOL)
-        # mock_session_persist.getattr("axapi_client.slb.template", "SP_OBJ_DICT[sp.type]")
-        # self.client_mock.getattr.assert_called_with("self.client_mock.axapi_client.slb.template", "SP_OBJ_DICT[sp.type]")
-        # mock_cp.create.assert_called_with(POOL.id, cookie_name=SESSION_PERSISTENCE.cookie_name)
-        # self.client_mock.slb.template.create.assert_called_with(POOL.id, cookie_name=SESSION_PERSISTENCE.cookie_name)
+        pool = copy.deepcopy(POOL)
+        pool.session_persistence = APP_COOKIE_SESS_PERS
+        mock_session_persist.execute(VTHUNDER, pool)
+        self.client_mock.slb.template.cookie_persistence.delete.assert_called_with(
+            POOL.id)
+        self.client_mock.slb.template.cookie_persistence.create.assert_called_with(
+            POOL.id, cookie_name=a10_test_constants.MOCK_COOKIE_NAME)
+
+    def test_handle_session_persistence_with_http_cookie(self):
+        mock_session_persist = HandleSessionPersistenceDelta()
+        pool = copy.deepcopy(POOL)
+        pool.session_persistence = HTTP_COOKIE_SESS_PERS
+        mock_session_persist.execute(VTHUNDER, pool)
+        self.client_mock.slb.template.cookie_persistence.delete.assert_called_with(
+            POOL.id)
+        self.client_mock.slb.template.cookie_persistence.create.assert_called_with(
+            POOL.id, cookie_name=a10_test_constants.MOCK_COOKIE_NAME)
+
+    def test_handle_session_persistence_with_app_cookie_with_no_sess_pers_type(self):
+        mock_session_persist = HandleSessionPersistenceDelta()
+        pool = copy.deepcopy(POOL)
+        pool.session_persistence = APP_COOKIE_SESS_PERS_WITH_NO_TYPE
+        mock_session_persist.execute(VTHUNDER, pool)
+        self.client_mock.slb.template.cookie_persistence.delete.assert_not_called()
+        self.client_mock.slb.template.cookie_persistence.create.assert_not_called()
+
+    def test_handle_session_persistence_with_source_ip_with_no_sess_pers(self):
+        mock_session_persist = HandleSessionPersistenceDelta()
+        pool = copy.deepcopy(POOL)
+        mock_session_persist.execute(VTHUNDER, pool)
+        self.client_mock.slb.template.src_ip_persistence.delete.assert_not_called()
+        self.client_mock.slb.template.src_ip_persistence.create.assert_not_called()
+
+    def test_revert_handle_session_persistence_with_source_ip(self):
+        mock_session_persist = HandleSessionPersistenceDelta()
+        pool = copy.deepcopy(POOL)
+        pool.session_persistence = SOURCE_IP_SESS_PERS
+        mock_session_persist.execute(VTHUNDER, pool)
+        self.client_mock.slb.template.src_ip_persistence.delete.assert_called_with(
+            POOL.id)
+
+    def test_revert_handle_session_persistence_with_http_cookie(self):
+        mock_session_persist = HandleSessionPersistenceDelta()
+        pool = copy.deepcopy(POOL)
+        pool.session_persistence = HTTP_COOKIE_SESS_PERS
+        mock_session_persist.execute(VTHUNDER, pool)
+        self.client_mock.slb.template.cookie_persistence.delete.assert_called_with(
+            POOL.id)
+
+    def test_handle_session_persistence_exception(self):
+        mock_session_persist = HandleSessionPersistenceDelta()
+        pool = copy.deepcopy(POOL)
+        self.client_mock.side_effect = acos_errors.Exists
+        mock_session_persist.execute(VTHUNDER, pool)
+
+    def test_delete_session_persistence(self):
+        mock_session_persist = DeleteSessionPersistence()
+        pool = copy.deepcopy(POOL)
+        pool.session_persistence = APP_COOKIE_SESS_PERS
+        mock_session_persist.execute(VTHUNDER, pool)
+        self.client_mock.slb.template.cookie_persistence.delete.assert_called_with(POOL.id)
+
+    def test_delete_session_persistence_with_no_sess_pers(self):
+        mock_session_persist = DeleteSessionPersistence()
+        pool = copy.deepcopy(POOL)
+        mock_session_persist.execute(VTHUNDER, pool)
+        self.client_mock.slb.template.cookie_persistence.delete.assert_not_called()
