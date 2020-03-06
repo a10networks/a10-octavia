@@ -18,7 +18,6 @@ import mock
 from unittest.mock import patch
 
 from octavia.common import data_models as o_data_models
-from octavia.tests.common import constants as t_constants
 import octavia.tests.unit.base as base
 
 from a10_octavia.tests.common import a10constants as a10_test_constants
