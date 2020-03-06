@@ -31,35 +31,31 @@ SP_OBJ_DICT = {
 class HandleSessionPersistenceDelta(BaseVThunderTask):
 
     def execute(self, vthunder, pool):
-
         c_pers, s_pers, sp = None, None, None
+        sp = pool.session_persistence
+        c_pers, s_pers = utils.get_sess_pers_templates(pool)
+        if sp and sp.type and sp.type in SP_OBJ_DICT:
+            axapi_client = self.client_factory(vthunder)
+            sp_template = getattr(
+                axapi_client.slb.template, SP_OBJ_DICT[sp.type])
 
-        if pool.session_persistence:
-            sp = pool.session_persistence
-            c_pers, s_pers = utils.get_sess_pers_templates(pool)
+            # Remove existing persistence template if any
+            try:
+                sp_template.delete(pool.id)
+            except acos_errors.NotFound:
+                pass
 
-            if sp and sp.type and sp.type in SP_OBJ_DICT:
-                axapi_client = self.client_factory(vthunder)
-                sp_template = getattr(
-                    axapi_client.slb.template, SP_OBJ_DICT[sp.type])
-
-                # Remove existing persistence template if any
-                try:
-                    sp_template.delete(pool.id)
-                except acos_errors.NotFound:
-                    pass
-
-                try:
-                    if sp.cookie_name:
-                        sp_template.create(pool.id, cookie_name=sp.cookie_name)
-                    else:
-                        sp_template.create(pool.id)
-                except acos_errors.Exists:
-                    pass
-                except Exception:
-                    LOG.exception(
-                        "Failed to create session persistence for pool: %s", pool.id)
-                    raise
+            try:
+                if sp.cookie_name:
+                    sp_template.create(pool.id, cookie_name=sp.cookie_name)
+                else:
+                    sp_template.create(pool.id)
+            except acos_errors.Exists:
+                 pass
+            except Exception:
+                 LOG.exception(
+                    "Failed to create session persistence for pool: %s", pool.id)
+                 raise
 
     def revert(self, vthunder, pool, *args, **kwargs):
         axapi_client = self.client_factory(vthunder)
