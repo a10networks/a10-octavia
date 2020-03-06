@@ -108,7 +108,7 @@ class DeleteL7Rule(BaseVThunderTask):
         policy.rules = rules
         l7rule.l7policy = policy
         l7policy = l7rule.l7policy
-        filename = l7polcy.id
+        filename = l7policy.id
         p = PolicyUtil()
         script = p.createPolicy(l7policy)
         size = len(script.encode('utf-8'))
