@@ -34,7 +34,7 @@ class HandleSessionPersistenceDelta(BaseVThunderTask):
 
         c_pers, s_pers, sp = None, None, None
 
-        if pool and pool.session_persistence:
+        if pool.session_persistence:
             sp = pool.session_persistence
             c_pers, s_pers = utils.get_sess_pers_templates(pool)
 

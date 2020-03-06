@@ -42,6 +42,7 @@ class PoolParent(object):
                        service_group_templates=service_group_temp,
                        axapi_args=args)
             LOG.debug("Pool created successfully: %s", pool.id)
+            return pool
         except Exception as e:
             LOG.exception("Failed to create pool: %s", str(e))
             raise
@@ -53,7 +54,7 @@ class PoolCreate(PoolParent, BaseVThunderTask):
     def execute(self, pool, vthunder):
         """ Execute create pool """
         axapi_client = self.client_factory(vthunder)
-        self.set(axapi_client.slb.service_group.create, pool, vthunder)
+        return self.set(axapi_client.slb.service_group.create, pool, vthunder)
 
 
 class PoolDelete(BaseVThunderTask):
