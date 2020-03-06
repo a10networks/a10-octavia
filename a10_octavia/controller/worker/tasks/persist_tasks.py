@@ -29,16 +29,20 @@ class HandleSessionPersistenceDelta(BaseVThunderTask):
         c_pers, s_pers, sp = None, None, None
         sp = pool.session_persistence
         c_pers, s_pers = utils.get_sess_pers_templates(pool)
+        import rpdb; rpdb.set_trace()
         if sp and sp.type and sp.type in SP_OBJ_DICT:
             axapi_client = self.client_factory(vthunder)
-            sp_template = getattr(
-                axapi_client.slb.template, SP_OBJ_DICT[sp.type])
 
             # Remove existing persistence template if any
-            try:
-                sp_template.delete(pool.id)
-            except acos_errors.NotFound:
-                pass
+            for sp_type in PERS_TYPE:
+                try:
+                    sp_template = getattr(axapi_client.slb.template, sp_type)
+                    sp_template.delete(pool.id)
+                except acos_errors.NotFound:
+                    pass
+
+            sp_template = getattr(
+                axapi_client.slb.template, SP_OBJ_DICT[sp.type])
 
             try:
                 if sp.cookie_name:
@@ -46,11 +50,11 @@ class HandleSessionPersistenceDelta(BaseVThunderTask):
                 else:
                     sp_template.create(pool.id)
             except acos_errors.Exists:
-                 pass
+                pass
             except Exception:
-                 LOG.exception(
+                LOG.exception(
                     "Failed to create session persistence for pool: %s", pool.id)
-                 raise
+                raise
 
     def revert(self, vthunder, pool, *args, **kwargs):
         axapi_client = self.client_factory(vthunder)
@@ -65,13 +69,14 @@ class HandleSessionPersistenceDelta(BaseVThunderTask):
 class DeleteSessionPersistence(BaseVThunderTask):
 
     def execute(self, vthunder, pool):
-        client = self.client_factory(vthunder)
+        axapi_client = self.client_factory(vthunder)
         if pool.session_persistence:
             for sp_type in PERS_TYPE:
                 try:
-                    sp_template = getattr(client.slb.template, sp_type)
+                    sp_template = getattr(axapi_client.slb.template, sp_type)
                     sp_template.delete(pool.id)
                 except acos_errors.NotFound:
                     pass
                 except Exception as e:
-                    LOG.warning("Failed to delete session persistence: %s", str(e))
+                    LOG.warning(
+                        "Failed to delete session persistence: %s", str(e))
