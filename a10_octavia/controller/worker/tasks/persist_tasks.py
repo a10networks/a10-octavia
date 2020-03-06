@@ -14,18 +14,13 @@
 
 
 import logging
-
 import acos_client.errors as acos_errors
+
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 from a10_octavia.controller.worker.tasks import utils
-
+from a10_octavia.common.a10constants import SP_OBJ_DICT, PERS_TYPE
 
 LOG = logging.getLogger(__name__)
-SP_OBJ_DICT = {
-    'HTTP_COOKIE': "cookie_persistence",
-    'APP_COOKIE': "cookie_persistence",
-    'SOURCE_IP': "src_ip_persistence",
-}
 
 
 class HandleSessionPersistenceDelta(BaseVThunderTask):
@@ -72,9 +67,11 @@ class DeleteSessionPersistence(BaseVThunderTask):
     def execute(self, vthunder, pool):
         client = self.client_factory(vthunder)
         if pool.session_persistence:
-            for sp_type in ['cookie_persistence', 'src_ip_persistence']:
+            for sp_type in PERS_TYPE:
                 try:
                     sp_template = getattr(client.slb.template, sp_type)
                     sp_template.delete(pool.id)
                 except acos_errors.NotFound:
                     pass
+                except Exception as e:
+                    LOG.warning("Failed to delete session persistence: %s", str(e))

@@ -107,10 +107,10 @@ class DeleteL7Rule(BaseVThunderTask):
                 break
         policy.rules = rules
         l7rule.l7policy = policy
-        l7pol = l7rule.l7policy
-        filename = l7pol.id
+        l7policy = l7rule.l7policy
+        filename = l7polcy.id
         p = PolicyUtil()
-        script = p.createPolicy(l7pol)
+        script = p.createPolicy(l7policy)
         size = len(script.encode('utf-8'))
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
@@ -121,7 +121,7 @@ class DeleteL7Rule(BaseVThunderTask):
                 file=filename, script=script, size=size, action="import")
             LOG.debug("aFlex policy deleted successfully.")
         except Exception as e:
-            LOG.exception("Failed to delete l7rule: %s", str(e))
+            LOG.warning("Failed to delete l7rule: %s", str(e))
             raise
 
         try:
@@ -129,7 +129,7 @@ class DeleteL7Rule(BaseVThunderTask):
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port)
         except Exception as e:
-            LOG.exception("Failed to delete l7rule: %s", str(e))
+            LOG.warning("Failed to delete l7rule: %s", str(e))
             raise
 
         aflex_scripts = []
@@ -147,5 +147,5 @@ class DeleteL7Rule(BaseVThunderTask):
                 s_pers, c_pers, 1, **kargs)
             LOG.debug("Listener updated successfully: %s", listener.id)
         except Exception as e:
-            LOG.exception("Failed to delete l7rule: %s", str(e))
+            LOG.warning("Failed to delete l7rule: %s", str(e))
             raise

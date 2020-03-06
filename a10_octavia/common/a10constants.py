@@ -26,7 +26,12 @@ OCTAVIA_HEALTH_MANAGER_CONTROLLER = 'octavia_health_manager_controller'
 OCTAVIA_HEALTH_MONITOR = 'octavia_health_monitor'
 VTHUNDER_CONFIG = 'vthunder_config'
 VTHUNDER_ID = "vthunder_id"
-
+SP_OBJ_DICT = {
+    'HTTP_COOKIE': "cookie_persistence",
+    'APP_COOKIE': "cookie_persistence",
+    'SOURCE_IP': "src_ip_persistence",
+}
+PERS_TYPE = ['cookie_persistence', 'src_ip_persistence']
 # Taskflow flow and task names
 
 MARK_VTHUNDER_MASTER_ACTIVE_IN_DB = 'mark-vthunder-master-active-in-db'

@@ -16,8 +16,8 @@ import json
 from oslo_log import log as logging
 from oslo_config import cfg
 
-from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
 import acos_client.errors as acos_errors
+from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
 
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 from a10_octavia.controller.worker.tasks import utils

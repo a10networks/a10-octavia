@@ -13,11 +13,11 @@
 #    under the License.
 
 
-from oslo_log import log as logging
 from oslo_config import cfg
+from oslo_log import log as logging
 
-from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 from a10_octavia.controller.worker.tasks import utils
+from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 
 CONF = cfg.CONF
@@ -106,7 +106,7 @@ class DeleteL7Policy(BaseVThunderTask):
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port)
         except Exception as e:
-            LOG.exception("Failed to get listener for l7policy: %s", str(e))
+            LOG.warning("Failed to get listener for l7policy: %s", str(e))
             raise
 
         new_aflex_scripts = []
@@ -126,11 +126,11 @@ class DeleteL7Policy(BaseVThunderTask):
             LOG.debug(
                 "l7policy %s detached from port %s successfully.", l7policy.id, listener.id)
         except Exception as e:
-            LOG.exception("Failed to detach l7policy: %s", str(e))
+            LOG.warning("Failed to detach l7policy: %s", str(e))
             raise
 
         try:
             axapi_client.slb.aflex_policy.delete(l7policy.id)
             LOG.debug("l7policy deleted successfully: %s", l7policy.id)
         except Exception as e:
-            LOG.exception("Failed to delete l7policy: %s", str(e))
+            LOG.warning("Failed to delete l7policy: %s", str(e))
