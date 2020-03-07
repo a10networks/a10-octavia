@@ -1,4 +1,4 @@
-#    Copyright 2019, A10 Networks
+#    Copyright 2020, A10 Networks
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -26,11 +26,7 @@ LOG = logging.getLogger(__name__)
 class HandleSessionPersistenceDelta(BaseVThunderTask):
 
     def execute(self, vthunder, pool):
-        c_pers, s_pers, sp = None, None, None
-        sp = pool.session_persistence
-        c_pers, s_pers = utils.get_sess_pers_templates(pool)
-        import rpdb; rpdb.set_trace()
-        if sp and sp.type and sp.type in SP_OBJ_DICT:
+        if pool.session_persistence in SP_OBJ_DICT:
             axapi_client = self.client_factory(vthunder)
 
             # Remove existing persistence template if any
@@ -45,8 +41,9 @@ class HandleSessionPersistenceDelta(BaseVThunderTask):
                 axapi_client.slb.template, SP_OBJ_DICT[sp.type])
 
             try:
-                if sp.cookie_name:
-                    sp_template.create(pool.id, cookie_name=sp.cookie_name)
+                if pool.session_persistence.cookie_name:
+                    sp_template.create(pool.id,
+                                       cookie_name=pool.session_persistence.cookie_name)
                 else:
                     sp_template.create(pool.id)
             except acos_errors.Exists:
@@ -59,7 +56,7 @@ class HandleSessionPersistenceDelta(BaseVThunderTask):
     def revert(self, vthunder, pool, *args, **kwargs):
         axapi_client = self.client_factory(vthunder)
         sp_template = getattr(
-            axapi_client.slb.template, SP_OBJ_DICT[sp.type])
+            axapi_client.slb.template, SP_OBJ_DICT[pool.session_persistence.type])
         try:
             sp_template.delete(pool.id)
         except acos_errors.NotFound:

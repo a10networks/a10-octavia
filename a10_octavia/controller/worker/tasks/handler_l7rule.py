@@ -26,7 +26,6 @@ LOG = logging.getLogger(__name__)
 class L7RuleParent(object):
 
     def set(self, l7rule, listeners, vthunder):
-        """Execute create l7rule """
         l7policy = l7rule.l7policy
         filename = l7policy.id
         p = PolicyUtil()
@@ -75,8 +74,7 @@ class L7RuleParent(object):
 
 class CreateL7Rule(L7RuleParent, BaseVThunderTask):
 
-    """Task to create L7Rule """
-
+    """Task to create L7Rule"""
     def execute(self, l7rule, listeners, vthunder):
         self.client_factory(vthunder)
         self.set(l7rule, listeners, vthunder)
@@ -84,8 +82,7 @@ class CreateL7Rule(L7RuleParent, BaseVThunderTask):
 
 class UpdateL7Rule(L7RuleParent, BaseVThunderTask):
 
-    """Task to update L7Rule """
-
+    """Task to update L7Rule"""
     def execute(self, l7rule, listeners, vthunder, update_dict):
         l7rule.__dict__.update(update_dict)
         self.client_factory(vthunder)
@@ -94,10 +91,8 @@ class UpdateL7Rule(L7RuleParent, BaseVThunderTask):
 
 class DeleteL7Rule(BaseVThunderTask):
 
-    """Task to delete a L7rule and disassociate from provided pool """
-
+    """Task to delete a L7rule and disassociate from provided pool"""
     def execute(self, l7rule, listeners, vthunder):
-        """Execute delete L7Rule """
         policy = l7rule.l7policy
         rules = policy.l7rules
 
