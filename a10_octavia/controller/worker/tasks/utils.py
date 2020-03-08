@@ -13,7 +13,12 @@
 #    under the License.
 
 
-MOCK_POOL_ID = 'mock-pool-1'
-MOCK_MEMBER_ID = 'mock-member-1'
-MOCK_LOAD_BALANCER_ID = 'mock-lb-1'
-MOCK_COOKIE_NAME = 'mock-cookie-1'
+def get_sess_pers_templates(pool):
+    c_pers, s_pers, sp = None, None, None
+    if pool and pool.session_persistence:
+        sp = pool.session_persistence
+        if sp.type == 'HTTP_COOKIE' or sp.type == 'APP_COOKIE':
+            c_pers = pool.id
+        elif sp.type == 'SOURCE_IP':
+            s_pers = pool.id
+    return c_pers, s_pers
