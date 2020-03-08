@@ -73,16 +73,16 @@ class L7RuleParent(object):
 
 
 class CreateL7Rule(L7RuleParent, BaseVThunderTask):
-
     """Task to create L7Rule"""
+
     def execute(self, l7rule, listeners, vthunder):
         self.client_factory(vthunder)
         self.set(l7rule, listeners, vthunder)
 
 
 class UpdateL7Rule(L7RuleParent, BaseVThunderTask):
-
     """Task to update L7Rule"""
+
     def execute(self, l7rule, listeners, vthunder, update_dict):
         l7rule.__dict__.update(update_dict)
         self.client_factory(vthunder)
@@ -90,8 +90,8 @@ class UpdateL7Rule(L7RuleParent, BaseVThunderTask):
 
 
 class DeleteL7Rule(BaseVThunderTask):
-
     """Task to delete a L7rule and disassociate from provided pool"""
+
     def execute(self, l7rule, listeners, vthunder):
         policy = l7rule.l7policy
         rules = policy.l7rules

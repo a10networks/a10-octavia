@@ -73,30 +73,27 @@ class L7PolicyParent(object):
 
 
 class CreateL7Policy(L7PolicyParent, BaseVThunderTask):
+    """Task to create a L7Policy"""
 
-    """ Task to create a L7Policy """
     def execute(self, l7policy, listeners, vthunder):
-        """ Execute create L7Policy """
         self.set(l7policy, listeners, vthunder)
 
 
 class UpdateL7Policy(L7PolicyParent, BaseVThunderTask):
+    """Task to update L7Policy"""
 
-    """ Task to update L7Policy """
     def execute(self, l7policy, listeners, vthunder, update_dict):
-        """ Execute update L7Policy """
         l7policy.__dict__.update(update_dict)
         self.set(l7policy, listeners, vthunder)
 
 
 class DeleteL7Policy(BaseVThunderTask):
+    """Task to delete L7Policy"""
 
-    """ Task to delete L7Policy """
     def execute(self, l7policy, vthunder):
-        """ Execute delete L7Policy """
         listener = l7policy.listener
         c_pers, s_pers = utils.get_sess_pers_templates(
-                listener.default_pool)
+            listener.default_pool)
         kargs = {}
         get_listener = None
         axapi_client = self.client_factory(vthunder)

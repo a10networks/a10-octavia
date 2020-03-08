@@ -24,6 +24,7 @@ LOG = logging.getLogger(__name__)
 
 
 class HandleSessionPersistenceDelta(BaseVThunderTask):
+    """Task to handle session persistence template delta for pool"""
 
     def execute(self, vthunder, pool):
         if pool.session_persistence in SP_OBJ_DICT:
@@ -64,6 +65,7 @@ class HandleSessionPersistenceDelta(BaseVThunderTask):
 
 
 class DeleteSessionPersistence(BaseVThunderTask):
+    """Task to delete session persistence templates"""
 
     def execute(self, vthunder, pool):
         axapi_client = self.client_factory(vthunder)
