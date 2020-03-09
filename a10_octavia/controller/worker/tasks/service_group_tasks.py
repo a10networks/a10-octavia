@@ -12,12 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_log import log as logging
 from oslo_config import cfg
-import acos_client
+from oslo_log import log as logging
+from taskflow import task
 
 from a10_octavia.common import openstack_mappings
-from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+from a10_octavia.controller.worker.tasks import utils
+from a10_octavia.controller.worker.tasks.decorator import axapi_client_decorator
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -25,14 +26,13 @@ LOG = logging.getLogger(__name__)
 
 class PoolParent(object):
 
-    def set(self, set_method, pool, vthunder, update=False):
+    def set(self, set_method, pool, axapi_client):
 
-        args = {'service_group': self.meta(pool, 'service_group', {})}
+        args = {'service_group': utils.meta(pool, 'service_group', {})}
         service_group_temp = {}
         service_group_temp['template-server'] = CONF.service_group.template_server
         service_group_temp['template-port'] = CONF.service_group.template_port
         service_group_temp['template-policy'] = CONF.service_group.template_policy
-        axapi_client = self.client_factory(vthunder)
         protocol = openstack_mappings.service_group_protocol(axapi_client, pool.protocol)
         lb_method = openstack_mappings.service_group_lb_method(axapi_client, pool.lb_algorithm)
         try:
@@ -48,36 +48,33 @@ class PoolParent(object):
             raise
 
 
-class PoolCreate(PoolParent, BaseVThunderTask):
-    """ Task to create pool """
+class PoolCreate(task.Task, PoolParent):
+    """Task to create pool"""
 
-    def execute(self, pool, vthunder):
-        """ Execute create pool """
-        axapi_client = self.client_factory(vthunder)
-        return self.set(axapi_client.slb.service_group.create, pool, vthunder)
+    @axapi_client_decorator
+    def execute(self, vthunder, pool):
+        return self.set(self.axapi_client.slb.service_group.create, pool, self.axapi_client)
 
 
-class PoolDelete(BaseVThunderTask):
+class PoolDelete(task.Task):
     """ Task to delete pool """
 
+    @axapi_client_decorator
     def execute(self, pool, vthunder):
-        """ Execute delete pool """
         try:
-            axapi_client = self.client_factory(vthunder)
-            axapi_client.slb.service_group.delete(pool.id)
+            self.axapi_client.slb.service_group.delete(pool.id)
             LOG.debug("Pool deleted successfully: %s", pool.id)
         except Exception as e:
             LOG.warning("Failed to delete pool: %s", str(e))
 
 
-class PoolUpdate(PoolParent, BaseVThunderTask):
-    """ Task to update pool """
+class PoolUpdate(task.Task, PoolParent):
+    """Task to update pool"""
 
+    @axapi_client_decorator
     def execute(self, pool, vthunder, update_dict):
-        """ Execute update pool """
-        axapi_client = self.client_factory(vthunder)
         if 'session_persistence' in update_dict:
             pool.session_persistence.__dict__.update(update_dict['session_persistence'])
             del update_dict['session_persistence']
         pool.__dict__.update(update_dict)
-        self.set(axapi_client.slb.service_group.update, pool, vthunder, update=True)
+        self.set(self.axapi_client.slb.service_group.update, pool, self.axapi_client)

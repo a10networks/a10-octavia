@@ -15,9 +15,10 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from taskflow import task
 
 from a10_octavia.controller.worker.tasks import utils
-from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+from a10_octavia.controller.worker.tasks.decorator import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 
 CONF = cfg.CONF
@@ -26,7 +27,7 @@ LOG = logging.getLogger(__name__)
 
 class L7PolicyParent(object):
 
-    def set(self, l7policy, listeners, vthunder):
+    def set(self, l7policy, listeners, vthunder, axapi_client):
         filename = l7policy.id
         p = PolicyUtil()
         script = p.createPolicy(l7policy)
@@ -35,10 +36,9 @@ class L7PolicyParent(object):
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         kargs = {}
         get_listener = None
-        axapi_client = self.client_factory(vthunder)
         try:
             axapi_client.slb.aflex_policy.create(
-                file=filename, script=script, size=size, action="import")
+                    file=filename, script=script, size=size, action="import")
             LOG.debug("l7policy created successfully: %s", l7policy.id)
         except Exception as e:
             LOG.exception("Failed to create/update l7policy: %s", str(e))
@@ -72,34 +72,36 @@ class L7PolicyParent(object):
             raise
 
 
-class CreateL7Policy(L7PolicyParent, BaseVThunderTask):
+class CreateL7Policy(task.Task, L7PolicyParent):
     """Task to create a L7Policy"""
 
+    @axapi_client_decorator
     def execute(self, l7policy, listeners, vthunder):
-        self.set(l7policy, listeners, vthunder)
+        self.set(l7policy, listeners, vthunder, self.axapi_client)
 
 
-class UpdateL7Policy(L7PolicyParent, BaseVThunderTask):
+class UpdateL7Policy(task.Task, L7PolicyParent):
     """Task to update L7Policy"""
 
+    @axapi_client_decorator
     def execute(self, l7policy, listeners, vthunder, update_dict):
         l7policy.__dict__.update(update_dict)
-        self.set(l7policy, listeners, vthunder)
+        self.set(l7policy, listeners, vthunder, self.axapi_client)
 
 
-class DeleteL7Policy(BaseVThunderTask):
+class DeleteL7Policy(task.Task):
     """Task to delete L7Policy"""
 
+    @axapi_client_decorator
     def execute(self, l7policy, vthunder):
         listener = l7policy.listener
         c_pers, s_pers = utils.get_sess_pers_templates(
             listener.default_pool)
         kargs = {}
         get_listener = None
-        axapi_client = self.client_factory(vthunder)
 
         try:
-            get_listener = axapi_client.slb.virtual_server.vport.get(
+            get_listener = self.axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port)
         except Exception as e:
@@ -115,7 +117,7 @@ class DeleteL7Policy(BaseVThunderTask):
         kargs["aflex-scripts"] = new_aflex_scripts
 
         try:
-            axapi_client.slb.virtual_server.vport.update(
+            self.axapi_client.slb.virtual_server.vport.update(
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id,
@@ -127,7 +129,7 @@ class DeleteL7Policy(BaseVThunderTask):
             raise
 
         try:
-            axapi_client.slb.aflex_policy.delete(l7policy.id)
+            self.axapi_client.slb.aflex_policy.delete(l7policy.id)
             LOG.debug("l7policy deleted successfully: %s", l7policy.id)
         except Exception as e:
             LOG.warning("Failed to delete l7policy: %s", str(e))
