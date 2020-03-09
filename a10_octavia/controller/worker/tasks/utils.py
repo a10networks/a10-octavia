@@ -22,3 +22,16 @@ def get_sess_pers_templates(pool):
         elif sp.type == 'SOURCE_IP':
             s_pers = pool.id
     return c_pers, s_pers
+
+def meta(lbaas_obj, key, default):
+        if isinstance(lbaas_obj, dict):
+            m = lbaas_obj.get('a10_meta', '{}')
+        elif hasattr(lbaas_obj, 'a10_meta'):
+            m = lbaas_obj.a10_meta
+        else:
+            return default
+        try:
+            d = json.loads(m)
+        except Exception:
+            return default
+        return d.get(key, default)
