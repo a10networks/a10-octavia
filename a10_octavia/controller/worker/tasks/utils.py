@@ -25,13 +25,13 @@ def get_sess_pers_templates(pool):
 
 def meta(lbaas_obj, key, default):
         if isinstance(lbaas_obj, dict):
-            m = lbaas_obj.get('a10_meta', '{}')
+            meta = lbaas_obj.get('a10_meta', '{}')
         elif hasattr(lbaas_obj, 'a10_meta'):
-            m = lbaas_obj.a10_meta
+            meta = lbaas_obj.a10_meta
         else:
             return default
         try:
-            d = json.loads(m)
+            dict_json = json.loads(meta)
         except Exception:
             return default
-        return d.get(key, default)
+        return dict_json.get(key, default)

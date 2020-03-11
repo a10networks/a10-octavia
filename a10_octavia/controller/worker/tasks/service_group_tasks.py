@@ -18,7 +18,7 @@ from taskflow import task
 
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks import utils
-from a10_octavia.controller.worker.tasks.decorator import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ class PoolParent(object):
             raise
 
 
-class PoolCreate(task.Task, PoolParent):
+class PoolCreate(PoolParent, task.Task):
     """Task to create pool"""
 
     @axapi_client_decorator
@@ -68,7 +68,7 @@ class PoolDelete(task.Task):
             LOG.warning("Failed to delete pool: %s", str(e))
 
 
-class PoolUpdate(task.Task, PoolParent):
+class PoolUpdate(PoolParent, task.Task):
     """Task to update pool"""
 
     @axapi_client_decorator
