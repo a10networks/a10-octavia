@@ -17,13 +17,13 @@ supported releases:
 Clone the repository and run the following command to install the plugin
 
 #### Register the A10 provider driver and controller worker plugin
-`sudo python ./setup.py install`
+`sudo pip install -e .`
 
-Clone the `acos-client` from https://github.com/a10networks/acos-client and checkout `octavia-fixes` branch
+Clone the `acos-client` from https://github.com/a10networks/acos-client and checkout `feature/octavia-support` branch
 
 #### Register `acos-client` by running following command in acos-client folder
 
-`sudo python ./setup.py install`
+`sudo pip install -e .`
 
 ## STEP 2: Upload vThunder image and create a nova flavor for amphorae devices
 
