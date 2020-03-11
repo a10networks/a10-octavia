@@ -24,7 +24,6 @@ from oslo_log import log as logging
 from oslo_config import cfg
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
-#from a10_octavia.controller.worker.tasks import persist_tasks
 
 
 CONF = cfg.CONF
