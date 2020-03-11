@@ -23,14 +23,13 @@ from octavia.amphorae.driver_exceptions import exceptions as driver_except
 import time
 from requests.exceptions import ConnectionError
 from requests.exceptions import ReadTimeout
-from httplib import BadStatusLine
+from http.client import BadStatusLine
 from octavia.db import api as db_apis
 from oslo_log import log as logging
 from oslo_config import cfg
 from octavia.common import utils
 from a10_octavia.common import a10constants, openstack_mappings
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
-from a10_octavia.controller.worker.tasks import persist
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 
 
