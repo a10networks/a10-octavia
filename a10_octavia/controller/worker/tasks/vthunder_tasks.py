@@ -23,7 +23,7 @@ from octavia.amphorae.driver_exceptions import exceptions as driver_except
 import time
 from requests.exceptions import ConnectionError
 from requests.exceptions import ReadTimeout
-from httplib import BadStatusLine
+from http.client import BadStatusLine
 from octavia.db import api as db_apis
 from oslo_log import log as logging
 from oslo_config import cfg
