@@ -24,7 +24,7 @@ from oslo_log import log as logging
 from oslo_config import cfg
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
-from a10_octavia.controller.worker.tasks import persist
+#from a10_octavia.controller.worker.tasks import persist_tasks
 
 
 CONF = cfg.CONF
@@ -45,13 +45,13 @@ class BaseVThunderTask(task.Task):
 
     def meta(self, lbaas_obj, key, default):
         if isinstance(lbaas_obj, dict):
-            m = lbaas_obj.get('a10_meta', '{}')
+            meta = lbaas_obj.get('a10_meta', '{}')
         elif hasattr(lbaas_obj, 'a10_meta'):
-            m = lbaas_obj.a10_meta
+            meta = lbaas_obj.a10_meta
         else:
             return default
         try:
-            d = json.loads(m)
+            dict_json = json.loads(meta)
         except Exception:
             return default
-        return d.get(key, default)
+        return dict_json.get(key, default)
