@@ -31,7 +31,7 @@ def meta(lbaas_obj, key, default):
         else:
             return default
         try:
-            dict_json = json.loads(meta)
+            meta_json = json.loads(meta)
         except Exception:
             return default
-        return dict_json.get(key, default)
+        return meta_json.get(key, default)
