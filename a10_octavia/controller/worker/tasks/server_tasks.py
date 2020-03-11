@@ -92,7 +92,7 @@ class MemberUpdate(task.Task):
     """Task to update member"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool):
+    def execute(self, member, vthunder):
         server_args = utils.meta(member, 'server', {})
         server_args['conn-limit'] = CONF.server.conn_limit
         server_args['conn-resume'] = CONF.server.conn_resume
