@@ -82,7 +82,7 @@ class DeleteHealthMonitor(task.Task):
 
 
 class UpdateHealthMonitor(task.Task):
-    """Task to update health monitor."""
+    """Task to update health monitor"""
 
     @axapi_client_decorator
     def execute(self, health_mon, vthunder, update_dict):
