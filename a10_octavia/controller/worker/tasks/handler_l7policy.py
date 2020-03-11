@@ -18,7 +18,7 @@ from oslo_log import log as logging
 from taskflow import task
 
 from a10_octavia.controller.worker.tasks import utils
-from a10_octavia.controller.worker.tasks.decorator import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 
 CONF = cfg.CONF
@@ -72,7 +72,7 @@ class L7PolicyParent(object):
             raise
 
 
-class CreateL7Policy(task.Task, L7PolicyParent):
+class CreateL7Policy(L7PolicyParent, task.Task):
     """Task to create a L7Policy"""
 
     @axapi_client_decorator
@@ -80,7 +80,7 @@ class CreateL7Policy(task.Task, L7PolicyParent):
         self.set(l7policy, listeners, vthunder, self.axapi_client)
 
 
-class UpdateL7Policy(task.Task, L7PolicyParent):
+class UpdateL7Policy(L7PolicyParent, task.Task):
     """Task to update L7Policy"""
 
     @axapi_client_decorator

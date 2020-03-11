@@ -19,7 +19,7 @@ from taskflow import task
 
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks import utils
-from a10_octavia.controller.worker.tasks.decorator import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
