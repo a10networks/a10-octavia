@@ -78,5 +78,4 @@ class UpdateVirtualServerTask(LoadBalancerParent, task.Task):
 
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
-        self.set(self.axapi_client.slb.virtual_server.update,
-                 loadbalancer, vthunder)
+        self.set(self.axapi_client.slb.virtual_server.update, loadbalancer)

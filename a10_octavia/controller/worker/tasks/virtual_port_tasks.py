@@ -41,7 +41,6 @@ class ListenersParent(object):
 
         template_args = {}
         try:
-            status = self.axapi_client.slb.UP
             for listener in listeners:
                 if listener.connection_limit != -1:
                     conn_limit = listener.connection_limit
@@ -51,6 +50,7 @@ class ListenersParent(object):
                                 "bounds with value {0}. Please set to between " +
                                 "1-64000000. Defaulting to 64000000".format(conn_limit))
                 listener.load_balancer = loadbalancer
+                status = self.axapi_client.slb.UP
                 if not listener.enabled:
                     status = self.axapi_client.slb.DOWN
                 c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)

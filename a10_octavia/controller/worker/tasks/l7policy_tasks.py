@@ -38,7 +38,7 @@ class L7PolicyParent(object):
         get_listener = None
         try:
             self.axapi_client.slb.aflex_policy.create(
-                    file=filename, script=script, size=size, action="import")
+                file=filename, script=script, size=size, action="import")
             LOG.debug("l7policy created successfully: %s", l7policy.id)
         except Exception as e:
             LOG.exception("Failed to create/update l7policy: %s", str(e))
