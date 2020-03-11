@@ -26,15 +26,15 @@ LOG = logging.getLogger(__name__)
 
 class PoolParent(object):
 
-    def set(self, set_method, pool, axapi_client):
+    def set(self, set_method, pool):
 
         args = {'service_group': utils.meta(pool, 'service_group', {})}
         service_group_temp = {}
         service_group_temp['template-server'] = CONF.service_group.template_server
         service_group_temp['template-port'] = CONF.service_group.template_port
         service_group_temp['template-policy'] = CONF.service_group.template_policy
-        protocol = openstack_mappings.service_group_protocol(axapi_client, pool.protocol)
-        lb_method = openstack_mappings.service_group_lb_method(axapi_client, pool.lb_algorithm)
+        protocol = openstack_mappings.service_group_protocol(self.axapi_client, pool.protocol)
+        lb_method = openstack_mappings.service_group_lb_method(self.axapi_client, pool.lb_algorithm)
         try:
             set_method(pool.id,
                        protocol=protocol,
@@ -53,7 +53,7 @@ class PoolCreate(PoolParent, task.Task):
 
     @axapi_client_decorator
     def execute(self, vthunder, pool):
-        return self.set(self.axapi_client.slb.service_group.create, pool, self.axapi_client)
+        return self.set(self.axapi_client.slb.service_group.create, pool)
 
 
 class PoolDelete(task.Task):
@@ -77,4 +77,4 @@ class PoolUpdate(PoolParent, task.Task):
             pool.session_persistence.__dict__.update(update_dict['session_persistence'])
             del update_dict['session_persistence']
         pool.__dict__.update(update_dict)
-        self.set(self.axapi_client.slb.service_group.update, pool, self.axapi_client)
+        self.set(self.axapi_client.slb.service_group.update, pool)

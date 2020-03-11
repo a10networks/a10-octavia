@@ -27,7 +27,7 @@ LOG = logging.getLogger(__name__)
 
 class L7PolicyParent(object):
 
-    def set(self, l7policy, listeners, vthunder, axapi_client):
+    def set(self, l7policy, listeners):
         filename = l7policy.id
         p = PolicyUtil()
         script = p.createPolicy(l7policy)
@@ -37,7 +37,7 @@ class L7PolicyParent(object):
         kargs = {}
         get_listener = None
         try:
-            axapi_client.slb.aflex_policy.create(
+            self.axapi_client.slb.aflex_policy.create(
                     file=filename, script=script, size=size, action="import")
             LOG.debug("l7policy created successfully: %s", l7policy.id)
         except Exception as e:
@@ -45,7 +45,7 @@ class L7PolicyParent(object):
             raise
 
         try:
-            get_listener = axapi_client.slb.virtual_server.vport.get(
+            get_listener = self.axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port)
         except Exception as e:
@@ -61,7 +61,7 @@ class L7PolicyParent(object):
             kargs["aflex-scripts"] = aflex_scripts
 
         try:
-            axapi_client.slb.virtual_server.vport.update(
+            self.axapi_client.slb.virtual_server.vport.update(
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id, s_pers,
@@ -77,7 +77,7 @@ class CreateL7Policy(L7PolicyParent, task.Task):
 
     @axapi_client_decorator
     def execute(self, l7policy, listeners, vthunder):
-        self.set(l7policy, listeners, vthunder, self.axapi_client)
+        self.set(l7policy, listeners)
 
 
 class UpdateL7Policy(L7PolicyParent, task.Task):
@@ -86,7 +86,7 @@ class UpdateL7Policy(L7PolicyParent, task.Task):
     @axapi_client_decorator
     def execute(self, l7policy, listeners, vthunder, update_dict):
         l7policy.__dict__.update(update_dict)
-        self.set(l7policy, listeners, vthunder, self.axapi_client)
+        self.set(l7policy, listeners)
 
 
 class DeleteL7Policy(task.Task):

@@ -48,6 +48,8 @@ class CreateAndAssociateHealthMonitor(task.Task):
             LOG.debug("Health Monitor created successfully: %s", health_mon.id[0:5])
         except Exception as e:
             LOG.exception("Failed to create health monitor: %s", str(e))
+            raise
+
         try:
             self.axapi_client.slb.service_group.update(health_mon.pool_id,
                                                        health_monitor=health_mon.id[0:5],
@@ -56,10 +58,10 @@ class CreateAndAssociateHealthMonitor(task.Task):
                       health_mon.id[0:5], health_mon.pool_id)
         except Exception as e:
             LOG.exception("Failed to associate pool to health monitor: %s", str(e))
+            raise
 
 
 class DeleteHealthMonitor(task.Task):
-
     """Task to disassociate healthmonitor from pool and then delete a healthmonitor"""
 
     @axapi_client_decorator
@@ -80,7 +82,6 @@ class DeleteHealthMonitor(task.Task):
 
 
 class UpdateHealthMonitor(task.Task):
-
     """Task to update health monitor."""
 
     @axapi_client_decorator
