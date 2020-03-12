@@ -29,7 +29,8 @@ class HandleSessionPersistenceDelta(task.Task):
 
     @axapi_client_decorator
     def execute(self, vthunder, pool):
-        if pool.session_persistence in SP_OBJ_DICT:
+        sess_pers = pool.session_persistence
+        if sess_pers and sess_pers.type in SP_OBJ_DICT:
 
             # Remove existing persistence template if any
             for sp_type in PERS_TYPE:
@@ -40,12 +41,12 @@ class HandleSessionPersistenceDelta(task.Task):
                     pass
 
             sp_template = getattr(
-                self.axapi_client.slb.template, SP_OBJ_DICT[sp.type])
+                self.axapi_client.slb.template, SP_OBJ_DICT[sess_pers.type])
 
             try:
-                if pool.session_persistence.cookie_name:
+                if sess_pers.cookie_name:
                     sp_template.create(pool.id,
-                                       cookie_name=pool.session_persistence.cookie_name)
+                                       cookie_name=sess_pers.cookie_name)
                 else:
                     sp_template.create(pool.id)
             except acos_errors.Exists:
