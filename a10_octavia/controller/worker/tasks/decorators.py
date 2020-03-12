@@ -16,17 +16,29 @@
 import acos_client
 from oslo_config import cfg
 from oslo_log import log as logging
+from requests.exceptions import ConnectionError
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
+
 def axapi_client_decorator(func):
     def wrapper(self, *args, **kwargs):
-        vthunder = kwargs['vthunder']
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-        self.axapi_client = acos_client.Client(vthunder.ip_address, axapi_version,
-                                               vthunder.username, vthunder.password,
-                                               timeout=30)
+        vthunder = kwargs.get('vthunder')
+        if vthunder:
+            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+            self.axapi_client = acos_client.Client(vthunder.ip_address, axapi_version,
+                                                   vthunder.username, vthunder.password,
+                                                   timeout=30)
+        else:
+            self.axapi_client = None
         func(self, *args, **kwargs)
-        self.axapi_client.session.close()
+
+        try:
+            self.axapi_client.session.close()
+        except ConnectionError as e:
+            LOG.debug("Failed to close the session for vThunder %s", vthunder.id)
+        except AttributeError:
+            pass
+
     return wrapper
