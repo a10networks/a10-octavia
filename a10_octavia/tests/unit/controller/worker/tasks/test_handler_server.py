@@ -12,11 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import imp
+import mock
 
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
 
-from a10_octavia.controller.worker.tasks.handler_server import MemberCreate
+from a10_octavia.controller.worker.tasks import handler_server as handler
 from a10_octavia.common.data_models import VThunder
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
@@ -29,8 +31,14 @@ MEMBER = o_data_models.Member(
 
 class TestHandlerServerTasks(BaseTaskTestCase):
 
+    def setUp(self):
+        super(TestHandlerServerTasks, self).setUp()
+        imp.reload(handler)
+        self.client_mock = mock.Mock()
+
     def test_revert_member_create_task(self):
-        mock_member = MemberCreate()
+        mock_member = handler.MemberCreate()
+        mock_member.axapi_client = self.client_mock
         mock_member.revert(MEMBER, VTHUNDER, POOL)
         self.client_mock.slb.service_group.member.delete.assert_called_with(
             POOL.id, MEMBER.id, MEMBER.protocol_port)
