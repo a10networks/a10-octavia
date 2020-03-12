@@ -1,6 +1,45 @@
 CHANGES
 =======
 
+* Removed common.py and occurences of BaseVThunderTask
+* Added decorators for task files and dependencies
+* corrected default value of conn\_limit
+* Modified httplib import for py3 compatability
+* Made fixes to address import errors
+* Removed excess pool parameter passed to member update task
+* Changed variable name to meta\_json
+* Incorporated required changes regarding class imports and Renamed decorators
+* Added devstack install
+* Update README.md
+* Update README.md
+* Included decorator and removed factory code
+* Moved meta function to utils
+* Added decorator to create acos\_client
+* Removed non-required perist.py
+* Added/corrected proper docstrings
+* Incorporated review changes
+* Corrected variable name in l7rule delete task
+* Corrected create/update persist so it loops for all template types
+* Corrected log warning for deletes and moved constanst to a10constants.py
+* Refactored logs and exceptions
+* Added unit tests for persist\_task
+* Created unit tests file
+* Removed if condition as not required after flow change
+* Updated session persistence flow
+* Reverted the compute\_task file
+* Added session persistence taskflow, changed its references with exceptions and logging
+* Created get\_sess\_pers in utils for grabbing c\_pers and s\_pers templates
+* Added travis
+* Inherited from Base class of Unittests, incorporated minor review changes
+* Added test base class for unit tests, corrected minor review changes
+* Removed the custom base A10ComputeBase class created
+* Incorporated review changes
+* Incorporated minor changes in review
+* Added constants for tests and corrected logs
+* Added revert tasks for handler\_server with unit tests
+* Corrected log line in a10\_database\_tasks
+* Added revert functions and unit tests
+* Updated README and corrected import in delete flows
 * Refactored compute tasks
 * Removed unwanted alias name
 * Update README.md
