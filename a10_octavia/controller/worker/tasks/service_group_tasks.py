@@ -28,7 +28,7 @@ class PoolParent(object):
 
     def set(self, set_method, pool):
 
-        args = {'service_group': utils.meta(pool, 'service_group', {})}
+        axapi_args = {'service_group': utils.meta(pool, 'service_group', {})}
         service_group_temp = {}
         service_group_temp['template-server'] = CONF.service_group.template_server
         service_group_temp['template-port'] = CONF.service_group.template_port
@@ -40,7 +40,7 @@ class PoolParent(object):
                        protocol=protocol,
                        lb_method=lb_method,
                        service_group_templates=service_group_temp,
-                       axapi_args=args)
+                       axapi_args=axapi_args)
             LOG.debug("Pool created successfully: %s", pool.id)
             return pool
         except Exception as e:
@@ -57,7 +57,7 @@ class PoolCreate(PoolParent, task.Task):
 
 
 class PoolDelete(task.Task):
-    """ Task to delete pool """
+    """Task to delete pool"""
 
     @axapi_client_decorator
     def execute(self, pool, vthunder):

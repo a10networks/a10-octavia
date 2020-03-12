@@ -59,7 +59,7 @@ class PoolFlows(object):
             provides=constants.POOL)
         create_pool_flow.add(*self._get_sess_pers_subflow(create_pool))
         create_pool_flow.add(virtual_port_tasks.ListenersUpdate(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+            requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
         create_pool_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
         create_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
@@ -153,7 +153,7 @@ class PoolFlows(object):
             provides=constants.POOL)
         update_pool_flow.add(*self._get_sess_pers_subflow(update_pool))
         update_pool_flow.add(virtual_port_tasks.ListenersUpdate(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+            requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
         update_pool_flow.add(database_tasks.UpdatePoolInDB(
             requires=[constants.POOL, constants.UPDATE_DICT]))
         update_pool_flow.add(database_tasks.MarkPoolActiveInDB(

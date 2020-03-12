@@ -48,7 +48,7 @@ class LoadBalancerParent(object):
 
 
 class CreateVirtualServerTask(LoadBalancerParent, task.Task):
-    """ Task to create a virtual server """
+    """Task to create a virtual server"""
 
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
@@ -63,7 +63,7 @@ class CreateVirtualServerTask(LoadBalancerParent, task.Task):
 
 
 class DeleteVirtualServerTask(task.Task):
-    """ Task to delete a virtual server """
+    """Task to delete a virtual server"""
 
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
@@ -74,7 +74,7 @@ class DeleteVirtualServerTask(task.Task):
 
 
 class UpdateVirtualServerTask(LoadBalancerParent, task.Task):
-    """ Task to update a virtual server """
+    """Task to update a virtual server"""
 
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
