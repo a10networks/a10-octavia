@@ -30,7 +30,7 @@ try:
 except (ImportError, AttributeError):
     pass
 
-from a10_octavia.controller.worker.tasks import handler_virtual_port
+from a10_octavia.controller.worker.tasks import virtual_port_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.common import a10constants
@@ -49,7 +49,7 @@ class ListenerFlows(object):
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_listener_flow.add(handler_virtual_port.ListenersCreate(
+        create_listener_flow.add(virtual_port_tasks.ListenersCreate(
             requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
         create_listener_flow.add(a10_network_tasks.UpdateVIP(
             requires=constants.LOADBALANCER))
@@ -90,7 +90,7 @@ class ListenerFlows(object):
         delete_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_listener_flow.add(handler_virtual_port.ListenerDelete(
+        delete_listener_flow.add(virtual_port_tasks.ListenerDelete(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         delete_listener_flow.add(network_tasks.UpdateVIPForDelete(
             requires=constants.LOADBALANCER))
@@ -114,7 +114,7 @@ class ListenerFlows(object):
         delete_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_listener_flow.add(handler_virtual_port.ListenerDelete(
+        delete_listener_flow.add(virtual_port_tasks.ListenerDelete(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         delete_listener_flow.add(database_tasks.DeleteListenerInDB(
             requires=constants.LISTENER))
@@ -159,7 +159,7 @@ class ListenerFlows(object):
         update_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        update_listener_flow.add(handler_virtual_port.ListenersUpdate(
+        update_listener_flow.add(virtual_port_tasks.ListenersUpdate(
             requires=[constants.LOADBALANCER, a10constants.VTHUNDER]))
 
         update_listener_flow.add(database_tasks.UpdateListenerInDB(
@@ -182,7 +182,7 @@ class ListenerFlows(object):
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_listener_flow.add(handler_virtual_port.ListenersCreate(
+        create_listener_flow.add(virtual_port_tasks.ListenersCreate(
             requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
         if project_id is None:
             create_listener_flow.add(network_tasks.UpdateVIP(
