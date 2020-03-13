@@ -1,7 +1,7 @@
 # A10 Networks OpenStack Octavia Driver
 =====================================================
 
-### Sections
+## Table of Contents
 1. [Overview](#Overview)
 
 2. [Setup and Installation](#Setup-and-Installation)
