@@ -121,7 +121,14 @@ from `a10-octavia/a10_octavia/db/migration` folder run
 alembic upgrade head
 ```
 
-if older migrations not found, truncate `alembic_migrations` table from octavia database and re-run the above command.
+If versioning error occurs, delete all entries in the `alembic_versions` table from `octavia` database and re-run the above command.
+
+```shell
+mysql> use octavia;
+mysql> DELETE FROM alembic_versions;
+```
+
+**Note: Octavia verisons less than 4.1.1 have the `alembic_migrations` table instead
 
 ## STEP 6: Update security group to access vThunder AXAPIs
 
