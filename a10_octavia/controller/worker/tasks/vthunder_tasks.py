@@ -149,7 +149,7 @@ class ConfigureVRRP(task.Task):
     """Task to configure Master vThunder VRRP"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, device_id, set_id):
+    def execute(self, vthunder, device_id=1, set_id=1):
         
         status = self.axapi_client.system.action.check_vrrp_status()
         try:
@@ -165,7 +165,7 @@ class ConfigureVRID(task.Task):
     """Task to configure vThunder VRID"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, backup_vthunder, vrrp_status, vrid):
+    def execute(self, vthunder, vrid=1):
         try:
             self.axapi_client.system.action.configureVRID(vrid)
             LOG.debug("Configured the master vThunder for VRID")
@@ -193,21 +193,23 @@ class ConfigureVRRPSync(task.Task):
                 raise
 
 
-def configure_avcs(device_id, device_priority, floating_ip, floating_mask):
-     self.axapi_client.system.action.set_vcs_device(device_id, device_priority)
-     self.axapi_client.system.action.set_vcs_para(floating_ip, floating_mask)
-     self.axapi_client.system.action.vcs_enable()
-     self.axapi_client.system.action.vcs_reload()
+def configure_avcs(axapi_client, device_id, device_priority, floating_ip, floating_mask):
+     axapi_client.system.action.set_vcs_device(device_id, device_priority)
+     axapi_client.system.action.set_vcs_para(floating_ip, floating_mask)
+     axapi_client.system.action.vcs_enable()
+     axapi_client.system.action.vcs_reload()
 
 class ConfigureaVCSMaster(task.Task):
     """Task to configure aVCS"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, vrrp_status, device_id, device_priority, floating_ip, floating_mask):
+    def execute(self, vthunder, vrrp_status, device_id=1, device_priority=200,
+                floating_ip="192.168.0.100", floating_mask="255.255.255.0"):
         """Execute to configure aVCS in master vThunder"""
         if not vrrp_status:
             try:
-                configure_avcs(device_id, device_priority, floating_ip, floating_mask)
+                configure_avcs(self.axapi_client, device_id, device_priority,
+                               floating_ip, floating_mask)
                 LOG.debug("Configured the master vThunder for aVCS: %s", vthunder.id)
             except Exception as e:
                 LOG.exception("Failed to configure master vThunder aVCS: %s", str(e))
@@ -217,7 +219,8 @@ class ConfigureaVCSMaster(task.Task):
 class ConfigureaVCSBackup(task.Task):
 
     @axapi_client_decorator
-    def execute(self, backup_vthunder, vrrp_status, device_id, device_priority, floating_ip, floating_mask):
+    def execute(self, vthunder, vrrp_status, device_id=2, device_priority=100,
+                floating_ip="192.168.0.100", floating_mask="255.255.255.0"):
 
             try:
                 attempts = 10
@@ -226,7 +229,8 @@ class ConfigureaVCSBackup(task.Task):
                     # proper exception handling with all other API call loops.
                     # Currently resolves "System is Busy" error
                     try:
-                        configure_avcs(device_id, device_priority, floating_ip, floating_mask)
+                        configure_avcs(self.axapi_client, device_id, device_priority,
+                                       floating_ip, floating_mask)
                         attempts = 0
                         LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
                     except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):

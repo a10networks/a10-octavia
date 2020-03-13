@@ -369,7 +369,7 @@ class VThunderFlows(object):
         # VRRP Configuration
         vrrp_subflow.add(vthunder_tasks.ConfigureVRRP(
             name=sf_name + '-' + a10constants.CONFIGURE_VRRP_FOR_MASTER_VTHUNDER,
-            rebind={a10constants.VTHUNDER:a10constants.VTHUNDER},
+            requires=(a10constants.VTHUNDER),
             inject={a10constants.DEVICE_ID:"1",a10constants.SET_ID:"1"},
             provides=(a10constants.VRRP_STATUS)))
         vrrp_subflow.add(vthunder_tasks.ConfigureVRRP(
@@ -380,13 +380,10 @@ class VThunderFlows(object):
         # VRID Configuration
         vrrp_subflow.add(vthunder_tasks.ConfigureVRID(
             name=sf_name + '-' + a10constants.CONFIGURE_VRID_FOR_MASTER_VTHUNDER,
-            requires=(a10constants.VTHUNDER, a10constants.VRRP_STATUS),
-            inject={a10constants.VRID:"1"}))
+            requires=(a10constants.VTHUNDER)))
         vrrp_subflow.add(vthunder_tasks.ConfigureVRID(
             name=sf_name + '-' + a10constants.CONFIGURE_VRID_FOR_BACKUP_VTHUNDER,
-            rebind={a10constants.VTHUNDER:a10constants.BACKUP_VTHUNDER},
-            requires=(a10constants.VRRP_STATUS),
-            inject={a10constants.VRID:"1"}))
+            rebind={a10constants.VTHUNDER:a10constants.BACKUP_VTHUNDER}))
         # VRRP Synch
         vrrp_subflow.add(vthunder_tasks.ConfigureVRRPSync(
             name=sf_name + '-' + a10constants.CONFIGURE_VRRP_SYNC,
@@ -396,20 +393,16 @@ class VThunderFlows(object):
             requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
             name=sf_name + '-' + a10constants.WAIT_FOR_BACKUP_SYNC,
-            rebind=(a10constants.BACKUP_VTHUNDER, constants.AMPHORA)))
+            rebind={a10constants.VTHUNDER:a10constants.BACKUP_VTHUNDER},
+            requires=(constants.AMPHORA)))
         # Configure aVCS
         vrrp_subflow.add(vthunder_tasks.ConfigureaVCSMaster(
             name=sf_name + '-' + a10constants.CONFIGURE_AVCS_SYNC_FOR_MASTER,
-            requires=(a10constants.VTHUNDER, a10constants.VRRP_STATUS),
-            inject={a10constants.DEVICE_ID:"1", a10constants.DEVICE_PRIORITY:"200", 
-                    a10constants.FLOATING_IP:"192.168.0.100", a10constants.FLOATING_MASK:"255.255.255.0"}))
+            requires=(a10constants.VTHUNDER, a10constants.VRRP_STATUS)))
         vrrp_subflow.add(vthunder_tasks.ConfigureaVCSBackup(
             name=sf_name + '-' + a10constants.CONFIGURE_AVCS_SYNC_FOR_BACKUP,
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-            requires=(a10constants.VRRP_STATUS),
-            inject={a10constants.DEVICE_ID:"2", a10constants.DEVICE_PRIORITY:"100",
-                    a10constants.FLOATING_IP:"192.168.0.100", a10constants.FLOATING_MASK:"255.255.255.0"}))
-        
+            requires=(a10constants.VRRP_STATUS)))
         return vrrp_subflow
 
     def get_rack_vthunder_for_lb_subflow(
