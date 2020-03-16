@@ -151,11 +151,9 @@ class ConfigureVRRP(task.Task):
     @axapi_client_decorator
     def execute(self, vthunder, device_id=1, set_id=1):
         
-        status = self.axapi_client.system.action.check_vrrp_status()
         try:
             self.axapi_client.system.action.configureVRRP(device_id, set_id)
             LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
-            return status
         except Exception as e:
             LOG.exception("Failed to configure master vThunder VRRP: %s", str(e))
             raise
@@ -166,6 +164,7 @@ class ConfigureVRID(task.Task):
 
     @axapi_client_decorator
     def execute(self, vthunder, vrid=1):
+        import rpdb; rpdb.set_trace()
         try:
             self.axapi_client.system.action.configureVRID(vrid)
             LOG.debug("Configured the master vThunder for VRID")
@@ -178,19 +177,18 @@ class ConfigureVRRPSync(task.Task):
     """Task to sync vThunder VRRP"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, backup_vthunder, vrrp_status):
+    def execute(self, vthunder, backup_vthunder):
         """Execute to sync up vrrp in two vThunder devices."""
-        if not vrrp_status:
-            try:
-                self.axapi_client.system.action.configSynch(backup_vthunder.ip_address,
-                                                            backup_vthunder.username,
-                                                            backup_vthunder.password)
-                LOG.debug("Waiting 30 seconds for config synch.")
-                time.sleep(30)
-                LOG.debug("Sync up for vThunder master")
-            except Exception as e:
-                LOG.exception("Failed VRRP sync: %s", str(e))
-                raise
+        try:
+            self.axapi_client.system.action.configSynch(backup_vthunder.ip_address,
+                                                        backup_vthunder.username,
+                                                        backup_vthunder.password)
+            LOG.debug("Waiting 30 seconds for config synch.")
+            time.sleep(30)
+            LOG.debug("Sync up for vThunder master")
+        except Exception as e:
+            LOG.exception("Failed VRRP sync: %s", str(e))
+            raise
 
 
 def configure_avcs(axapi_client, device_id, device_priority, floating_ip, floating_mask):
@@ -203,39 +201,38 @@ class ConfigureaVCSMaster(task.Task):
     """Task to configure aVCS"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, vrrp_status, device_id=1, device_priority=200,
+    def execute(self, vthunder, device_id=1, device_priority=200,
                 floating_ip="192.168.0.100", floating_mask="255.255.255.0"):
         """Execute to configure aVCS in master vThunder"""
-        if not vrrp_status:
-            try:
-                configure_avcs(self.axapi_client, device_id, device_priority,
-                               floating_ip, floating_mask)
-                LOG.debug("Configured the master vThunder for aVCS: %s", vthunder.id)
-            except Exception as e:
-                LOG.exception("Failed to configure master vThunder aVCS: %s", str(e))
-                raise
+        try:
+            configure_avcs(self.axapi_client, device_id, device_priority,
+                           floating_ip, floating_mask)
+            LOG.debug("Configured the master vThunder for aVCS: %s", vthunder.id)
+        except Exception as e:
+            LOG.exception("Failed to configure master vThunder aVCS: %s", str(e))
+            raise
 
 
 class ConfigureaVCSBackup(task.Task):
 
     @axapi_client_decorator
-    def execute(self, vthunder, vrrp_status, device_id=2, device_priority=100,
+    def execute(self, vthunder, device_id=2, device_priority=100,
                 floating_ip="192.168.0.100", floating_mask="255.255.255.0"):
 
-            try:
-                attempts = 10
-                while attempts > 0:
-                    # TODO: Need this loop to be moved in acos_client with
-                    # proper exception handling with all other API call loops.
-                    # Currently resolves "System is Busy" error
-                    try:
-                        configure_avcs(self.axapi_client, device_id, device_priority,
-                                       floating_ip, floating_mask)
-                        attempts = 0
-                        LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
-                    except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
+        try:
+            attempts = 30
+            while attempts > 0:
+            # TODO: Need this loop to be moved in acos_client with
+            # proper exception handling with all other API call loops.
+            # Currently resolves "System is Busy" error
+                try:
+                    configure_avcs(self.axapi_client, device_id, device_priority,
+                                   floating_ip, floating_mask)
+                    attempts = 0
+                    LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
+                except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
                         attempts = attempts - 1
-            except Exception as e:
+        except Exception as e:
                 LOG.exception("Failed to configure backup vThunder aVCS: %s", str(e))
                 raise
 
@@ -286,5 +283,6 @@ class CheckVRRPStatus(task.Task):
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        status = self.axapi_client.system.action.check_vrrp_status()
-        return status
+        vrrp_status = self.axapi_client.system.action.check_vrrp_status()
+        if vrrp_status:
+            return True
