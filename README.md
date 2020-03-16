@@ -56,7 +56,7 @@ Add `a10` driver to the `enabled_provider_drivers` list in the `api-settings` se
 Change `default_provider_driver` to `a10`
 
 ```shell
-enabled_provider_drivers = a10: 'The A10 Octavia driver.',
+enabled_provider_drivers = a10: 'The A10 Octavia driver.'
 
 default_provider_driver = a10
 ```
