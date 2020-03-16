@@ -41,11 +41,13 @@ class PoolParent(object):
                        lb_method=lb_method,
                        service_group_templates=service_group_temp,
                        axapi_args=args)
-            LOG.debug("Pool created successfully: %s", pool.id)
+            LOG.debug("Pool created/updated successfully: %s", pool.id)
             return pool
         except Exception as e:
-            LOG.exception("Failed to create pool: %s", str(e))
-            raise
+            if not update:
+                LOG.exception("Failed to create pool: %s", str(e))
+                raise
+            LOG.warning("Failed to update pool: %s", str(e))
 
 
 class PoolCreate(PoolParent, BaseVThunderTask):
@@ -55,6 +57,15 @@ class PoolCreate(PoolParent, BaseVThunderTask):
         """ Execute create pool """
         axapi_client = self.client_factory(vthunder)
         return self.set(axapi_client.slb.service_group.create, pool, vthunder)
+
+    def revert(self, pool, vthunder, *args, **kwargs):
+        """ Handle create pool failures """
+        self.task_utils.mark_pool_prov_status_error(pool.id)
+        axapi_client = self.client_factory(vthunder)
+        try:
+            axapi_client.slb.service_group.delete(pool.id)
+        except Exception as e:
+            LOG.exception("Failed to revert create pool: %s", str(e))
 
 
 class PoolDelete(BaseVThunderTask):

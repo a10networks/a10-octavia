@@ -14,7 +14,7 @@
 
 
 import mock
-from unittest.mock import patch
+from mock import patch
 from octavia.tests.unit import base
 
 
