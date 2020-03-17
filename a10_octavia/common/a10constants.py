@@ -33,7 +33,7 @@ SET_ID = "set_id"
 VRID = "vrid"
 DEVICE_PRIORITY = 'device_priority'
 FLOATING_IP = 'floating_ip'
-FLOATING_MASK = 'floating_mask'
+FLOATING_IP_MASK = 'floating_ip_mask'
 SP_OBJ_DICT = {
     'HTTP_COOKIE': "cookie_persistence",
     'APP_COOKIE': "cookie_persistence",

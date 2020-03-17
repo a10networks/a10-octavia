@@ -292,7 +292,7 @@ class LoadBalancerFlows(object):
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             new_LB_net_subflow.add(a10_database_tasks.MarkVThunderStatusInDB(
                 name=a10constants.MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB,
-                rebind={a10constants.VTHUNDER:a10constants.BACKUP_VTHUNDER},
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                 inject={"status": constants.ACTIVE}))
         return new_LB_net_subflow
 

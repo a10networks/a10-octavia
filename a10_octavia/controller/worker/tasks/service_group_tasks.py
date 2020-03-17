@@ -73,8 +73,5 @@ class PoolUpdate(PoolParent, task.Task):
 
     @axapi_client_decorator
     def execute(self, pool, vthunder, update_dict):
-        if 'session_persistence' in update_dict:
-            pool.session_persistence.__dict__.update(update_dict['session_persistence'])
-            del update_dict['session_persistence']
         pool.__dict__.update(update_dict)
         self.set(self.axapi_client.slb.service_group.update, pool)
