@@ -17,10 +17,10 @@ import copy
 
 from octavia.common import data_models as o_data_models
 
-from a10_octavia.tests.common import a10constants as a10_test_constants
 from a10_octavia.common.data_models import VThunder
 from a10_octavia.controller.worker.tasks.persist_tasks import DeleteSessionPersistence
 from a10_octavia.controller.worker.tasks.persist_tasks import HandleSessionPersistenceDelta
+from a10_octavia.tests.common import a10constants as a10_test_constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 
 VTHUNDER = VThunder()

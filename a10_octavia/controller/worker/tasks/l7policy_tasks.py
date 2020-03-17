@@ -16,9 +16,9 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from a10_octavia.controller.worker.tasks import utils
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
+from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)

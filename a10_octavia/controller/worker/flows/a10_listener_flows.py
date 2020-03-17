@@ -19,10 +19,10 @@ from octavia.controller.worker.tasks import database_tasks
 from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import network_tasks
 
-from a10_octavia.controller.worker.tasks import virtual_port_tasks
+from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
-from a10_octavia.common import a10constants
+from a10_octavia.controller.worker.tasks import virtual_port_tasks
 
 
 class ListenerFlows(object):
@@ -62,7 +62,7 @@ class ListenerFlows(object):
         create_all_listeners_flow.add(database_tasks.ReloadLoadBalancer(
             requires=constants.LOADBALANCER_ID,
             provides=constants.LOADBALANCER))
-        create_all_listeners_flow.add(amphora_driver_tasks.ListenersUpdate(
+        create_all_listeners_flow.add(virtual_port_tasks.ListenersUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_all_listeners_flow.add(network_tasks.UpdateVIP(
             requires=constants.LOADBALANCER))

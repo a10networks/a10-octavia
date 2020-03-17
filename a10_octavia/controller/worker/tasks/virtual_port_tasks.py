@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
 from oslo_log import log as logging
 from oslo_config import cfg
 
@@ -31,7 +30,6 @@ class ListenersParent(object):
     def set(self, set_method, loadbalancer, listeners, vthunder):
         ipinip = CONF.listener.ipinip
         no_dest_nat = CONF.listener.no_dest_nat
-        ha_conn_mirror = CONF.listener.ha_conn_mirror
         autosnat = CONF.listener.autosnat
         conn_limit = CONF.listener.conn_limit
         virtual_port_templates = {}

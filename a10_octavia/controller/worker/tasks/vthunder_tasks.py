@@ -12,12 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-from taskflow import task
-
-from octavia.controller.worker import task_utils as task_utilities
 from octavia.common import constants
-import acos_client
 from acos_client.errors import ACOSException
 from octavia.amphorae.driver_exceptions import exceptions as driver_except
 import time
@@ -29,7 +24,6 @@ from oslo_log import log as logging
 from oslo_config import cfg
 from octavia.common import utils
 from a10_octavia.common import a10constants, openstack_mappings
-from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 
 
@@ -79,8 +73,8 @@ class AmphoraePostVIPPlug(BaseVThunderTask):
         """Execute get_info routine for a vThunder until it responds."""
         try:
             c = self.client_factory(vthunder)
-            save_config = c.system.action.write_memory()
-            amp_info = c.system.action.reboot()
+            c.system.action.write_memory()
+            c.system.action.reboot()
             LOG.info("Waiting for 30 seconds to trigger vThunder reboot.")
             time.sleep(30)
             LOG.info("Rebooted vThunder successfully!")
@@ -99,8 +93,8 @@ class AmphoraePostMemberNetworkPlug(BaseVThunderTask):
             amphora_id = loadbalancer.amphorae[0].id
             if len(added_ports[amphora_id]) > 0:
                 c = self.client_factory(vthunder)
-                save_config = c.system.action.write_memory()
-                amp_info = c.system.action.reboot()
+                c.system.action.write_memory()
+                c.system.action.reboot()
                 time.sleep(30)
                 LOG.info("Rebooted vThunder successfully!")
             else:
@@ -118,7 +112,7 @@ class EnableInterface(BaseVThunderTask):
         """Execute get_info routine for a vThunder until it responds."""
         try:
             c = self.client_factory(vthunder)
-            amp_info = c.system.action.setInterface(1)
+            c.system.action.setInterface(1)
             LOG.info("Configured the devices")
         except Exception as e:
             LOG.error("Unable to configure vthunder interface")
@@ -142,7 +136,7 @@ class EnableInterfaceForMembers(BaseVThunderTask):
                     try:
                         target_interface = len(nics)
                         c = self.client_factory(vthunder)
-                        amp_info = c.system.action.setInterface(target_interface - 1)
+                        c.system.action.setInterface(target_interface - 1)
                         configured_interface = True
                         LOG.info("Configured the new interface required for member.")
                     except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
@@ -165,7 +159,7 @@ class ConfigureVRRP(BaseVThunderTask):
         if not status:
             try:
                 c = self.client_factory(vthunder)
-                amp_info = c.system.action.configureVRRP(1, 1)
+                c.system.action.configureVRRP(1, 1)
                 LOG.info("Configured the master vThunder for VRRP")
             except Exception as e:
                 LOG.error("Unable to configure master vThunder VRRP")
@@ -174,7 +168,7 @@ class ConfigureVRRP(BaseVThunderTask):
 
             try:
                 c = self.client_factory(backup_vthunder)
-                amp_info = c.system.action.configureVRRP(2, 1)
+                c.system.action.configureVRRP(2, 1)
                 LOG.info("Configured the backup vThunder for VRRP")
             except Exception as e:
                 LOG.error("Unable to configure backup vThunder VRRP")
@@ -191,7 +185,7 @@ class ConfigureVRID(BaseVThunderTask):
         if not vrrp_status:
             try:
                 c = self.client_factory(vthunder)
-                amp_info = c.system.action.configureVRID(1)
+                c.system.action.configureVRID(1)
                 LOG.info("Configured the master vThunder for VRID")
             except Exception as e:
                 LOG.error("Unable to configure master vThunder VRRP")
@@ -200,7 +194,7 @@ class ConfigureVRID(BaseVThunderTask):
 
             try:
                 c = self.client_factory(backup_vthunder)
-                amp_info = c.system.action.configureVRID(1)
+                c.system.action.configureVRID(1)
                 LOG.info("Configured the backup vThunder for VRID")
             except Exception as e:
                 LOG.error("Unable to configure backup vThunder VRRP")
@@ -216,7 +210,7 @@ class ConfigureVRRPSync(BaseVThunderTask):
         if not vrrp_status:
             try:
                 c = self.client_factory(vthunder)
-                amp_info = c.system.action.configSynch(
+                c.system.action.configSynch(
                     backup_vthunder.ip_address,
                     backup_vthunder.username,
                     backup_vthunder.password)
@@ -274,13 +268,12 @@ class ListenersCreate(BaseVThunderTask):
 
     def execute(self, loadbalancer, listeners, vthunder):
         """Execute updates per listener for an amphora."""
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
         for listener in listeners:
             listener.load_balancer = loadbalancer
             try:
                 c = self.client_factory(vthunder)
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
-                out = c.slb.virtual_server.vport.create(
+                c.slb.virtual_server.vport.create(
                     loadbalancer.id,
                     name,
                     listener.protocol,
@@ -313,7 +306,7 @@ class ListenersUpdate(BaseVThunderTask):
             try:
                 c = self.client_factory(vthunder)
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
-                out = c.slb.virtual_server.vport.update(
+                c.slb.virtual_server.vport.update(
                     loadbalancer.id,
                     name,
                     listener.protocol,
@@ -343,8 +336,8 @@ class ListenerDelete(BaseVThunderTask):
         try:
             c = self.client_factory(vthunder)
             name = loadbalancer.id + "_" + str(listener.protocol_port)
-            out = c.slb.virtual_server.vport.delete(loadbalancer.id, name, listener.protocol,
-                                                    listener.protocol_port)
+            c.slb.virtual_server.vport.delete(loadbalancer.id, name, listener.protocol,
+                                              listener.protocol_port)
             LOG.info("Listener deleted successfully.")
         except Exception as e:
             print(str(e))
@@ -366,7 +359,7 @@ class PoolCreate(BaseVThunderTask):
         """Execute create pool for an amphora."""
         try:
             c = self.client_factory(vthunder)
-            out = c.slb.service_group.create(pool.id, pool.protocol)
+            c.slb.service_group.create(pool.id, pool.protocol)
             LOG.info("Pool created successfully.")
         except Exception as e:
             print(str(e))
@@ -380,7 +373,7 @@ class PoolDelete(BaseVThunderTask):
         """Execute create pool for an amphora."""
         try:
             c = self.client_factory(vthunder)
-            out = c.slb.service_group.delete(pool.id)
+            c.slb.service_group.delete(pool.id)
             LOG.info("Pool deleted successfully.")
         except Exception as e:
             print(str(e))
@@ -394,13 +387,13 @@ class MemberCreate(BaseVThunderTask):
         """Execute create member for an amphora."""
         try:
             c = self.client_factory(vthunder)
-            out = c.slb.server.create(member.id, member.ip_address)
+            c.slb.server.create(member.id, member.ip_address)
             LOG.info("Member created successfully.")
         except Exception as e:
             print(str(e))
         try:
             c = self.client_factory(vthunder)
-            out = c.slb.service_group.member.create(pool.id, member.id, member.protocol_port)
+            c.slb.service_group.member.create(pool.id, member.id, member.protocol_port)
             LOG.info("Member associated to pool successfully.")
         except Exception as e:
             print(str(e))
@@ -412,7 +405,6 @@ class MemberDelete(BaseVThunderTask):
 
     def execute(self, member, vthunder, pool):
         """Execute delete member for an amphora."""
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
         try:
             c = self.client_factory(vthunder)
             LOG.info("Member de-associated to pool successfully.")
@@ -420,7 +412,7 @@ class MemberDelete(BaseVThunderTask):
             print(str(e))
         try:
             c = self.client_factory(vthunder)
-            out = c.slb.server.delete(member.id)
+            c.slb.server.delete(member.id)
             LOG.info("Member deleted successfully.")
         except Exception as e:
             print(str(e))

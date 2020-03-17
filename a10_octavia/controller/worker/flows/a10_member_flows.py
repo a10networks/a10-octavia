@@ -23,11 +23,11 @@ from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import model_tasks
 from octavia.controller.worker.tasks import network_tasks
 
-from a10_octavia.controller.worker.tasks import vthunder_tasks
-from a10_octavia.controller.worker.tasks import server_tasks
+from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
-from a10_octavia.common import a10constants
+from a10_octavia.controller.worker.tasks import server_tasks
+from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 
 class MemberFlows(object):

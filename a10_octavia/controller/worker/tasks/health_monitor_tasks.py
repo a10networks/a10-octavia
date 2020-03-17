@@ -33,7 +33,6 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
             method = None
             url = None
             expect_code = None
-            port = None
             if health_mon.type in ['HTTP', 'HTTPS']:
                 method = health_mon.http_method
                 url = health_mon.url_path

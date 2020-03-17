@@ -13,8 +13,8 @@
 # under the License.
 #
 
-import datetime
 from concurrent import futures
+import datetime
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -22,6 +22,7 @@ from oslo_utils import excutils
 
 from octavia.controller.healthmanager import health_manager
 from octavia.db import api as db_apis
+
 from a10_octavia.controller.worker import controller_worker as cw
 from a10_octavia.db import repositories as a10repo
 

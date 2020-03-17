@@ -12,13 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-import logging
 import acos_client.errors as acos_errors
+import logging
 
+from a10_octavia.common.a10constants import PERS_TYPE
+from a10_octavia.common.a10constants import SP_OBJ_DICT
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
-from a10_octavia.controller.worker.tasks import utils
-from a10_octavia.common.a10constants import SP_OBJ_DICT, PERS_TYPE
 
 LOG = logging.getLogger(__name__)
 
@@ -39,7 +38,7 @@ class HandleSessionPersistenceDelta(BaseVThunderTask):
                     pass
 
             sp_template = getattr(
-                axapi_client.slb.template, SP_OBJ_DICT[sp.type])
+                axapi_client.slb.template, SP_OBJ_DICT[pool.session_persistence.type])
 
             try:
                 if pool.session_persistence.cookie_name:

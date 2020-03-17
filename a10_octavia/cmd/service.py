@@ -12,11 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+from octavia.common import rpc
 from oslo_config import cfg
 from oslo_log import log
 
-from octavia.common import rpc
 from a10_octavia.common import config_options
 
 

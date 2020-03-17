@@ -23,18 +23,18 @@ from octavia.controller.worker.flows import amphora_flows
 from octavia.controller.worker.flows import listener_flows
 from octavia.controller.worker.flows import member_flows
 from octavia.controller.worker.flows import pool_flows
+from octavia.controller.worker.tasks import compute_tasks
 from octavia.controller.worker.tasks import database_tasks
 from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import network_tasks
-from octavia.controller.worker.tasks import compute_tasks
 
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.flows import vthunder_flows
-from a10_octavia.controller.worker.tasks import virtual_server_tasks
-from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.controller.worker.tasks import a10_compute_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
+from a10_octavia.controller.worker.tasks import virtual_server_tasks
+from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)

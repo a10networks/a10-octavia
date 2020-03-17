@@ -12,18 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import acos_client
+import json
 
+from oslo_config import cfg
+from oslo_log import log as logging
 from taskflow import task
 
 from octavia.controller.worker import task_utils as task_utilities
-from octavia.common import constants
-import acos_client
-from octavia.amphorae.driver_exceptions import exceptions as driver_except
-
-from oslo_log import log as logging
-from oslo_config import cfg
-from a10_octavia.common import openstack_mappings
-from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 
 
 CONF = cfg.CONF
@@ -37,10 +33,9 @@ class BaseVThunderTask(task.Task):
         super(BaseVThunderTask, self).__init__(**kwargs)
 
     def client_factory(self, vthunder):
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
         c = acos_client.Client(
             vthunder.ip_address,
-            axapi_version,
+            str(vthunder.axapi_version),
             vthunder.username,
             vthunder.password,
             timeout=30)

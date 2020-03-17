@@ -19,9 +19,9 @@ from octavia.controller.worker.tasks import database_tasks
 from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import model_tasks
 
-from a10_octavia.controller.worker.tasks import l7rule_tasks
-from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.common import a10constants
+from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.controller.worker.tasks import l7rule_tasks
 
 
 class L7RuleFlows(object):

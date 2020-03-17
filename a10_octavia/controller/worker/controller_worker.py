@@ -12,21 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-# from oslo_config import cfg
-# from oslo_log import log as logging
-
-# from octavia.common import base_taskflow
-# from octavia.api.drivers import exceptions
-
 import tenacity
 import urllib3
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import excutils
 from sqlalchemy.orm import exc as db_exceptions
 from taskflow.listeners import logging as tf_logging
 
-from octavia.api.drivers import driver_lib
 from octavia.common import base_taskflow
 from octavia.common import constants
 from octavia.common import exceptions
@@ -311,7 +304,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'
                      'from config file for Rack Vthunder' % (lb.project_id))
             create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
-                vthunder_conf=CONF.rack_vthunder.devices[lb.project_id], topology=topology, listeners=lb.listeners)
+                vthunder_conf=CONF.rack_vthunder.devices[lb.project_id],
+                topology=topology, listeners=lb.listeners)
             create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
         else:
             create_lb_flow = self._lb_flows.get_create_load_balancer_flow(

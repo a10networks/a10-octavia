@@ -79,6 +79,5 @@ class UpdateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
 
     def execute(self, loadbalancer, vthunder):
         c = self.client_factory(vthunder)
-        status = self.set(c.slb.virtual_server.update,
-                          loadbalancer,
-                          vthunder)
+        self.set(c.slb.virtual_server.update,
+                 loadbalancer, vthunder)

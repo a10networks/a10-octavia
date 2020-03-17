@@ -21,10 +21,10 @@ from taskflow.patterns import linear_flow
 from octavia.common import constants
 from octavia.controller.worker.tasks import database_tasks
 
-from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.common import a10constants
-from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_compute_tasks as compute_tasks
+from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 CONF = cfg.CONF
 

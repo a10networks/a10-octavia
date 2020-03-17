@@ -12,13 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import socket
 import datetime
+import socket
+
 from oslo_config import cfg
 from oslo_log import log as logging
 
 from octavia.common import exceptions
 from octavia.db import api as db_api
+
 from a10_octavia.db import repositories as a10repo
 
 UDP_MAX_SIZE = 64 * 1024

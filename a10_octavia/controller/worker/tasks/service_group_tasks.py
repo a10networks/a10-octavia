@@ -14,7 +14,6 @@
 
 from oslo_log import log as logging
 from oslo_config import cfg
-import acos_client
 
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
