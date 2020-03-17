@@ -173,7 +173,7 @@ class ConfigureVRRP(BaseVThunderTask):
             except Exception as e:
                 LOG.error("Unable to configure backup vThunder VRRP")
                 LOG.info(str(e))
-                # TODO raise - To be handled in exception handling task
+                # TODO(hthompson6) raise - To be handled in exception handling task
         return status
 
 
@@ -244,7 +244,7 @@ class ConfigureaVCS(BaseVThunderTask):
             try:
                 attempts = 10
                 while attempts > 0:
-                    # TODO: Need this loop to be moved in acos_client with
+                    # TODO(hthompson6) Need this loop to be moved in acos_client with
                     # proper exception handling with all other API call loops.
                     # Currently resolves "System is Busy" error
                     try:

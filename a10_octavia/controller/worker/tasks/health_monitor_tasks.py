@@ -28,7 +28,7 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
     def execute(self, health_mon, vthunder):
         """ Execute create health monitor """
 
-        # TODO : Length of name of healthmonitor for older vThunder devices
+        # TODO(hthompson6) Length of name of healthmonitor for older vThunder devices
         try:
             method = None
             url = None
@@ -76,13 +76,12 @@ class UpdateHealthMonitor(BaseVThunderTask):
 
     def execute(self, health_mon, vthunder, update_dict):
         """ Execute update health monitor """
-        # TODO : Length of name of healthmonitor for older vThunder devices
+        # TODO(hthompson6) Length of name of healthmonitor for older vThunder devices
         health_mon.__dict__.update(update_dict)
         try:
             method = None
             url = None
             expect_code = None
-            # port = None
             if health_mon.type in ['HTTP', 'HTTPS']:
                 method = health_mon.http_method
                 url = health_mon.url_path

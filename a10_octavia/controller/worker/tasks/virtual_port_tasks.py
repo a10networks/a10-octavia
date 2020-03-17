@@ -58,7 +58,7 @@ class ListenersParent(object):
                         loadbalancer, listener, vthunder)
 
                 if listener.protocol.lower() == 'http':
-                    # TODO work around for issue in acos client
+                    # TODO(hthompson6) work around for issue in acos client
                     listener.protocol = listener.protocol.lower()
                     virtual_port_template = CONF.listener.template_http
                     virtual_port_templates['template-http'] = virtual_port_template
@@ -77,7 +77,7 @@ class ListenersParent(object):
                            s_pers_name=s_pers, c_pers_name=c_pers,
                            status=status, no_dest_nat=no_dest_nat,
                            autosnat=autosnat, ipinip=ipinip,
-                           # TODO resolve in acos client
+                           # TODO(hthompson6) resolve in acos client
                            # ha_conn_mirror=ha_conn_mirror,
                            conn_limit=conn_limit,
                            virtual_port_templates=virtual_port_templates,

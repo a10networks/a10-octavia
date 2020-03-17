@@ -833,9 +833,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             # feature : db role switching for HA flow
             self._switch_roles_for_ha_flow(vthunder)
 
-            # TODO: delete failed one
-            # TODO: boot up new amps
-            # TODO: vrrp sync
+            # TODO(hthompson6) delete failed one
+            # TODO(hthompson6) boot up new amps
+            # TODO(hthompson6) vrrp sync
 
         except Exception as e:
             with excutils.save_and_reraise_exception():
