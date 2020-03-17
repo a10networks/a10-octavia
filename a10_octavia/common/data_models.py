@@ -18,8 +18,6 @@ from datetime import datetime
 import six
 from sqlalchemy.orm import collections
 
-from octavia.common import constants
-
 
 class BaseDataModel(object):
     def to_dict(self, calling_classes=None, recurse=False, **kwargs):

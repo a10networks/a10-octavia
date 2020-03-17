@@ -216,8 +216,10 @@ class ConfigureVRRPSync(BaseVThunderTask):
         if not vrrp_status:
             try:
                 c = self.client_factory(vthunder)
-                amp_info = c.system.action.configSynch(backup_vthunder.ip_address, backup_vthunder.username,
-                                                       backup_vthunder.password)
+                amp_info = c.system.action.configSynch(
+                    backup_vthunder.ip_address,
+                    backup_vthunder.username,
+                    backup_vthunder.password)
                 LOG.info("Waiting 30 seconds for config synch.")
                 time.sleep(30)
                 LOG.info("Sync up for vThunder master")
@@ -278,9 +280,13 @@ class ListenersCreate(BaseVThunderTask):
             try:
                 c = self.client_factory(vthunder)
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
-                out = c.slb.virtual_server.vport.create(loadbalancer.id, name, listener.protocol,
-                                                        listener.protocol_port, listener.default_pool_id,
-                                                        autosnat=True)
+                out = c.slb.virtual_server.vport.create(
+                    loadbalancer.id,
+                    name,
+                    listener.protocol,
+                    listener.protocol_port,
+                    listener.default_pool_id,
+                    autosnat=True)
                 LOG.info("Listener created successfully.")
             except Exception as e:
                 print(str(e))
@@ -307,8 +313,12 @@ class ListenersUpdate(BaseVThunderTask):
             try:
                 c = self.client_factory(vthunder)
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
-                out = c.slb.virtual_server.vport.update(loadbalancer.id, name, listener.protocol,
-                                                        listener.protocol_port, listener.default_pool_id)
+                out = c.slb.virtual_server.vport.update(
+                    loadbalancer.id,
+                    name,
+                    listener.protocol,
+                    listener.protocol_port,
+                    listener.default_pool_id)
                 LOG.info("Listener created successfully.")
             except Exception as e:
                 print(str(e))
@@ -457,6 +467,7 @@ class CreateHealthMonitorOnVThunder(BaseVThunderTask):
                 LOG.info("Server created successfully. Enabled health check for health monitor.")
             except Exception as e:
                 LOG.info(str(e))
+
 
 class CheckVRRPStatus(BaseVThunderTask):
     """"Task to check VRRP status"""

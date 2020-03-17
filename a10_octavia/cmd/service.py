@@ -16,7 +16,6 @@
 from oslo_config import cfg
 from oslo_log import log
 
-from octavia.common import config
 from octavia.common import rpc
 from a10_octavia.common import config_options
 

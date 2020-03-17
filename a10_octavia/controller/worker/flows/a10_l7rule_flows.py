@@ -100,8 +100,13 @@ class L7RuleFlows(object):
         update_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        update_l7rule_flow.add(l7rule_tasks.UpdateL7Rule(
-            requires=[constants.L7RULE, constants.LISTENERS, a10constants.VTHUNDER, constants.UPDATE_DICT]))
+        update_l7rule_flow.add(
+            l7rule_tasks.UpdateL7Rule(
+                requires=[
+                    constants.L7RULE,
+                    constants.LISTENERS,
+                    a10constants.VTHUNDER,
+                    constants.UPDATE_DICT]))
         update_l7rule_flow.add(database_tasks.UpdateL7RuleInDB(
             requires=[constants.L7RULE, constants.UPDATE_DICT]))
         update_l7rule_flow.add(database_tasks.MarkL7RuleActiveInDB(

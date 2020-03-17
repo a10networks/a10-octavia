@@ -423,13 +423,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
         if member.project_id in CONF.rack_vthunder.devices:
-            create_member_tf = self._taskflow_load(self._member_flows.get_rack_vthunder_create_member_flow(),
-                                                   store={constants.MEMBER: member,
-                                                          constants.LISTENERS:
-                                                          listeners,
-                                                          constants.LOADBALANCER:
-                                                          load_balancer,
-                                                          constants.POOL: pool})
+            create_member_tf = self._taskflow_load(
+                self._member_flows.get_rack_vthunder_create_member_flow(),
+                store={
+                    constants.MEMBER: member,
+                    constants.LISTENERS: listeners,
+                    constants.LOADBALANCER: load_balancer,
+                    constants.POOL: pool})
         else:
             create_member_tf = self._taskflow_load(self._member_flows.
                                                    get_create_member_flow(topology=topology),

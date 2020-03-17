@@ -38,7 +38,6 @@ class A10HealthManager(health_manager.HealthManager):
         self.vthunder_repo = a10repo.VThunderRepository()
         self.dead = exit_event
 
-
     def health_check(self):
         futs = []
         while not self.dead.is_set():
@@ -49,7 +48,8 @@ class A10HealthManager(health_manager.HealthManager):
                     seconds=CONF.a10_health_manager.heartbeat_timeout)
                 initial_setup_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
                     seconds=CONF.a10_health_manager.failover_timeout)
-                vthunder = self.vthunder_repo.get_stale_vthunders(lock_session, initial_setup_wait_time, failover_wait_time)
+                vthunder = self.vthunder_repo.get_stale_vthunders(
+                    lock_session, initial_setup_wait_time, failover_wait_time)
 
             except Exception:
                 with excutils.save_and_reraise_exception():

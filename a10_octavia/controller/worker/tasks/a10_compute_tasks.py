@@ -26,7 +26,6 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-
 class ComputeCreate(BaseComputeTask):
     """Create the compute instance for a new amphora."""
 

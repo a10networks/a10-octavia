@@ -25,6 +25,7 @@ AMPHORA = o_data_models.Amphora(id=t_constants.MOCK_AMP_ID1)
 VTHUNDER = VThunder()
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID, amphorae=[AMPHORA])
 
+
 class TestHandlerVirtualServerTasks(BaseTaskTestCase):
 
     def test_revert_create_virtual_server_task(self):

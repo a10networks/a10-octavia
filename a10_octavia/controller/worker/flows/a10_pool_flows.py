@@ -176,4 +176,4 @@ class PoolFlows(object):
         """Decides if the pool has session persistence
         :returns: True if if pool has session persistence
         """
-        return history[history.keys()[0]].session_persistence != None
+        return history[history.keys()[0]].session_persistence is not None

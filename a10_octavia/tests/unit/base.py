@@ -25,5 +25,5 @@ class BaseTaskTestCase(base.TestCase):
         config = {'return_value': self.client_mock}
         patcher = patch(
             'a10_octavia.controller.worker.tasks.common.BaseVThunderTask.client_factory', **config)
-        mock_patch = patcher.start()
+        patcher.start()
         super(base.TestCase, self).setUp()

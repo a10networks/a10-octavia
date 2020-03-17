@@ -14,7 +14,6 @@
 
 import logging
 import sys
-import threading
 import cotyledon
 from cotyledon import oslo_config_glue
 from oslo_config import cfg
