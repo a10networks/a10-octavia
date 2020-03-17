@@ -16,10 +16,9 @@ from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
 
 from a10_octavia.common.data_models import VThunder
-from a10_octavia.controller.worker.tasks.handler_virtual_server import CreateVirtualServerTask
+from a10_octavia.controller.worker.tasks.virtual_server_tasks import CreateVirtualServerTask
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
-
 
 AMPHORA = o_data_models.Amphora(id=t_constants.MOCK_AMP_ID1)
 VTHUNDER = VThunder()
