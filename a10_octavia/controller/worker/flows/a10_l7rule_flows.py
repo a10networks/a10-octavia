@@ -13,24 +13,15 @@
 #    under the License.
 
 from taskflow.patterns import linear_flow
+
+from octavia.common import constants
+from octavia.controller.worker.tasks import database_tasks
+from octavia.controller.worker.tasks import lifecycle_tasks
+from octavia.controller.worker.tasks import model_tasks
+
 from a10_octavia.controller.worker.tasks import l7rule_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.common import a10constants
-from octavia.common import constants
-try:
-    from octavia.controller.worker.v2.tasks import database_tasks
-    from octavia.controller.worker.v2.tasks import lifecycle_tasks
-    from octavia.controller.worker.v2.tasks import model_tasks
-except (ImportError, AttributeError):
-    pass
-
-try:
-    # Stein and previous
-    from octavia.controller.worker.tasks import database_tasks
-    from octavia.controller.worker.tasks import lifecycle_tasks
-    from octavia.controller.worker.tasks import model_tasks
-except (ImportError, AttributeError):
-    pass
 
 
 class L7RuleFlows(object):

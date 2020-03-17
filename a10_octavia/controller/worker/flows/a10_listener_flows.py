@@ -15,20 +15,9 @@
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
-try:
-    from octavia.controller.worker.v2.tasks import database_tasks
-    from octavia.controller.worker.v2.tasks import lifecycle_tasks
-    from octavia.controller.worker.v2.tasks import network_tasks
-except (ImportError, AttributeError):
-    pass
-
-try:
-    # Stein and previous
-    from octavia.controller.worker.tasks import database_tasks
-    from octavia.controller.worker.tasks import lifecycle_tasks
-    from octavia.controller.worker.tasks import network_tasks
-except (ImportError, AttributeError):
-    pass
+from octavia.controller.worker.tasks import database_tasks
+from octavia.controller.worker.tasks import lifecycle_tasks
+from octavia.controller.worker.tasks import network_tasks
 
 from a10_octavia.controller.worker.tasks import virtual_port_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks

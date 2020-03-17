@@ -16,6 +16,18 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from taskflow.patterns import linear_flow
 from taskflow.patterns import unordered_flow
+
+from octavia.common import constants
+from octavia.common import exceptions
+from octavia.controller.worker.flows import amphora_flows
+from octavia.controller.worker.flows import listener_flows
+from octavia.controller.worker.flows import member_flows
+from octavia.controller.worker.flows import pool_flows
+from octavia.controller.worker.tasks import database_tasks
+from octavia.controller.worker.tasks import lifecycle_tasks
+from octavia.controller.worker.tasks import network_tasks
+from octavia.controller.worker.tasks import compute_tasks
+
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.flows import vthunder_flows
 from a10_octavia.controller.worker.tasks import virtual_server_tasks
@@ -23,34 +35,6 @@ from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.controller.worker.tasks import a10_compute_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
-from octavia.common import constants
-from octavia.common import exceptions
-
-try:
-    from octavia.controller.worker.v2.flows import amphora_flows
-    from octavia.controller.worker.v2.flows import listener_flows
-    from octavia.controller.worker.v2.flows import member_flows
-    from octavia.controller.worker.v2.flows import pool_flows
-
-    from octavia.controller.worker.v2.tasks import database_tasks
-    from octavia.controller.worker.v2.tasks import lifecycle_tasks
-    from octavia.controller.worker.v2.tasks import network_tasks
-except (ImportError, AttributeError):
-    pass
-
-try:
-    # Stein and previous
-    from octavia.controller.worker.flows import amphora_flows
-    from octavia.controller.worker.flows import listener_flows
-    from octavia.controller.worker.flows import member_flows
-    from octavia.controller.worker.flows import pool_flows
-    from octavia.controller.worker.tasks import database_tasks
-    from octavia.controller.worker.tasks import lifecycle_tasks
-    from octavia.controller.worker.tasks import network_tasks
-    from octavia.controller.worker.tasks import compute_tasks
-except (ImportError, AttributeError):
-    pass
-
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
