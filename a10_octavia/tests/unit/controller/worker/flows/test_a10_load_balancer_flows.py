@@ -27,7 +27,7 @@ from a10_octavia.controller.worker.flows.a10_load_balancer_flows import LoadBala
 @mock.patch("octavia.controller.worker.tasks.database_tasks.UpdateAmphoraVIPData")
 class TestLoadBalancerFlows(TestCase):
     def setUp(self):
-        super(TestBase, self).setUp()
+        super(TestLoadBalancerFlows, self).setUp()
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
 
         self.conf.config(
