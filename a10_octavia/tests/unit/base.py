@@ -13,8 +13,12 @@
 #    under the License.
 
 
-import mock
-from mock import patch
+try:
+    from unittest.mock import patch
+except ImportError:
+    import mock
+    from mock import patch
+
 from octavia.tests.unit import base
 
 
