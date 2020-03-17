@@ -12,11 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-from oslo_log import log as logging
 from oslo_config import cfg
-from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+from oslo_log import log as logging
+
 from a10_octavia.common import openstack_mappings
+from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)

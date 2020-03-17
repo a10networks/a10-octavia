@@ -12,18 +12,23 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from octavia.common import constants
-from acos_client.errors import ACOSException
-from octavia.amphorae.driver_exceptions import exceptions as driver_except
-import time
+from http.client import BadStatusLine
 from requests.exceptions import ConnectionError
 from requests.exceptions import ReadTimeout
-from http.client import BadStatusLine
-from octavia.db import api as db_apis
-from oslo_log import log as logging
+import time
+
 from oslo_config import cfg
+from oslo_log import log as logging
+
+from octavia.amphorae.driver_exceptions import exceptions as driver_except
+from octavia.common import constants
 from octavia.common import utils
-from a10_octavia.common import a10constants, openstack_mappings
+from octavia.db import api as db_apis
+
+from acos_client.errors import ACOSException
+
+from a10_octavia.common import a10constants
+from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 
 

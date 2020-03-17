@@ -14,11 +14,13 @@
 
 import os
 import sys
+
 from oslo_log import log as logging
-from a10_octavia.etc import config as blank_config
-from a10_octavia.etc import defaults
+
 from a10_octavia.common.defaults import DEFAULT
 from a10_octavia.common import exceptions
+from a10_octavia.etc import config as blank_config
+from a10_octavia.etc import defaults
 
 # This is ConfigParser pre-Python3
 if sys.version_info < (3,):

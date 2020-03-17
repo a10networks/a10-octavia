@@ -12,10 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_log import log as logging
-from oslo_config import cfg
-
 import acos_client.errors as acos_errors
+
+from oslo_config import cfg
+from oslo_log import log as logging
+
 from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
 
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask

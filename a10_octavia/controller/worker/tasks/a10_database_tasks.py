@@ -14,16 +14,18 @@
 
 
 from datetime import datetime
+import sqlalchemy
+from sqlalchemy.orm.exc import NoResultFound
+
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import uuidutils
-import sqlalchemy
 from taskflow import task
-from sqlalchemy.orm.exc import NoResultFound
 
 from octavia.common import constants
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
+
 from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF

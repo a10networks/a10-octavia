@@ -12,13 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-from a10_octavia.db import repositories as repo
-from a10_octavia.db import api as db_apis
 from oslo_utils import uuidutils
 
+from a10_octavia.db import api as db_apis
+from a10_octavia.db import repositories as repo
 
-class VThunderDB():
+
+class VThunderDB(object):
 
     def __init__(self, **kwargs):
         self.vthunder_repo = repo.VThunderRepository()

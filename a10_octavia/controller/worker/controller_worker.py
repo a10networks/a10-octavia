@@ -12,12 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from sqlalchemy.orm import exc as db_exceptions
 import tenacity
 import urllib3
+
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
-from sqlalchemy.orm import exc as db_exceptions
 from taskflow.listeners import logging as tf_logging
 
 from octavia.common import base_taskflow
