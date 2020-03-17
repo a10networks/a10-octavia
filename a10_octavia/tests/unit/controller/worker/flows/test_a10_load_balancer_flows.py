@@ -19,7 +19,6 @@ from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
 from taskflow.patterns import linear_flow as flow
 
-from a10_octavia.tests.test_base import TestBase
 from octavia.common import constants
 
 from a10_octavia.controller.worker.flows.a10_load_balancer_flows import LoadBalancerFlows
