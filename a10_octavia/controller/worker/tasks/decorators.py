@@ -32,7 +32,7 @@ def axapi_client_decorator(func):
                                                    timeout=30)
         else:
             self.axapi_client = None
-        func(self, *args, **kwargs)
+        return func(self, *args, **kwargs)
 
         try:
             self.axapi_client.session.close()
