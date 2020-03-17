@@ -13,6 +13,8 @@
 #    under the License.
 
 import mock
+from testtools import TestCase
+
 from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
 from taskflow.patterns import linear_flow as flow
@@ -24,7 +26,7 @@ from a10_octavia.controller.worker.flows.a10_load_balancer_flows import LoadBala
 
 
 @mock.patch("octavia.controller.worker.tasks.database_tasks.UpdateAmphoraVIPData")
-class TestLoadBalancerFlows(TestBase):
+class TestLoadBalancerFlows(TestCase):
     def setUp(self):
         super(TestBase, self).setUp()
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
