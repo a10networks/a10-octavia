@@ -12,8 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import acos_client.errors as acos_errors
 import logging
+
+import acos_client.errors as acos_errors
 
 from a10_octavia.common.a10constants import PERS_TYPE
 from a10_octavia.common.a10constants import SP_OBJ_DICT

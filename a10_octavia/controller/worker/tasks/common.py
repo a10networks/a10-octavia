@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import acos_client
 import json
 
 from oslo_config import cfg
@@ -21,6 +20,7 @@ from taskflow import task
 
 from octavia.controller.worker import task_utils as task_utilities
 
+import acos_client
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
