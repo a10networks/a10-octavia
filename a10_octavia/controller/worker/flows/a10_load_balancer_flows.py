@@ -280,15 +280,15 @@ class LoadBalancerFlows(object):
                 requires=constants.LOADBALANCER,
                 provides=a10constants.BACKUP_VTHUNDER))
             new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
-                name="Backup_amphora_plug",
+                name=a10constants.BACKUP_AMPHORA_PLUG,
                 requires=constants.LOADBALANCER,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             new_LB_net_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-                name="backup_connectivity_wait",
+                name=a10constants.BACKUP_CONNECTIVITY_WAIT,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                 requires=constants.AMPHORA))
             new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
-                name="backup_enable_interface",
+                name=a10constants.BACKUP_ENABLE_INTERFACE,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             new_LB_net_subflow.add(a10_database_tasks.MarkVThunderStatusInDB(
                 name=a10constants.MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB,
