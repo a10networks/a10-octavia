@@ -12,9 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from octavia.common import rpc
 from oslo_config import cfg
 from oslo_log import log
+
+# The config import here has the side effect of registering
+# values from octavia.conf
+# See: https://github.com/openstack/octavia/blob/master/octavia/common/config.py
+from octavia.common import config
+
+from octavia.common import rpc
 
 from a10_octavia.common import config_options
 
