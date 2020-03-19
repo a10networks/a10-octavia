@@ -12,11 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-from oslo_log import log as logging
 from oslo_config import cfg
-from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+from oslo_log import log as logging
+
 from a10_octavia.common import openstack_mappings
+from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -28,12 +28,11 @@ class CreateAndAssociateHealthMonitor(BaseVThunderTask):
     def execute(self, health_mon, vthunder):
         """ Execute create health monitor """
 
-        # TODO : Length of name of healthmonitor for older vThunder devices
+        # TODO(hthompson6) Length of name of healthmonitor for older vThunder devices
         try:
             method = None
             url = None
             expect_code = None
-            port = None
             if health_mon.type in ['HTTP', 'HTTPS']:
                 method = health_mon.http_method
                 url = health_mon.url_path
@@ -77,13 +76,12 @@ class UpdateHealthMonitor(BaseVThunderTask):
 
     def execute(self, health_mon, vthunder, update_dict):
         """ Execute update health monitor """
-        # TODO : Length of name of healthmonitor for older vThunder devices
+        # TODO(hthompson6) Length of name of healthmonitor for older vThunder devices
         health_mon.__dict__.update(update_dict)
         try:
             method = None
             url = None
             expect_code = None
-            # port = None
             if health_mon.type in ['HTTP', 'HTTPS']:
                 method = health_mon.http_method
                 url = health_mon.url_path

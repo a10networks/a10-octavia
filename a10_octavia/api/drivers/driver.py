@@ -16,15 +16,8 @@ from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 
-from octavia.api.drivers import exceptions
 from octavia.api.drivers import provider_base as driver_base
-from octavia.api.drivers import utils as driver_utils
 from octavia.common import constants
-from octavia.common import data_models
-from octavia.common import utils
-from octavia.db import api as db_apis
-from octavia.db import repositories
-from octavia.network import base as network_base
 
 CONF = cfg.CONF
 CONF.import_group('oslo_messaging', 'octavia.common.config')

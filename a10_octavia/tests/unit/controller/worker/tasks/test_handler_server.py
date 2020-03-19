@@ -16,8 +16,8 @@
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
 
-from a10_octavia.controller.worker.tasks.handler_server import MemberCreate
 from a10_octavia.common.data_models import VThunder
+from a10_octavia.controller.worker.tasks.server_tasks import MemberCreate
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 

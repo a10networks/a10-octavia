@@ -12,21 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-# from oslo_config import cfg
-# from oslo_log import log as logging
-
-# from octavia.common import base_taskflow
-# from octavia.api.drivers import exceptions
-
+from sqlalchemy.orm import exc as db_exceptions
 import tenacity
 import urllib3
+
 from oslo_config import cfg
 from oslo_log import log as logging
-from sqlalchemy.orm import exc as db_exceptions
+from oslo_utils import excutils
 from taskflow.listeners import logging as tf_logging
 
-from octavia.api.drivers import driver_lib
 from octavia.common import base_taskflow
 from octavia.common import constants
 from octavia.common import exceptions
@@ -311,7 +305,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'
                      'from config file for Rack Vthunder' % (lb.project_id))
             create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
-                vthunder_conf=CONF.rack_vthunder.devices[lb.project_id], topology=topology, listeners=lb.listeners)
+                vthunder_conf=CONF.rack_vthunder.devices[lb.project_id],
+                topology=topology, listeners=lb.listeners)
             create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
         else:
             create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
@@ -423,13 +418,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
         if member.project_id in CONF.rack_vthunder.devices:
-            create_member_tf = self._taskflow_load(self._member_flows.get_rack_vthunder_create_member_flow(),
-                                                   store={constants.MEMBER: member,
-                                                          constants.LISTENERS:
-                                                          listeners,
-                                                          constants.LOADBALANCER:
-                                                          load_balancer,
-                                                          constants.POOL: pool})
+            create_member_tf = self._taskflow_load(
+                self._member_flows.get_rack_vthunder_create_member_flow(),
+                store={
+                    constants.MEMBER: member,
+                    constants.LISTENERS: listeners,
+                    constants.LOADBALANCER: load_balancer,
+                    constants.POOL: pool})
         else:
             create_member_tf = self._taskflow_load(self._member_flows.
                                                    get_create_member_flow(topology=topology),
@@ -839,9 +834,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             # feature : db role switching for HA flow
             self._switch_roles_for_ha_flow(vthunder)
 
-            # TODO: delete failed one
-            # TODO: boot up new amps
-            # TODO: vrrp sync
+            # TODO(hthompson6) delete failed one
+            # TODO(hthompson6) boot up new amps
+            # TODO(hthompson6) vrrp sync
 
         except Exception as e:
             with excutils.save_and_reraise_exception():

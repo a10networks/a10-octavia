@@ -14,16 +14,13 @@
 
 import acos_client.errors as acos_errors
 import copy
-import mock
-from unittest.mock import patch
 
 from octavia.common import data_models as o_data_models
-import octavia.tests.unit.base as base
 
-from a10_octavia.tests.common import a10constants as a10_test_constants
 from a10_octavia.common.data_models import VThunder
 from a10_octavia.controller.worker.tasks.persist_tasks import DeleteSessionPersistence
 from a10_octavia.controller.worker.tasks.persist_tasks import HandleSessionPersistenceDelta
+from a10_octavia.tests.common import a10constants as a10_test_constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 
 VTHUNDER = VThunder()

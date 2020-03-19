@@ -12,9 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_log import log as logging
 from oslo_config import cfg
-import acos_client
+from oslo_log import log as logging
 
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask

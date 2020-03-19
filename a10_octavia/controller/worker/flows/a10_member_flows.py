@@ -15,30 +15,19 @@
 
 from taskflow.patterns import linear_flow
 from taskflow.patterns import unordered_flow
-from a10_octavia.controller.worker.tasks import vthunder_tasks
-from a10_octavia.controller.worker.tasks import server_tasks
+
+from octavia.common import constants
+from octavia.controller.worker.tasks import amphora_driver_tasks
+from octavia.controller.worker.tasks import database_tasks
+from octavia.controller.worker.tasks import lifecycle_tasks
+from octavia.controller.worker.tasks import model_tasks
+from octavia.controller.worker.tasks import network_tasks
+
+from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
-from a10_octavia.common import a10constants
-from octavia.common import constants
-try:
-    from octavia.controller.worker.v2.tasks import amphora_driver_tasks
-    from octavia.controller.worker.v2.tasks import database_tasks
-    from octavia.controller.worker.v2.tasks import lifecycle_tasks
-    from octavia.controller.worker.v2.tasks import model_tasks
-    from octavia.controller.worker.v2.tasks import network_tasks
-except (ImportError, AttributeError):
-    pass
-
-try:
-    # Stein and previous
-    from octavia.controller.worker.tasks import amphora_driver_tasks
-    from octavia.controller.worker.tasks import database_tasks
-    from octavia.controller.worker.tasks import lifecycle_tasks
-    from octavia.controller.worker.tasks import model_tasks
-    from octavia.controller.worker.tasks import network_tasks
-except (ImportError, AttributeError):
-    pass
+from a10_octavia.controller.worker.tasks import server_tasks
+from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 
 class MemberFlows(object):
@@ -80,15 +69,23 @@ class MemberFlows(object):
                 name="get_backup_vThunder",
                 requires=constants.LOADBALANCER,
                 provides=a10constants.BACKUP_VTHUNDER))
-            create_member_flow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
-                name="backup_amphora_network_plug",
-                rebind=[constants.ADDED_PORTS, constants.LOADBALANCER, a10constants.BACKUP_VTHUNDER]))
+            create_member_flow.add(
+                vthunder_tasks.AmphoraePostMemberNetworkPlug(
+                    name="backup_amphora_network_plug",
+                    rebind=[
+                        constants.ADDED_PORTS,
+                        constants.LOADBALANCER,
+                        a10constants.BACKUP_VTHUNDER]))
             create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
                 name="backup_compute_conn_wait",
                 rebind=[a10constants.BACKUP_VTHUNDER, constants.AMPHORA]))
-            create_member_flow.add(vthunder_tasks.EnableInterfaceForMembers(
-                name="backup_enable_interface",
-                rebind=[constants.ADDED_PORTS, constants.LOADBALANCER, a10constants.BACKUP_VTHUNDER]))
+            create_member_flow.add(
+                vthunder_tasks.EnableInterfaceForMembers(
+                    name="backup_enable_interface",
+                    rebind=[
+                        constants.ADDED_PORTS,
+                        constants.LOADBALANCER,
+                        a10constants.BACKUP_VTHUNDER]))
 
         create_member_flow.add(server_tasks.MemberCreate(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))

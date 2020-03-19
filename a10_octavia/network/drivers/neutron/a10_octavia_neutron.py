@@ -156,8 +156,8 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
              if listener.protocol != constants.PROTOCOL_UDP else
              constants.PROTOCOL_UDP.lower())
             for listener in load_balancer.listeners
-            if listener.provisioning_status != constants.PENDING_DELETE and
-            listener.provisioning_status != constants.DELETED]
+            if listener.provisioning_status != constants.PENDING_DELETE
+            and listener.provisioning_status != constants.DELETED]
         # As the peer port will hold the tcp connection for keepalived and
         # haproxy session synchronization, so here the security group rule
         # should be just related with tcp protocol only.
@@ -165,8 +165,8 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
             (listener.peer_port,
              constants.PROTOCOL_TCP.lower())
             for listener in load_balancer.listeners
-            if listener.provisioning_status != constants.PENDING_DELETE and
-            listener.provisioning_status != constants.DELETED]
+            if listener.provisioning_status != constants.PENDING_DELETE
+            and listener.provisioning_status != constants.DELETED]
         updated_ports.extend(peer_ports)
         # Just going to use port_range_max for now because we can assume that
         # port_range_max and min will be the same since this driver is
@@ -177,15 +177,14 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
                      # confuse other protocols with None ports
                      # with the egress rules.  VRRP uses protocol
                      # 51 and 112
-                     if rule.get('direction') != 'egress' and
-                     rule.get('protocol', '').lower() in ['tcp', 'udp']]
+                     if rule.get('direction') != 'egress'
+                     and rule.get('protocol', '').lower() in ['tcp', 'udp']]
         add_ports = set(updated_ports) - set(old_ports)
         del_ports = set(old_ports) - set(updated_ports)
         for rule in rules.get('security_group_rules', []):
-            if (rule.get('protocol', '') and
-                    rule.get('protocol', '').lower() in ['tcp', 'udp'] and
-                    (rule.get('port_range_max'),
-                     rule.get('protocol')) in del_ports):
+            if (rule.get('protocol', '') and rule.get('protocol', '').lower() in [
+                    'tcp', 'udp'] and (rule.get('port_range_max'),
+                                       rule.get('protocol')) in del_ports):
                 rule_id = rule.get('id')
                 try:
                     self.neutron_client.delete_security_group_rule(rule_id)
@@ -236,8 +235,8 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
 
     def _add_vip_security_group_to_port(self, load_balancer_id, port_id,
                                         sec_grp_id=None):
-        sec_grp_id = (sec_grp_id or
-                      self._get_lb_security_group(load_balancer_id).get('id'))
+        sec_grp_id = (sec_grp_id or self._get_lb_security_group(
+            load_balancer_id).get('id'))
         try:
             self._add_security_group_to_port(sec_grp_id, port_id)
         except base.PortNotFound:

@@ -12,8 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_log import log as logging
 from oslo_config import cfg
+from oslo_log import log as logging
+
 from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 
 CONF = cfg.CONF
@@ -79,6 +80,5 @@ class UpdateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
 
     def execute(self, loadbalancer, vthunder):
         c = self.client_factory(vthunder)
-        status = self.set(c.slb.virtual_server.update,
-                          loadbalancer,
-                          vthunder)
+        self.set(c.slb.virtual_server.update,
+                 loadbalancer, vthunder)
