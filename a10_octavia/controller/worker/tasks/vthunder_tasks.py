@@ -12,19 +12,23 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from acos_client.errors import ACOSException
 from http.client import BadStatusLine
-from oslo_config import cfg
-from oslo_log import log as logging
-from requests.exceptions import ConnectionError, ReadTimeout
-from taskflow import task
+from requests.exceptions import ConnectionError
+from requests.exceptions import ReadTimeout
 import time
 
+from oslo_config import cfg
+from oslo_log import log as logging
+
 from octavia.amphorae.driver_exceptions import exceptions as driver_except
-from octavia.common import constants, utils
+from octavia.common import constants
+from octavia.common import utils
 from octavia.db import api as db_apis
 
-from a10_octavia.common import a10constants, openstack_mappings
+from acos_client.errors import ACOSException
+
+from a10_octavia.common import a10constants
+from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 
 
@@ -133,7 +137,6 @@ class EnableInterfaceForMembers(task.Task):
                 while attempts > 0 and configured_interface is False:
                     try:
                         target_interface = len(nics)
-                        self.axapi_client.system.action.setInterface(target_interface - 1)
                         configured_interface = True
                         LOG.debug("Configured the new interface required for member.")
                     except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
@@ -230,11 +233,10 @@ class ConfigureaVCSBackup(task.Task):
     @axapi_client_decorator
     def execute(self, vthunder, device_id=2, device_priority=100,
                 floating_ip="192.168.0.100", floating_ip_mask="255.255.255.0"):
-
         try:
             attempts = 30
             while attempts > 0:
-                # TODO: Need this loop to be moved in acos_client with
+                # TODO(omkartelee01): Need this loop to be moved in acos_client with
                 # proper exception handling with all other API call loops.
                 # Currently resolves "System is Busy" error
                 try:

@@ -87,7 +87,8 @@ class UpdateHealthMonitor(task.Task):
 
     @axapi_client_decorator
     def execute(self, health_mon, vthunder, update_dict):
-        # TODO : Length of name of healthmonitor for older vThunder devices
+        """ Execute update health monitor """
+        # TODO(hthompson6) Length of name of healthmonitor for older vThunder devices
         health_mon.__dict__.update(update_dict)
         method = None
         url = None

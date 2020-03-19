@@ -19,6 +19,7 @@ import oslo_messaging as messaging
 from oslo_messaging.rpc import dispatcher
 
 from octavia.common import rpc
+
 from a10_octavia.controller.queue import endpoint
 
 LOG = logging.getLogger(__name__)

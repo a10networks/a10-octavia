@@ -18,7 +18,6 @@ import datetime
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from sqlalchemy.orm import exc as sqlalchemy_exceptions
 
 from octavia.db import api as db_api
 from octavia.db import repositories as repo

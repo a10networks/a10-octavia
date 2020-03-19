@@ -19,6 +19,7 @@ from taskflow import task
 from a10_octavia.controller.worker.tasks import utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
+from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)

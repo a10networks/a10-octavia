@@ -12,18 +12,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
-import sys
-import threading
 import cotyledon
 from cotyledon import oslo_config_glue
+import logging
+import sys
+
 from oslo_config import cfg
 from oslo_reports import guru_meditation_report as gmr
 
 from octavia import version
 
-from a10_octavia.controller.queue import consumer
 from a10_octavia.cmd import service as octavia_service
+from a10_octavia.controller.queue import consumer
 
 
 CONF = cfg.CONF

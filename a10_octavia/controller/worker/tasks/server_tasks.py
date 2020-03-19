@@ -12,13 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-from oslo_log import log as logging
 from oslo_config import cfg
+from oslo_log import log as logging
 from taskflow import task
 
 from a10_octavia.controller.worker.tasks import utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)

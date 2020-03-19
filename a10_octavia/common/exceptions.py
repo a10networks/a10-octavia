@@ -13,11 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-A10 Octavia exception handling.
-"""
-from octavia.i18n import _
 from octavia.common import exceptions
+from octavia.i18n import _
 
 
 class NoDatabaseURL(exceptions.OctaviaException):

@@ -17,23 +17,14 @@ import logging
 from oslo_config import cfg
 from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
-from a10_octavia.controller.worker.tasks import vthunder_tasks
-from a10_octavia.common import a10constants
-from a10_octavia.controller.worker.tasks import a10_database_tasks
-from a10_octavia.controller.worker.tasks import a10_compute_tasks as compute_tasks
 
 from octavia.common import constants
-try:
-    from octavia.controller.worker.v2.tasks import database_tasks
-except (ImportError, AttributeError):
-    pass
+from octavia.controller.worker.tasks import database_tasks
 
-try:
-    # Stein and previous
-    from octavia.controller.worker.tasks import database_tasks
-except (ImportError, AttributeError):
-    pass
-
+from a10_octavia.common import a10constants
+from a10_octavia.controller.worker.tasks import a10_compute_tasks as compute_tasks
+from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 CONF = cfg.CONF
 
@@ -137,33 +128,6 @@ class VThunderFlows(object):
                              decider_depth='flow')
 
         return amp_for_lb_flow
-
-    def _get_post_map_lb_subflow(self, prefix, role):
-        """Set amphora type after mapped to lb."""
-
-        sf_name = prefix + '-' + constants.POST_MAP_AMP_TO_LB_SUBFLOW
-        post_map_amp_to_lb = linear_flow.Flow(
-            sf_name)
-
-        post_map_amp_to_lb.add(database_tasks.ReloadAmphora(
-            name=sf_name + '-' + constants.RELOAD_AMPHORA,
-            requires=constants.AMPHORA_ID,
-            provides=constants.AMPHORA))
-
-        if role == constants.ROLE_MASTER:
-            post_map_amp_to_lb.add(database_tasks.MarkAmphoraMasterInDB(
-                name=sf_name + '-' + constants.MARK_AMP_MASTER_INDB,
-                requires=constants.AMPHORA))
-        elif role == constants.ROLE_BACKUP:
-            post_map_amp_to_lb.add(database_tasks.MarkAmphoraBackupInDB(
-                name=sf_name + '-' + constants.MARK_AMP_BACKUP_INDB,
-                requires=constants.AMPHORA))
-        elif role == constants.ROLE_STANDALONE:
-            post_map_amp_to_lb.add(database_tasks.MarkAmphoraStandAloneInDB(
-                name=sf_name + '-' + constants.MARK_AMP_STANDALONE_INDB,
-                requires=constants.AMPHORA))
-
-        return post_map_amp_to_lb
 
     def _get_post_map_lb_subflow(self, prefix, role):
         """Set amphora type after mapped to lb."""

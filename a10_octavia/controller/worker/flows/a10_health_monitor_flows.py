@@ -14,21 +14,15 @@
 
 
 from taskflow.patterns import linear_flow
-from a10_octavia.controller.worker.tasks import health_monitor_tasks
-from a10_octavia.controller.worker.tasks import a10_database_tasks
-from a10_octavia.common import a10constants
+
 from octavia.common import constants
+from octavia.controller.worker.tasks import database_tasks
+from octavia.controller.worker.tasks import lifecycle_tasks
+from octavia.controller.worker.tasks import model_tasks
 
-
-try:
-    from octavia.controller.worker.v2.tasks import database_tasks
-    from octavia.controller.worker.v2.tasks import lifecycle_tasks
-    from octavia.controller.worker.v2.tasks import model_tasks
-except ImportError as import_exc:
-    # Stein and previous
-    from octavia.controller.worker.tasks import database_tasks
-    from octavia.controller.worker.tasks import lifecycle_tasks
-    from octavia.controller.worker.tasks import model_tasks
+from a10_octavia.common import a10constants
+from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.controller.worker.tasks import health_monitor_tasks
 
 
 class HealthMonitorFlows(object):

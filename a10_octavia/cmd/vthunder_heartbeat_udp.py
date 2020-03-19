@@ -12,13 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import socket
 import datetime
+import socket
+
 from oslo_config import cfg
 from oslo_log import log as logging
 
 from octavia.common import exceptions
 from octavia.db import api as db_api
+
 from a10_octavia.db import repositories as a10repo
 
 UDP_MAX_SIZE = 64 * 1024
@@ -80,7 +82,8 @@ class VThunderUDPStatusGetter(object):
 
             if record_id:
                 last_udp_update = datetime.datetime.utcnow()
-                self.vthunder_repo.update(db_api.get_session(), record_id, last_udp_update=last_udp_update)
+                self.vthunder_repo.update(db_api.get_session(), record_id,
+                                          last_udp_update=last_udp_update)
         except socket.timeout:
             # Pass here as this is an expected cycling of the listen socket
             pass
