@@ -12,8 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-from http.client import BadStatusLine
+try:
+    from http.client import BadStatusLine
+except ImportError:
+    from httplib import BadStatusLine
 from requests.exceptions import ConnectionError
 from requests.exceptions import ReadTimeout
 from taskflow import task
