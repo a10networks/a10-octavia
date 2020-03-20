@@ -1,11 +1,20 @@
 CHANGES
 =======
 
+* Removed common.py and occurences of BaseVThunderTask
+* Added decorators for task files and dependencies
+* corrected default value of conn\_limit
 * Modified httplib import for py3 compatability
 * Made fixes to address import errors
+* Removed excess pool parameter passed to member update task
+* Changed variable name to meta\_json
+* Incorporated required changes regarding class imports and Renamed decorators
 * Added devstack install
 * Update README.md
 * Update README.md
+* Included decorator and removed factory code
+* Moved meta function to utils
+* Added decorator to create acos\_client
 * Removed non-required perist.py
 * Added/corrected proper docstrings
 * Incorporated review changes

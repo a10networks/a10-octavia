@@ -12,11 +12,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import imp
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
 
 from a10_octavia.common.data_models import VThunder
-from a10_octavia.controller.worker.tasks.virtual_server_tasks import CreateVirtualServerTask
+import a10_octavia.controller.worker.tasks.virtual_server_tasks as task
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 
@@ -27,7 +33,13 @@ LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID, amphorae=
 
 class TestHandlerVirtualServerTasks(BaseTaskTestCase):
 
+    def setUp(self):
+        super(TestHandlerVirtualServerTasks, self).setUp()
+        imp.reload(task)
+
     def test_revert_create_virtual_server_task(self):
-        mock_load_balancer = CreateVirtualServerTask()
+        client_mock = mock.Mock()
+        mock_load_balancer = task.CreateVirtualServerTask()
+        mock_load_balancer.axapi_client = client_mock
         mock_load_balancer.revert(LB, VTHUNDER)
-        self.client_mock.slb.virtual_server.delete.assert_called_with(LB.id)
+        client_mock.slb.virtual_server.delete.assert_called_with(LB.id)

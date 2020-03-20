@@ -13,11 +13,17 @@
 #    under the License.
 
 
+import imp
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
 
 from a10_octavia.common.data_models import VThunder
-from a10_octavia.controller.worker.tasks.server_tasks import MemberCreate
+import a10_octavia.controller.worker.tasks.server_tasks as task
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 
@@ -29,8 +35,14 @@ MEMBER = o_data_models.Member(
 
 class TestHandlerServerTasks(BaseTaskTestCase):
 
+    def setUp(self):
+        super(TestHandlerServerTasks, self).setUp()
+        imp.reload(task)
+        self.client_mock = mock.Mock()
+
     def test_revert_member_create_task(self):
-        mock_member = MemberCreate()
+        mock_member = task.MemberCreate()
+        mock_member.axapi_client = self.client_mock
         mock_member.revert(MEMBER, VTHUNDER, POOL)
         self.client_mock.slb.service_group.member.delete.assert_called_with(
             POOL.id, MEMBER.id, MEMBER.protocol_port)

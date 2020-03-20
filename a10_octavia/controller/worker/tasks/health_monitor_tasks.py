@@ -12,88 +12,99 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 from oslo_config import cfg
 from oslo_log import log as logging
+from taskflow import task
 
+from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
-from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class CreateAndAssociateHealthMonitor(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
+class CreateAndAssociateHealthMonitor(task.Task):
+    """Task to create a healthmonitor and associate it with provided pool."""
 
+    @axapi_client_decorator
     def execute(self, health_mon, vthunder):
-        """ Execute create health monitor """
+        method = None
+        url = None
+        expect_code = None
+        if health_mon.type in a10constants.HTTP_TYPE:
+            method = health_mon.http_method
+            url = health_mon.url_path
+            expect_code = health_mon.expected_codes
+        args = utils.meta(health_mon, 'hm', {})
 
-        # TODO(hthompson6) Length of name of healthmonitor for older vThunder devices
         try:
-            method = None
-            url = None
-            expect_code = None
-            if health_mon.type in ['HTTP', 'HTTPS']:
-                method = health_mon.http_method
-                url = health_mon.url_path
-                expect_code = health_mon.expected_codes
-            args = self.meta(health_mon, 'hm', {})
-            c = self.client_factory(vthunder)
-            c.slb.hm.create(health_mon.id[0:5],
-                            openstack_mappings.hm_type(c, health_mon.type),
-                            health_mon.delay, health_mon.timeout,
-                            health_mon.rise_threshold, method=method, url=url,
-                            expect_code=expect_code, port=None, axapi_args=args)
-            LOG.info("Health Monitor created successfully.")
-            c.slb.service_group.update(health_mon.pool_id,
-                                       health_monitor=health_mon.id[0:5],
-                                       health_check_disable=0)
-            LOG.info("Health Monitor associated to pool successfully.")
+            self.axapi_client.slb.hm.create(health_mon.id[0:5],
+                                            openstack_mappings.hm_type(self.axapi_client,
+                                            health_mon.type),
+                                            health_mon.delay, health_mon.timeout,
+                                            health_mon.rise_threshold, method=method, url=url,
+                                            expect_code=expect_code, axapi_args=args)
+            LOG.debug("Health Monitor created successfully: %s", health_mon.id)
         except Exception as e:
-            LOG.error(str(e))
-            LOG.info("Error occurred")
+            LOG.exception("Failed to create Health Monitor: %s", str(e))
+            raise
+
+        try:
+            self.axapi_client.slb.service_group.update(health_mon.pool_id,
+                                                       health_monitor=health_mon.id[0:5],
+                                                       health_check_disable=0)
+            LOG.debug("Health Monitor %s is associated to pool %s successfully.",
+                      health_mon.id, health_mon.pool_id)
+        except Exception as e:
+            LOG.exception("Failed to associate pool to Health Monitor: %s", str(e))
+            raise
 
 
-class DeleteHealthMonitor(BaseVThunderTask):
-    """ Task to disassociate healthmonitor from pool and then delete a healthmonitor """
+class DeleteHealthMonitor(task.Task):
+    """Task to disassociate Health Monitor from pool and delete"""
 
+    @axapi_client_decorator
     def execute(self, health_mon, vthunder):
-        """ Execute delete health monitor  """
         try:
-            c = self.client_factory(vthunder)
-            c.slb.service_group.update(health_mon.pool_id,
-                                       health_monitor="",
-                                       health_check_disable=True)
-            LOG.info("Health Monitor disassociated to pool successfully.")
-            c.slb.hm.delete(health_mon.id[0:5])
-            LOG.info("Health Monitor deleted successfully.")
+            self.axapi_client.slb.service_group.update(health_mon.pool_id,
+                                                       health_monitor="",
+                                                       health_check_disable=True)
+            LOG.debug("Health Monitor %s is dissociated from pool %s successfully.",
+                      health_mon.id, health_mon.pool_id)
         except Exception as e:
-            LOG.error(str(e))
+            LOG.warning("Failed to dissociate Health Monitor from pool: %s", str(e))
+        try:
+            self.axapi_client.slb.hm.delete(health_mon.id[0:5])
+            LOG.debug("Health Monitor deleted successfully: %s", health_mon.id)
+        except Exception as e:
+            LOG.warning("Failed to delete health monitor: %s", str(e))
 
 
-class UpdateHealthMonitor(BaseVThunderTask):
-    """ Task to update health monitor. """
+class UpdateHealthMonitor(task.Task):
+    """Task to update Health Monitor"""
 
+    @axapi_client_decorator
     def execute(self, health_mon, vthunder, update_dict):
         """ Execute update health monitor """
         # TODO(hthompson6) Length of name of healthmonitor for older vThunder devices
         health_mon.__dict__.update(update_dict)
+        method = None
+        url = None
+        expect_code = None
+        if health_mon.type in a10constants.HTTP_TYPE:
+            method = health_mon.http_method
+            url = health_mon.url_path
+            expect_code = health_mon.expected_codes
+        args = utils.meta(health_mon, 'hm', {})
         try:
-            method = None
-            url = None
-            expect_code = None
-            if health_mon.type in ['HTTP', 'HTTPS']:
-                method = health_mon.http_method
-                url = health_mon.url_path
-                expect_code = health_mon.expected_codes
-            args = self.meta(health_mon, 'hm', {})
-            c = self.client_factory(vthunder)
-            c.slb.hm.update(health_mon.id[0:5], openstack_mappings.hm_type(c, health_mon.type),
-                            health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
-                            method=method, url=url, expect_code=expect_code, port=None,
-                            axapi_args=args
-                            )
-            LOG.info("Health Monitor created successfully.")
+            self.axapi_client.slb.hm.update(
+                health_mon.id[0:5],
+                openstack_mappings.hm_type(self.axapi_client, health_mon.type),
+                health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
+                method=method, url=url, expect_code=expect_code, axapi_args=args)
+            LOG.debug("Health Monitor updated successfully: %s", health_mon.id)
         except Exception as e:
-            LOG.error(str(e))
-            LOG.info("Error occurred")
+            LOG.exception("Failed to update Health Monitor: %s", str(e))

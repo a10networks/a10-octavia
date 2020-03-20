@@ -149,7 +149,7 @@ class ListenerFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_listener_flow.add(virtual_port_tasks.ListenersUpdate(
-            requires=[constants.LOADBALANCER, a10constants.VTHUNDER]))
+            requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
 
         update_listener_flow.add(database_tasks.UpdateListenerInDB(
             requires=[constants.LISTENER, constants.UPDATE_DICT]))
