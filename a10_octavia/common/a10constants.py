@@ -39,7 +39,7 @@ SP_OBJ_DICT = {
     'APP_COOKIE': "cookie_persistence",
     'SOURCE_IP': "src_ip_persistence",
 }
-HM_TYPE = ['HTTP', 'HTTPS']
+HTTP_TYPE = ['HTTP', 'HTTPS']
 PERS_TYPE = ['cookie_persistence', 'src_ip_persistence']
 # Taskflow flow and task names
 

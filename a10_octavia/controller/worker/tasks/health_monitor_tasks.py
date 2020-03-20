@@ -34,7 +34,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
         method = None
         url = None
         expect_code = None
-        if health_mon.type in a10constants.HM_TYPE:
+        if health_mon.type in a10constants.HTTP_TYPE:
             method = health_mon.http_method
             url = health_mon.url_path
             expect_code = health_mon.expected_codes
@@ -94,7 +94,7 @@ class UpdateHealthMonitor(task.Task):
         method = None
         url = None
         expect_code = None
-        if health_mon.type in a10constants.HM_TYPE:
+        if health_mon.type in a10constants.HTTP_TYPE:
             method = health_mon.http_method
             url = health_mon.url_path
             expect_code = health_mon.expected_codes
