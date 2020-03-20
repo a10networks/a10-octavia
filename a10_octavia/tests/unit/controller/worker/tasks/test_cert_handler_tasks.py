@@ -8,7 +8,8 @@ from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
 import octavia.tests.unit.base as base
 
-from a10_octavia.common.data_models import VThunder, Certificate
+from a10_octavia.common.data_models import Certificate
+from a10_octavia.common.data_models import VThunder
 from a10_octavia.controller.worker.tasks import cert_handler_tasks
 from a10_octavia.tests.common import a10constants as a10_test_constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
