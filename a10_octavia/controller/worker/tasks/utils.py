@@ -15,6 +15,29 @@
 import json
 
 
+import logging
+from oslo_utils import excutils
+
+LOG = logging.getLogger(__name__)
+
+
+def get_cert_data(barbican_client, listener):
+    cert_data = {}
+    cert_ref = listener.tls_certificate_id
+    try:
+        cert_container = barbican_client.containers.get(container_ref=cert_ref)
+        cert_data["cert_content"] = cert_container.certificate.payload
+        cert_data["key_content"] = cert_container.private_key.payload
+        cert_data["key_pass"] = cert_container.private_key_passphrase
+        cert_data["template_name"] = listener.id
+        cert_data["cert_filename"] = cert_container.certificate.name
+        cert_data["key_filename"] = cert_container.private_key.name
+    except Exception as e:
+        LOG.exception("Failed to fetch cert containers: %s", str(e))
+        raise
+    return cert_data
+
+
 def get_sess_pers_templates(pool):
     c_pers, s_pers, sp = None, None, None
     if pool and pool.session_persistence:
