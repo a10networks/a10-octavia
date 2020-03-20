@@ -1,4 +1,5 @@
 acos-client>=1.4.6		#
+httplib2>=0.12.1                # Python HTTP client
 octavia>=4.1.1,<5.0.0.0rc1	# stein version of octavia
 octavia-lib			#
 python-barbicanclient>=4.5.2 	# copied from octavia requirements.txt
