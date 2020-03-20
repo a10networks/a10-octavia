@@ -14,6 +14,7 @@
 
 import json
 
+
 def get_sess_pers_templates(pool):
     c_pers, s_pers, sp = None, None, None
     if pool and pool.session_persistence:

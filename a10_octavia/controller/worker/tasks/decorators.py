@@ -26,8 +26,8 @@ def axapi_client_decorator(func):
     def wrapper(self, *args, **kwargs):
         vthunder = kwargs.get('vthunder')
         if vthunder:
-            axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            self.axapi_client = acos_client.Client(vthunder.ip_address, axapi_version,
+            api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+            self.axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
                                                    vthunder.username, vthunder.password,
                                                    timeout=30)
         else:
@@ -37,7 +37,7 @@ def axapi_client_decorator(func):
         try:
             self.axapi_client.session.close()
         except ConnectionError as e:
-            LOG.debug("Failed to close the session for vThunder %s", vthunder.id)
+            LOG.debug("Failed to close the vThunder session: %s", str(e))
         except AttributeError:
             pass
 

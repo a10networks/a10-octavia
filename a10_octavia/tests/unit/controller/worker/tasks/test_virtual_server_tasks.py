@@ -21,8 +21,8 @@ except ImportError:
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
 
-import a10_octavia.controller.worker.tasks.virtual_server_tasks as task
 from a10_octavia.common.data_models import VThunder
+import a10_octavia.controller.worker.tasks.virtual_server_tasks as task
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 
