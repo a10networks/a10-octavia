@@ -18,9 +18,8 @@ import mock
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
 
-import a10_octavia.controller.worker.tasks.handler_virtual_server as handler
+import a10_octavia.controller.worker.tasks.virtual_server_tasks as task
 from a10_octavia.common.data_models import VThunder
-from a10_octavia.controller.worker.tasks.virtual_server_tasks import CreateVirtualServerTask
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 
@@ -33,11 +32,11 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
    
     def setUp(self):
         super(TestHandlerVirtualServerTasks, self).setUp()
-        imp.reload(handler)
+        imp.reload(task)
  
     def test_revert_create_virtual_server_task(self):
         client_mock = mock.Mock()
-        mock_load_balancer = handler.CreateVirtualServerTask()
+        mock_load_balancer = task.CreateVirtualServerTask()
         mock_load_balancer.axapi_client = client_mock
         mock_load_balancer.revert(LB, VTHUNDER)
         client_mock.slb.virtual_server.delete.assert_called_with(LB.id)

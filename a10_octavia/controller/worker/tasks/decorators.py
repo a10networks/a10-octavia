@@ -32,7 +32,7 @@ def axapi_client_decorator(func):
                                                    timeout=30)
         else:
             self.axapi_client = None
-        return func(self, *args, **kwargs)
+        result = func(self, *args, **kwargs)
 
         try:
             self.axapi_client.session.close()
@@ -40,5 +40,7 @@ def axapi_client_decorator(func):
             LOG.debug("Failed to close the session for vThunder %s", vthunder.id)
         except AttributeError:
             pass
+
+        return result
 
     return wrapper
