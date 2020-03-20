@@ -15,8 +15,12 @@
 import acos_client.errors as acos_errors
 import copy
 import imp
-import mock
-from unittest.mock import patch
+try:
+    from unittest import mock
+    from unittest.mock import patch
+except ImportError:
+    import mock
+    from mock import patch
 
 from octavia.common import data_models as o_data_models
 

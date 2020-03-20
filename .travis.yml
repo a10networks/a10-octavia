@@ -2,7 +2,7 @@ language: python
 jobs:
   include:
   - name: "2.7 Unit Tests"
-    python: "2.7"
+    python: "2.7.17"
     env: TOX_ENV=py27
   - name: "3.5 Unit Tests"
     python: "3.5"

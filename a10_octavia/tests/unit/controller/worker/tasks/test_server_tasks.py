@@ -14,7 +14,10 @@
 
 
 import imp
-import mock
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
