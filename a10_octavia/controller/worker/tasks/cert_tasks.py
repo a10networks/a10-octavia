@@ -18,14 +18,14 @@ from taskflow import task
 
 from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
 
-from a10_octavia.controller.worker.tasks import utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks import utils
 
 LOG = logging.getLogger(__name__)
 
 
 class SSLCertCreate(task.Task):
-    """Creates an SSL certificate"""
+    """Task to create an SSL certificate"""
     @axapi_client_decorator
     def execute(self, loadbalancer, listener, vthunder, action="import", certificate_type="pem"):
         barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
@@ -54,13 +54,13 @@ class SSLCertCreate(task.Task):
         cert_data = utils.get_cert_data(barbican_client, listener)
         try:
             self.axapi_client.file.ssl_cert.delete(file=cert_data["cert_filename"])
-            LOG.debug("Task SSLCertCreate reverted")
-        except Exception as e:
+            LOG.debug("Reverted SSLCertCreate: %s", cert_data["cert_filename"])
+        except Exception:
             pass
 
 
 class SSLKeyCreate(task.Task):
-    """Creates an SSL Key"""
+    """Task to create an SSL Key"""
     @axapi_client_decorator
     def execute(self, cert_data, vthunder, action="import"):
         try:
@@ -82,13 +82,13 @@ class SSLKeyCreate(task.Task):
     def revert(self, cert_data, vthunder, *args, **kwargs):
         try:
             self.axapi_client.file.ssl_key.delete(file=cert_data["key_filename"])
-            LOG.debug("Task SSLKeyCreate Reverted")
-        except Exception as e:
+            LOG.debug("Reverted SSLKeyCreate: %s", cert_data["key_filename"])
+        except Exception:
             pass
 
 
 class ClientSSLTemplateCreate(task.Task):
-    """Creates a client ssl template for a listener"""
+    """Task to create a client ssl template for a listener"""
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
@@ -110,13 +110,13 @@ class ClientSSLTemplateCreate(task.Task):
     def revert(self, cert_data, vthunder, *args, **kwargs):
         try:
             self.axapi_client.slb.template.client_ssl.delete(name=cert_data["template_name"])
-            LOG.debug("Task ClientSSLTemplateCreate Reverted")
-        except Exception as e:
+            LOG.debug("Reverted ClientSSLTemplateCreate: %s", cert_data["template_name"])
+        except Exception:
             pass
 
 
 class SSLCertUpdate(task.Task):
-    """Updates an SSL certificate"""
+    """Task to update an SSL certificate"""
     @axapi_client_decorator
     def execute(self, loadbalancer, listener, vthunder, action="import", certificate_type="pem"):
         barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
@@ -135,7 +135,7 @@ class SSLCertUpdate(task.Task):
 
 
 class SSLKeyUpdate(task.Task):
-    """Updates an SSL Key"""
+    """Task to update an SSL Key"""
     @axapi_client_decorator
     def execute(self, cert_data, vthunder, action="import"):
         try:
@@ -150,7 +150,7 @@ class SSLKeyUpdate(task.Task):
 
 
 class ClientSSLTemplateUpdate(task.Task):
-    """Updates a client ssl template for a listener"""
+    """Task to update a client ssl template for a listener"""
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
@@ -166,7 +166,7 @@ class ClientSSLTemplateUpdate(task.Task):
 
 
 class SSLCertDelete(task.Task):
-    """Deletes an SSL certificate"""
+    """Task to delete an SSL certificate"""
     @axapi_client_decorator
     def execute(self, loadbalancer, listener, vthunder):
         barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
@@ -181,7 +181,7 @@ class SSLCertDelete(task.Task):
 
 
 class SSLKeyDelete(task.Task):
-    """Deletes an SSL Key"""
+    """Task to delete an SSL Key"""
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
@@ -193,7 +193,7 @@ class SSLKeyDelete(task.Task):
 
 
 class ClientSSLTemplateDelete(task.Task):
-    """Deletes a client ssl template for a listener"""
+    """Task to delete a client ssl template for a listener"""
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
@@ -203,4 +203,3 @@ class ClientSSLTemplateDelete(task.Task):
                           cert_data["template_name"])
         except Exception as e:
             LOG.warning("Failed to delete Client SSL Template: %s", str(e))
-

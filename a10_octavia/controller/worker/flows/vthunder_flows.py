@@ -321,75 +321,46 @@ class VThunderFlows(object):
     def get_vrrp_subflow(self, prefix):
         sf_name = prefix + '-' + constants.GET_VRRP_SUBFLOW
         vrrp_subflow = linear_flow.Flow(sf_name)
-        # TODO(omkartelee01) Need HA variables here
         vrrp_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-            name=sf_name + '-' + a10constants.GET_LOADBALANCER_FROM_DB,
+            name=sf_name + '-' + 'Get_Loadbalancer_from_db',
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         vrrp_subflow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
-            name=sf_name + '-' + a10constants.GET_BACKUP_LOADBALANCER_FROM_DB,
+            name=sf_name + '-' + 'get_backup_loadbalancer_from_db',
             requires=constants.LOADBALANCER,
             provides=a10constants.BACKUP_VTHUNDER))
-        # VRRP Configuration
-        vrrp_subflow.add(vthunder_tasks.ConfigureVRRPMaster(
-            name=sf_name + '-' + a10constants.CONFIGURE_VRRP_FOR_MASTER_VTHUNDER,
-            requires=(a10constants.VTHUNDER)))
-        vrrp_subflow.add(vthunder_tasks.ConfigureVRRPBackup(
-            name=sf_name + '-' + a10constants.CONFIGURE_VRRP_FOR_BACKUP_VTHUNDER,
-            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-        vrrp_subflow.add(self._get_vrrp_status_subflow(sf_name))
-
-        return vrrp_subflow
-
-    def _get_vrrp_status_subflow(self, sf_name):
-        check_vrrp_status = graph_flow.Flow(a10constants.CHECK_VRRP_STATUS)
-        check_vrrp_status.add(vthunder_tasks.CheckVRRPStatus(
-            name=a10constants.CHECK_VRRP_MASTER_STATUS,
-            requires=(a10constants.VTHUNDER),
-            provides=(a10constants.MASTER_VRRP_STATUS)))
-        check_vrrp_status.add(vthunder_tasks.CheckVRRPStatus(
-            name=a10constants.CHECK_VRRP_BACKUP_STATUS,
-            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-            provides=(a10constants.BACKUP_VRRP_STATUS)))
-        confirm_vrrp = vthunder_tasks.ConfirmVRRPStatus(
-            name=a10constants.CONFIRM_VRRP_STATUS,
-            requires=(a10constants.MASTER_VRRP_STATUS, a10constants.BACKUP_VRRP_STATUS),
-            provides=(a10constants.VRRP_STATUS))
-        configure_vrrp = self._configure_vrrp_subflow(sf_name)
-        check_vrrp_status.add(confirm_vrrp, configure_vrrp)
-        check_vrrp_status.link(confirm_vrrp, configure_vrrp,
-                               decider=self._is_vrrp_configured)
-        return check_vrrp_status
-
-    def _configure_vrrp_subflow(self, sf_name):
-        configure_vrrp_subflow = linear_flow.Flow(sf_name)
-        # VRID Configuration
-        configure_vrrp_subflow.add(vthunder_tasks.ConfigureVRID(
-            name=sf_name + '-' + a10constants.CONFIGURE_VRID_FOR_MASTER_VTHUNDER,
-            requires=(a10constants.VTHUNDER)))
-        configure_vrrp_subflow.add(vthunder_tasks.ConfigureVRID(
-            name=sf_name + '-' + a10constants.CONFIGURE_VRID_FOR_BACKUP_VTHUNDER,
-            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-        # VRRP synch
-        configure_vrrp_subflow.add(vthunder_tasks.ConfigureVRRPSync(
-            name=sf_name + '-' + a10constants.CONFIGURE_VRRP_SYNC,
-            requires=(a10constants.VTHUNDER, a10constants.BACKUP_VTHUNDER)))
-        # Wait for VRRP synch
-        configure_vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-            name=sf_name + '-' + a10constants.WAIT_FOR_MASTER_SYNC,
+        vrrp_subflow.add(vthunder_tasks.ConfigureVRRP(
+            name=sf_name + '-' + 'configure_vrrp',
+            requires=(a10constants.VTHUNDER, a10constants.BACKUP_VTHUNDER),
+            provides=(a10constants.VRRP_STATUS)))
+        vrrp_subflow.add(
+            vthunder_tasks.ConfigureVRID(
+                name=sf_name + '-' + 'configure_vrid',
+                requires=(
+                    a10constants.VTHUNDER,
+                    a10constants.BACKUP_VTHUNDER,
+                    a10constants.VRRP_STATUS)))
+        vrrp_subflow.add(
+            vthunder_tasks.ConfigureVRRPSync(
+                name=sf_name + '-' + 'configure_vrrp_sync',
+                requires=(
+                    a10constants.VTHUNDER,
+                    a10constants.BACKUP_VTHUNDER,
+                    a10constants.VRRP_STATUS)))
+        vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            name=sf_name + '-' + 'wait_for_master_sync',
             requires=(a10constants.VTHUNDER, constants.AMPHORA)))
-        configure_vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-            name=sf_name + '-' + a10constants.WAIT_FOR_BACKUP_SYNC,
-            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-            requires=(constants.AMPHORA)))
-        # Configure aVCS
-        configure_vrrp_subflow.add(vthunder_tasks.ConfigureaVCSMaster(
-            name=sf_name + '-' + a10constants.CONFIGURE_AVCS_SYNC_FOR_MASTER,
-            requires=(a10constants.VTHUNDER)))
-        configure_vrrp_subflow.add(vthunder_tasks.ConfigureaVCSBackup(
-            name=sf_name + '-' + a10constants.CONFIGURE_AVCS_SYNC_FOR_BACKUP,
-            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-        return configure_vrrp_subflow
+        vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            name=sf_name + '-' + 'wait_for_backup_sync',
+            rebind=(a10constants.BACKUP_VTHUNDER, constants.AMPHORA)))
+        vrrp_subflow.add(
+            vthunder_tasks.ConfigureaVCS(
+                name=sf_name + '-' + 'configure_avcs_sync',
+                requires=(
+                    a10constants.VTHUNDER,
+                    a10constants.BACKUP_VTHUNDER,
+                    a10constants.VRRP_STATUS)))
+        return vrrp_subflow
 
     def get_rack_vthunder_for_lb_subflow(
             self, vthunder_conf, prefix, role=constants.ROLE_STANDALONE):
@@ -412,9 +383,3 @@ class VThunderFlows(object):
             provides=a10constants.VTHUNDER))
 
         return amp_for_lb_flow
-
-    def _is_vrrp_configured(self, history):
-        """Checks whether vrrp is configured
-        :returns: True if vrrp is configured
-        """
-        return history[history.keys()[0]]

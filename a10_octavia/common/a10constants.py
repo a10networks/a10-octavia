@@ -19,8 +19,6 @@ STATUS = 'status'
 ROLE = 'role'
 BACKUP_VTHUNDER = 'backup_vthunder'
 VRRP_STATUS = 'vrrp_status'
-MASTER_VRRP_STATUS = 'master_vrrp_status'
-BACKUP_VRRP_STATUS = 'backup_vrrp_status'
 
 FAILED = 'FAILED'
 USED_SPARE = 'USED_SPARE'
@@ -40,13 +38,9 @@ SP_OBJ_DICT = {
     'APP_COOKIE': "cookie_persistence",
     'SOURCE_IP': "src_ip_persistence",
 }
-HTTP_TYPE = ['HTTP', 'HTTPS']
 PERS_TYPE = ['cookie_persistence', 'src_ip_persistence']
 # Taskflow flow and task names
 
-BACKUP_AMPHORA_PLUG = 'backup-amphora-plug'
-BACKUP_CONNECTIVITY_WAIT = 'backup-connectivity-wait'
-BACKUP_ENABLE_INTERFACE = 'backup-enable-interface'
 MARK_VTHUNDER_MASTER_ACTIVE_IN_DB = 'mark-vthunder-master-active-in-db'
 MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB = 'mark-vthunder-backup-active-in-db'
 GET_BACKUP_VTHUNDER_BY_LB = 'get-backup-vthunder-by-lb'

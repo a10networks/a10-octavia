@@ -14,22 +14,20 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from taskflow import task
 
-from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
-from a10_octavia.controller.worker.tasks import utils
-
+from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class MemberCreate(task.Task):
-    """Task to create a member and associate to pool"""
+class MemberCreate(BaseVThunderTask):
 
-    @axapi_client_decorator
+    """ Task to create a member and associate to pool """
+
     def execute(self, member, vthunder, pool):
-        server_args = utils.meta(member, 'server', {})
+        """ Execute create member """
+        server_args = self.meta(member, 'server', {})
         server_args['conn-limit'] = CONF.server.conn_limit
         server_args['conn-resume'] = CONF.server.conn_resume
         server_args = {'server': server_args}
@@ -39,18 +37,19 @@ class MemberCreate(task.Task):
             status = False
         else:
             status = True
+        c = self.client_factory(vthunder)
 
         try:
-            self.axapi_client.slb.server.create(member.id, member.ip_address, status=status,
-                                                server_templates=server_temp,
-                                                axapi_args=server_args)
+            c.slb.server.create(member.id, member.ip_address, status=status,
+                                server_templates=server_temp,
+                                axapi_args=server_args)
             LOG.debug("Member created successfully: %s", member.id)
         except Exception as e:
             LOG.exception("Failed to create member: %s", str(e))
             raise
 
         try:
-            self.axapi_client.slb.service_group.member.create(
+            c.slb.service_group.member.create(
                 pool.id, member.id, member.protocol_port)
             LOG.debug("Member %s associated to pool %s successfully",
                       member.id, pool.id)
@@ -58,42 +57,45 @@ class MemberCreate(task.Task):
             LOG.exception("Failed to associate member to pool: %s", str(e))
             raise
 
-    @axapi_client_decorator
     def revert(self, member, vthunder, pool, *args, **kwargs):
+        c = self.client_factory(vthunder)
         try:
-            self.axapi_client.slb.service_group.member.delete(
+            c.slb.service_group.member.delete(
                 pool.id, member.id, member.protocol_port)
         except Exception as e:
             LOG.exception("Failed to revert create pool: %s", str(e))
 
         try:
-            self.axapi_client.slb.server.delete(member.id)
+            c.slb.server.delete(member.id)
         except Exception as e:
             LOG.exception("Failed to revert create member: %s", str(e))
 
 
-class MemberDelete(task.Task):
-    """Task to delete member"""
+class MemberDelete(BaseVThunderTask):
 
-    @axapi_client_decorator
+    """ Task to delete member """
+
     def execute(self, member, vthunder, pool):
+        """ Execute delete member """
+        c = self.client_factory(vthunder)
         try:
-            self.axapi_client.slb.service_group.member.delete(
+            c.slb.service_group.member.delete(
                 pool.id, member.id, member.protocol_port)
             LOG.debug(
                 "Member %s is dissociated from pool %s successfully.", member.id, pool.id)
-            self.axapi_client.slb.server.delete(member.id)
+            c.slb.server.delete(member.id)
             LOG.debug("Member %s is deleted successfully.", member.id)
         except Exception as e:
             LOG.warning("Failed to delete member: %s", str(e))
 
 
-class MemberUpdate(task.Task):
-    """Task to update member"""
+class MemberUpdate(BaseVThunderTask):
 
-    @axapi_client_decorator
-    def execute(self, member, vthunder):
-        server_args = utils.meta(member, 'server', {})
+    """ Task to update member """
+
+    def execute(self, member, vthunder, pool):
+        """Execute update member """
+        server_args = self.meta(member, 'server', {})
         server_args['conn-limit'] = CONF.server.conn_limit
         server_args['conn-resume'] = CONF.server.conn_resume
         server_args = {'server': server_args}
@@ -103,11 +105,12 @@ class MemberUpdate(task.Task):
             status = False
         else:
             status = True
+        c = self.client_factory(vthunder)
 
         try:
-            self.axapi_client.slb.server.update(member.id, member.ip_address, status=status,
-                                                server_templates=server_temp,
-                                                axapi_args=server_args)
+            c.slb.server.update(member.id, member.ip_address, status=status,
+                                server_templates=server_temp,
+                                axapi_args=server_args)
             LOG.debug("Member updated successfully: %s", member.id)
         except Exception as e:
             LOG.exception("Failed to update member: %s", str(e))

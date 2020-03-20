@@ -14,9 +14,8 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from taskflow import task
 
-from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 from a10_octavia.controller.worker.tasks import utils
 
@@ -26,7 +25,7 @@ LOG = logging.getLogger(__name__)
 
 class L7RuleParent(object):
 
-    def set(self, l7rule, listeners):
+    def set(self, l7rule, listeners, vthunder):
         l7policy = l7rule.l7policy
         filename = l7policy.id
         p = PolicyUtil()
@@ -34,10 +33,11 @@ class L7RuleParent(object):
         size = len(script.encode('utf-8'))
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
+        axapi_client = self.client_factory(vthunder)
         kargs = {}
         get_listener = None
         try:
-            self.axapi_client.slb.aflex_policy.create(
+            axapi_client.slb.aflex_policy.create(
                 file=filename, script=script, size=size, action="import")
             LOG.debug("aFlex policy created successfully.")
         except Exception as e:
@@ -45,7 +45,7 @@ class L7RuleParent(object):
             raise
 
         try:
-            get_listener = self.axapi_client.slb.virtual_server.vport.get(
+            get_listener = axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port)
         except Exception as e:
@@ -61,7 +61,7 @@ class L7RuleParent(object):
         kargs["aflex-scripts"] = aflex_scripts
 
         try:
-            self.axapi_client.slb.virtual_server.vport.update(
+            axapi_client.slb.virtual_server.vport.update(
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id, s_pers,
@@ -72,27 +72,26 @@ class L7RuleParent(object):
             raise
 
 
-class CreateL7Rule(L7RuleParent, task.Task):
+class CreateL7Rule(L7RuleParent, BaseVThunderTask):
     """Task to create L7Rule"""
 
-    @axapi_client_decorator
     def execute(self, l7rule, listeners, vthunder):
-        self.set(l7rule, listeners)
+        self.client_factory(vthunder)
+        self.set(l7rule, listeners, vthunder)
 
 
-class UpdateL7Rule(L7RuleParent, task.Task):
+class UpdateL7Rule(L7RuleParent, BaseVThunderTask):
     """Task to update L7Rule"""
 
-    @axapi_client_decorator
     def execute(self, l7rule, listeners, vthunder, update_dict):
         l7rule.__dict__.update(update_dict)
-        self.set(l7rule, listeners)
+        self.client_factory(vthunder)
+        self.set(l7rule, listeners, vthunder)
 
 
-class DeleteL7Rule(task.Task):
+class DeleteL7Rule(BaseVThunderTask):
     """Task to delete a L7rule and disassociate from provided pool"""
 
-    @axapi_client_decorator
     def execute(self, l7rule, listeners, vthunder):
         policy = l7rule.l7policy
         rules = policy.l7rules
@@ -111,8 +110,9 @@ class DeleteL7Rule(task.Task):
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         kargs = {}
+        axapi_client = self.client_factory(vthunder)
         try:
-            self.axapi_client.slb.aflex_policy.create(
+            axapi_client.slb.aflex_policy.create(
                 file=filename, script=script, size=size, action="import")
             LOG.debug("aFlex policy deleted successfully.")
         except Exception as e:
@@ -120,7 +120,7 @@ class DeleteL7Rule(task.Task):
             raise
 
         try:
-            get_listener = self.axapi_client.slb.virtual_server.vport.get(
+            get_listener = axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port)
         except Exception as e:
@@ -136,7 +136,7 @@ class DeleteL7Rule(task.Task):
         kargs["aflex-scripts"] = aflex_scripts
 
         try:
-            self.axapi_client.slb.virtual_server.vport.update(
+            axapi_client.slb.virtual_server.vport.update(
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port, listener.default_pool_id,
                 s_pers, c_pers, 1, **kargs)

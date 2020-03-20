@@ -12,11 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 
 import logging
-from oslo_utils import excutils
 
 from a10_octavia.common.data_models import Certificate
 
@@ -29,11 +26,11 @@ def get_cert_data(barbican_client, listener):
     try:
         cert_container = barbican_client.containers.get(container_ref=cert_ref)
         cert_data = Certificate(cert_filename=cert_container.certificate.name,
-                    key_filename=cert_container.private_key.name,
-                    cert_content=cert_container.certificate.payload,
-                    key_content=cert_container.private_key.payload,
-                    key_pass=cert_container.private_key_passphrase,
-                    template_name=listener.id).to_dict()
+                                key_filename=cert_container.private_key.name,
+                                cert_content=cert_container.certificate.payload,
+                                key_content=cert_container.private_key.payload,
+                                key_pass=cert_container.private_key_passphrase,
+                                template_name=listener.id).to_dict()
     except Exception as e:
         LOG.exception("Failed to fetch cert containers: %s", str(e))
         raise
@@ -49,17 +46,3 @@ def get_sess_pers_templates(pool):
         elif sp.type == 'SOURCE_IP':
             s_pers = pool.id
     return c_pers, s_pers
-
-
-def meta(lbaas_obj, key, default):
-    if isinstance(lbaas_obj, dict):
-        meta = lbaas_obj.get('a10_meta', '{}')
-    elif hasattr(lbaas_obj, 'a10_meta'):
-        meta = lbaas_obj.a10_meta
-    else:
-        return default
-    try:
-        meta_json = json.loads(meta)
-    except Exception:
-        return default
-    return meta_json.get(key, default)

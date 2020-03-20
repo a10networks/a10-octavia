@@ -12,10 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-try:
-    from unittest.mock import patch
-except ImportError:
-    from mock import patch
+
+import mock
+from unittest.mock import patch
 
 from octavia.tests.unit import base
 
@@ -23,6 +22,9 @@ from octavia.tests.unit import base
 class BaseTaskTestCase(base.TestCase):
 
     def setUp(self):
+        self.client_mock = mock.Mock()
+        config = {'return_value': self.client_mock}
+        patcher = patch(
+            'a10_octavia.controller.worker.tasks.common.BaseVThunderTask.client_factory', **config)
+        patcher.start()
         super(base.TestCase, self).setUp()
-        patch('a10_octavia.controller.worker.tasks.decorators.axapi_client_decorator',
-              lambda x: x).start()

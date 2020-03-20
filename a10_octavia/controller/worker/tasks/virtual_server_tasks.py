@@ -14,11 +14,8 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from taskflow import task
 
-from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
-from a10_octavia.controller.worker.tasks import utils
-
+from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -26,11 +23,12 @@ LOG = logging.getLogger(__name__)
 
 class LoadBalancerParent(object):
 
-    def set(self, set_method, loadbalancer):
-        status = self.axapi_client.slb.UP
+    def set(self, set_method, loadbalancer, vthunder):
+        c = self.client_factory(vthunder)
+        status = c.slb.UP
         if not loadbalancer.provisioning_status:
-            status = self.axapi_client.slb.DOWN
-        vip_meta = utils.meta(loadbalancer, 'virtual_server', {})
+            status = c.slb.DOWN
+        vip_meta = self.meta(loadbalancer, 'virtual_server', {})
         arp_disable = CONF.slb.arp_disable
         vrid = CONF.slb.default_virtual_server_vrid
 
@@ -48,35 +46,39 @@ class LoadBalancerParent(object):
             raise
 
 
-class CreateVirtualServerTask(LoadBalancerParent, task.Task):
-    """Task to create a virtual server"""
+class CreateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
 
-    @axapi_client_decorator
+    """ Task to create a virtual server """
+
     def execute(self, loadbalancer, vthunder):
-        self.set(self.axapi_client.slb.virtual_server.create, loadbalancer)
+        c = self.client_factory(vthunder)
+        self.set(c.slb.virtual_server.create, loadbalancer, vthunder)
 
-    @axapi_client_decorator
     def revert(self, loadbalancer, vthunder, *args, **kwargs):
+        c = self.client_factory(vthunder)
         try:
-            self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
+            c.slb.virtual_server.delete(loadbalancer.id)
         except Exception as e:
             LOG.exception("Failed to revert create load balancer: %s", str(e))
 
 
-class DeleteVirtualServerTask(task.Task):
-    """Task to delete a virtual server"""
+class DeleteVirtualServerTask(BaseVThunderTask):
 
-    @axapi_client_decorator
+    """ Task to delete a virtual server """
+
     def execute(self, loadbalancer, vthunder):
+        c = self.client_factory(vthunder)
         try:
-            self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
+            c.slb.virtual_server.delete(loadbalancer.id)
         except Exception as e:
             LOG.warning("Failed to delete load balancer: %s", str(e))
 
 
-class UpdateVirtualServerTask(LoadBalancerParent, task.Task):
-    """Task to update a virtual server"""
+class UpdateVirtualServerTask(LoadBalancerParent, BaseVThunderTask):
 
-    @axapi_client_decorator
+    """ Task to update a virtual server """
+
     def execute(self, loadbalancer, vthunder):
-        self.set(self.axapi_client.slb.virtual_server.update, loadbalancer)
+        c = self.client_factory(vthunder)
+        self.set(c.slb.virtual_server.update,
+                 loadbalancer, vthunder)
