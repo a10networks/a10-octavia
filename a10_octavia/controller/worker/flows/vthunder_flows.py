@@ -321,7 +321,7 @@ class VThunderFlows(object):
     def get_vrrp_subflow(self, prefix):
         sf_name = prefix + '-' + constants.GET_VRRP_SUBFLOW
         vrrp_subflow = linear_flow.Flow(sf_name)
-        # TODO- Need HA variables here
+        # TODO(omkartelee01) Need HA variables here
         vrrp_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=sf_name + '-' + a10constants.GET_LOADBALANCER_FROM_DB,
             requires=constants.LOADBALANCER,

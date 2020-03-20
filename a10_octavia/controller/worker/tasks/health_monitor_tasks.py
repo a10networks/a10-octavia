@@ -42,7 +42,8 @@ class CreateAndAssociateHealthMonitor(task.Task):
 
         try:
             self.axapi_client.slb.hm.create(health_mon.id[0:5],
-                                            openstack_mappings.hm_type(self.axapi_client, health_mon.type),
+                                            openstack_mappings.hm_type(self.axapi_client,
+                                            health_mon.type),
                                             health_mon.delay, health_mon.timeout,
                                             health_mon.rise_threshold, method=method, url=url,
                                             expect_code=expect_code, axapi_args=args)

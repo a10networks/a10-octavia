@@ -17,7 +17,8 @@ import logging
 import acos_client.errors as acos_errors
 from taskflow import task
 
-from a10_octavia.common.a10constants import SP_OBJ_DICT, PERS_TYPE
+from a10_octavia.common.a10constants import SP_OBJ_DICT
+from a10_octavia.common.a10constants import PERS_TYPE
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 
 LOG = logging.getLogger(__name__)

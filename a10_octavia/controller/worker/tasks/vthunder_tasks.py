@@ -41,6 +41,7 @@ LOG = logging.getLogger(__name__)
 
 
 class VThunderComputeConnectivityWait(task.Task):
+
     """Task to wait for the compute instance to be up"""
 
     @axapi_client_decorator
@@ -61,7 +62,8 @@ class VThunderComputeConnectivityWait(task.Task):
                     LOG.debug("VThunder connection attempt - " + str(attemptid))
                     pass
             if attempts < 0:
-                LOG.error("Failed to connect vThunder in expected amount of boot time: %s", vthunder.id)
+                LOG.error("Failed to connect vThunder in expected amount of boot time: %s",
+                          vthunder.id)
                 raise ConnectionError
 
         except driver_except.TimeOutException:
@@ -75,6 +77,7 @@ class VThunderComputeConnectivityWait(task.Task):
 
 
 class AmphoraePostVIPPlug(task.Task):
+
     """Task to reboot and configure vThunder device"""
 
     @axapi_client_decorator
@@ -92,6 +95,7 @@ class AmphoraePostVIPPlug(task.Task):
 
 
 class AmphoraePostMemberNetworkPlug(task.Task):
+
     """Task to reboot and configure vThunder device"""
 
     @axapi_client_decorator
@@ -112,6 +116,7 @@ class AmphoraePostMemberNetworkPlug(task.Task):
 
 
 class EnableInterface(task.Task):
+
     """Task to configure vThunder ports"""
 
     @axapi_client_decorator
@@ -125,6 +130,7 @@ class EnableInterface(task.Task):
 
 
 class EnableInterfaceForMembers(task.Task):
+
     """Task to enable an interface associated with a member"""
 
     @axapi_client_decorator
@@ -141,6 +147,7 @@ class EnableInterfaceForMembers(task.Task):
                 while attempts > 0 and configured_interface is False:
                     try:
                         target_interface = len(nics)
+                        self.axapi_client.system.action.setInterface(target_interface - 1)
                         configured_interface = True
                         LOG.debug("Configured the new interface required for member.")
                     except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
@@ -153,6 +160,7 @@ class EnableInterfaceForMembers(task.Task):
 
 
 class ConfigureVRRPMaster(task.Task):
+
     """Task to configure Master vThunder VRRP"""
 
     @axapi_client_decorator
@@ -166,6 +174,7 @@ class ConfigureVRRPMaster(task.Task):
 
 
 class ConfigureVRRPBackup(task.Task):
+
     """Task to configure Master vThunder VRRP"""
 
     @axapi_client_decorator
@@ -179,6 +188,7 @@ class ConfigureVRRPBackup(task.Task):
 
 
 class ConfigureVRID(task.Task):
+
     """Task to configure vThunder VRID"""
 
     @axapi_client_decorator
@@ -192,6 +202,7 @@ class ConfigureVRID(task.Task):
 
 
 class ConfigureVRRPSync(task.Task):
+
     """Task to sync vThunder VRRP"""
 
     @axapi_client_decorator
@@ -217,6 +228,7 @@ def configure_avcs(axapi_client, device_id, device_priority, floating_ip, floati
 
 
 class ConfigureaVCSMaster(task.Task):
+
     """Task to configure aVCS"""
 
     @axapi_client_decorator
@@ -249,13 +261,14 @@ class ConfigureaVCSBackup(task.Task):
                     attempts = 0
                     LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
                 except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
-                        attempts = attempts - 1
+                    attempts = attempts - 1
         except Exception as e:
-                LOG.exception("Failed to configure backup vThunder aVCS: %s", str(e))
-                raise
+            LOG.exception("Failed to configure backup vThunder aVCS: %s", str(e))
+            raise
 
 
 class CreateHealthMonitorOnVThunder(task.Task):
+
     """Task to create a Health Monitor and server for HM service"""
 
     @axapi_client_decorator
@@ -279,7 +292,9 @@ class CreateHealthMonitorOnVThunder(task.Task):
 
         result = None
         try:
-            result = self.axapi_client.slb.hm.create(health_check, openstack_mappings.hm_type(c, 'UDP'),
+            result = self.axapi_client.slb.hm.create(health_check,
+                                                     openstack_mappings.hm_type(
+                                                         self.axapi_client, 'UDP'),
                                                      interval, timeout, max_retries, method, url,
                                                      expect_code, port, ipv4)
             LOG.debug("Successfully created health monitor for vThunder %s", vthunder.id)
@@ -297,6 +312,7 @@ class CreateHealthMonitorOnVThunder(task.Task):
 
 
 class CheckVRRPStatus(task.Task):
+
     """Task to check VRRP status"""
 
     @axapi_client_decorator
@@ -309,6 +325,7 @@ class CheckVRRPStatus(task.Task):
 
 
 class ConfirmVRRPStatus(task.Task):
+
     """Task to confirm master and backup VRRP status"""
 
     def execute(self, master_vrrp_status, backup_vrrp_status):

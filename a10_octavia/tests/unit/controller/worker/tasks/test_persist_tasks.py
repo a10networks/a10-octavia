@@ -17,15 +17,13 @@ import copy
 import imp
 try:
     from unittest import mock
-    from unittest.mock import patch
 except ImportError:
     import mock
-    from mock import patch
 
 from octavia.common import data_models as o_data_models
 
 from a10_octavia.common.data_models import VThunder
-from a10_octavia.controller.worker.tasks import persist_tasks 
+from a10_octavia.controller.worker.tasks import persist_tasks
 from a10_octavia.tests.common import a10constants as a10_test_constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 
@@ -100,7 +98,7 @@ class TestPersistTasks(BaseTaskTestCase):
 
     def test_revert_handle_session_persistence_with_source_ip(self):
         mock_session_persist = persist_tasks.HandleSessionPersistenceDelta()
-        mock_session_persist.axapi_client = self.client_mock 
+        mock_session_persist.axapi_client = self.client_mock
         self.pool.session_persistence = SOURCE_IP_SESS_PERS
         mock_session_persist.execute(VTHUNDER, self.pool)
         self.client_mock.slb.template.src_ip_persistence.delete.assert_called_with(

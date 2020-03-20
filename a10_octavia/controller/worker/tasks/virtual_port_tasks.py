@@ -57,7 +57,6 @@ class ListenersParent(object):
                     template_args["template_client_ssl"] = self.cert_handler(
                         loadbalancer, listener)
 
-                
                 if listener.protocol.lower() == 'http':
                     # TODO(hthompson6) work around for issue in acos client
                     listener.protocol = listener.protocol.lower()
@@ -104,40 +103,41 @@ class ListenersParent(object):
 
         try:
             self.axapi_client.file.ssl_cert.create(file=cert_data["cert_filename"],
-                                   cert=cert_data["cert_content"],
-                                   size=len(cert_data["cert_content"]),
-                                   action="import", certificate_type="pem")
+                                                   cert=cert_data["cert_content"],
+                                                   size=len(cert_data["cert_content"]),
+                                                   action="import", certificate_type="pem")
         except acos_errors.Exists:
             self.axapi_client.file.ssl_cert.update(file=cert_data["cert_filename"],
-                                   cert=cert_data["cert_content"],
-                                   size=len(cert_data["cert_content"]),
-                                   action="import", certificate_type="pem")
+                                                   cert=cert_data["cert_content"],
+                                                   size=len(cert_data["cert_content"]),
+                                                   action="import", certificate_type="pem")
         try:
             self.axapi_client.file.ssl_key.create(file=cert_data["key_filename"],
-                                  cert=cert_data["key_content"],
-                                  size=len(cert_data["key_content"]),
-                                  action="import")
+                                                  cert=cert_data["key_content"],
+                                                  size=len(cert_data["key_content"]),
+                                                  action="import")
         except acos_errors.Exists:
             self.axapi_client.file.ssl_key.update(file=cert_data["key_filename"],
-                                  cert=cert_data["key_content"],
-                                  size=len(cert_data["key_content"]),
-                                  action="import")
+                                                  cert=cert_data["key_content"],
+                                                  size=len(cert_data["key_content"]),
+                                                  action="import")
         # create template
         try:
             self.axapi_client.slb.template.client_ssl.create(cert_data["template_name"],
-                                             cert=cert_data["cert_filename"],
-                                             key=cert_data["key_filename"],
-                                             passphrase=cert_data["key_pass"])
+                                                             cert=cert_data["cert_filename"],
+                                                             key=cert_data["key_filename"],
+                                                             passphrase=cert_data["key_pass"])
         except acos_errors.Exists:
             self.axapi_client.slb.template.client_ssl.update(cert_data["template_name"],
-                                             cert=cert_data["cert_filename"],
-                                             key=cert_data["key_filename"],
-                                             passphrase=cert_data["key_pass"])
+                                                             cert=cert_data["cert_filename"],
+                                                             key=cert_data["key_filename"],
+                                                             passphrase=cert_data["key_pass"])
 
         return cert_data["template_name"]
 
 
 class ListenersCreate(ListenersParent, task.Task):
+
     """Task to create listener"""
 
     @axapi_client_decorator
@@ -155,6 +155,7 @@ class ListenersCreate(ListenersParent, task.Task):
 
 
 class ListenersUpdate(ListenersParent, task.Task):
+
     """Task to update listener"""
 
     @axapi_client_decorator
@@ -172,14 +173,16 @@ class ListenersUpdate(ListenersParent, task.Task):
 
 
 class ListenerDelete(task.Task):
+
     """Task to delete the listener"""
 
     @axapi_client_decorator
     def execute(self, loadbalancer, listener, vthunder):
         name = loadbalancer.id + "_" + str(listener.protocol_port)
         try:
-            self.axapi_client.slb.virtual_server.vport.delete(loadbalancer.id, name, listener.protocol,
-                                              listener.protocol_port)
+            self.axapi_client.slb.virtual_server.vport.delete(
+                loadbalancer.id, name, listener.protocol,
+                listener.protocol_port)
             LOG.debug("Listener deleted successfully: %s", name)
         except Exception as e:
             LOG.warning("Failed to delete the listener: %s", str(e))

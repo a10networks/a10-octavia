@@ -32,11 +32,11 @@ LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID, amphorae=
 
 
 class TestHandlerVirtualServerTasks(BaseTaskTestCase):
-   
+
     def setUp(self):
         super(TestHandlerVirtualServerTasks, self).setUp()
         imp.reload(task)
- 
+
     def test_revert_create_virtual_server_task(self):
         client_mock = mock.Mock()
         mock_load_balancer = task.CreateVirtualServerTask()

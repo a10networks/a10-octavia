@@ -25,4 +25,4 @@ class BaseTaskTestCase(base.TestCase):
     def setUp(self):
         super(base.TestCase, self).setUp()
         patch('a10_octavia.controller.worker.tasks.decorators.axapi_client_decorator',
-               lambda x: x).start()
+              lambda x: x).start()
