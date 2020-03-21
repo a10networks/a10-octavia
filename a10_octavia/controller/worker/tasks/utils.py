@@ -13,6 +13,28 @@
 #    under the License.
 
 import json
+import logging
+
+from a10_octavia.common.data_models import Certificate
+
+LOG = logging.getLogger(__name__)
+
+
+def get_cert_data(barbican_client, listener):
+    cert_data = {}
+    cert_ref = listener.tls_certificate_id
+    try:
+        cert_container = barbican_client.containers.get(container_ref=cert_ref)
+        cert_data = Certificate(cert_filename=cert_container.certificate.name,
+                                key_filename=cert_container.private_key.name,
+                                cert_content=cert_container.certificate.payload,
+                                key_content=cert_container.private_key.payload,
+                                key_pass=cert_container.private_key_passphrase,
+                                template_name=listener.id).to_dict()
+    except Exception as e:
+        LOG.exception("Failed to fetch cert containers: %s", str(e))
+        raise
+    return cert_data
 
 
 def get_sess_pers_templates(pool):
