@@ -156,3 +156,15 @@ class VThunder(BaseDataModel):
         self.status = status
         self.created_at = created_at
         self.updated_at = updated_at
+
+
+class Certificate(BaseDataModel):
+
+    def __init__(self, cert_filename=None, cert_content=None, key_filename=None,
+                 key_content=None, key_pass=None, template_name=None):
+        self.cert_filename = cert_filename
+        self.cert_content = cert_content
+        self.key_filename = key_filename
+        self.key_content = key_content
+        self.key_pass = key_pass
+        self.template_name = template_name
