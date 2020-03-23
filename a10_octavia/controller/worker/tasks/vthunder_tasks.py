@@ -12,34 +12,39 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-from taskflow import task
-
-from octavia.controller.worker import task_utils as task_utilities
-from octavia.common import constants
-import acos_client
-from acos_client.errors import ACOSException
-from octavia.amphorae.driver_exceptions import exceptions as driver_except
-import time
+try:
+    from http.client import BadStatusLine
+except ImportError:
+    from httplib import BadStatusLine
 from requests.exceptions import ConnectionError
 from requests.exceptions import ReadTimeout
-from http.client import BadStatusLine
-from octavia.db import api as db_apis
-from oslo_log import log as logging
+from taskflow import task
+import time
+
 from oslo_config import cfg
+from oslo_log import log as logging
+
+from octavia.amphorae.driver_exceptions import exceptions as driver_except
+from octavia.common import constants
 from octavia.common import utils
-from a10_octavia.common import a10constants, openstack_mappings
-from a10_octavia.controller.worker.tasks.policy import PolicyUtil
-from a10_octavia.controller.worker.tasks.common import BaseVThunderTask
+from octavia.db import api as db_apis
+
+from acos_client.errors import ACOSException
+
+from a10_octavia.common import a10constants
+from a10_octavia.common import openstack_mappings
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class VThunderComputeConnectivityWait(BaseVThunderTask):
-    """"Task to wait for the compute instance to be up."""
+class VThunderComputeConnectivityWait(task.Task):
 
+    """Task to wait for the compute instance to be up"""
+
+    @axapi_client_decorator
     def execute(self, vthunder, amphora):
         """Execute get_info routine for a vThunder until it responds."""
         try:
@@ -49,87 +54,88 @@ class VThunderComputeConnectivityWait(BaseVThunderTask):
             while attempts >= 0:
                 try:
                     attempts = attempts - 1
-                    c = self.client_factory(vthunder)
-                    amp_info = c.system.information()
-                    LOG.info(str(amp_info))
+                    self.axapi_client.system.information()
                     break
                 except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
                     attemptid = 21 - attempts
                     time.sleep(20)
-                    LOG.info("VThunder connection attempt - " + str(attemptid))
+                    LOG.debug("VThunder connection attempt - " + str(attemptid))
                     pass
             if attempts < 0:
-                LOG.error("Failed to connect vThunder in expected amount of boot time.")
+                LOG.error("Failed to connect vThunder in expected amount of boot time: %s",
+                          vthunder.id)
                 raise ConnectionError
 
         except driver_except.TimeOutException:
-            LOG.error("Amphora compute instance failed to become reachable. "
-                      "This either means the compute driver failed to fully "
-                      "boot the instance inside the timeout interval or the "
-                      "instance is not reachable via the lb-mgmt-net.")
+            LOG.exception("Amphora compute instance failed to become reachable. "
+                          "This either means the compute driver failed to fully "
+                          "boot the instance inside the timeout interval or the "
+                          "instance is not reachable via the lb-mgmt-net.")
             self.amphora_repo.update(db_apis.get_session(), amphora.id,
                                      status=constants.ERROR)
             raise
 
 
-class AmphoraePostVIPPlug(BaseVThunderTask):
-    """"Task to reboot and configure vThunder device"""
+class AmphoraePostVIPPlug(task.Task):
 
+    """Task to reboot and configure vThunder device"""
+
+    @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
         """Execute get_info routine for a vThunder until it responds."""
         try:
-            c = self.client_factory(vthunder)
-            save_config = c.system.action.write_memory()
-            amp_info = c.system.action.reboot()
-            LOG.info("Waiting for 30 seconds to trigger vThunder reboot.")
+            self.axapi_client.system.action.write_memory()
+            self.axapi_client.system.action.reboot()
+            LOG.debug("Waiting for 30 seconds to trigger vThunder reboot.")
             time.sleep(30)
-            LOG.info("Rebooted vThunder successfully!")
+            LOG.debug("vThunder rebooted successfully: %s", vthunder.id)
         except Exception as e:
-            LOG.error("Unable to reboot vthunder device")
-            LOG.info(str(e))
+            LOG.exception("Failed to reboot vthunder device: %s", str(e))
             raise
 
 
-class AmphoraePostMemberNetworkPlug(BaseVThunderTask):
-    """"Task to reboot and configure vThunder device"""
+class AmphoraePostMemberNetworkPlug(task.Task):
 
+    """Task to reboot and configure vThunder device"""
+
+    @axapi_client_decorator
     def execute(self, added_ports, loadbalancer, vthunder):
         """Execute get_info routine for a vThunder until it responds."""
         try:
             amphora_id = loadbalancer.amphorae[0].id
             if len(added_ports[amphora_id]) > 0:
-                c = self.client_factory(vthunder)
-                save_config = c.system.action.write_memory()
-                amp_info = c.system.action.reboot()
+                self.axapi_client.system.action.write_memory()
+                self.axapi_client.system.action.reboot()
                 time.sleep(30)
-                LOG.info("Rebooted vThunder successfully!")
+                LOG.debug("vThunder rebooted successfully: %s", vthunder.id)
             else:
-                LOG.info("vThunder reboot is not required for member addition.")
+                LOG.debug("vThunder reboot is not required for member addition.")
         except Exception as e:
-            LOG.error("Unable to reload vthunder device")
-            LOG.info(str(e))
+            LOG.exception("Failed to reboot vthunder device: %s", str(e))
             raise
 
 
-class EnableInterface(BaseVThunderTask):
-    """"Task to configure vThunder ports"""
+class EnableInterface(task.Task):
 
+    """Task to configure vThunder ports"""
+
+    @axapi_client_decorator
     def execute(self, vthunder):
-        """Execute get_info routine for a vThunder until it responds."""
         try:
-            c = self.client_factory(vthunder)
-            amp_info = c.system.action.setInterface(1)
-            LOG.info("Configured the devices")
+            self.axapi_client.system.action.setInterface(1)
+            LOG.debug("Configured the mgmt interface for vThunder: %s", vthunder.id)
         except Exception as e:
-            LOG.error("Unable to configure vthunder interface")
-            LOG.info(str(e))
+            LOG.exception("Failed to configure  mgmt interface vThunder: %s", str(e))
+            raise
 
 
-class EnableInterfaceForMembers(BaseVThunderTask):
-    """ Task to enable an interface associated with a member """
+class EnableInterfaceForMembers(task.Task):
 
+    """Task to enable an interface associated with a member"""
+
+    @axapi_client_decorator
     def execute(self, added_ports, loadbalancer, vthunder):
-        """ Enable specific interface of amphora """
+        """Enable specific interface of amphora"""
         try:
             amphora_id = loadbalancer.amphorae[0].id
             compute_id = loadbalancer.amphorae[0].compute_id
@@ -141,287 +147,132 @@ class EnableInterfaceForMembers(BaseVThunderTask):
                 while attempts > 0 and configured_interface is False:
                     try:
                         target_interface = len(nics)
-                        c = self.client_factory(vthunder)
-                        amp_info = c.system.action.setInterface(target_interface - 1)
+                        self.axapi_client.system.action.setInterface(target_interface - 1)
                         configured_interface = True
-                        LOG.info("Configured the new interface required for member.")
+                        LOG.debug("Configured the new interface required for member.")
                     except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
                         attempts = attempts - 1
             else:
-                LOG.info("Configuration of new interface is not required for member.")
+                LOG.debug("Configuration of new interface is not required for member.")
         except Exception as e:
-            LOG.error("Unable to configure vthunder interface")
-            LOG.info(str(e))
+            LOG.exception("Failed to configure vthunder interface: %s", str(e))
             raise
 
 
-class ConfigureVRRP(BaseVThunderTask):
-    """"Task to configure vThunder VRRP """
+class ConfigureVRRPMaster(task.Task):
 
-    def execute(self, vthunder, backup_vthunder):
-        """Execute to configure vrrp in two vThunder devices."""
-        c = self.client_factory(vthunder)
-        status = c.system.action.check_vrrp_status()
-        if not status:
-            try:
-                c = self.client_factory(vthunder)
-                amp_info = c.system.action.configureVRRP(1, 1)
-                LOG.info("Configured the master vThunder for VRRP")
-            except Exception as e:
-                LOG.error("Unable to configure master vThunder VRRP")
-                LOG.info(str(e))
-                raise
+    """Task to configure Master vThunder VRRP"""
 
-            try:
-                c = self.client_factory(backup_vthunder)
-                amp_info = c.system.action.configureVRRP(2, 1)
-                LOG.info("Configured the backup vThunder for VRRP")
-            except Exception as e:
-                LOG.error("Unable to configure backup vThunder VRRP")
-                LOG.info(str(e))
-                # TODO raise - To be handled in exception handling task
-        return status
-
-
-class ConfigureVRID(BaseVThunderTask):
-    """"Task to configure vThunder VRRP """
-
-    def execute(self, vthunder, backup_vthunder, vrrp_status):
-        """Execute to configure vrrp in two vThunder devices."""
-        if not vrrp_status:
-            try:
-                c = self.client_factory(vthunder)
-                amp_info = c.system.action.configureVRID(1)
-                LOG.info("Configured the master vThunder for VRID")
-            except Exception as e:
-                LOG.error("Unable to configure master vThunder VRRP")
-                LOG.info(str(e))
-                raise
-
-            try:
-                c = self.client_factory(backup_vthunder)
-                amp_info = c.system.action.configureVRID(1)
-                LOG.info("Configured the backup vThunder for VRID")
-            except Exception as e:
-                LOG.error("Unable to configure backup vThunder VRRP")
-                LOG.info(str(e))
-                # raise
-
-
-class ConfigureVRRPSync(BaseVThunderTask):
-    """"Task to sync vThunder VRRP """
-
-    def execute(self, vthunder, backup_vthunder, vrrp_status):
-        """Execute to sync up vrrp in two vThunder devices."""
-        if not vrrp_status:
-            try:
-                c = self.client_factory(vthunder)
-                amp_info = c.system.action.configSynch(backup_vthunder.ip_address, backup_vthunder.username,
-                                                       backup_vthunder.password)
-                LOG.info("Waiting 30 seconds for config synch.")
-                time.sleep(30)
-                LOG.info("Sync up for vThunder master")
-            except Exception as e:
-                LOG.error("Unable to sync master vThunder VRRP")
-                LOG.info(str(e))
-                # raise
-
-
-class ConfigureaVCS(BaseVThunderTask):
-    """"Task to configure aVCS """
-
-    def execute(self, vthunder, backup_vthunder, vrrp_status):
-        """Execute to configure aVCS in two vThunder devices."""
-        if not vrrp_status:
-            try:
-                c = self.client_factory(vthunder)
-                c.system.action.set_vcs_device(1, 200)
-                c.system.action.set_vcs_para("192.168.0.100", "255.255.255.0")
-                c.system.action.vcs_enable()
-                c.system.action.vcs_reload()
-                LOG.info("Configured the master vThunder for aVCS")
-            except Exception as e:
-                LOG.error("Unable to configure master vThunder aVCS")
-                LOG.info(str(e))
-                raise
-
-            try:
-                attempts = 10
-                while attempts > 0:
-                    # TODO: Need this loop to be moved in acos_client with
-                    # proper exception handling with all other API call loops.
-                    # Currently resolves "System is Busy" error
-                    try:
-                        bc = self.client_factory(backup_vthunder)
-                        bc.system.action.set_vcs_device(2, 100)
-                        bc.system.action.set_vcs_para("192.168.0.100", "255.255.255.0")
-                        bc.system.action.vcs_enable()
-                        bc.system.action.vcs_reload()
-                        attempts = 0
-                        LOG.info("Configured the backup vThunder for aVCS")
-                    except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
-                        attempts = attempts - 1
-            except Exception as e:
-                LOG.error("Unable to configure backup vThunder aVCS")
-                LOG.info(str(e))
-                raise
-
-
-class ListenersCreate(BaseVThunderTask):
-    """Task to update amphora with all specified listeners' configurations."""
-
-    def execute(self, loadbalancer, listeners, vthunder):
-        """Execute updates per listener for an amphora."""
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-        for listener in listeners:
-            listener.load_balancer = loadbalancer
-            try:
-                c = self.client_factory(vthunder)
-                name = loadbalancer.id + "_" + str(listener.protocol_port)
-                out = c.slb.virtual_server.vport.create(loadbalancer.id, name, listener.protocol,
-                                                        listener.protocol_port, listener.default_pool_id,
-                                                        autosnat=True)
-                LOG.info("Listener created successfully.")
-            except Exception as e:
-                print(str(e))
-                LOG.info("Error occurred")
-
-    def revert(self, loadbalancer, *args, **kwargs):
-        """Handle failed listeners updates."""
-
-        LOG.warning("Reverting listeners updates.")
-
-        for listener in loadbalancer.listeners:
-            self.task_utils.mark_listener_prov_status_error(listener.id)
-
-        return None
-
-
-class ListenersUpdate(BaseVThunderTask):
-    """Task to update amphora with all specified listeners' configurations."""
-
-    def execute(self, loadbalancer, listeners, vthunder):
-        """Execute updates per listener for an amphora."""
-        for listener in listeners:
-            listener.load_balancer = loadbalancer
-            try:
-                c = self.client_factory(vthunder)
-                name = loadbalancer.id + "_" + str(listener.protocol_port)
-                out = c.slb.virtual_server.vport.update(loadbalancer.id, name, listener.protocol,
-                                                        listener.protocol_port, listener.default_pool_id)
-                LOG.info("Listener created successfully.")
-            except Exception as e:
-                print(str(e))
-                LOG.info("Error occurred")
-
-    def revert(self, loadbalancer, *args, **kwargs):
-        """Handle failed listeners updates."""
-
-        LOG.warning("Reverting listeners updates.")
-
-        for listener in loadbalancer.listeners:
-            self.task_utils.mark_listener_prov_status_error(listener.id)
-
-        return None
-
-
-class ListenerDelete(BaseVThunderTask):
-    """Task to delete the listener on the vip."""
-
-    def execute(self, loadbalancer, listener, vthunder):
-        """Execute listener delete routines for an amphora."""
-        try:
-            c = self.client_factory(vthunder)
-            name = loadbalancer.id + "_" + str(listener.protocol_port)
-            out = c.slb.virtual_server.vport.delete(loadbalancer.id, name, listener.protocol,
-                                                    listener.protocol_port)
-            LOG.info("Listener deleted successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")
-        LOG.debug("Deleted the listener on the vip")
-
-    def revert(self, listener, *args, **kwargs):
-        """Handle a failed listener delete."""
-
-        LOG.warning("Reverting listener delete.")
-
-        self.task_utils.mark_listener_prov_status_error(listener.id)
-
-
-class PoolCreate(BaseVThunderTask):
-    """Task to update amphora with all specified listeners' configurations."""
-
-    def execute(self, pool, vthunder):
-        """Execute create pool for an amphora."""
-        try:
-            c = self.client_factory(vthunder)
-            out = c.slb.service_group.create(pool.id, pool.protocol)
-            LOG.info("Pool created successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")
-
-
-class PoolDelete(BaseVThunderTask):
-    """Task to update amphora with all specified listeners' configurations."""
-
-    def execute(self, pool, vthunder):
-        """Execute create pool for an amphora."""
-        try:
-            c = self.client_factory(vthunder)
-            out = c.slb.service_group.delete(pool.id)
-            LOG.info("Pool deleted successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")
-
-
-class MemberCreate(BaseVThunderTask):
-    """Task to update amphora with all specified member configurations."""
-
-    def execute(self, member, vthunder, pool):
-        """Execute create member for an amphora."""
-        try:
-            c = self.client_factory(vthunder)
-            out = c.slb.server.create(member.id, member.ip_address)
-            LOG.info("Member created successfully.")
-        except Exception as e:
-            print(str(e))
-        try:
-            c = self.client_factory(vthunder)
-            out = c.slb.service_group.member.create(pool.id, member.id, member.protocol_port)
-            LOG.info("Member associated to pool successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")
-
-
-class MemberDelete(BaseVThunderTask):
-    """Task to update amphora with all specified member configurations."""
-
-    def execute(self, member, vthunder, pool):
-        """Execute delete member for an amphora."""
-        axapi_version = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-        try:
-            c = self.client_factory(vthunder)
-            LOG.info("Member de-associated to pool successfully.")
-        except Exception as e:
-            print(str(e))
-        try:
-            c = self.client_factory(vthunder)
-            out = c.slb.server.delete(member.id)
-            LOG.info("Member deleted successfully.")
-        except Exception as e:
-            print(str(e))
-            LOG.info("Error occurred")
-
-
-class CreateHealthMonitorOnVThunder(BaseVThunderTask):
-    """ Task to create a healthmonitor and associate it with provided pool. """
-
+    @axapi_client_decorator
     def execute(self, vthunder):
-        """ Execute create health monitor for master vthunder """
+        try:
+            self.axapi_client.system.action.configureVRRP(1, 1)
+            LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
+        except Exception as e:
+            LOG.exception("Failed to configure master vThunder VRRP: %s", str(e))
+            raise
+
+
+class ConfigureVRRPBackup(task.Task):
+
+    """Task to configure Master vThunder VRRP"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder):
+        try:
+            self.axapi_client.system.action.configureVRRP(2, 1)
+            LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
+        except Exception as e:
+            LOG.exception("Failed to configure backup vThunder VRRP: %s", str(e))
+            raise
+
+
+class ConfigureVRID(task.Task):
+
+    """Task to configure vThunder VRID"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder, vrid=1):
+        try:
+            self.axapi_client.system.action.configureVRID(vrid)
+            LOG.debug("Configured the master vThunder for VRID")
+        except Exception as e:
+            LOG.exception("Failed to configure VRID on vthunder: %s", str(e))
+            raise
+
+
+class ConfigureVRRPSync(task.Task):
+
+    """Task to sync vThunder VRRP"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder, backup_vthunder):
+        """Execute to sync up vrrp in two vThunder devices."""
+        try:
+            self.axapi_client.system.action.configSynch(backup_vthunder.ip_address,
+                                                        backup_vthunder.username,
+                                                        backup_vthunder.password)
+            LOG.debug("Waiting 30 seconds for config synch.")
+            time.sleep(30)
+            LOG.debug("Sync up for vThunder master")
+        except Exception as e:
+            LOG.exception("Failed VRRP sync: %s", str(e))
+            raise
+
+
+def configure_avcs(axapi_client, device_id, device_priority, floating_ip, floating_ip_mask):
+    axapi_client.system.action.set_vcs_device(device_id, device_priority)
+    axapi_client.system.action.set_vcs_para(floating_ip, floating_ip_mask)
+    axapi_client.system.action.vcs_enable()
+    axapi_client.system.action.vcs_reload()
+
+
+class ConfigureaVCSMaster(task.Task):
+
+    """Task to configure aVCS"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder, device_id=1, device_priority=200,
+                floating_ip="192.168.0.100", floating_ip_mask="255.255.255.0"):
+        """Execute to configure aVCS in master vThunder"""
+        try:
+            configure_avcs(self.axapi_client, device_id, device_priority,
+                           floating_ip, floating_ip_mask)
+            LOG.debug("Configured the master vThunder for aVCS: %s", vthunder.id)
+        except Exception as e:
+            LOG.exception("Failed to configure master vThunder aVCS: %s", str(e))
+            raise
+
+
+class ConfigureaVCSBackup(task.Task):
+
+    @axapi_client_decorator
+    def execute(self, vthunder, device_id=2, device_priority=100,
+                floating_ip="192.168.0.100", floating_ip_mask="255.255.255.0"):
+        try:
+            attempts = 30
+            while attempts > 0:
+                # TODO(omkartelee01): Need this loop to be moved in acos_client with
+                # proper exception handling with all other API call loops.
+                # Currently resolves "System is Busy" error
+                try:
+                    configure_avcs(self.axapi_client, device_id, device_priority,
+                                   floating_ip, floating_ip_mask)
+                    attempts = 0
+                    LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
+                except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
+                    attempts = attempts - 1
+        except Exception as e:
+            LOG.exception("Failed to configure backup vThunder aVCS: %s", str(e))
+            raise
+
+
+class CreateHealthMonitorOnVThunder(task.Task):
+
+    """Task to create a Health Monitor and server for HM service"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder):
         method = None
         url = None
         expect_code = None
@@ -432,7 +283,6 @@ class CreateHealthMonitorOnVThunder(BaseVThunderTask):
         max_retries = CONF.a10_health_manager.health_check_max_retries
         port = CONF.a10_health_manager.bind_port
         ipv4 = CONF.a10_health_manager.bind_ip
-        c = self.client_factory(vthunder)
         if interval < timeout:
             LOG.warning(
                 "Interval should be greater than or equal to timeout. Reverting to default values. "
@@ -442,27 +292,44 @@ class CreateHealthMonitorOnVThunder(BaseVThunderTask):
 
         result = None
         try:
-            result = c.slb.hm.create(health_check, openstack_mappings.hm_type(c, 'UDP'),
-                                     interval, timeout, max_retries, method, url, expect_code,
-                                     port, ipv4)
-            LOG.info("Health Monitor created successfully.")
+            result = self.axapi_client.slb.hm.create(health_check,
+                                                     openstack_mappings.hm_type(
+                                                         self.axapi_client, 'UDP'),
+                                                     interval, timeout, max_retries, method, url,
+                                                     expect_code, port, ipv4)
+            LOG.debug("Successfully created health monitor for vThunder %s", vthunder.id)
         except Exception as e:
-            LOG.info(str(e))
+            LOG.debug("Failed to create health monitor: %s", str(e))
 
         if result:
             ip_address = CONF.a10_health_manager.udp_server_ip_address
             health_check = a10constants.OCTAVIA_HEALTH_MONITOR
             try:
-                c.slb.server.create(name, ip_address, health_check=health_check)
-                LOG.info("Server created successfully. Enabled health check for health monitor.")
+                self.axapi_client.slb.server.create(name, ip_address, health_check=health_check)
+                LOG.debug("Server created successfully. Enabled health check for health monitor.")
             except Exception as e:
-                LOG.info(str(e))
+                LOG.exception("Failed to create health monitor server: %s", str(e))
 
-class CheckVRRPStatus(BaseVThunderTask):
-    """"Task to check VRRP status"""
 
+class CheckVRRPStatus(task.Task):
+
+    """Task to check VRRP status"""
+
+    @axapi_client_decorator
     def execute(self, vthunder):
-        """Execute to configure vrrp in two vThunder devices."""
-        c = self.client_factory(vthunder)
-        status = c.system.action.check_vrrp_status()
-        return status
+        vrrp_status = self.axapi_client.system.action.check_vrrp_status()
+        if vrrp_status:
+            return True
+        else:
+            return False
+
+
+class ConfirmVRRPStatus(task.Task):
+
+    """Task to confirm master and backup VRRP status"""
+
+    def execute(self, master_vrrp_status, backup_vrrp_status):
+        if master_vrrp_status and master_vrrp_status:
+            return True
+        else:
+            return False

@@ -26,6 +26,7 @@ import oslo_messaging as messaging
 from octavia.common import constants
 from octavia.i18n import _
 from octavia import version
+
 from a10_octavia.common import config_types
 
 LOG = logging.getLogger(__name__)
@@ -75,8 +76,8 @@ A10_LISTENER_OPTS = [
                help=_('Policy Template (Policy template name).')),
     cfg.BoolOpt('autosnat', default=True,
                 help=_('Enable autosnat')),
-    cfg.IntOpt('conn_limit', min=1, max=8000000,
-               default=8000000,
+    cfg.IntOpt('conn_limit', min=1, max=64000000,
+               default=64000000,
                help=_('Connection Limit')),
     cfg.StrOpt('template_http',
                default=None,
@@ -115,8 +116,8 @@ A10_L7_RULE_OPTS = [
 ]
 
 A10_SERVER_OPTS = [
-    cfg.IntOpt('conn_limit', min=1, max=8000000,
-               default=8000000,
+    cfg.IntOpt('conn_limit', min=1, max=64000000,
+               default=64000000,
                help=_('Connection Limit')),
     cfg.IntOpt('conn_resume', min=1, max=1000000,
                default=1,

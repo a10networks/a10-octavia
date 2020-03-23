@@ -26,7 +26,6 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-
 class ComputeCreate(BaseComputeTask):
     """Create the compute instance for a new amphora."""
 
@@ -37,7 +36,6 @@ class ComputeCreate(BaseComputeTask):
         network_ids = CONF.a10_controller_worker.amp_boot_network_list[:]
         LOG.debug("Compute create execute for amphora with id %s", amphora_id)
         key_name = CONF.a10_controller_worker.amp_ssh_key_name
-        topology = CONF.a10_controller_worker.loadbalancer_topology
 
         try:
             if CONF.a10_controller_worker.build_rate_limit != -1:

@@ -14,26 +14,19 @@
 
 
 from datetime import datetime
-from oslo_config import cfg
-from oslo_db import exception as odb_exceptions
-from oslo_log import log as logging
-from oslo_utils import excutils
-from oslo_utils import uuidutils
-import six
 import sqlalchemy
-from sqlalchemy.orm import exc
-from taskflow import task
-from taskflow.types import failure
 from sqlalchemy.orm.exc import NoResultFound
 
+from oslo_config import cfg
+from oslo_log import log as logging
+from oslo_utils import uuidutils
+from taskflow import task
+
 from octavia.common import constants
-from octavia.common import data_models
-import octavia.common.tls_utils.cert_parser as cert_parser
-from octavia.controller.worker import task_utils as task_utilities
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
+
 from a10_octavia.db import repositories as a10_repo
-from octavia.api.drivers import driver_lib
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -70,15 +63,6 @@ class CreateVThunderEntry(BaseDatabaseTask):
         password = CONF.vthunder.default_vthunder_password
         axapi_version = CONF.vthunder.default_axapi_version
 
-        compute_id = None
-        undercloud = True
-        if amphora.compute_id:
-            compute_id = amphora.compute_id
-            undercloud = False
-        else:
-            undercloud = None
-            undercloud = True
-
         if role == constants.ROLE_MASTER:
             topology = "ACTIVE_STANDBY"
             role = "MASTER"
@@ -89,7 +73,7 @@ class CreateVThunderEntry(BaseDatabaseTask):
             topology = "STANDALONE"
             role = "MASTER"
 
-        vthunder = self.vthunder_repo.create(
+        self.vthunder_repo.create(
             db_apis.get_session(), vthunder_id=vthunder_id,
             amphora_id=amphora.id,
             device_name=vthunder_id, username=username,
@@ -97,7 +81,7 @@ class CreateVThunderEntry(BaseDatabaseTask):
             undercloud=False, axapi_version=axapi_version,
             loadbalancer_id=loadbalancer.id,
             project_id=loadbalancer.project_id,
-            compute_id=compute_id,
+            compute_id=amphora.compute_id,
             topology=topology,
             role=role,
             last_udp_update=datetime.utcnow(),
@@ -173,7 +157,7 @@ class GetComputeForProject(BaseDatabaseTask):
             self.vthunder_repo.update(db_apis.get_session(), vthunder.id,
                                       status="USED_SPARE", updated_at=datetime.utcnow())
         amphora_id = vthunder.amphora_id
-        amphora = self.amphora_repo.get(db_apis.get_session(), id=amphora_id)
+        self.amphora_repo.get(db_apis.get_session(), id=amphora_id)
         compute_id = vthunder.compute_id
         return compute_id
 
@@ -215,22 +199,22 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
     """ Create VThunder device entry in DB """
 
     def execute(self, loadbalancer, vthunder_config):
-        vthunder = self.vthunder_repo.create(db_apis.get_session(),
-                                             vthunder_id=uuidutils.generate_uuid(),
-                                             device_name=vthunder_config.device_name,
-                                             username=vthunder_config.username,
-                                             password=vthunder_config.password,
-                                             ip_address=vthunder_config.ip_address,
-                                             undercloud=vthunder_config.undercloud,
-                                             loadbalancer_id=loadbalancer.id,
-                                             project_id=vthunder_config.project_id,
-                                             axapi_version=vthunder_config.axapi_version,
-                                             topology="STANDALONE",
-                                             role="MASTER",
-                                             status="ACTIVE",
-                                             last_udp_update=datetime.utcnow(),
-                                             created_at=datetime.utcnow(),
-                                             updated_at=datetime.utcnow())
+        self.vthunder_repo.create(db_apis.get_session(),
+                                  vthunder_id=uuidutils.generate_uuid(),
+                                  device_name=vthunder_config.device_name,
+                                  username=vthunder_config.username,
+                                  password=vthunder_config.password,
+                                  ip_address=vthunder_config.ip_address,
+                                  undercloud=vthunder_config.undercloud,
+                                  loadbalancer_id=loadbalancer.id,
+                                  project_id=vthunder_config.project_id,
+                                  axapi_version=vthunder_config.axapi_version,
+                                  topology="STANDALONE",
+                                  role="MASTER",
+                                  status="ACTIVE",
+                                  last_udp_update=datetime.utcnow(),
+                                  created_at=datetime.utcnow(),
+                                  updated_at=datetime.utcnow())
         LOG.info("Successfully created vthunder entry in database.")
 
 
@@ -239,18 +223,18 @@ class CreateVThunderHealthEntry(BaseDatabaseTask):
     """ Create VThunder Health entry in DB """
 
     def execute(self, loadbalancer, vthunder_config):
-        vthunder = self.vthunder_repo.create(db_apis.get_session(),
-                                             vthunder_id=uuidutils.generate_uuid(),
-                                             device_name=vthunder_config.device_name,
-                                             username=vthunder_config.username,
-                                             password=vthunder_config.password,
-                                             ip_address=vthunder_config.ip_address,
-                                             undercloud=vthunder_config.undercloud,
-                                             loadbalancer_id=loadbalancer.id,
-                                             project_id=vthunder_config.project_id,
-                                             axapi_version=vthunder_config.axapi_version,
-                                             topology="STANDALONE",
-                                             role="MASTER")
+        self.vthunder_repo.create(db_apis.get_session(),
+                                  vthunder_id=uuidutils.generate_uuid(),
+                                  device_name=vthunder_config.device_name,
+                                  username=vthunder_config.username,
+                                  password=vthunder_config.password,
+                                  ip_address=vthunder_config.ip_address,
+                                  undercloud=vthunder_config.undercloud,
+                                  loadbalancer_id=loadbalancer.id,
+                                  project_id=vthunder_config.project_id,
+                                  axapi_version=vthunder_config.axapi_version,
+                                  topology="STANDALONE",
+                                  role="MASTER")
         LOG.info("Successfully created vthunder entry in database.")
 
 
@@ -265,7 +249,7 @@ class MarkVThunderStatusInDB(BaseDatabaseTask):
         except (sqlalchemy.orm.exc.NoResultFound,
                 sqlalchemy.orm.exc.UnmappedInstanceError):
             LOG.debug('No existing amphora health record to mark busy '
-                      'for amphora: %s, skipping.', vthunder_id)
+                      'for amphora: %s, skipping.', vthunder.id)
 
 
 class CreateSpareVThunderEntry(BaseDatabaseTask):

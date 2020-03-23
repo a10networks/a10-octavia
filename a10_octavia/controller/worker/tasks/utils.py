@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
+
 
 def get_sess_pers_templates(pool):
     c_pers, s_pers, sp = None, None, None
@@ -22,3 +24,17 @@ def get_sess_pers_templates(pool):
         elif sp.type == 'SOURCE_IP':
             s_pers = pool.id
     return c_pers, s_pers
+
+
+def meta(lbaas_obj, key, default):
+    if isinstance(lbaas_obj, dict):
+        meta = lbaas_obj.get('a10_meta', '{}')
+    elif hasattr(lbaas_obj, 'a10_meta'):
+        meta = lbaas_obj.a10_meta
+    else:
+        return default
+    try:
+        meta_json = json.loads(meta)
+    except Exception:
+        return default
+    return meta_json.get(key, default)

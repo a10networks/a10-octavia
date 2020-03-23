@@ -12,27 +12,34 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import imp
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
 
-from a10_octavia.controller.worker.tasks.server_tasks import MemberCreate
 from a10_octavia.common.data_models import VThunder
+import a10_octavia.controller.worker.tasks.virtual_server_tasks as task
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 
+AMPHORA = o_data_models.Amphora(id=t_constants.MOCK_AMP_ID1)
 VTHUNDER = VThunder()
-POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID)
-MEMBER = o_data_models.Member(
-    id=a10constants.MOCK_MEMBER_ID, protocol_port=t_constants.MOCK_PORT_ID)
+LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID, amphorae=[AMPHORA])
 
 
-class TestHandlerServerTasks(BaseTaskTestCase):
+class TestHandlerVirtualServerTasks(BaseTaskTestCase):
 
-    def test_revert_member_create_task(self):
-        mock_member = MemberCreate()
-        mock_member.revert(MEMBER, VTHUNDER, POOL)
-        self.client_mock.slb.service_group.member.delete.assert_called_with(
-            POOL.id, MEMBER.id, MEMBER.protocol_port)
-        self.client_mock.slb.server.delete.assert_called_with(
-            MEMBER.id)
+    def setUp(self):
+        super(TestHandlerVirtualServerTasks, self).setUp()
+        imp.reload(task)
+
+    def test_revert_create_virtual_server_task(self):
+        client_mock = mock.Mock()
+        mock_load_balancer = task.CreateVirtualServerTask()
+        mock_load_balancer.axapi_client = client_mock
+        mock_load_balancer.revert(LB, VTHUNDER)
+        client_mock.slb.virtual_server.delete.assert_called_with(LB.id)

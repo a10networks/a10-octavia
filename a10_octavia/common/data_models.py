@@ -13,12 +13,10 @@
 #    under the License.
 
 
-import re
 from datetime import datetime
+import re
 import six
 from sqlalchemy.orm import collections
-
-from octavia.common import constants
 
 
 class BaseDataModel(object):

@@ -16,41 +16,25 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from taskflow.patterns import linear_flow
 from taskflow.patterns import unordered_flow
+
+from octavia.common import constants
+from octavia.common import exceptions
+from octavia.controller.worker.flows import amphora_flows
+from octavia.controller.worker.flows import listener_flows
+from octavia.controller.worker.flows import member_flows
+from octavia.controller.worker.flows import pool_flows
+from octavia.controller.worker.tasks import compute_tasks
+from octavia.controller.worker.tasks import database_tasks
+from octavia.controller.worker.tasks import lifecycle_tasks
+from octavia.controller.worker.tasks import network_tasks
+
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.flows import vthunder_flows
-from a10_octavia.controller.worker.tasks import virtual_server_tasks
-from a10_octavia.controller.worker.tasks import vthunder_tasks
 from a10_octavia.controller.worker.tasks import a10_compute_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
-from octavia.common import constants
-from octavia.common import exceptions
-
-try:
-    from octavia.controller.worker.v2.flows import amphora_flows
-    from octavia.controller.worker.v2.flows import listener_flows
-    from octavia.controller.worker.v2.flows import member_flows
-    from octavia.controller.worker.v2.flows import pool_flows
-
-    from octavia.controller.worker.v2.tasks import database_tasks
-    from octavia.controller.worker.v2.tasks import lifecycle_tasks
-    from octavia.controller.worker.v2.tasks import network_tasks
-except (ImportError, AttributeError):
-    pass
-
-try:
-    # Stein and previous
-    from octavia.controller.worker.flows import amphora_flows
-    from octavia.controller.worker.flows import listener_flows
-    from octavia.controller.worker.flows import member_flows
-    from octavia.controller.worker.flows import pool_flows
-    from octavia.controller.worker.tasks import database_tasks
-    from octavia.controller.worker.tasks import lifecycle_tasks
-    from octavia.controller.worker.tasks import network_tasks
-    from octavia.controller.worker.tasks import compute_tasks
-except (ImportError, AttributeError):
-    pass
-
+from a10_octavia.controller.worker.tasks import virtual_server_tasks
+from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -280,18 +264,19 @@ class LoadBalancerFlows(object):
                 requires=constants.LOADBALANCER,
                 provides=a10constants.BACKUP_VTHUNDER))
             new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
-                name="Backup_amphora_plug",
-                rebind=[constants.LOADBALANCER,
-                        a10constants.BACKUP_VTHUNDER]))
+                name=a10constants.BACKUP_AMPHORA_PLUG,
+                requires=constants.LOADBALANCER,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             new_LB_net_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-                name="backup_connectivity_wait",
-                rebind=[a10constants.BACKUP_VTHUNDER, constants.AMPHORA]))
+                name=a10constants.BACKUP_CONNECTIVITY_WAIT,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                requires=constants.AMPHORA))
             new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
-                name="backup_enable_interface",
-                rebind=[a10constants.BACKUP_VTHUNDER]))
+                name=a10constants.BACKUP_ENABLE_INTERFACE,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             new_LB_net_subflow.add(a10_database_tasks.MarkVThunderStatusInDB(
                 name=a10constants.MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB,
-                rebind=[a10constants.BACKUP_VTHUNDER],
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                 inject={"status": constants.ACTIVE}))
         return new_LB_net_subflow
 

@@ -25,12 +25,12 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 
-from octavia import version
 from octavia.cmd import health_manager
+from octavia import version
+
+from a10_octavia.cmd import service
 from a10_octavia.cmd import vthunder_heartbeat_udp as heartbeat_udp
 from a10_octavia.controller.healthmanager import a10_health_manager
-from a10_octavia.cmd import service
-
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -109,6 +109,7 @@ def main():
             process.join()
     except KeyboardInterrupt:
         process_cleanup()
+
 
 if __name__ == "__main__":
     main()
