@@ -24,7 +24,7 @@ except ImportError:
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
 
-from a10_octavia.controller.worker.tasks.service_group_tasks import PoolCreate
+import a10_octavia.controller.worker.tasks.service_group_tasks as task
 from a10_octavia.common.data_models import VThunder
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
@@ -36,13 +36,14 @@ POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID)
 class TestHandlerServiceGroupTasks(BaseTaskTestCase):
 
     def setUp(self):
-        super(TestHandlerServerTasks, self).setUp()
+        super(TestHandlerServiceGroupTasks, self).setUp()
         imp.reload(task)
         self.client_mock = mock.Mock()
  
     @patch('octavia.controller.worker.task_utils.TaskUtils')
     def test_revert_pool_create_task(self, mock_task_utils):
-        mock_pool = PoolCreate()
+        mock_pool = task.PoolCreate()
+        mock_pool.axapi_client = self.client_mock
         mock_pool.revert(POOL, VTHUNDER)
         mock_pool.task_utils.mark_pool_prov_status_error.assert_called_with(POOL.id)
         self.client_mock.slb.service_group.delete.assert_called_with(POOL.id)
