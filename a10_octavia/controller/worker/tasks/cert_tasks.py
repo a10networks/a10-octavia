@@ -27,21 +27,21 @@ LOG = logging.getLogger(__name__)
 class SSLCertCreate(task.Task):
     """Task to create an SSL certificate"""
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder, action="import", certificate_type="pem"):
+    def execute(self, loadbalancer, listener, vthunder, certificate_type="pem"):
         barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
         cert_data = utils.get_cert_data(barbican_client, listener)
         try:
-            if self.axapi_client.file.ssl_cert.exists(file=cert_data["cert_filename"]):
-                self.axapi_client.file.ssl_cert.update(file=cert_data["cert_filename"],
-                                                       cert=cert_data["cert_content"],
-                                                       size=len(cert_data["cert_content"]),
-                                                       action=action,
+            if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
+                self.axapi_client.file.ssl_cert.update(file=cert_data.cert_filename,
+                                                       cert=cert_data.cert_content,
+                                                       size=len(cert_data.cert_content),
+                                                       action="import",
                                                        certificate_type=certificate_type)
             else:
-                self.axapi_client.file.ssl_cert.create(file=cert_data["cert_filename"],
-                                                       cert=cert_data["cert_content"],
-                                                       size=len(cert_data["cert_content"]),
-                                                       action=action,
+                self.axapi_client.file.ssl_cert.create(file=cert_data.cert_filename,
+                                                       cert=cert_data.cert_content,
+                                                       size=len(cert_data.cert_content),
+                                                       action="import",
                                                        certificate_type=certificate_type)
         except Exception as e:
             LOG.exception("Failed to create SSL certificate: %s", str(e))
@@ -53,8 +53,8 @@ class SSLCertCreate(task.Task):
         barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
         cert_data = utils.get_cert_data(barbican_client, listener)
         try:
-            self.axapi_client.file.ssl_cert.delete(file=cert_data["cert_filename"])
-            LOG.debug("Reverted SSLCertCreate: %s", cert_data["cert_filename"])
+            self.axapi_client.file.ssl_cert.delete(file=cert_data.cert_filename)
+            LOG.debug("Reverted SSLCertCreate: %s", cert_data.cert_filename)
         except Exception:
             pass
 
@@ -62,18 +62,18 @@ class SSLCertCreate(task.Task):
 class SSLKeyCreate(task.Task):
     """Task to create an SSL Key"""
     @axapi_client_decorator
-    def execute(self, cert_data, vthunder, action="import"):
+    def execute(self, cert_data, vthunder):
         try:
-            if self.axapi_client.file.ssl_key.exists(file=cert_data["key_filename"]):
-                self.axapi_client.file.ssl_key.update(file=cert_data["key_filename"],
-                                                      cert=cert_data["key_content"],
-                                                      size=len(cert_data["key_content"]),
-                                                      action=action)
+            if self.axapi_client.file.ssl_key.exists(file=cert_data.key_filename):
+                self.axapi_client.file.ssl_key.update(file=cert_data.key_filename,
+                                                      cert=cert_data.key_content,
+                                                      size=len(cert_data.key_content),
+                                                      action="import")
             else:
-                self.axapi_client.file.ssl_key.create(file=cert_data["key_filename"],
-                                                      cert=cert_data["key_content"],
-                                                      size=len(cert_data["key_content"]),
-                                                      action=action)
+                self.axapi_client.file.ssl_key.create(file=cert_data.key_filename,
+                                                      cert=cert_data.key_content,
+                                                      size=len(cert_data.key_content),
+                                                      action="import")
         except Exception as e:
             LOG.exception("Failed to create SSL key: %s", str(e))
             raise e
@@ -81,8 +81,8 @@ class SSLKeyCreate(task.Task):
     @axapi_client_decorator
     def revert(self, cert_data, vthunder, *args, **kwargs):
         try:
-            self.axapi_client.file.ssl_key.delete(file=cert_data["key_filename"])
-            LOG.debug("Reverted SSLKeyCreate: %s", cert_data["key_filename"])
+            self.axapi_client.file.ssl_key.delete(file=cert_data.key_filename)
+            LOG.debug("Reverted SSLKeyCreate: %s", cert_data.key_filename)
         except Exception:
             pass
 
@@ -92,16 +92,16 @@ class ClientSSLTemplateCreate(task.Task):
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
-            if self.axapi_client.slb.template.client_ssl.exists(name=cert_data["template_name"]):
-                self.axapi_client.slb.template.client_ssl.update(name=cert_data["template_name"],
-                                                                 cert=cert_data["cert_filename"],
-                                                                 key=cert_data["key_filename"],
-                                                                 passphrase=cert_data["key_pass"])
+            if self.axapi_client.slb.template.client_ssl.exists(name=cert_data.template_name):
+                self.axapi_client.slb.template.client_ssl.update(name=cert_data.template_name,
+                                                                 cert=cert_data.cert_filename,
+                                                                 key=cert_data.key_filename,
+                                                                 passphrase=cert_data.key_pass)
             else:
-                self.axapi_client.slb.template.client_ssl.create(name=cert_data["template_name"],
-                                                                 cert=cert_data["cert_filename"],
-                                                                 key=cert_data["key_filename"],
-                                                                 passphrase=cert_data["key_pass"])
+                self.axapi_client.slb.template.client_ssl.create(name=cert_data.template_name,
+                                                                 cert=cert_data.cert_filename,
+                                                                 key=cert_data.key_filename,
+                                                                 passphrase=cert_data.key_pass)
         except Exception as e:
             LOG.exception("Failed to create client SSL template: %s", str(e))
             raise e
@@ -109,8 +109,8 @@ class ClientSSLTemplateCreate(task.Task):
     @axapi_client_decorator
     def revert(self, cert_data, vthunder, *args, **kwargs):
         try:
-            self.axapi_client.slb.template.client_ssl.delete(name=cert_data["template_name"])
-            LOG.debug("Reverted ClientSSLTemplateCreate: %s", cert_data["template_name"])
+            self.axapi_client.slb.template.client_ssl.delete(name=cert_data.template_name)
+            LOG.debug("Reverted ClientSSLTemplateCreate: %s", cert_data.template_name)
         except Exception:
             pass
 
@@ -122,13 +122,13 @@ class SSLCertUpdate(task.Task):
         barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
         cert_data = utils.get_cert_data(barbican_client, listener)
         try:
-            if self.axapi_client.file.ssl_cert.exists(file=cert_data["cert_filename"]):
-                self.axapi_client.file.ssl_cert.update(file=cert_data["cert_filename"],
-                                                       cert=cert_data["cert_content"],
-                                                       size=len(cert_data["cert_content"]),
+            if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
+                self.axapi_client.file.ssl_cert.update(file=cert_data.cert_filename,
+                                                       cert=cert_data.cert_content,
+                                                       size=len(cert_data.cert_content),
                                                        action=action,
                                                        certificate_type=certificate_type)
-                LOG.debug("SSL certificate updated successfully: %s", cert_data["cert_filename"])
+                LOG.debug("SSL certificate updated successfully: %s", cert_data.cert_filename)
         except Exception as e:
             LOG.warning("Failed to update SSL Certificate: %s", str(e))
         return cert_data
@@ -139,12 +139,12 @@ class SSLKeyUpdate(task.Task):
     @axapi_client_decorator
     def execute(self, cert_data, vthunder, action="import"):
         try:
-            if self.axapi_client.file.ssl_key.exists(file=cert_data["key_filename"]):
-                self.axapi_client.file.ssl_key.update(file=cert_data["key_filename"],
-                                                      cert=cert_data["key_content"],
-                                                      size=len(cert_data["key_content"]),
+            if self.axapi_client.file.ssl_key.exists(file=cert_data.key_filename):
+                self.axapi_client.file.ssl_key.update(file=cert_data.key_filename,
+                                                      cert=cert_data.key_content,
+                                                      size=len(cert_data.key_content),
                                                       action=action)
-                LOG.debug("SSL Key updated successfully: %s", cert_data["key_filename"])
+                LOG.debug("SSL Key updated successfully: %s", cert_data.key_filename)
         except Exception as e:
             LOG.warning("Failed to update SSL Key: %s", str(e))
 
@@ -154,13 +154,13 @@ class ClientSSLTemplateUpdate(task.Task):
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
-            if self.axapi_client.slb.template.client_ssl.exists(name=cert_data["template_name"]):
-                self.axapi_client.slb.template.client_ssl.update(name=cert_data["template_name"],
-                                                                 cert=cert_data["cert_filename"],
-                                                                 key=cert_data["key_filename"],
-                                                                 passphrase=cert_data["key_pass"])
+            if self.axapi_client.slb.template.client_ssl.exists(name=cert_data.template_name):
+                self.axapi_client.slb.template.client_ssl.update(name=cert_data.template_name,
+                                                                 cert=cert_data.cert_filename,
+                                                                 key=cert_data.key_filename,
+                                                                 passphrase=cert_data.key_pass)
                 LOG.debug("Client SSL Template updated successfully: %s",
-                          cert_data["template_name"])
+                          cert_data.template_name)
         except Exception as e:
             LOG.warning("Failed to update Client SSL Template: %s", str(e))
 
@@ -172,9 +172,9 @@ class SSLCertDelete(task.Task):
         barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
         cert_data = utils.get_cert_data(barbican_client, listener)
         try:
-            if self.axapi_client.file.ssl_cert.exists(file=cert_data["cert_filename"]):
-                self.axapi_client.file.ssl_cert.delete(file=cert_data["cert_filename"])
-                LOG.debug("SSL certificate deleted successfully: %s", cert_data["cert_filename"])
+            if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
+                self.axapi_client.file.ssl_cert.delete(file=cert_data.cert_filename)
+                LOG.debug("SSL certificate deleted successfully: %s", cert_data.cert_filename)
         except Exception as e:
             LOG.warning("Failed to delete SSL Certificate: %s", str(e))
         return cert_data
@@ -185,9 +185,9 @@ class SSLKeyDelete(task.Task):
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
-            if self.axapi_client.file.ssl_key.exists(file=cert_data["key_filename"]):
-                self.axapi_client.file.ssl_key.delete(file=cert_data["key_filename"])
-                LOG.debug("SSL Key deleted successfully: %s", cert_data["key_filename"])
+            if self.axapi_client.file.ssl_key.exists(file=cert_data.key_filename):
+                self.axapi_client.file.ssl_key.delete(file=cert_data.key_filename)
+                LOG.debug("SSL Key deleted successfully: %s", cert_data.key_filename)
         except Exception as e:
             LOG.warning("Failed to delete SSL Key: %s", str(e))
 
@@ -197,9 +197,9 @@ class ClientSSLTemplateDelete(task.Task):
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
-            if self.axapi_client.slb.template.client_ssl.exists(name=cert_data["template_name"]):
-                self.axapi_client.slb.template.client_ssl.delete(name=cert_data["template_name"])
+            if self.axapi_client.slb.template.client_ssl.exists(name=cert_data.template_name):
+                self.axapi_client.slb.template.client_ssl.delete(name=cert_data.template_name)
                 LOG.debug("Client SSL Template deleted successfully: %s",
-                          cert_data["template_name"])
+                          cert_data.template_name)
         except Exception as e:
             LOG.warning("Failed to delete Client SSL Template: %s", str(e))

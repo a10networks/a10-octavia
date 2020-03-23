@@ -44,7 +44,7 @@ CERT_DATA = Certificate(cert_filename=a10_test_constants.MOCK_CERT_FILENAME,
                         key_filename=a10_test_constants.MOCK_KEY_FILENAME,
                         key_content=a10_test_constants.MOCK_KEY_CONTENT,
                         template_name=a10_test_constants.MOCK_TEMPLATE_NAME,
-                        key_pass=a10_test_constants.MOCK_KEY_PASS).to_dict()
+                        key_pass=a10_test_constants.MOCK_KEY_PASS)
 
 
 class TestCertHandlerTasks(BaseTaskTestCase):
