@@ -35,17 +35,11 @@ class PoolParent(object):
         service_group_temp['template-policy'] = CONF.service_group.template_policy
         protocol = openstack_mappings.service_group_protocol(self.axapi_client, pool.protocol)
         lb_method = openstack_mappings.service_group_lb_method(self.axapi_client, pool.lb_algorithm)
-        try:
-            set_method(pool.id,
-                       protocol=protocol,
-                       lb_method=lb_method,
-                       service_group_templates=service_group_temp,
-                       axapi_args=axapi_args)
-            LOG.debug("Pool created successfully: %s", pool.id)
-            return pool
-        except Exception as e:
-            LOG.exception("Failed to create pool: %s", str(e))
-            raise
+        set_method(pool.id,
+                   protocol=protocol,
+                   lb_method=lb_method,
+                   service_group_templates=service_group_temp,
+                   axapi_args=axapi_args)
 
 
 class PoolCreate(PoolParent, task.Task):
@@ -53,8 +47,21 @@ class PoolCreate(PoolParent, task.Task):
 
     @axapi_client_decorator
     def execute(self, vthunder, pool):
-        return self.set(self.axapi_client.slb.service_group.create, pool)
+        try:
+            self.set(self.axapi_client.slb.service_group.create, pool)
+            LOG.debug("Pool created successfully: %s", pool.id)
+            return pool
+        except Exception as e:
+            LOG.exception("Failed to create pool: %s", str(e))
+            raise
 
+    @axapi_client_decorator
+    def revert(self, vthunder, pool, *args, **kwargs):
+        self.task_utils.mark_pool_prov_status_error(pool.id)
+        try:
+            self.axapi_client.slb.service_group.delete(pool.id)
+        except Exception as e:
+            LOG.warning("Failed to revert create pool: %s", str(e))
 
 class PoolDelete(task.Task):
     """Task to delete pool"""
@@ -74,4 +81,8 @@ class PoolUpdate(PoolParent, task.Task):
     @axapi_client_decorator
     def execute(self, pool, vthunder, update_dict):
         pool.__dict__.update(update_dict)
-        self.set(self.axapi_client.slb.service_group.update, pool)
+        try:
+            self.set(self.axapi_client.slb.service_group.update, pool)
+            LOG.debug("Pool updated successfully: %s", pool.id)
+        except Exception as e:
+            LOG.warning("Failed to update pool: %s", str(e))
