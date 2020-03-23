@@ -13,7 +13,9 @@
 #    under the License.
 
 
+import imp
 try:
+    from unittest import mock
     from unittest.mock import patch
 except ImportError:
     import mock
@@ -33,6 +35,11 @@ POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID)
 
 class TestHandlerServiceGroupTasks(BaseTaskTestCase):
 
+    def setUp(self):
+        super(TestHandlerServerTasks, self).setUp()
+        imp.reload(task)
+        self.client_mock = mock.Mock()
+ 
     @patch('octavia.controller.worker.task_utils.TaskUtils')
     def test_revert_pool_create_task(self, mock_task_utils):
         mock_pool = PoolCreate()
