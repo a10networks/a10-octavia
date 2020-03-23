@@ -39,7 +39,7 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         super(TestHandlerServiceGroupTasks, self).setUp()
         imp.reload(task)
         self.client_mock = mock.Mock()
- 
+
     @patch('octavia.controller.worker.task_utils.TaskUtils')
     def test_revert_pool_create_task(self, mock_task_utils):
         mock_pool = task.PoolCreate()

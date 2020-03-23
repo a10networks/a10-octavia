@@ -68,6 +68,7 @@ class PoolCreate(PoolParent, task.Task):
         except Exception as e:
             LOG.warning("Failed to revert create pool: %s", str(e))
 
+
 class PoolDelete(task.Task):
     """Task to delete pool"""
 
