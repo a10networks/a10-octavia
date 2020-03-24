@@ -20,11 +20,16 @@ cd $HOME/devstack
 
 git checkout stable/stein
 
+git clone https://github.com/openstack/python-octaviaclient.git $HOME/python-octaviaclient
+cd $HOME/python-octaviaclient
+
+git checkout stable/stein
+pip install -e .
+
 cat <<EOF > $HOME/devstack/localrc
 enable_plugin barbican https://opendev.org/openstack/barbican stable/stein
 enable_plugin neutron https://opendev.org/openstack/neutron stable/stein
 enable_plugin octavia https://opendev.org/openstack/octavia stable/stein
-LIBS_FROM_GIT+=python-octaviaclient
 
 KEYSTONE_TOKEN_FORMAT=fernet
 
