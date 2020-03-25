@@ -16,10 +16,8 @@
 import imp
 try:
     from unittest import mock
-    from unittest.mock import patch
 except ImportError:
     import mock
-    from mock import patch
 
 from octavia.common import data_models as o_data_models
 
@@ -39,10 +37,8 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         imp.reload(task)
         self.client_mock = mock.Mock()
 
-    @patch('octavia.controller.worker.task_utils.TaskUtils')
-    def test_revert_pool_create_task(self, mock_task_utils):
+    def test_revert_pool_create_task(self):
         mock_pool = task.PoolCreate()
         mock_pool.axapi_client = self.client_mock
         mock_pool.revert(POOL, VTHUNDER)
-        mock_pool.task_utils.mark_pool_prov_status_error.assert_called_with(POOL.id)
         self.client_mock.slb.service_group.delete.assert_called_with(POOL.id)
