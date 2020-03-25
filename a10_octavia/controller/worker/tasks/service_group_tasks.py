@@ -16,8 +16,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from taskflow import task
 
-from octavia.controller.worker import task_utils
-
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
@@ -27,9 +25,6 @@ LOG = logging.getLogger(__name__)
 
 
 class PoolParent(object):
-
-    def __init__(self, **kwargs):
-        self.task_utils = task_utils.TaskUtils()
 
     def set(self, set_method, pool):
 
@@ -62,7 +57,6 @@ class PoolCreate(PoolParent, task.Task):
 
     @axapi_client_decorator
     def revert(self, pool, vthunder, *args, **kwargs):
-        self.task_utils.mark_pool_prov_status_error(pool.id)
         try:
             self.axapi_client.slb.service_group.delete(pool.id)
         except Exception as e:
