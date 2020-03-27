@@ -45,18 +45,15 @@ LOG_COLOR=True
 # Pre-requisite
 ENABLED_SERVICES=key,rabbit,mysql,horizon
 # Nova
-ENABLED_SERVICES+=,n-api,n-obj,n-cpu,n-cond,n-sch
-# Placement service needed for Nova
+ENABLED_SERVICES+=,n-api,n-crt,n-cpu,n-cond,n-sch,n-api-meta,n-sproxy
 ENABLED_SERVICES+=,placement-api,placement-client
 # Glance
 ENABLED_SERVICES+=,g-api,g-reg
 # Neutron
-ENABLED_SERVICES+=,neutron-api,neutron-agent,neutron-dhcp,neutron-l3
-ENABLED_SERVICES+=,neutron-metadata-agent,neutron-qos
-# Tempest (optional)
-#ENABLED_SERVICES+=,tempest
-# Octavia
-ENABLED_SERVICES+=,octavia,o-api,o-cw,o-hm,o-hk,o-da
+ENABLED_SERVICES+=,q-svc,q-agt,q-dhcp,q-l3,q-meta,neutron
+ENABLED_SERVICES+=,octavia,o-cw,o-hk,o-hm,o-api
+# Cinder
+ENABLED_SERVICES+=,c-api,c-vol,c-sch
 EOF
 
 # Create the stack user
