@@ -29,11 +29,14 @@ LOG = logging.getLogger(__name__)
 class ComputeCreate(BaseComputeTask):
     """Create the compute instance for a new amphora."""
 
-    def execute(self, amphora_id, build_type_priority=constants.LB_CREATE_NORMAL_PRIORITY,
+    def execute(self, amphora_id, loadbalancer,
+                build_type_priority=constants.LB_CREATE_NORMAL_PRIORITY,
                 server_group_id=None, ports=None):
 
         ports = ports or []
         network_ids = CONF.a10_controller_worker.amp_boot_network_list[:]
+        # Injecting VIP network ID
+        network_ids.append(loadbalancer.vip.network_id)
         LOG.debug("Compute create execute for amphora with id %s", amphora_id)
         key_name = CONF.a10_controller_worker.amp_ssh_key_name
 
