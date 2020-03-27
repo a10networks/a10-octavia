@@ -54,6 +54,8 @@ ENABLED_SERVICES+=,q-svc,q-agt,q-dhcp,q-l3,q-meta,neutron
 ENABLED_SERVICES+=,octavia,o-cw,o-hk,o-hm,o-api
 # Cinder
 ENABLED_SERVICES+=,c-api,c-vol,c-sch
+# Tempest (optional)
+#ENABLED_SERVICES+=,tempest
 EOF
 
 # Create the stack user
