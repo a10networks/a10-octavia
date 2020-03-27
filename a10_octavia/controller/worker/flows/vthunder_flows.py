@@ -24,6 +24,7 @@ from octavia.controller.worker.tasks import database_tasks
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_compute_tasks as compute_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 CONF = cfg.CONF
@@ -164,6 +165,19 @@ class VThunderFlows(object):
         create_amp_for_lb_subflow.add(database_tasks.CreateAmphoraInDB(
             name=sf_name + '-' + constants.CREATE_AMPHORA_INDB,
             provides=constants.AMPHORA_ID))
+        # VIP subnet integration at bootup
+        create_amp_for_lb_subflow.add(database_tasks.ReloadLoadBalancer(
+            name=sf_name + '-' + constants.RELOADLOAD_BALANCER,
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
+        create_amp_for_lb_subflow.add(a10_network_tasks.AllocateVIP(
+            name=sf_name + '-' + a10constants.ALLOCATE_VIP,
+            requires=constants.LOADBALANCER,
+            provides=constants.VIP))
+        create_amp_for_lb_subflow.add(database_tasks.UpdateVIPAfterAllocation(
+            name=sf_name + '-' + a10constants.UPDATE_VIP_AFTER_ALLOCATION,
+            requires=(constants.LOADBALANCER_ID, constants.VIP),
+            provides=constants.LOADBALANCER))
 
         require_server_group_id_condition = (
             role in (constants.ROLE_BACKUP, constants.ROLE_MASTER) and
@@ -176,6 +190,7 @@ class VThunderFlows(object):
                     constants.AMPHORA_ID,
                     constants.BUILD_TYPE_PRIORITY,
                     constants.SERVER_GROUP_ID,
+                    constants.LOADBALANCER
                 ),
                 provides=constants.COMPUTE_ID))
         else:
@@ -184,6 +199,7 @@ class VThunderFlows(object):
                 requires=(
                     constants.AMPHORA_ID,
                     constants.BUILD_TYPE_PRIORITY,
+                    constants.LOADBALANCER
                 ),
                 provides=constants.COMPUTE_ID))
 
@@ -202,23 +218,15 @@ class VThunderFlows(object):
             requires=(constants.AMPHORA_ID, constants.COMPUTE_OBJ),
             provides=constants.AMPHORA))
         # create vThunder entry in custom DB
-        create_amp_for_lb_subflow.add(database_tasks.ReloadLoadBalancer(
-            name=sf_name + '-' + 'reload_loadbalancer',
-            requires=constants.LOADBALANCER_ID,
-            provides=constants.LOADBALANCER))
         create_amp_for_lb_subflow.add(a10_database_tasks.CreateVThunderEntry(
-            name=sf_name + '-' + 'set load balancer status PENDING_CREATE',
+            name=sf_name + '-' + a10constants.CREATE_VTHUNDER_ENTRY,
             requires=(constants.AMPHORA, constants.LOADBALANCER),
-            inject={"role": role, "status": constants.PENDING_CREATE}))
+            inject={a10constants.ROLE: role, a10constants.STATUS: constants.PENDING_CREATE}))
         # Get VThunder details from database
         create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-            name=sf_name + '-' + 'Get_Loadbalancer_from_db',
+            name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_amp_for_lb_subflow.add(
-            vthunder_tasks.VThunderComputeConnectivityWait(
-                name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
-                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         # create_amp_for_lb_subflow.add(amphora_driver_tasks.AmphoraFinalize(
         #    name=sf_name + '-' + constants.AMPHORA_FINALIZE,
         #    requires=constants.AMPHORA))
