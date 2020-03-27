@@ -120,11 +120,11 @@ from `a10-octavia/a10_octavia/db/migration` folder run
 alembic upgrade head
 ```
 
-If versioning error occurs, delete all entries in the `alembic_versions` table from `octavia` database and re-run the above command.
+If versioning error occurs, delete all entries in the `alembic_version` table from `octavia` database and re-run the above command.
 
 ```shell
 mysql> use octavia;
-mysql> DELETE FROM alembic_versions;
+mysql> DELETE FROM alembic_version;
 ```
 
 **Note: Octavia verisons less than 4.1.1 have the `alembic_migrations` table instead
