@@ -12,7 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from taskflow.patterns import graph_flow, linear_flow
+from taskflow.patterns import graph_flow
+from taskflow.patterns import linear_flow
 
 from octavia.common import constants
 from octavia.controller.worker.tasks import database_tasks

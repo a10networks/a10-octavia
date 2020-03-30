@@ -280,6 +280,7 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
         LOG.info("Successfully created vthunder entry in database.")
         return vthunder
 
+
 class MarkLBAndListenerActiveInDB(BaseDatabaseTask):
     """Mark the load balancer and specified listener active in the DB.
     Since sqlalchemy will likely retry by itself always revert if it fails
