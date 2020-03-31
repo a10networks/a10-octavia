@@ -45,6 +45,7 @@ PERS_TYPE = ['cookie_persistence', 'src_ip_persistence']
 # Taskflow flow and task names
 
 BACKUP_AMPHORA_PLUG = 'backup-amphora-plug'
+MASTER_CONNECTIVITY_WAIT = 'master-connectivity-wait'
 BACKUP_CONNECTIVITY_WAIT = 'backup-connectivity-wait'
 BACKUP_ENABLE_INTERFACE = 'backup-enable-interface'
 MARK_VTHUNDER_MASTER_ACTIVE_IN_DB = 'mark-vthunder-master-active-in-db'
@@ -67,3 +68,7 @@ CHECK_VRRP_STATUS = 'check-vrrp-status'
 CHECK_VRRP_MASTER_STATUS = 'check-vrrp-master-status'
 CHECK_VRRP_BACKUP_STATUS = 'check-vrrp-backup-status'
 CONFIRM_VRRP_STATUS = 'confirm-vrrp-status'
+ALLOCATE_VIP = 'allocate-vip'
+UPDATE_VIP_AFTER_ALLOCATION = 'update-vip-after-allocation'
+CREATE_VTHUNDER_ENTRY = 'create-vthunder-entry'
+VTHUNDER_BY_LB = 'vthunder-by-loadbalancer'

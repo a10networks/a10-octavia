@@ -72,20 +72,17 @@ class MemberFlows(object):
             create_member_flow.add(
                 vthunder_tasks.AmphoraePostMemberNetworkPlug(
                     name="backup_amphora_network_plug",
-                    rebind=[
-                        constants.ADDED_PORTS,
-                        constants.LOADBALANCER,
-                        a10constants.BACKUP_VTHUNDER]))
+                    requires=[constants.ADDED_PORTS, constants.LOADBALANCER],
+                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
                 name="backup_compute_conn_wait",
-                rebind=[a10constants.BACKUP_VTHUNDER, constants.AMPHORA]))
+                requires=constants.AMPHORA,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             create_member_flow.add(
                 vthunder_tasks.EnableInterfaceForMembers(
                     name="backup_enable_interface",
-                    rebind=[
-                        constants.ADDED_PORTS,
-                        constants.LOADBALANCER,
-                        a10constants.BACKUP_VTHUNDER]))
+                    requires=[constants.ADDED_PORTS, constants.LOADBALANCER],
+                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
 
         create_member_flow.add(server_tasks.MemberCreate(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))

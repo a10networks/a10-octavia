@@ -208,19 +208,11 @@ class LoadBalancerFlows(object):
 
         :returns: The flow to setup networking for a new amphora
         """
-        LOG.info("Inside network subflow")
         new_LB_net_subflow = linear_flow.Flow(constants.
                                               LOADBALANCER_NETWORKING_SUBFLOW)
-        new_LB_net_subflow.add(a10_network_tasks.AllocateVIP(
-            requires=constants.LOADBALANCER,
-            provides=constants.VIP))
-        new_LB_net_subflow.add(database_tasks.UpdateVIPAfterAllocation(
-            requires=(constants.LOADBALANCER_ID, constants.VIP),
-            provides=constants.LOADBALANCER))
         new_LB_net_subflow.add(a10_network_tasks.PlugVIP(
             requires=constants.LOADBALANCER,
             provides=constants.AMPS_DATA))
-        LOG.info("After plugging the VIP")
         new_LB_net_subflow.add(a10_network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.AMPS_DATA,
                       constants.UPDATE_DICT)))
@@ -236,25 +228,16 @@ class LoadBalancerFlows(object):
         new_LB_net_subflow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
-        # new_LB_net_subflow.add(amphora_driver_tasks.AmphoraePostVIPPlug(
-        #    requires=(constants.LOADBALANCER,
-        #              constants.AMPHORAE_NETWORK_CONFIG)))
-
-        # Get VThunder details from database
-        # new_LB_net_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-        #    requires=constants.LOADBALANCER,
-        #    provides=a10constants.VTHUNDER))
-        new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
-            requires=(constants.LOADBALANCER,
-                      a10constants.VTHUNDER)))
-        new_LB_net_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-            requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        new_LB_net_subflow.add(
+            vthunder_tasks.VThunderComputeConnectivityWait(
+                name=a10constants.MASTER_CONNECTIVITY_WAIT,
+                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
             requires=a10constants.VTHUNDER))
         new_LB_net_subflow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name=a10constants.MARK_VTHUNDER_MASTER_ACTIVE_IN_DB,
             requires=a10constants.VTHUNDER,
-            inject={"status": constants.ACTIVE}))
+            inject={a10constants.STATUS: constants.ACTIVE}))
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             new_LB_net_subflow.add(vthunder_tasks.CreateHealthMonitorOnVThunder(
                 name=a10constants.CREATE_HEALTH_MONITOR_ON_VTHUNDER_MASTER,
@@ -263,10 +246,6 @@ class LoadBalancerFlows(object):
                 name=a10constants.GET_BACKUP_VTHUNDER_BY_LB,
                 requires=constants.LOADBALANCER,
                 provides=a10constants.BACKUP_VTHUNDER))
-            new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
-                name=a10constants.BACKUP_AMPHORA_PLUG,
-                requires=constants.LOADBALANCER,
-                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             new_LB_net_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
                 name=a10constants.BACKUP_CONNECTIVITY_WAIT,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
@@ -277,7 +256,7 @@ class LoadBalancerFlows(object):
             new_LB_net_subflow.add(a10_database_tasks.MarkVThunderStatusInDB(
                 name=a10constants.MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-                inject={"status": constants.ACTIVE}))
+                inject={a10constants.STATUS: constants.ACTIVE}))
         return new_LB_net_subflow
 
     def get_update_load_balancer_flow(self):
