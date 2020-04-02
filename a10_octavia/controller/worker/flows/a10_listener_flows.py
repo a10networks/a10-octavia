@@ -80,10 +80,7 @@ class ListenerFlows(object):
         """Decides if the protocol is TERMINATED_HTTPS
         :returns: True if if protocol is TERMINATED_HTTPS
         """
-        if history.values()[0]:
-            return True
-        else:
-            return False
+        return history.values()[0] is not None
 
     def get_create_all_listeners_flow(self):
         """Create a flow to create all listeners
