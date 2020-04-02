@@ -51,20 +51,12 @@ class ListenerFlows(object):
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_listener_flow.add(*self.get_listener_create_cert_template_subflow())
+        create_listener_flow.add(*self._get_listener_create_cert_template_subflow())
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         return create_listener_flow
 
-    def _get_cert_create_subflow(self):
-        get_create_cert_subflow = linear_flow.Flow(a10constants.CREATE_CERT_TEMPLATE_SUBFLOW)
-        get_create_cert_subflow.add(cert_tasks.SSLKeyCreate(
-            requires=(a10constants.CERT_DATA, a10constants.VTHUNDER)))
-        get_create_cert_subflow.add(cert_tasks.ClientSSLTemplateCreate(
-            requires=(a10constants.CERT_DATA, a10constants.VTHUNDER)))
-        return get_create_cert_subflow
-
-    def get_listener_create_cert_template_subflow(self):
+    def _get_listener_create_cert_template_subflow(self):
         get_listener_create_cert_subflow = graph_flow.Flow(
             a10constants.CREATE_LISTENER_CERT_SUBFLOW)
         cert_create_task = cert_tasks.SSLCertCreate(
@@ -75,6 +67,14 @@ class ListenerFlows(object):
         get_listener_create_cert_subflow.link(
             cert_create_task, cert_create_template_task, decider=self._is_terminated_https)
         return get_listener_create_cert_subflow
+
+    def _get_cert_create_subflow(self):
+        get_create_cert_subflow = linear_flow.Flow(a10constants.CREATE_CERT_TEMPLATE_SUBFLOW)
+        get_create_cert_subflow.add(cert_tasks.SSLKeyCreate(
+            requires=(a10constants.CERT_DATA, a10constants.VTHUNDER)))
+        get_create_cert_subflow.add(cert_tasks.ClientSSLTemplateCreate(
+            requires=(a10constants.CERT_DATA, a10constants.VTHUNDER)))
+        return get_create_cert_subflow
 
     def _is_terminated_https(self, history):
         """Decides if the protocol is TERMINATED_HTTPS
@@ -130,20 +130,12 @@ class ListenerFlows(object):
         delete_listener_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_listener_subflow.add(*self.get_listener_delete_cert_template_subflow())
+        delete_listener_subflow.add(*self._get_listener_delete_cert_template_subflow())
         delete_listener_subflow.add(virtual_port_tasks.ListenerDelete(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         return delete_listener_subflow
 
-    def _get_cert_delete_subflow(self):
-        get_delete_cert_subflow = linear_flow.Flow(a10constants.DELETE_CERT_TEMPLATE_SUBFLOW)
-        get_delete_cert_subflow.add(cert_tasks.SSLKeyDelete(
-            requires=(a10constants.CERT_DATA, a10constants.VTHUNDER)))
-        get_delete_cert_subflow.add(cert_tasks.ClientSSLTemplateDelete(
-            requires=(a10constants.CERT_DATA, a10constants.VTHUNDER)))
-        return get_delete_cert_subflow
-
-    def get_listener_delete_cert_template_subflow(self):
+    def _get_listener_delete_cert_template_subflow(self):
         get_listener_delete_cert_subflow = graph_flow.Flow(
             a10constants.DELETE_LISTENER_CERT_SUBFLOW)
         cert_delete_task = cert_tasks.SSLCertDelete(
@@ -154,6 +146,14 @@ class ListenerFlows(object):
         get_listener_delete_cert_subflow.link(
             cert_delete_task, cert_delete_template_task, decider=self._is_terminated_https)
         return get_listener_delete_cert_subflow
+
+    def _get_cert_delete_subflow(self):
+        get_delete_cert_subflow = linear_flow.Flow(a10constants.DELETE_CERT_TEMPLATE_SUBFLOW)
+        get_delete_cert_subflow.add(cert_tasks.SSLKeyDelete(
+            requires=(a10constants.CERT_DATA, a10constants.VTHUNDER)))
+        get_delete_cert_subflow.add(cert_tasks.ClientSSLTemplateDelete(
+            requires=(a10constants.CERT_DATA, a10constants.VTHUNDER)))
+        return get_delete_cert_subflow
 
     def get_delete_rack_listener_flow(self):
         """Create a flow to delete a rack listener
@@ -205,7 +205,7 @@ class ListenerFlows(object):
         update_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        update_listener_flow.add(*self.get_listener_update_cert_template_subflow())
+        update_listener_flow.add(*self._get_listener_update_cert_template_subflow())
         update_listener_flow.add(virtual_port_tasks.ListenerUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         update_listener_flow.add(database_tasks.UpdateListenerInDB(
@@ -216,15 +216,7 @@ class ListenerFlows(object):
 
         return update_listener_flow
 
-    def _get_cert_update_subflow(self):
-        get_cert_update_subflow = linear_flow.Flow(a10constants.UPDATE_CERT_TEMPLATE_SUBFLOW)
-        get_cert_update_subflow.add(cert_tasks.SSLKeyUpdate(
-            requires=(a10constants.CERT_DATA, a10constants.VTHUNDER)))
-        get_cert_update_subflow.add(cert_tasks.ClientSSLTemplateUpdate(
-            requires=(a10constants.CERT_DATA, a10constants.VTHUNDER)))
-        return get_cert_update_subflow
-
-    def get_listener_update_cert_template_subflow(self):
+    def _get_listener_update_cert_template_subflow(self):
         get_listener_update_cert_subflow = graph_flow.Flow(
             a10constants.UPDATE_LISTENER_CERT_SUBFLOW)
         cert_update_task = cert_tasks.SSLCertUpdate(
@@ -235,6 +227,14 @@ class ListenerFlows(object):
         get_listener_update_cert_subflow.link(
             cert_update_task, cert_update_template_task, decider=self._is_terminated_https)
         return get_listener_update_cert_subflow
+
+    def _get_cert_update_subflow(self):
+        get_cert_update_subflow = linear_flow.Flow(a10constants.UPDATE_CERT_TEMPLATE_SUBFLOW)
+        get_cert_update_subflow.add(cert_tasks.SSLKeyUpdate(
+            requires=(a10constants.CERT_DATA, a10constants.VTHUNDER)))
+        get_cert_update_subflow.add(cert_tasks.ClientSSLTemplateUpdate(
+            requires=(a10constants.CERT_DATA, a10constants.VTHUNDER)))
+        return get_cert_update_subflow
 
     def get_rack_vthunder_create_listener_flow(self, project_id):
         """Create a flow to create a rack listener
