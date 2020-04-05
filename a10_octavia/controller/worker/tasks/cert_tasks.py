@@ -28,25 +28,26 @@ class SSLCertCreate(task.Task):
     """Task to create an SSL certificate"""
     @axapi_client_decorator
     def execute(self, loadbalancer, listener, vthunder, certificate_type="pem"):
-        barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
-        cert_data = utils.get_cert_data(barbican_client, listener)
-        try:
-            if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
-                self.axapi_client.file.ssl_cert.update(file=cert_data.cert_filename,
-                                                       cert=cert_data.cert_content,
-                                                       size=len(cert_data.cert_content),
-                                                       action="import",
-                                                       certificate_type=certificate_type)
-            else:
-                self.axapi_client.file.ssl_cert.create(file=cert_data.cert_filename,
-                                                       cert=cert_data.cert_content,
-                                                       size=len(cert_data.cert_content),
-                                                       action="import",
-                                                       certificate_type=certificate_type)
-        except Exception as e:
-            LOG.exception("Failed to create SSL certificate: %s", str(e))
-            raise e
-        return cert_data
+        if listener.protocol == "TERMINATED_HTTPS":
+            barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
+            cert_data = utils.get_cert_data(barbican_client, listener)
+            try:
+                if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
+                    self.axapi_client.file.ssl_cert.update(file=cert_data.cert_filename,
+                                                           cert=cert_data.cert_content,
+                                                           size=len(cert_data.cert_content),
+                                                           action="import",
+                                                           certificate_type=certificate_type)
+                else:
+                    self.axapi_client.file.ssl_cert.create(file=cert_data.cert_filename,
+                                                           cert=cert_data.cert_content,
+                                                           size=len(cert_data.cert_content),
+                                                           action="import",
+                                                           certificate_type=certificate_type)
+            except Exception as e:
+                LOG.exception("Failed to create SSL certificate: %s", str(e))
+                raise e
+            return cert_data
 
     @axapi_client_decorator
     def revert(self, loadbalancer, listener, vthunder, *args, **kwargs):
@@ -119,19 +120,20 @@ class SSLCertUpdate(task.Task):
     """Task to update an SSL certificate"""
     @axapi_client_decorator
     def execute(self, loadbalancer, listener, vthunder, action="import", certificate_type="pem"):
-        barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
-        cert_data = utils.get_cert_data(barbican_client, listener)
-        try:
-            if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
-                self.axapi_client.file.ssl_cert.update(file=cert_data.cert_filename,
-                                                       cert=cert_data.cert_content,
-                                                       size=len(cert_data.cert_content),
-                                                       action=action,
-                                                       certificate_type=certificate_type)
-                LOG.debug("SSL certificate updated successfully: %s", cert_data.cert_filename)
-        except Exception as e:
-            LOG.warning("Failed to update SSL Certificate: %s", str(e))
-        return cert_data
+        if listener.protocol == "TERMINATED_HTTPS":
+            barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
+            cert_data = utils.get_cert_data(barbican_client, listener)
+            try:
+                if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
+                    self.axapi_client.file.ssl_cert.update(file=cert_data.cert_filename,
+                                                           cert=cert_data.cert_content,
+                                                           size=len(cert_data.cert_content),
+                                                           action=action,
+                                                           certificate_type=certificate_type)
+                    LOG.debug("SSL certificate updated successfully: %s", cert_data.cert_filename)
+            except Exception as e:
+                LOG.warning("Failed to update SSL Certificate: %s", str(e))
+            return cert_data
 
 
 class SSLKeyUpdate(task.Task):
@@ -169,15 +171,16 @@ class SSLCertDelete(task.Task):
     """Task to delete an SSL certificate"""
     @axapi_client_decorator
     def execute(self, loadbalancer, listener, vthunder):
-        barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
-        cert_data = utils.get_cert_data(barbican_client, listener)
-        try:
-            if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
-                self.axapi_client.file.ssl_cert.delete(file=cert_data.cert_filename)
-                LOG.debug("SSL certificate deleted successfully: %s", cert_data.cert_filename)
-        except Exception as e:
-            LOG.warning("Failed to delete SSL Certificate: %s", str(e))
-        return cert_data
+        if listener.protocol == "TERMINATED_HTTPS":
+            barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
+            cert_data = utils.get_cert_data(barbican_client, listener)
+            try:
+                if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
+                    self.axapi_client.file.ssl_cert.delete(file=cert_data.cert_filename)
+                    LOG.debug("SSL certificate deleted successfully: %s", cert_data.cert_filename)
+            except Exception as e:
+                LOG.warning("Failed to delete SSL Certificate: %s", str(e))
+            return cert_data
 
 
 class SSLKeyDelete(task.Task):
