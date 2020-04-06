@@ -306,7 +306,7 @@ class LoadBalancerFlows(object):
                 post_amp_prefix, topology, mark_active=(not listeners)))
 
         lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
-            requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER, a10constants.VTHUNDER),
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.STATUS))
 
         return lb_create_flow
