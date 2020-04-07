@@ -14,12 +14,31 @@
 
 
 import acos_client
+from acos_client.errors import ACOSException
+from acos_client.errors import Exists
+
+try:
+    from http.client import BadStatusLine
+except ImportError:
+    from httplib import BadStatusLine
 from oslo_config import cfg
 from oslo_log import log as logging
 from requests.exceptions import ConnectionError
+from requests.exceptions import ReadTimeout
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
+
+
+def configure_partition(vthunder_client, partition):
+    try:
+        try:
+            vthunder_client.system.partition.create(partition)
+        except Exists:
+            pass
+        vthunder_client.system.partition.active(partition)
+    except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
+        pass
 
 
 def axapi_client_decorator(func):
@@ -30,6 +49,8 @@ def axapi_client_decorator(func):
             self.axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
                                                    vthunder.username, vthunder.password,
                                                    timeout=30)
+            if vthunder.partition != 'shared':
+                configure_partition(self.axapi_client, vthunder.partition)
         else:
             self.axapi_client = None
         result = func(self, *args, **kwargs)
@@ -40,7 +61,6 @@ def axapi_client_decorator(func):
             LOG.debug("Failed to close the vThunder session: %s", str(e))
         except AttributeError:
             pass
-
         return result
 
     return wrapper

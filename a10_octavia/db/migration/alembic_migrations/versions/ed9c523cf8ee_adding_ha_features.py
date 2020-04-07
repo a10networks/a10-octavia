@@ -36,7 +36,8 @@ def upgrade():
         sa.Column('last_udp_update', sa.DateTime(), nullable=True),
         sa.Column('status', sa.String(36), default='ACTIVE', nullable=False),
         sa.Column(u'created_at', sa.DateTime(), nullable=True),
-        sa.Column(u'updated_at', sa.DateTime(), nullable=True)
+        sa.Column(u'updated_at', sa.DateTime(), nullable=True),
+        sa.Column('partition', sa.String(1024), nullable=False)
     )
 
 
