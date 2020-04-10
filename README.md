@@ -16,7 +16,7 @@ supported releases:
 
 * OpenStack: Stein Release
 * Octavia version: 4.1.0
-* ACOS versions: AxAPI 2.1 (ACOS 2.7.2+), ACOS 4/AxAPI 3.0 (ACOS 4.0.1-GA +)
+* ACOS versions: ACOS 4.1.4 GR1 P1 (AxAPI 3.0)
 
 **Note: Following Configurations should be done as an OpenStack admin user**
 
