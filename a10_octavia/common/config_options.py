@@ -42,6 +42,9 @@ A10_VTHUNDER_OPTS = [
     cfg.IntOpt('default_axapi_version',
                default=30,
                help=_('VThunder axapi version')),
+    cfg.StrOpt('partition',
+               default='shared',
+               help=_('VThunder Partition name'))
 
 ]
 
