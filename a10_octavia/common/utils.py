@@ -19,6 +19,7 @@
 import netaddr
 from oslo_log import log as logging
 
+from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
 
 LOG = logging.getLogger(__name__)
@@ -58,6 +59,8 @@ def convert_to_rack_vthunder_conf(rack_list):
             validation_flag = validate_params(rack_device)
             if validation_flag:
                 rack_device['undercloud'] = True
+                if rack_device['partition'] is None:
+                    rack_device['partition'] = a10constants.SHARED_PARTITION
                 vthunder_conf = data_models.VThunder(**rack_device)
                 rack_dict[rack_device['project_id']] = vthunder_conf
             else:
