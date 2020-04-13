@@ -59,7 +59,8 @@ class VThunderComputeConnectivityWait(task.Task):
                     attempts = attempts - 1
                     self.axapi_client.system.information()
                     break
-                except (req_exceptions.ConnectionError, acos_errors.ACOSException, http_client.BadStatusLine, req_exceptions.ReadTimeout):
+                except (req_exceptions.ConnectionError, acos_errors.ACOSException,
+                        http_client.BadStatusLine, req_exceptions.ReadTimeout):
                     attemptid = 21 - attempts
                     time.sleep(20)
                     LOG.debug("VThunder connection attempt - " + str(attemptid))
@@ -153,7 +154,8 @@ class EnableInterfaceForMembers(task.Task):
                         self.axapi_client.system.action.setInterface(target_interface - 1)
                         configured_interface = True
                         LOG.debug("Configured the new interface required for member.")
-                    except (req_exceptions.ConnectionError, acos_errors.ACOSException, http_client.BadStatusLine, req_exceptions.ReadTimeout):
+                    except (req_exceptions.ConnectionError, acos_errors.ACOSException,
+                            http_client.BadStatusLine, req_exceptions.ReadTimeout):
                         attempts = attempts - 1
             else:
                 LOG.debug("Configuration of new interface is not required for member.")
@@ -263,7 +265,8 @@ class ConfigureaVCSBackup(task.Task):
                                    floating_ip, floating_ip_mask)
                     attempts = 0
                     LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
-                except (req_exceptions.ConnectionError, acos_errors.ACOSException, http_client.BadStatusLine, req_exceptions.ReadTimeout):
+                except (req_exceptions.ConnectionError, acos_errors.ACOSException,
+                        http_client.BadStatusLine, req_exceptions.ReadTimeout):
                     attempts = attempts - 1
         except Exception as e:
             LOG.exception("Failed to configure backup vThunder aVCS: %s", str(e))
