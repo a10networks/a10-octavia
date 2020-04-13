@@ -31,8 +31,6 @@ from octavia.common import constants
 from octavia.common import utils
 from octavia.db import api as db_apis
 
-from acos_client.errors import ACOSException
-
 from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
