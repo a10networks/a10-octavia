@@ -78,6 +78,7 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(
             self.get_post_lb_vthunder_association_flow(
                 post_amp_prefix, topology, mark_active=(not listeners)))
+
         lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
             requires=(constants.LOADBALANCER,
                            a10constants.VTHUNDER)))
@@ -232,6 +233,10 @@ class LoadBalancerFlows(object):
             vthunder_tasks.VThunderComputeConnectivityWait(
                 name=a10constants.MASTER_CONNECTIVITY_WAIT,
                 requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        if topology == constants.TOPOLOGY_SINGLE:
+            new_LB_net_subflow.add(vthunder_tasks.HandleACOSPartitionChange(
+                name=a10constants.CHANGE_PARTITION,
+                requires=a10constants.VTHUNDER))
         new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
             requires=a10constants.VTHUNDER))
         new_LB_net_subflow.add(a10_database_tasks.MarkVThunderStatusInDB(
@@ -304,10 +309,8 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(
             self.get_post_lb_rack_vthunder_association_flow(
                 post_amp_prefix, topology, mark_active=(not listeners)))
-
         lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
-            requires=(constants.LOADBALANCER_ID, constants.LOADBALANCER, a10constants.VTHUNDER),
-            provides=a10constants.STATUS))
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
 
         return lb_create_flow
 
