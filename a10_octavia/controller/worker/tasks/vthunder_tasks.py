@@ -13,13 +13,12 @@
 #    under the License.
 
 import acos_client
-import acos_client.errors as acos_errors
+from acos_client import errors as acos_errors
 try:
-    from http.client import BadStatusLine
+    import http.client as http_client
 except ImportError:
-    from httplib import BadStatusLine
-from requests.exceptions import ConnectionError
-from requests.exceptions import ReadTimeout
+    import httplib as http_client
+from requests import exceptions as req_exceptions
 from taskflow import task
 import time
 
@@ -31,7 +30,6 @@ from octavia.common import constants
 from octavia.common import utils
 from octavia.db import api as db_apis
 
-from acos_client.errors import ACOSException
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
@@ -61,7 +59,7 @@ class VThunderComputeConnectivityWait(task.Task):
                     attempts = attempts - 1
                     self.axapi_client.system.information()
                     break
-                except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
+                except (req_exceptions.ConnectionError, acos_errors.ACOSException, http_client.BadStatusLine, req_exceptions.ReadTimeout):
                     attemptid = 21 - attempts
                     time.sleep(20)
                     LOG.debug("VThunder connection attempt - " + str(attemptid))
@@ -69,7 +67,7 @@ class VThunderComputeConnectivityWait(task.Task):
             if attempts < 0:
                 LOG.error("Failed to connect vThunder in expected amount of boot time: %s",
                           vthunder.id)
-                raise ConnectionError
+                raise req_exceptions.ConnectionError
 
         except driver_except.TimeOutException:
             LOG.exception("Amphora compute instance failed to become reachable. "
@@ -155,7 +153,7 @@ class EnableInterfaceForMembers(task.Task):
                         self.axapi_client.system.action.setInterface(target_interface - 1)
                         configured_interface = True
                         LOG.debug("Configured the new interface required for member.")
-                    except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
+                    except (req_exceptions.ConnectionError, acos_errors.ACOSException, http_client.BadStatusLine, req_exceptions.ReadTimeout):
                         attempts = attempts - 1
             else:
                 LOG.debug("Configuration of new interface is not required for member.")
@@ -265,7 +263,7 @@ class ConfigureaVCSBackup(task.Task):
                                    floating_ip, floating_ip_mask)
                     attempts = 0
                     LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
-                except (ConnectionError, ACOSException, BadStatusLine, ReadTimeout):
+                except (req_exceptions.ConnectionError, acos_errors.ACOSException, http_client.BadStatusLine, req_exceptions.ReadTimeout):
                     attempts = attempts - 1
         except Exception as e:
             LOG.exception("Failed to configure backup vThunder aVCS: %s", str(e))
