@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import acos_client
+import acos_client.errors as acos_errors
 try:
     from http.client import BadStatusLine
 except ImportError:
@@ -44,10 +46,13 @@ class VThunderComputeConnectivityWait(task.Task):
 
     """Task to wait for the compute instance to be up"""
 
-    @axapi_client_decorator
     def execute(self, vthunder, amphora):
         """Execute get_info routine for a vThunder until it responds."""
         try:
+            api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+            self.axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
+                                                   vthunder.username, vthunder.password,
+                                                   timeout=30)
 
             LOG.info("Attempting to connect vThunder device for connection.")
             attempts = 30
@@ -333,3 +338,28 @@ class ConfirmVRRPStatus(task.Task):
             return True
         else:
             return False
+
+
+class HandleACOSPartitionChange(task.Task):
+
+    """Task to switch to specified partition"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder):
+        if vthunder.partition != a10constants.SHARED_PARTITION:
+            try:
+                self.axapi_client.system.partition.create(vthunder.partition)
+                LOG.info("Partition %s created", vthunder.partition)
+            except acos_errors.Exists:
+                pass
+            except Exception as e:
+                LOG.exception("Failed to create parition on vThunder: %s", str(e))
+                raise
+
+    @axapi_client_decorator
+    def revert(self, vthunder, *args, **kwargs):
+        try:
+            self.axapi_client.system.partition.delete(vthunder.partition)
+        except Exception as e:
+            LOG.exception("Failed to revert partition create : %s", str(e))
+            raise
