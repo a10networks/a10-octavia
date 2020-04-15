@@ -42,6 +42,7 @@ A10_VTHUNDER_OPTS = [
     cfg.IntOpt('default_axapi_version',
                default=30,
                help=_('VThunder axapi version')),
+
 ]
 
 A10_SLB_OPTS = [

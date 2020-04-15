@@ -40,10 +40,12 @@ def validate_params(rack_info):
                                                   'username', 'password', 'device_name')):
             if validate_ipv4(rack_info['ip_address']):
                 return True
-            LOG.error('Invalid IP address given ' + rack_info['ip_address'])
-    LOG.error('Configuration of `devices` under [RACK_VTHUNDER] is invalid. '
-              'Please check your configuration. The params `project_id`, '
-              '`ip_address`, `username`, `password` and `device_name` cannot be None ')
+            raise exceptions.ValidationException(detail=_(
+                'Invalid IP address given ' + rack_info['ip_address']))
+    raise exceptions.ValidationException(detail=_(
+        'Configuration of `devices` under [RACK_VTHUNDER] is invalid. '
+        'Please check your configuration. The params `project_id`, '
+        '`ip_address`, `username`, `password` and `device_name` cannot be None '))
     return False
 
 
