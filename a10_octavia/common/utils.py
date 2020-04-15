@@ -76,7 +76,8 @@ def convert_to_rack_vthunder_conf(rack_list):
                 vthunder_conf = data_models.VThunder(**rack_device)
                 if rack_dict.get(rack_device['project_id']):
                     raise exceptions.ValidationException(detail=_('Supplied duplicate project_id ' +
-                                                                  rack_device['project_id'] + ' in [rack_vthunder]'))
+                                                                  rack_device['project_id'] +
+                                                                  ' in [rack_vthunder]'))
                 rack_dict[rack_device['project_id']] = vthunder_conf
             else:
                 LOG.warning('Invalid definition of rack device for '

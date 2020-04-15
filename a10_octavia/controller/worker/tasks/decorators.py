@@ -18,8 +18,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from requests.exceptions import ConnectionError
 
-from octavia.common import constants
-
 from a10_octavia.common import a10constants
 
 CONF = cfg.CONF
