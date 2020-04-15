@@ -43,9 +43,9 @@ def axapi_client_decorator(func):
             self.axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
                                                    vthunder.username, vthunder.password,
                                                    timeout=30)
-            if vthunder.topology == constants.ROLE_STANDALONE:
-                if vthunder.partition != a10constants.SHARED_PARTITION:
-                    activate_partition(self.axapi_client, vthunder.partition)
+
+            if vthunder.partition != a10constants.SHARED_PARTITION:
+                activate_partition(self.axapi_client, vthunder.partition)
 
         else:
             self.axapi_client = None
