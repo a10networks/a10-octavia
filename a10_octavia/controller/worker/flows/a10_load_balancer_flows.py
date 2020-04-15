@@ -232,10 +232,6 @@ class LoadBalancerFlows(object):
             vthunder_tasks.VThunderComputeConnectivityWait(
                 name=a10constants.MASTER_CONNECTIVITY_WAIT,
                 requires=(a10constants.VTHUNDER, constants.AMPHORA)))
-        if topology == constants.TOPOLOGY_SINGLE:
-            new_LB_net_subflow.add(vthunder_tasks.HandleACOSPartitionChange(
-                name=a10constants.CHANGE_PARTITION,
-                requires=a10constants.VTHUNDER))
         new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
             requires=a10constants.VTHUNDER))
         new_LB_net_subflow.add(a10_database_tasks.MarkVThunderStatusInDB(

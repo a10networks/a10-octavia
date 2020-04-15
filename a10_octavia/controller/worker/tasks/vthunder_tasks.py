@@ -347,15 +347,14 @@ class HandleACOSPartitionChange(task.Task):
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        if vthunder.partition != a10constants.SHARED_PARTITION:
-            try:
-                self.axapi_client.system.partition.create(vthunder.partition)
-                LOG.info("Partition %s created", vthunder.partition)
-            except acos_errors.Exists:
-                pass
-            except Exception as e:
-                LOG.exception("Failed to create parition on vThunder: %s", str(e))
-                raise
+        try:
+            self.axapi_client.system.partition.create(vthunder.partition)
+            LOG.info("Partition %s created", vthunder.partition)
+        except acos_errors.Exists:
+            pass
+        except Exception as e:
+            LOG.exception("Failed to create parition on vThunder: %s", str(e))
+            raise
 
     @axapi_client_decorator
     def revert(self, vthunder, *args, **kwargs):

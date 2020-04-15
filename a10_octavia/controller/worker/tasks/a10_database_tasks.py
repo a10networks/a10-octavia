@@ -62,7 +62,6 @@ class CreateVThunderEntry(BaseDatabaseTask):
         username = CONF.vthunder.default_vthunder_username
         password = CONF.vthunder.default_vthunder_password
         axapi_version = CONF.vthunder.default_axapi_version
-        partition = CONF.vthunder.partition
 
         if role == constants.ROLE_MASTER:
             topology = "ACTIVE_STANDBY"
@@ -88,8 +87,7 @@ class CreateVThunderEntry(BaseDatabaseTask):
             last_udp_update=datetime.utcnow(),
             status=status,
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-            partition=partition)
+            updated_at=datetime.utcnow())
 
         LOG.info("Successfully created vthunder entry in database.")
 
@@ -263,7 +261,6 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
         username = CONF.vthunder.default_vthunder_username
         password = CONF.vthunder.default_vthunder_password
         axapi_version = CONF.vthunder.default_axapi_version
-        partition = CONF.vthunder.partition
         vthunder = self.vthunder_repo.create(
             db_apis.get_session(), vthunder_id=vthunder_id,
             amphora_id=amphora.id,
@@ -278,7 +275,6 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
             status="READY",
             created_at=datetime.utcnow(),
             last_udp_update=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-            partition=partition)
+            updated_at=datetime.utcnow())
         LOG.info("Successfully created vthunder entry in database.")
         return vthunder
