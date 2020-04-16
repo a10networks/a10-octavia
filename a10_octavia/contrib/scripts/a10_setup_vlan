@@ -1,0 +1,407 @@
+#!/bin/bash
+
+#
+# This script is used for setting up devstack VLAN config and Openstack VLAN networks.
+# It setus up three openstack networks networkA (vlan id:11, subnet:10.0.11.0/24),
+# networkB (vlan id:12, subnet:10.0.12.0/24) and networkC (vlan id:13, subnet:10.0.13.0/24).
+# It creats a trunk networkA-trunk in networkA, with parent port networkA-trunk-port.
+# Subports networkA-trunk-subport-vlan12 and networkA-trunk-subport-vlan13 are added
+# to the trunk.
+#
+
+function usage {
+cat << EOF
+usage: $0
+
+OPTIONS:
+  --help                     prints this message
+  --restart-services         restarts neutron and octavia services
+  --setup-devstack-vlan      sets up ovs bridge and neutron vlan config
+  --teardown-ostack-networks teardown openstack vlan networks and trunk
+                             make sure to delete all vlan entities created by user
+                             before running this command
+  --setup-ostack-networks    sets up openstack vlan networks and trunk port
+  --teardown-devstack-vlan   tears down ovs bridge and removes neutron vlan config
+EOF
+}
+
+function check_exists {
+    local cmd="${1}"
+    local pattern="${2}"
+
+    local output=$(${cmd})
+    local exists=$(echo "${output}" | grep "${pattern}")
+    if [ -z "${exists}" ]
+    then
+        echo 0
+        return
+    fi
+
+    echo 1
+}
+
+function create_vlan_bridge {
+
+    local exists=$(check_exists "sudo ovs-vsctl list-br" "br-vlan")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[+] Creating OVS bridge br-vlan"
+        sudo ovs-vsctl add-br br-vlan
+    else
+        echo "[=] OVS bridge br-vlan already exists"
+    fi 
+
+
+    exists=$(check_exists "sudo ovs-vsctl list-ports br-vlan" "phy-br-vlan")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[+] Adding patch port phy-br-vlan to OVS bridge br-vlan"
+        sudo ovs-vsctl add-port br-vlan phy-br-vlan
+    else
+        echo "[=] Patch port phy-br-vlan already exists on OVS bridge br-vlan"
+    fi
+
+    exists=$(check_exists "sudo ovs-vsctl list-ports br-int" "int-br-vlan")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[+] Adding patch port int-br-vlan to OVS bridge br-int"
+        sudo ovs-vsctl add-port br-int int-br-vlan
+    else
+        echo "[=] Patch port int-br-vlan already exists on OVS bridge br-int"
+    fi
+
+    sleep 2
+
+    echo "[=] Connecting patch ports"
+    sudo ovs-vsctl set interface phy-br-vlan type=patch
+    sudo ovs-vsctl set interface phy-br-vlan options:peer=int-br-vlan
+    sudo ovs-vsctl set interface int-br-vlan type=patch
+    sudo ovs-vsctl set interface int-br-vlan options:peer=phy-br-vlan
+
+    echo "[=] VLAN bridge configured"
+}
+
+function patch_conf_files {
+    echo "[+] Patching config files"
+
+    local exists=$(check_exists "/bin/cat /etc/neutron/neutron.conf" "\[placement\]")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[=] Adding placement section to /etc/neutron/neutron.conf"
+        local host_ip=$(ifconfig eth0 | grep "inet " | awk '{print $2}')
+        local placement_txt="
+
+[placement]
+www_authenticate_uri = http://${host_ip}/identity
+project_domain_name = Default
+project_name = admin
+user_domain_name = Default
+password = admin
+username = nova
+auth_url = http://${host_ip}/identity_admin
+auth_type = password
+region_name = RegionOne
+"
+        echo "${placement_txt}" >> /etc/neutron/neutron.conf
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/neutron.conf" "segments,trunk")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[=] Overwriting service_plugins in /etc/neutron/neutron.conf"
+        sed -i "s/service_plugins = router,qos/service_plugins = qos,router,segments,trunk/" /etc/neutron/neutron.conf
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "tenant_network_types = vlan")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[=] Overwriting tenant_network_types in /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/tenant_network_types = vxlan/tenant_network_types = vlan/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "#network_vlan_ranges =")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting network_vlan_ranges /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/#network_vlan_ranges =/network_vlan_ranges = vlanNet:10:15/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "vlanNet:br-vlan")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[=] Overwriting bridge_mappings in /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/bridge_mappings = .*/bridge_mappings = public:br-ex,vlanNet:br-vlan/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+}
+
+function restart_services {
+    echo "[=] Restarting devstack@o-* devstack@neutron-* services"
+    pushd /etc/systemd/system/
+    sudo systemctl restart devstack@o-* devstack@neutron-*
+    popd
+}
+
+function create_network {
+    local vlan_id="${1}"
+    local network_name="${2}"
+    local segment_name="${3}"
+    local subnet_name="${4}"
+    local subnet_range="${5}"
+
+    exists=$(check_exists "openstack network list" "${network_name}")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[+] Creating ${network_name}"
+        openstack network create --provider-segment ${vlan_id} --provider-network-type vlan --provider-physical-network vlanNet ${network_name}
+        sleep 1
+    fi
+
+    exists=$(check_exists "openstack network segment list" "${segment_name}")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[=] Renaming vlan segment ${vlan_id} to ${segment_name}"
+        local segment_id=$(openstack network segment list | grep " ${vlan_id} " | awk '{print $2}')
+        openstack network segment set --name ${segment_name} ${segment_id}
+        sleep 1
+    fi
+
+    exists=$(check_exists "openstack subnet list" "${subnet_name}")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[+] Creating ${subnet_name}"
+        openstack subnet create --network ${network_name} --network-segment ${segment_name} --subnet-range ${subnet_range} ${subnet_name}
+        sleep 1
+    fi
+}
+
+function create_port {
+    local port_name=${1}
+    local network_name=${2}
+
+    exists=$(check_exists "openstack port list" "${port_name}")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[+] Creating ${port_name} in ${network_name}"
+        openstack port create --network ${network_name} --no-security-group --disable-port-security ${port_name} 
+        sleep 1
+    fi
+}
+
+function create_trunk {
+    local network_name=${1}
+    local trunk_name="${network_name}-trunk"
+    local port_name="${trunk_name}-port"
+
+    exists=$(check_exists "openstack network trunk list" "${trunk_name}")
+    if [[ ${exists} -ne 1 ]]; then
+        create_port "${port_name}" "${network_name}"
+        local trunk_port_id=$(openstack port show ${port_name} | grep " id" | awk '{print $4}')
+
+        echo "[+] Creating ${trunk_name}"
+        openstack network trunk create --parent-port ${trunk_port_id} ${trunk_name}
+        sleep 1
+    fi
+}
+
+function create_trunk_subport {
+    local network_name=${1}
+    local vlan_id=${2}
+    local vlan_network_name=${3}
+    local trunk_name="${network_name}-trunk"
+    local port_name="${trunk_name}-subport-vlan${vlan_id}"
+
+    exists=$(check_exists "openstack network trunk list" "${trunk_name}")
+    if [[ ${exists} -eq 1 ]]; then
+        create_port "${port_name}" "${vlan_network_name}"
+        local sub_port_id=$(openstack port show ${port_name} | grep " id" | awk '{print $4}')
+
+        echo "[=] Setting ${trunk_name} subport ${port_name}"
+        openstack network trunk set --subport port=${sub_port_id},segmentation-type=vlan,segmentation-id=${vlan_id} ${trunk_name}
+        sleep 1
+    fi
+}
+
+function setup_devstack_vlan {
+    create_vlan_bridge
+    patch_conf_files
+}
+
+function setup_ostack_networks {
+    create_network 11 networkA segmentA subnetA 10.0.11.0/24
+    create_network 12 networkB segmentB subnetB 10.0.12.0/24
+    create_network 13 networkC segmentC subnetC 10.0.13.0/24
+    create_trunk networkA
+    create_trunk_subport networkA 12 networkB
+    create_trunk_subport networkA 13 networkC
+}
+
+function delete_port {
+    local port_name=${1}
+
+    exists=$(check_exists "openstack port list" "${port_name}")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[-] Deleting ${port_name}"
+        openstack port delete ${port_name} 
+    fi
+}
+
+function unset_trunk_subport {
+    local network_name=${1}
+    local vlan_id=${2}
+    local vlan_network_name=${3}
+    local trunk_name="${network_name}-trunk"
+    local port_name="${trunk_name}-subport-vlan${vlan_id}"
+
+    exists=$(check_exists "openstack network trunk list" "${trunk_name}")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[-] UnSetting ${trunk_name} subport ${port_name}"
+        openstack network trunk unset --subport ${port_name} ${trunk_name}
+
+        delete_port ${port_name}
+    fi
+}
+
+function delete_trunk {
+    local network_name=${1}
+    local trunk_name="${network_name}-trunk"
+    local port_name="${trunk_name}-port"
+
+    exists=$(check_exists "openstack network trunk list" "${trunk_name}")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[-] Deleting ${trunk_name}"
+        openstack network trunk delete ${trunk_name}
+
+        delete_port ${port_name}
+    fi
+}
+
+function delete_network {
+    local network_name="${1}"
+    local segment_name="${2}"
+    local subnet_name="${3}"
+
+    exists=$(check_exists "openstack subnet list" "${subnet_name}")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[-] Deleting ${subnet_name}"
+        openstack subnet delete ${subnet_name}
+    fi
+
+    exists=$(check_exists "openstack network segment list" "${segment_name}")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[-] Removing ${segment_name}"
+        openstack network segment delete ${segment_name}
+    fi
+
+    exists=$(check_exists "openstack network list" "${network_name}")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[-] Deleting ${network_name}"
+        openstack network delete ${network_name}
+    fi
+}
+
+function unpatch_conf_files {
+    echo "[-] Removing vlan patch in config files"
+
+    local exists=$(check_exists "/bin/cat /etc/neutron/neutron.conf" "\[placement\]")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Removing placement section to /etc/neutron/neutron.conf"
+        sed '/\[placement\]/,/^$/d' /etc/neutron/neutron.conf > /etc/neutron/neutron_mod.conf
+        mv /etc/neutron/neutron_mod.conf /etc/neutron/neutron.conf
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/neutron.conf" "segments,trunk")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting service_plugins in /etc/neutron/neutron.conf"
+        sed -i "s/service_plugins = qos,router,segments,trunk/service_plugins = router,qos/" /etc/neutron/neutron.conf
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "tenant_network_types = vlan")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting tenant_network_types in /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/tenant_network_types = vlan/tenant_network_types = vxlan/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "network_vlan_ranges = vlanNet:10:15")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting network_vlan_ranges /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/network_vlan_ranges = vlanNet:10:15/#network_vlan_ranges =/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "vlanNet:br-vlan")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting bridge_mappings in /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/bridge_mappings = public:br-ex,vlanNet:br-vlan/bridge_mappings = public:br-ex/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+}
+
+function delete_vlan_bridge {
+    local exists=$(check_exists "sudo ovs-vsctl list-br" "br-vlan")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[-] Deleting patch ports"
+        sudo ovs-vsctl del-port br-vlan phy-br-vlan
+        sudo ovs-vsctl del-port br-int int-br-vlan
+
+        echo "[-] Deleting OVS bridge br-vlan"
+        sudo ovs-vsctl del-br br-vlan
+    fi
+}
+
+function teardown_ostack_networks {
+    unset_trunk_subport networkA 13 networkC
+    unset_trunk_subport networkA 12 networkB
+    delete_trunk networkA
+    delete_network networkC segmentC subnetC
+    delete_network networkB segmentB subnetB
+    delete_network networkA segmentA subnetA
+}
+
+function teardown_devstack_vlan {
+    unpatch_conf_files
+    delete_vlan_bridge
+}
+
+arg_restart_services=false
+arg_setup_devstack_vlan=false
+arg_setup_ostack_networks=false
+arg_teardown_ostack_networks=false
+arg_teardown_devstack_vlan=false
+
+function set_args {
+    if [[ $# -eq 0 ]] || [[ $# -gt 1 ]]; then
+        echo "Improper number of arguments. Pass only one argument."
+        usage
+        exit 0
+    fi
+    while [ "${1:-}" != "" ]; do
+        case "$1" in
+            "--help")
+                usage
+                exit 0
+                ;;
+            "--restart-services")
+                arg_restart_services=true
+                ;;
+            "--setup-devstack-vlan")
+                arg_setup_devstack_vlan=true
+                ;;
+            "--setup-ostack-networks")
+                arg_setup_ostack_networks=true
+                ;;
+            "--teardown-ostack-networks")
+                arg_teardown_ostack_networks=true
+                ;;
+            ""--teardown-devstack-vlan)
+                arg_teardown_devstack_vlan=true
+                ;;
+            *)
+                usage
+                exit 0
+        esac
+        shift
+    done
+}
+
+function main {
+    set_args "$@"
+    if [[ $arg_setup_devstack_vlan = true ]]; then
+        setup_devstack_vlan
+    elif [[ $arg_setup_ostack_networks = true ]]; then
+        setup_ostack_networks
+    elif [[ $arg_teardown_ostack_networks = true ]]; then
+        teardown_ostack_networks
+    elif [[ $arg_teardown_devstack_vlan = true ]]; then
+        teardown_devstack_vlan
+    else
+        restart_services
+    fi
+}
+
+main "$@"
