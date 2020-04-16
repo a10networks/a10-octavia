@@ -72,7 +72,10 @@ class ListenersParent(object):
 
                 # Add all config filters here
                 if no_dest_nat and (
-                    listener.protocol.lower() not in a10constants.NO_DEST_NAT_SUPPORTED_PROTOCOL):
+                        listener.protocol.lower()
+                        not in a10constants.NO_DEST_NAT_SUPPORTED_PROTOCOL):
+                    LOG.warning("'no_dest_nat' is not allowed for HTTP," +
+                                "HTTPS or TERMINATED_HTTPS listener.")
                     no_dest_nat = False
 
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
