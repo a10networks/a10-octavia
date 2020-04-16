@@ -19,6 +19,7 @@ from taskflow import task
 import acos_client.errors as acos_errors
 from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
 
+from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -68,6 +69,11 @@ class ListenersParent(object):
 
                 virtual_port_template = CONF.listener.template_policy
                 virtual_port_templates['template-policy'] = virtual_port_template
+
+                # Add all config filters here
+                if no_dest_nat and (
+                    listener.protocol.lower() not in a10constants.NO_DEST_NAT_SUPPORTED_PROTOCOL):
+                    no_dest_nat = False
 
                 name = loadbalancer.id + "_" + str(listener.protocol_port)
                 set_method(loadbalancer.id, name,
