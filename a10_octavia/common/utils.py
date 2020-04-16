@@ -50,17 +50,12 @@ def validate_params(rack_info):
     return False
 
 
-def check_partition_collision(rack_device):
-    ip_part_set = set()
-    for rack in rack_device.values():
-        candidate = rack.ip_address + rack.partition
-        if candidate in ip_part_set:
-            raise exceptions.ValidationException(
-                detail=_('Supplied duplicate partition in config file for ip_address' +
-                         rack.ip_address))
-        else:
-            ip_part_set.add(candidate)
-    return True
+def check_duplicate_entries(rack_dict):
+    rack_count_dict = {}
+    for rack_key, rack_value in rack_dict.items():
+        candidate = '{} - {}'.format(rack_value.ip_address, rack_value.partition)
+        rack_count_dict[candidate] = rack_count_dict.get(candidate, 0) + 1
+    return [k for k, v in rack_count_dict.items() if v > 1]
 
 
 def convert_to_rack_vthunder_conf(rack_list):
@@ -74,13 +69,13 @@ def convert_to_rack_vthunder_conf(rack_list):
             validation_flag = validate_params(rack_device)
             if validation_flag:
                 rack_device['undercloud'] = True
-                if 'partition' not in rack_device or not rack_device['partition']:
+                if not rack_device.get('partition'):
                     rack_device['partition'] = a10constants.SHARED_PARTITION
                 vthunder_conf = data_models.VThunder(**rack_device)
                 if rack_dict.get(rack_device['project_id']):
-                    raise exceptions.ValidationException(detail=_('Supplied duplicate project_id ' +
-                                                                  rack_device['project_id'] +
-                                                                  ' in [rack_vthunder]'))
+                    raise exceptions.ValidationException(detail=_(
+                        'Supplied duplicate project_id ' +
+                        rack_device['project_id'] + ' in [rack_vthunder]'))
                 rack_dict[rack_device['project_id']] = vthunder_conf
 
     except KeyError as err:
@@ -88,5 +83,9 @@ def convert_to_rack_vthunder_conf(rack_list):
                   "The Loadbalancer you create shall boot as overcloud."
                   "Check attribute: " + str(err))
 
-    if check_partition_collision(rack_dict):
-        return rack_dict
+    duplicates_list = check_duplicate_entries(rack_dict)
+    if len(duplicates_list) != 0:
+        raise exceptions.ValidationException(detail=_('Duplicates found for the following '
+                                                      'ip_address-partition entries: {}'
+                                                      .format(list(duplicates_list))))
+    return rack_dict
