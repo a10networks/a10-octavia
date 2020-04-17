@@ -1,4 +1,4 @@
-acos-client>=1.4.6		#
+acos-client>=2.1.0		#
 octavia>=4.1.1,<5.0.0.0rc1	# stein version of octavia
 octavia-lib			#
 python-barbicanclient>=4.5.2 	# copied from octavia requirements.txt
