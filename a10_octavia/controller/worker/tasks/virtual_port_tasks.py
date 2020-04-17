@@ -19,6 +19,7 @@ from taskflow import task
 import acos_client.errors as acos_errors
 from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
 
+from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -27,6 +28,18 @@ LOG = logging.getLogger(__name__)
 
 
 class ListenersParent(object):
+
+    def transform_https_protocols(self, listener):
+        """
+        Openstack passes protocol HTTPS for non terminated HTTPS. This is effectively
+        generic TCP load balancer. The load balancer will forward the raw TCP traffic
+        from the web client to the back-end servers without decrypting it.
+        So this transform.
+        """
+        if listener.protocol == 'HTTPS':
+            listener.protocol = 'TCP'
+        if listener.protocol == 'TERMINATED_HTTPS':
+            listener.protocol = 'HTTPS'
 
     def set(self, set_method, loadbalancer, listeners):
         ipinip = CONF.listener.ipinip
@@ -52,12 +65,13 @@ class ListenersParent(object):
                 if not listener.enabled:
                     status = self.axapi_client.slb.DOWN
                 c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
-                if listener.protocol == "TERMINATED_HTTPS":
-                    listener.protocol = 'HTTPS'
+
+                self.transform_https_protocols(listener)
+                if listener.protocol == 'HTTPS':
                     template_args["template_client_ssl"] = self.cert_handler(
                         loadbalancer, listener)
 
-                if listener.protocol.lower() == 'http':
+                if listener.protocol in a10constants.HTTP_TYPE:
                     # TODO(hthompson6) work around for issue in acos client
                     listener.protocol = listener.protocol.lower()
                     virtual_port_template = CONF.listener.template_http
@@ -172,13 +186,14 @@ class ListenersUpdate(ListenersParent, task.Task):
         return None
 
 
-class ListenerDelete(task.Task):
+class ListenerDelete(ListenersParent, task.Task):
 
     """Task to delete the listener"""
 
     @axapi_client_decorator
     def execute(self, loadbalancer, listener, vthunder):
         name = loadbalancer.id + "_" + str(listener.protocol_port)
+        self.transform_https_protocols(listener)
         try:
             self.axapi_client.slb.virtual_server.vport.delete(
                 loadbalancer.id, name, listener.protocol,
