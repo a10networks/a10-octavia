@@ -3,15 +3,19 @@
 ## Table of Contents
 1. [Overview](#Overview)
 
-2. [Setup and Installation](#Setup-and-Installation)
+2. [System Requirements](#System-Requirements)
+
+3. [Setup and Installation](#Setup-and-Installation)
 
     1. [For use with vThunders](#For-use-with-vThunders)
 
     2. [For use with hardware devices](#For-use-with-hardware-devices)
 
-3. [Contribution](#Contribution)
+4. [Setting Object Defaults](#Setting-Object-Defaults)
 
-4. [Issues and Inquiries](#Issues-and-Inquiries)
+5. [Contribution](#Contribution)
+
+6. [Issues and Inquiries](#Issues-and-Inquiries)
 
 # Overview
 
@@ -22,7 +26,8 @@ supported releases:
 
 * OpenStack: Stein Release
 * Octavia version: >=4.1.1, <5.0.0.0rc1 (Stein versions)
-* ACOS versions: ACOS 4.1.4 GR1 P2 (AxAPI 3.0)
+* ACOS versions: ACOS 4.1.4 GR1 P2
+* AXAPI versions: 3.0
 
 **Note: Following Configurations should be done as an OpenStack admin user**
 
@@ -49,7 +54,15 @@ enabled_provider_drivers = a10: 'The A10 Octavia driver.'
 default_provider_driver = a10
 ```
 
-### Add A10-Octavia config file
+## Restart Openstack Octavia services
+
+#### For devstack development environment
+`sudo systemctl restart devstack@o-api.service devstack@o-cw.service devstack@o-hk.service devstack@o-hm.service`
+
+#### For other OpenStack environments
+Use `systemctl` or similar function to restart Octavia controller and health services.
+
+### Add A10 Octavia config file
 Create a `a10-octavia.conf` file at /etc/a10/ location with proper permissions including following configuration sections.
 
 ## For use with vThunders
@@ -76,7 +89,7 @@ DEFAULT_AXAPI_VERSION = "30"
 
 [a10_controller_worker]
 amp_image_owner_id = <admin_project_id>
-amp_secgroup_list = lb-mgmt-sec-grp <or_you_can_create_custom>
+amp_secgroup_list = <security_group_to_apply>
 amp_flavor_id = <flavor_id_for_amphorae>
 amp_boot_network_list = <netword_id_to_boot_amphorae_in_admin_project>
 amp_ssh_key_name = <ssh_key_for_amphorae>
@@ -85,7 +98,7 @@ workers = 2
 amp_active_retries = 100
 amp_active_wait_sec = 2
 amp_image_id = <vthunder_amphorae_image_id>
-loadbalancer_topology = SINGLE
+loadbalancer_topology = <SINGLE or ACTIVE_STANDBY>
 
 [a10_health_manager]
 udp_server_ip_address = <server_ip_address_for_health_monitor>
@@ -107,29 +120,51 @@ load_balancer_expiry_age = 3600
 amphorae_expiry_age = 3600
 ```
 
+## Update security group to access vThunder AXAPIs
+
+Update security group `lb-mgmt-sec-grp` (or custom security group configured in a10-octavia.conf file) and allow `TCP PORT 80` and `TCP PORT 443` ingress traffic to allow AXAPI communication with vThunder instances. Also update security group `lb-health-mgr-sec-grp` to allow `UDP PORT 5550` ingress traffic to allow UDP packets from vThunder instances.
+
 ## For use with hardware devices
 
-#### Controller worker sample config
+### Hardware sample config
+
 ```shell
 [a10_controller_worker]
-amp_image_owner_id = <admin_project_id>
-amp_secgroup_list = lb-mgmt-sec-grp <or_you_can_create_custom>
-amp_flavor_id = <flavor_id_for_amphorae>
+amp_secgroup_list = <security_group_to_apply> 
 amp_boot_network_list = <netword_id_to_boot_amphorae_in_admin_project>
 amp_ssh_key_name = <ssh_key_for_amphorae>
 network_driver = a10_octavia_neutron_driver
 workers = 2
 amp_active_retries = 100
 amp_active_wait_sec = 2
-amp_image_id = <vthunder_amphorae_image_id>
 loadbalancer_topology = SINGLE
+
+[RACK_VTHUNDER]
+devices = """[
+                    {
+                     "project_id":"<project_id>",
+                     "ip_address":"10.0.0.4",
+                     "undercloud":"True",
+                     "username":"<username>",
+                     "password":"<password>",
+                     "device_name":"<device_name>",
+                     "axapi_version":"30"
+                     },
+                     {
+                     "project_id":"<another_project_id>",
+                     "ip_address":"10.0.0.5",
+                     "undercloud":"True",
+                     "username":"<username>",
+                     "password":"<password>",
+                     "device_name":"<device_name>",
+                     "axapi_version":"30",
+                     }
+             ]
+       """
 ```
-Load balancer topology options are `SINGLE` and `ACTIVE_STANDBY`. In `ACTIVE_STANDBY` topology, the plugin boots 2 vThunders and uses VRRP-A and aVCS to provide high availability.
 
 
-#### Rack device sample config
-
-## STEP 5: Run database migrations
+## Run database migrations
 
 from `a10-octavia/a10_octavia/db/migration` folder run 
 
@@ -144,13 +179,10 @@ mysql> use octavia;
 mysql> DELETE FROM alembic_version;
 ```
 
-**Note: Octavia verisons less than 4.1.1 have the `alembic_migrations` table instead
-
-## STEP 6: Update security group to access vThunder AXAPIs
-
-Update security group `lb-mgmt-sec-grp` (or custom security group configured in a10-octavia.conf file) and allow `TCP PORT 80` and `TCP PORT 443` ingress traffic to allow AXAPI communication with vThunder instances. Also update security group `lb-health-mgr-sec-grp` to allow `UDP PORT 5550` ingress traffic to allow UDP packets from vThunder instances.
+*Note: Octavia verisons less than 4.1.1 have the `alembic_migrations` table instead*
 
 ## STEP 7: Restart Related Octavia Services
+
 #### For devstack development environment
 `sudo systemctl restart devstack@o-api.service devstack@o-cw.service devstack@o-hk.service devstack@o-hm.service`
 
@@ -168,6 +200,8 @@ journalctl -af --unit a10-health-manager.service
 journalctl -af --unit a10-housekeeper-manager.service
 ```
 
+# Setting Object Defaults
+
 # Contribution
 
 ### Fork the a10-octavia repository
@@ -183,18 +217,14 @@ git clone https://git@github.com:<username>/a10-octavia.git
 ### Checkout to a new branch
 
 ```shell
-
+git checkout -b feature/<branch_name>
 ```
 
 ### Register the A10 provider driver and controller worker plugin
 
-`sudo pip install -e .`
-
-### Register `acos-client` by running following command in acos-client folder
-
-Clone the `acos-client` from https://github.com/a10networks/acos-client and checkout `feature/octavia-support` branch
-
-`sudo pip install -e .`
+```shell
+sudo pip install -e /path/to/a10-octavia
+```
 
 # Issues and Inquiries
 For all issues, please send an email to support@a10networks.com 
