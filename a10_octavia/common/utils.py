@@ -17,9 +17,8 @@
 
 """
 import netaddr
+from oslo_config.cfg import ConfigFileValueError
 from oslo_log import log as logging
-
-from octavia.common import exceptions
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
@@ -41,19 +40,17 @@ def validate_params(rack_info):
                                                   'username', 'password', 'device_name')):
             if validate_ipv4(rack_info['ip_address']):
                 return True
-            raise exceptions.ValidationException(detail=_(
-                'Invalid IP address given ' + rack_info['ip_address']))
-    raise exceptions.ValidationException(detail=_(
-        'Configuration of `devices` under [RACK_VTHUNDER] is invalid. '
-        'Please check your configuration. The params `project_id`, '
-        '`ip_address`, `username`, `password` and `device_name` cannot be None '))
+            raise ConfigFileValueError('Invalid IPAddress value given ' + rack_info['ip_address'])
+    raise ConfigFileValueError('Please check your configuration. The params `project_id`, '
+                               '`ip_address`, `username`, `password` and `device_name` '
+                               'under [rack_vthunder] section cannot be None ')
     return False
 
 
 def check_duplicate_entries(rack_dict):
     rack_count_dict = {}
     for rack_key, rack_value in rack_dict.items():
-        candidate = '{} - {}'.format(rack_value.ip_address, rack_value.partition)
+        candidate = '{}:{}'.format(rack_value.ip_address, rack_value.partition)
         rack_count_dict[candidate] = rack_count_dict.get(candidate, 0) + 1
     return [k for k, v in rack_count_dict.items() if v > 1]
 
@@ -64,28 +61,22 @@ def convert_to_rack_vthunder_conf(rack_list):
     """
     rack_dict = {}
     validation_flag = False
-    try:
-        for rack_device in rack_list:
-            validation_flag = validate_params(rack_device)
-            if validation_flag:
-                rack_device['undercloud'] = True
-                if not rack_device.get('partition'):
-                    rack_device['partition'] = a10constants.SHARED_PARTITION
-                vthunder_conf = data_models.VThunder(**rack_device)
-                if rack_dict.get(rack_device['project_id']):
-                    raise exceptions.ValidationException(detail=_(
-                        'Supplied duplicate project_id ' +
-                        rack_device['project_id'] + ' in [rack_vthunder]'))
-                rack_dict[rack_device['project_id']] = vthunder_conf
-
-    except KeyError as err:
-        LOG.error("Invalid definition of rack device in configuration file."
-                  "The Loadbalancer you create shall boot as overcloud."
-                  "Check attribute: " + str(err))
+    for rack_device in rack_list:
+        validation_flag = validate_params(rack_device)
+        if validation_flag:
+            rack_device['undercloud'] = True
+            if not rack_device.get('partition'):
+                rack_device['partition'] = a10constants.SHARED_PARTITION
+            vthunder_conf = data_models.VThunder(**rack_device)
+            if rack_dict.get(rack_device['project_id']):
+                raise ConfigFileValueError('Supplied duplicate project_id ' +
+                                           rack_device['project_id'] +
+                                           ' in [rack_vthunder] section')
+            rack_dict[rack_device['project_id']] = vthunder_conf
 
     duplicates_list = check_duplicate_entries(rack_dict)
     if len(duplicates_list) != 0:
-        raise exceptions.ValidationException(detail=_('Duplicates found for the following '
-                                                      'ip_address-partition entries: {}'
-                                                      .format(list(duplicates_list))))
+        raise ConfigFileValueError('Duplicates found for the following '
+                                   '\'ip_address:partition\' entries: {}'
+                                   .format(list(duplicates_list)))
     return rack_dict
