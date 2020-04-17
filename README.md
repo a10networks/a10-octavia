@@ -5,52 +5,40 @@
 
 2. [Setup and Installation](#Setup-and-Installation)
 
-3. [Issues and Inquiries](#Issues-and-Inquiries)
+    1. [For use with vThunders](#For-use-with-vThunders)
+
+    2. [For use with hardware devices](#For-use-with-hardware-devices)
+
+3. [Contribution](#Contribution)
+
+4. [Issues and Inquiries](#Issues-and-Inquiries)
 
 # Overview
 
-**This is currently in beta stage with limited support. Our next dev release is tentative for early 2020.**
+**This is currently in beta stage with limited support.**
 
 A10 Networks Octavia Driver for Thunder, vThunder and AX Series Appliances 
 supported releases:
 
 * OpenStack: Stein Release
-* Octavia version: 4.1.0
-* ACOS versions: ACOS 4.1.4 GR1 P1 (AxAPI 3.0)
+* Octavia version: >=4.1.1, <5.0.0.0rc1 (Stein versions)
+* ACOS versions: ACOS 4.1.4 GR1 P2 (AxAPI 3.0)
 
 **Note: Following Configurations should be done as an OpenStack admin user**
 
-# Setup and Installation
+# Installation
 
-## STEP 1: Installation
+This guide assumes that Openstack has already been deployed and Octavia has already been configured.
 
-Clone the repository and run the following command to install the plugin
-
-#### Register the A10 provider driver and controller worker plugin
-`sudo pip install -e .`
-
-#### Register `acos-client` by running following command in acos-client folder
-
-Clone the `acos-client` from https://github.com/a10networks/acos-client and checkout `feature/octavia-support` branch
-
-`sudo pip install -e .`
-
-## STEP 2: Upload vThunder image and create a nova flavor for amphorae devices
-
-Upload a vThunder image (QCOW2) and create nova flavor with required resources.
-Minimum recommendation for vThunder instance is 8 vCPUs, 8GB RAM and 30GB disk.
-
-Use below commands for reference:
+## Install from PyPi
 
 ```shell
-openstack image create --disk-format qcow2 --container-format bare --public --file vThunder410.qcow2 vThunder.qcow2
-
-openstack flavor create --vcpu 8 --ram 8196 --disk 30 vThunder_flavor
+pip install a10-octavia
 ```
 
-Note down the `image ID` and `flavor ID` of created resources.
+# Setup And Configuration
 
-## STEP 3: Enable A10 provider driver in Octavia config file
+## Enable A10 provider driver in Octavia config file
 
 Add `a10` driver to the `enabled_provider_drivers` list in the `api-settings` section of `/etc/octavia/octavia.conf`.
 Change `default_provider_driver` to `a10`
@@ -61,8 +49,23 @@ enabled_provider_drivers = a10: 'The A10 Octavia driver.'
 default_provider_driver = a10
 ```
 
-## STEP 4: Add A10-Octavia config file
+### Add A10-Octavia config file
 Create a `a10-octavia.conf` file at /etc/a10/ location with proper permissions including following configuration sections.
+
+## For use with vThunders
+
+### Upload vThunder image and create a nova flavor for amphorae devices
+
+Upload a vThunder image (QCOW2) and create nova flavor with required resources.
+Minimum recommendation for vThunder instance is 8 vCPUs, 8GB RAM and 30GB disk.
+
+```shell
+openstack image create --disk-format qcow2 --container-format bare --public --file vThunder410.qcow2 vThunder.qcow2
+
+openstack flavor create --vcpu 8 --ram 8196 --disk 30 vThunder_flavor
+```
+
+Note down the `image ID` and `flavor ID` of created resources.
 
 ### vThunder sample config
 ```shell
@@ -70,9 +73,43 @@ Create a `a10-octavia.conf` file at /etc/a10/ location with proper permissions i
 DEFAULT_VTHUNDER_USERNAME = "admin"
 DEFAULT_VTHUNDER_PASSWORD = "a10"
 DEFAULT_AXAPI_VERSION = "30"
+
+[a10_controller_worker]
+amp_image_owner_id = <admin_project_id>
+amp_secgroup_list = lb-mgmt-sec-grp <or_you_can_create_custom>
+amp_flavor_id = <flavor_id_for_amphorae>
+amp_boot_network_list = <netword_id_to_boot_amphorae_in_admin_project>
+amp_ssh_key_name = <ssh_key_for_amphorae>
+network_driver = a10_octavia_neutron_driver
+workers = 2
+amp_active_retries = 100
+amp_active_wait_sec = 2
+amp_image_id = <vthunder_amphorae_image_id>
+loadbalancer_topology = SINGLE
+
+[a10_health_manager]
+udp_server_ip_address = <server_ip_address_for_health_monitor>
+bind_port = 5550
+bind_ip = <controller_ip_configured_to_listen_for_udp_health_packets>
+heartbeat_interval = 5
+heartbeat_key = insecure
+heartbeat_timeout = 90
+health_check_interval = 3
+failover_timeout = 600
+health_check_timeout = 3
+health_check_max_retries = 5
 ```
 
-### Controller worker sample config
+#### Housekeeper sample config
+```shell
+[a10_house_keeping]
+load_balancer_expiry_age = 3600
+amphorae_expiry_age = 3600
+```
+
+## For use with hardware devices
+
+#### Controller worker sample config
 ```shell
 [a10_controller_worker]
 amp_image_owner_id = <admin_project_id>
@@ -87,30 +124,10 @@ amp_active_wait_sec = 2
 amp_image_id = <vthunder_amphorae_image_id>
 loadbalancer_topology = SINGLE
 ```
-Load balancer topology options are `SINGLE` and `ACTIVE_STANDBY`. In `ACTIVE_STANDBY` topology, the plugin boots 2 vThunders and uses aVCS to provide high availability.
+Load balancer topology options are `SINGLE` and `ACTIVE_STANDBY`. In `ACTIVE_STANDBY` topology, the plugin boots 2 vThunders and uses VRRP-A and aVCS to provide high availability.
 
-### Health manager sample config
-```shell
-[a10_health_manager]
-udp_server_ip_address = <server_ip_address_for_health_monitor>
-bind_port = 5550
-bind_ip = <controller_ip_configured_to_listen_for_udp_health_packets>
-heartbeat_interval = 5
-heartbeat_key = insecure
-heartbeat_timeout = 90
-health_check_interval = 3
-failover_timeout = 600
-health_check_timeout = 3
-health_check_max_retries = 5
-```
 
-### Housekeeper sample config
-```shell
-[a10_house_keeping]
-load_balancer_expiry_age = 3600
-amphorae_expiry_age = 3600
-```
-
+#### Rack device sample config
 
 ## STEP 5: Run database migrations
 
@@ -141,11 +158,6 @@ Update security group `lb-mgmt-sec-grp` (or custom security group configured in 
 Use `systemctl` or similar function to restart Octavia controller and health services. 
 
 ## STEP 8: [FOR ROCKY AND STEIN RELEASE] Create a10-octavia services
-From a10-octavia/a10_octavia/install folder run `install_service.sh` script.
-
-```shell
-chmod +X install_service.sh
-./install_service.sh
 ```
 This will install systemd services with names - `a10-controller-worker`, `a10-health-manager.service` and `a10-housekeeper-manager.service`. Make sure the services are up and running.
 You can start/stop the services using systemctl/service commands.
@@ -156,6 +168,33 @@ journalctl -af --unit a10-health-manager.service
 journalctl -af --unit a10-housekeeper-manager.service
 ```
 
+# Contribution
+
+### Fork the a10-octavia repository
+
+[How To Fork](https://help.github.com/en/github/getting-started-with-github/fork-a-repo)
+
+### Clone the repo from your fork
+
+```shell
+git clone https://git@github.com:<username>/a10-octavia.git
+```
+
+### Checkout to a new branch
+
+```shell
+
+```
+
+### Register the A10 provider driver and controller worker plugin
+
+`sudo pip install -e .`
+
+### Register `acos-client` by running following command in acos-client folder
+
+Clone the `acos-client` from https://github.com/a10networks/acos-client and checkout `feature/octavia-support` branch
+
+`sudo pip install -e .`
 
 # Issues and Inquiries
 For all issues, please send an email to support@a10networks.com 
