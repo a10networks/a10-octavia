@@ -64,14 +64,14 @@ def convert_to_rack_vthunder_conf(rack_list):
     for rack_device in rack_list:
         validation_flag = validate_params(rack_device)
         if validation_flag:
-            rack_device['undercloud'] = True
-            if not rack_device.get('partition'):
-                rack_device['partition'] = a10constants.SHARED_PARTITION
-            vthunder_conf = data_models.VThunder(**rack_device)
             if rack_dict.get(rack_device['project_id']):
                 raise ConfigFileValueError('Supplied duplicate project_id ' +
                                            rack_device['project_id'] +
                                            ' in [rack_vthunder] section')
+            rack_device['undercloud'] = True
+            if not rack_device.get('partition'):
+                rack_device['partition'] = a10constants.SHARED_PARTITION
+            vthunder_conf = data_models.VThunder(**rack_device)
             rack_dict[rack_device['project_id']] = vthunder_conf
 
     duplicates_list = check_duplicate_entries(rack_dict)
