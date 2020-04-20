@@ -60,3 +60,15 @@ def service_group_protocol(c, os_protocol):
         'UDP': z.UDP
     }
     return protocols[os_protocol]
+
+
+def virtual_port_protocol(c, os_protocol):
+    z = c.slb.virtual_server.vport
+    protocols = {
+        'TCP': z.TCP,
+        'UDP': z.UDP,
+        'HTTP': z.HTTP,
+        'HTTPS': z.TCP,
+        'TERMINATED_HTTPS': z.HTTPS
+    }
+    return protocols[os_protocol].upper()
