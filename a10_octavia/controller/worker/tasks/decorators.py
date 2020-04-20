@@ -18,8 +18,19 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from requests.exceptions import ConnectionError
 
+from a10_octavia.common import a10constants
+
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
+
+
+def activate_partition(vthunder_client, partition):
+    try:
+        if vthunder_client.system.partition.exists(partition):
+            vthunder_client.system.partition.active(partition)
+    except Exception as e:
+        LOG.exception("Failed to activate partition: %s", str(e))
+        raise
 
 
 def axapi_client_decorator(func):
@@ -30,6 +41,10 @@ def axapi_client_decorator(func):
             self.axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
                                                    vthunder.username, vthunder.password,
                                                    timeout=30)
+
+            if vthunder.partition != a10constants.SHARED_PARTITION:
+                activate_partition(self.axapi_client, vthunder.partition)
+
         else:
             self.axapi_client = None
         result = func(self, *args, **kwargs)

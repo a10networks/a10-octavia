@@ -42,6 +42,7 @@ SP_OBJ_DICT = {
 }
 HTTP_TYPE = ['HTTP', 'HTTPS']
 PERS_TYPE = ['cookie_persistence', 'src_ip_persistence']
+SHARED_PARTITION = 'shared'
 # Taskflow flow and task names
 
 BACKUP_AMPHORA_PLUG = 'backup-amphora-plug'
@@ -72,3 +73,4 @@ ALLOCATE_VIP = 'allocate-vip'
 UPDATE_VIP_AFTER_ALLOCATION = 'update-vip-after-allocation'
 CREATE_VTHUNDER_ENTRY = 'create-vthunder-entry'
 VTHUNDER_BY_LB = 'vthunder-by-loadbalancer'
+CHANGE_PARTITION = 'change-partition'
