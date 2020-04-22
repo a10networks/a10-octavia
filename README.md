@@ -146,6 +146,7 @@ Full list of options can be found here: [Config Options Module](https://github.c
 These settings are for ports allocated on the managment network. It's up to the operator to define the data network security rules.
 
 When delopying with the STANDALONE loadbalancer topology
+
 | Protocol   | Port  | Ingress    | Egress  | Purpose                                   |
 |:----------:|:-----:|:----------:|:-------:|:-----------------------------------------:|
 | TCP        | 80    | ✓          | ✓       | Communication with AXAPI                  |
@@ -153,6 +154,7 @@ When delopying with the STANDALONE loadbalancer topology
 | UDP        | 5550  |            | ✓       | Communication with Health Manager Service |
 
 When deploying with the ACTIVE-STANDBY loadbalancer topology
+
 | Protocol   | Port   | Ingress    | Egress  | Purpose                                           |
 |:----------:|:------:|:----------:|:-------:|:-------------------------------------------------:|
 | TCP        | 80     | ✓          | ✓       | Communication with AXAPI                          |
@@ -346,7 +348,8 @@ $ pip install -e a10-octavia
 
 ### 8. Update security groups 
 
-Modify the `lb-mgmt-sec-grp` to includ
+Modify the `lb-mgmt-sec-grp` to include
+
 | Protocol   | Port   | Ingress    | Egress  | Purpose                                           |
 |:----------:|:------:|:----------:|:-------:|:-------------------------------------------------:|
 | TCP        | 80     | ✓          | ✓       | Communication with AXAPI                          |
@@ -354,6 +357,7 @@ Modify the `lb-mgmt-sec-grp` to includ
 | UDP        | ALL    | ✓          | ✓       | For specifics contact support@a10networks.com     | 
 
 Modify the `lb-health-mgr-sec-grp` to include
+
 | Protocol   | Port  | Ingress    | Egress  | Purpose                                   |
 |:----------:|:-----:|:----------:|:-------:|:-----------------------------------------:|
 | UDP        | 5550  |            | ✓       | Communication with Health Manager Service |
