@@ -250,6 +250,11 @@ These settings are added to the `a10-octavia.conf` file. They allow the operator
 
 *WARNING: Any option specified here will apply globally meaning all projects and devices*
 
+#### Default config example
+```shell
+[DEFAULT]
+
+```
 #### Loadbalancer/virtual server config example
 ```shell
 [SLB]
