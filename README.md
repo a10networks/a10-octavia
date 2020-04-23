@@ -252,7 +252,7 @@ These settings are added to the `a10-octavia.conf` file. They allow the operator
 
 #### Default config example
 ```shell
-[DEFAULT]
+[a10_global]
 
 ```
 #### Loadbalancer/virtual server config example

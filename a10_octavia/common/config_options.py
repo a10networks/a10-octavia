@@ -32,7 +32,7 @@ from a10_octavia.common import config_types
 LOG = logging.getLogger(__name__)
 
 
-A10_DEFAULT_OPTS = [
+A10_GLOBAL_OPTS = [
 ]
 
 A10_VTHUNDER_OPTS = [
@@ -309,7 +309,7 @@ A10_NOVA_OPTS = [
 
 
 # Register the configuration options
-cfg.CONF.register_opts(A10_DEFAULT_OPTS)
+cfg.CONF.register_opts(A10_GLOBAL_OPTS, group='a10_global')
 cfg.CONF.register_opts(A10_CONTROLLER_WORKER_OPTS, group='a10_controller_worker')
 cfg.CONF.register_opts(A10_HOUSE_KEEPING_OPTS, group='a10_house_keeping')
 cfg.CONF.register_cli_opts(A10_HEALTH_MANAGER_OPTS, group='a10_health_manager')
