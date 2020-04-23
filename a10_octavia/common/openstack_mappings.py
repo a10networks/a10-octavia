@@ -30,7 +30,7 @@ def service_group_lb_method(c, os_method):
     lb_methods = {
         'ROUND_ROBIN': z.ROUND_ROBIN,
         'LEAST_CONNECTIONS': z.LEAST_CONNECTION,
-        'SOURCE_IP': z.SOURCE_IP_HASH,
+        'SOURCE_IP': z.SOURCE_IP_HASH_ONLY,
         'WEIGHTED_ROUND_ROBIN': z.WEIGHTED_ROUND_ROBIN,
         'WEIGHTED_LEAST_CONNECTION': z.WEIGHTED_LEAST_CONNECTION,
         'LEAST_CONNECTION_ON_SERVICE_PORT':
