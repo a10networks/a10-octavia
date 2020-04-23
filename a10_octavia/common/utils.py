@@ -17,8 +17,10 @@
 
 """
 import netaddr
+from oslo_config.cfg import ConfigFileValueError
 from oslo_log import log as logging
 
+from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
 
 LOG = logging.getLogger(__name__)
@@ -26,9 +28,7 @@ LOG = logging.getLogger(__name__)
 
 def validate_ipv4(address):
     """Validates for IP4 address format"""
-    if not netaddr.valid_ipv4(address, netaddr.core.INET_PTON):
-        return False
-    return True
+    return netaddr.valid_ipv4(address, netaddr.core.INET_PTON)
 
 
 def validate_params(rack_info):
@@ -40,11 +40,19 @@ def validate_params(rack_info):
                                                   'username', 'password', 'device_name')):
             if validate_ipv4(rack_info['ip_address']):
                 return True
-            LOG.error('Invalid IP address given ' + rack_info['ip_address'])
-    LOG.error('Configuration of `devices` under [RACK_VTHUNDER] is invalid. '
-              'Please check your configuration. The params `project_id`, '
-              '`ip_address`, `username`, `password` and `device_name` cannot be None ')
+            raise ConfigFileValueError('Invalid IPAddress value given ' + rack_info['ip_address'])
+    raise ConfigFileValueError('Please check your configuration. The params `project_id`, '
+                               '`ip_address`, `username`, `password` and `device_name` '
+                               'under [rack_vthunder] section cannot be None ')
     return False
+
+
+def check_duplicate_entries(rack_dict):
+    rack_count_dict = {}
+    for rack_key, rack_value in rack_dict.items():
+        candidate = '{}:{}'.format(rack_value.ip_address, rack_value.partition)
+        rack_count_dict[candidate] = rack_count_dict.get(candidate, 0) + 1
+    return [k for k, v in rack_count_dict.items() if v > 1]
 
 
 def convert_to_rack_vthunder_conf(rack_list):
@@ -53,19 +61,22 @@ def convert_to_rack_vthunder_conf(rack_list):
     """
     rack_dict = {}
     validation_flag = False
-    try:
-        for rack_device in rack_list:
-            validation_flag = validate_params(rack_device)
-            if validation_flag:
-                rack_device['undercloud'] = True
-                vthunder_conf = data_models.VThunder(**rack_device)
-                rack_dict[rack_device['project_id']] = vthunder_conf
-            else:
-                LOG.warning('Invalid definition of rack device for '
-                            'project ' + rack_device['project_id'])
+    for rack_device in rack_list:
+        validation_flag = validate_params(rack_device)
+        if validation_flag:
+            if rack_dict.get(rack_device['project_id']):
+                raise ConfigFileValueError('Supplied duplicate project_id ' +
+                                           rack_device['project_id'] +
+                                           ' in [rack_vthunder] section')
+            rack_device['undercloud'] = True
+            if not rack_device.get('partition'):
+                rack_device['partition'] = a10constants.SHARED_PARTITION
+            vthunder_conf = data_models.VThunder(**rack_device)
+            rack_dict[rack_device['project_id']] = vthunder_conf
 
-    except KeyError as err:
-        LOG.error("Invalid definition of rack device in configuration file."
-                  "The Loadbalancer you create shall boot as overcloud."
-                  "Check attribute: " + str(err))
+    duplicates_list = check_duplicate_entries(rack_dict)
+    if len(duplicates_list) != 0:
+        raise ConfigFileValueError('Duplicates found for the following '
+                                   '\'ip_address:partition\' entries: {}'
+                                   .format(list(duplicates_list)))
     return rack_dict

@@ -47,6 +47,7 @@ class VThunder(base_models.BASE):
     status = sa.Column('status', sa.String(36), default='ACTIVE', nullable=False)
     created_at = sa.Column(u'created_at', sa.DateTime(), nullable=True)
     updated_at = sa.Column(u'updated_at', sa.DateTime(), nullable=True)
+    partition = sa.Column(sa.String(14), nullable=True)
 
     @classmethod
     def find_by_loadbalancer_id(cls, loadbalancer_id, db_session=None):
