@@ -69,8 +69,12 @@ def convert_to_rack_vthunder_conf(rack_list):
                                            rack_device['project_id'] +
                                            ' in [rack_vthunder] section')
             rack_device['undercloud'] = True
-            if not rack_device.get('partition'):
+            partition_name = rack_device.get('partition')
+            if not partition_name:
                 rack_device['partition'] = a10constants.SHARED_PARTITION
+            elif len(partition_name) > 14:
+                raise ConfigFileValueError('Supplied partition name `' + partition_name +
+                                           '` should not be greater than 14 characters')
             vthunder_conf = data_models.VThunder(**rack_device)
             rack_dict[rack_device['project_id']] = vthunder_conf
 
