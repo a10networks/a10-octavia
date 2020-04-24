@@ -69,5 +69,4 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
             lb_method=mock_pool.axapi_client.slb.service_group.SOURCE_IP_HASH_ONLY,
             service_group_templates={'template-port': None, 'template-policy': None,
                                      'template-server': None},
-            axapi_args=AXAPI_ARGS
-            )
+            axapi_args=AXAPI_ARGS)
