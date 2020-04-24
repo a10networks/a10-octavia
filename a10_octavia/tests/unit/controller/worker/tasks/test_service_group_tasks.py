@@ -21,6 +21,7 @@ except ImportError:
 from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
 
+from octavia.common import constants as o_constants
 from octavia.common import data_models as o_data_models
 
 from a10_octavia.common.config_options import A10_SERVICE_GROUP_OPTS
@@ -60,13 +61,12 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         mock_pool.axapi_client = self.client_mock
         mock_pool.CONF = self.conf
         POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID,
-                                  protocol=a10constants.HTTP_PROTOCOL,
-                                  lb_algorithm=a10constants.POOL_LB_ALGO_SOURCE_IP)
+                                  protocol=o_constants.PROTOCOL_HTTP,
+                                  lb_algorithm=o_constants.LB_ALGORITHM_SOURCE_IP)
         mock_pool.execute(POOL, VTHUNDER)
         self.client_mock.slb.service_group.create.assert_called_with(
             a10constants.MOCK_POOL_ID,
-            protocol=mock_pool.axapi_client.slb.service_group.TCP,
+            protocol=mock.ANY,
             lb_method=mock_pool.axapi_client.slb.service_group.SOURCE_IP_HASH_ONLY,
-            service_group_templates={'template-port': None, 'template-policy': None,
-                                     'template-server': None},
+            service_group_templates=mock.ANY,
             axapi_args=AXAPI_ARGS)
