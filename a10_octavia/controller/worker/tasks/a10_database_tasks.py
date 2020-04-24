@@ -199,24 +199,42 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
     """ Create VThunder device entry in DB """
 
     def execute(self, loadbalancer, vthunder_config):
-        self.vthunder_repo.create(db_apis.get_session(),
-                                  vthunder_id=uuidutils.generate_uuid(),
-                                  device_name=vthunder_config.device_name,
-                                  username=vthunder_config.username,
-                                  password=vthunder_config.password,
-                                  ip_address=vthunder_config.ip_address,
-                                  undercloud=vthunder_config.undercloud,
-                                  loadbalancer_id=loadbalancer.id,
-                                  project_id=vthunder_config.project_id,
-                                  axapi_version=vthunder_config.axapi_version,
-                                  topology="STANDALONE",
-                                  role="MASTER",
-                                  status="ACTIVE",
-                                  last_udp_update=datetime.utcnow(),
-                                  created_at=datetime.utcnow(),
-                                  updated_at=datetime.utcnow(),
-                                  partition=vthunder_config.partition)
-        LOG.info("Successfully created vthunder entry in database.")
+        hierarchical_multitenancy = CONF.a10_global.enable_hierarchical_multitenancy
+        if hierarchical_multitenancy:
+            partition = vthunder_config.project_id[:14]
+        else:
+            partition = vthunder_config.partition
+        try:
+            self.vthunder_repo.create(db_apis.get_session(),
+                                      vthunder_id=uuidutils.generate_uuid(),
+                                      device_name=vthunder_config.device_name,
+                                      username=vthunder_config.username,
+                                      password=vthunder_config.password,
+                                      ip_address=vthunder_config.ip_address,
+                                      undercloud=vthunder_config.undercloud,
+                                      loadbalancer_id=loadbalancer.id,
+                                      project_id=vthunder_config.project_id,
+                                      axapi_version=vthunder_config.axapi_version,
+                                      topology="STANDALONE",
+                                      role="MASTER",
+                                      status="ACTIVE",
+                                      last_udp_update=datetime.utcnow(),
+                                      created_at=datetime.utcnow(),
+                                      updated_at=datetime.utcnow(),
+                                      partition=partition,
+                                      hierarchical_multitenancy=hierarchical_multitenancy)
+            LOG.info("Successfully created vthunder entry in database.")
+        except Exception as e:
+            LOG.error('Failed to create vThunder entry in db for load balancer: %s.',
+                      loadbalancer.id)
+            raise
+
+    def revert(self, loadbalancer, vthunder_config, *args, **kwargs):
+        try:
+            self.vthunder_repo.delete(
+                db_apis.get_session(), loadbalancer_id=loadbalancer.id)
+        except NoResultFound:
+            LOG.error("Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
 
 
 class CreateVThunderHealthEntry(BaseDatabaseTask):
