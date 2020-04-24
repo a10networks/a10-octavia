@@ -60,10 +60,10 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         mock_pool = task.PoolCreate()
         mock_pool.axapi_client = self.client_mock
         mock_pool.CONF = self.conf
-        POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID,
+        pool = o_data_models.Pool(id=a10constants.MOCK_POOL_ID,
                                   protocol=o_constants.PROTOCOL_HTTP,
                                   lb_algorithm=o_constants.LB_ALGORITHM_SOURCE_IP)
-        mock_pool.execute(POOL, VTHUNDER)
+        mock_pool.execute(pool, VTHUNDER)
         self.client_mock.slb.service_group.create.assert_called_with(
             a10constants.MOCK_POOL_ID,
             protocol=mock.ANY,
