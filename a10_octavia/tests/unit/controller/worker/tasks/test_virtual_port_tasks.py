@@ -61,7 +61,7 @@ class TestHandlerVirtualPortTasks(BaseTaskTestCase):
         listener_task.execute(LB, [listener], VTHUNDER)
         args, kwargs = client_mock.slb.virtual_server.vport.create.call_args
         self.assertTrue(kwargs.get('use_rcv_hop'))
-        self.assertEquals(kwargs.get('conn_limit'), 1000)
+        self.assertEqual(kwargs.get('conn_limit'), 1000)
 
     def test_update_virtual_port_task(self):
         conf = self._mock_conf(False, False)
@@ -73,4 +73,4 @@ class TestHandlerVirtualPortTasks(BaseTaskTestCase):
         listener_task.execute(LB, [listener], VTHUNDER)
         args, kwargs = client_mock.slb.virtual_server.vport.update.call_args
         self.assertFalse(kwargs.get('use_rcv_hop'))
-        self.assertEquals(kwargs.get('conn_limit'), 1000)
+        self.assertEqual(kwargs.get('conn_limit'), 1000)
