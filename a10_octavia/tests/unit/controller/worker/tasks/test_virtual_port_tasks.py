@@ -19,7 +19,6 @@ except ImportError:
     import mock
 
 from octavia.common import data_models as o_data_models
-from octavia.tests.common import constants as t_constants
 
 from oslo_config import cfg
 
@@ -52,7 +51,7 @@ class TestHandlerVirtualPortTasks(BaseTaskTestCase):
         return listener
 
     def test_create_virtual_port_task(self):
-        conf = self._mock_conf(True, False)
+        self._mock_conf(True, False)
         listener = self._mock_listener('HTTP', 1000)
 
         client_mock = mock.Mock()
@@ -64,7 +63,7 @@ class TestHandlerVirtualPortTasks(BaseTaskTestCase):
         self.assertEqual(kwargs.get('conn_limit'), 1000)
 
     def test_update_virtual_port_task(self):
-        conf = self._mock_conf(False, False)
+        self._mock_conf(False, False)
         listener = self._mock_listener('HTTP', 1000)
 
         client_mock = mock.Mock()
