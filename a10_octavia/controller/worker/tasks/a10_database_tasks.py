@@ -227,7 +227,7 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
         except Exception as e:
             LOG.error('Failed to create vThunder entry in db for load balancer: %s.',
                       loadbalancer.id)
-            raise
+            raise e
 
     def revert(self, loadbalancer, vthunder_config, *args, **kwargs):
         try:
