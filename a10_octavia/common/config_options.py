@@ -35,7 +35,7 @@ LOG = logging.getLogger(__name__)
 A10_GLOBAL_OPTS = [
     cfg.BoolOpt('enable_hierarchical_multitenancy', default=False,
                 help=_('Enable Hierarchical Multitenancy '
-                'for racked devices.')),
+                       'for racked - hardware thunder devices.')),
 ]
 
 A10_VTHUNDER_OPTS = [
