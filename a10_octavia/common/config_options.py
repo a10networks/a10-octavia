@@ -86,6 +86,9 @@ A10_LISTENER_OPTS = [
                default=None,
                max_length=127,
                help=_('HTTP Template Name')),
+    cfg.BoolOpt('use_rcv_hop_for_resp',
+                default=False,
+                help=_('Use receive hop for response to client')),
 ]
 
 A10_SERVICE_GROUP_OPTS = [

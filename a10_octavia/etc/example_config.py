@@ -23,6 +23,7 @@ template_policy = "policy_temp1"
 autosnat = True
 conn_limit = 5000
 template_http = "http_template"
+use_rcv_hop_for_resp = True
 
 [SERVICE - GROUP]
 templates = "server1"

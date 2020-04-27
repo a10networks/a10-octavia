@@ -35,6 +35,7 @@ class ListenersParent(object):
         no_dest_nat = CONF.listener.no_dest_nat
         autosnat = CONF.listener.autosnat
         conn_limit = CONF.listener.conn_limit
+        use_rcv_hop = CONF.listener.use_rcv_hop_for_resp
         virtual_port_templates = {}
         template_virtual_port = CONF.listener.template_virtual_port
         virtual_port_templates['template-virtual-port'] = template_virtual_port
@@ -91,6 +92,7 @@ class ListenersParent(object):
                            autosnat=autosnat, ipinip=ipinip,
                            # TODO(hthompson6) resolve in acos client
                            # ha_conn_mirror=ha_conn_mirror,
+                           use_rcv_hop=use_rcv_hop,
                            conn_limit=conn_limit,
                            virtual_port_templates=virtual_port_templates,
                            **template_args)
