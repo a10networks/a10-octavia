@@ -15,13 +15,10 @@
 from copy import deepcopy
 from oslo_config.cfg import ConfigFileValueError
 
-from a10_octavia.tests.unit.base import BaseTaskTestCase
 from a10_octavia.common.data_models import VThunder
 import a10_octavia.common.utils as utils
-#from unittest.mock import patch
+from a10_octavia.tests.unit.base import BaseTaskTestCase
 
-RACK_LIST = [{
-}]
 SHARED_RACK_DEVICE = {'partition': 'shared'}
 RACK_DEVICE = {
     'partition': 'sample-1'
@@ -96,8 +93,8 @@ class TestUtils(BaseTaskTestCase):
         self.assertRaises(ConfigFileValueError, utils.validate_params, INVALID_RACK_INFO)
 
     def test_check_duplicate_entries(self):
-        self.assertEquals(utils.check_duplicate_entries(DUPLICATE_DICT), DUP_LIST)
-        self.assertEquals(utils.check_duplicate_entries(NON_DUPLICATE_DICT), [])
+        self.assertEqual(utils.check_duplicate_entries(DUPLICATE_DICT), DUP_LIST)
+        self.assertEqual(utils.check_duplicate_entries(NON_DUPLICATE_DICT), [])
 
     def test_convert_to_rack_vthunder_conf(self):
         self.assertRaises(ConfigFileValueError, utils.convert_to_rack_vthunder_conf,
