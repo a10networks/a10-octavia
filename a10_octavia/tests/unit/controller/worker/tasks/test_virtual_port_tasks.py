@@ -23,7 +23,8 @@ from octavia.common import data_models as o_data_models
 from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
 
-from a10_octavia.common import data_models, config_options
+from a10_octavia.common import config_options
+from a10_octavia.common import data_models
 from a10_octavia.controller.worker.tasks import virtual_port_tasks as task
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
