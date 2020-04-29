@@ -348,8 +348,8 @@ class HandleACOSPartitionChange(task.Task):
     @axapi_client_decorator
     def execute(self, vthunder):
         try:
-            self.axapi_client.system.partition.create(vthunder.partition)
-            LOG.info("Partition %s created", vthunder.partition)
+            self.axapi_client.system.partition.create(vthunder.partition_name)
+            LOG.info("Partition %s created", vthunder.partition_name)
         except acos_errors.Exists:
             pass
         except Exception as e:
@@ -359,7 +359,7 @@ class HandleACOSPartitionChange(task.Task):
     @axapi_client_decorator
     def revert(self, vthunder, *args, **kwargs):
         try:
-            self.axapi_client.system.partition.delete(vthunder.partition)
+            self.axapi_client.system.partition.delete(vthunder.partition_name)
         except Exception as e:
             LOG.exception("Failed to revert partition create : %s", str(e))
             raise
