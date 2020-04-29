@@ -37,7 +37,7 @@ def upgrade():
         sa.Column('status', sa.String(36), default='ACTIVE', nullable=False),
         sa.Column(u'created_at', sa.DateTime(), nullable=True),
         sa.Column(u'updated_at', sa.DateTime(), nullable=True),
-        sa.Column('partition', sa.String(14), nullable=True)
+        sa.Column('partition_name', sa.String(14), nullable=True)
     )
 
 

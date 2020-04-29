@@ -12,16 +12,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from copy import deepcopy
-from oslo_config.cfg import ConfigFileValueError
+import copy
+import unittest
 
-from a10_octavia.common.data_models import VThunder
-import a10_octavia.common.utils as utils
-from a10_octavia.tests.unit.base import BaseTaskTestCase
+from oslo_config import cfg
 
-SHARED_RACK_DEVICE = {'partition': 'shared'}
+from a10_octavia.common import data_models
+from a10_octavia.common import utils
+
+SHARED_RACK_DEVICE = {'partition_name': 'shared'}
 RACK_DEVICE = {
-    'partition': 'sample-1'
+    'partition_name': 'sample-1'
 }
 
 RACK_INFO = {
@@ -38,7 +39,7 @@ RACK_INFO_2 = {
     'device_name': 'rack_thunder_2',
     'username': 'def',
     'password': 'def',
-    'partition': 'def-sample'
+    'partition_name': 'def-sample'
 }
 
 DUP_PARTITION_RACK_INFO = {
@@ -48,12 +49,12 @@ DUP_PARTITION_RACK_INFO = {
     'username': 'abc',
     'password': 'abc'}
 
-INVALID_RACK_INFO = {}
-VTHUNDER_1 = VThunder(project_id="project-1", device_name="rack_thunder_1", undercloud=True,
-                      username="abc", password="abc", ip_address="10.10.10.10", partition="shared")
-VTHUNDER_2 = VThunder(project_id="project-2", device_name="rack_thunder_2", undercloud=True,
-                      username="def", password="def", ip_address="12.12.12.12",
-                      partition="def-sample")
+VTHUNDER_1 = data_models.VThunder(project_id="project-1", device_name="rack_thunder_1",
+                                  undercloud=True, username="abc", password="abc",
+                                  ip_address="10.10.10.10", partition_name="shared")
+VTHUNDER_2 = data_models.VThunder(project_id="project-2", device_name="rack_thunder_2",
+                                  undercloud=True, username="def", password="def",
+                                  ip_address="12.12.12.12", partition_name="def-sample")
 
 DUPLICATE_DICT = {'project_1': VTHUNDER_1,
                   'project_2': VTHUNDER_1}
@@ -73,33 +74,49 @@ RESULT_RACK_DEVICE_LIST = {'project-1': VTHUNDER_1,
                            'project-2': VTHUNDER_2}
 
 
-class TestUtils(BaseTaskTestCase):
+class TestUtils(unittest.TestCase):
 
-    def test_validate_ipv4(self):
+    def test_validate_ipv4_valid(self):
         self.assertEqual(utils.validate_ipv4('10.43.12.122'), None)
-        self.assertRaises(ConfigFileValueError, utils.validate_ipv4, '192.0.20')
 
-    def test_validate_partition(self):
+    def test_validate_ipv4_invalid(self):
+        self.assertRaises(cfg.ConfigFileValueError, utils.validate_ipv4, '192.0.20')
+        self.assertRaises(cfg.ConfigFileValueError, utils.validate_ipv4, 'abc')
+
+    def test_validate_partition_valid(self):
         self.assertEqual(utils.validate_partition(RACK_DEVICE), RACK_DEVICE)
-        RACK_DEVICE['partition'] = 'sample_long_partition_name'
-        self.assertRaises(ValueError, utils.validate_partition, RACK_DEVICE)
-        EMPTY_RACK_DEVICE = {}
-        self.assertEqual(utils.validate_partition(EMPTY_RACK_DEVICE), SHARED_RACK_DEVICE)
+        empty_rack_device = {}
+        self.assertEqual(utils.validate_partition(empty_rack_device), SHARED_RACK_DEVICE)
 
-    def test_validate_params(self):
-        SHARED_RACK_INFO = deepcopy(RACK_INFO)
-        SHARED_RACK_INFO['partition'] = 'shared'
-        self.assertEqual(utils.validate_params(RACK_INFO), SHARED_RACK_INFO)
-        self.assertRaises(ConfigFileValueError, utils.validate_params, INVALID_RACK_INFO)
+    def test_validate_partition_invalid(self):
+        long_partition_rack_device = copy.deepcopy(RACK_DEVICE)
+        long_partition_rack_device['partition_name'] = 'sample_long_partition_name'
+        self.assertRaises(ValueError, utils.validate_partition, long_partition_rack_device)
 
-    def test_check_duplicate_entries(self):
+    def test_validate_params_valid(self):
+        shared_rack_info = copy.deepcopy(RACK_INFO)
+        shared_rack_info['partition_name'] = 'shared'
+        self.assertEqual(utils.validate_params(RACK_INFO), shared_rack_info)
+
+    def test_validate_params_invalid(self):
+        empty_param_rack_info = {}
+        missing_param_rack_info = {'project_id': 'abc'}
+        self.assertRaises(cfg.ConfigFileValueError, utils.validate_params, empty_param_rack_info)
+        self.assertRaises(cfg.ConfigFileValueError, utils.validate_params, missing_param_rack_info)
+
+    def test_check_duplicate_entries_dup_found(self):
         self.assertEqual(utils.check_duplicate_entries(DUPLICATE_DICT), DUP_LIST)
+
+    def test_check_duplicate_entries_no_dup_found(self):
         self.assertEqual(utils.check_duplicate_entries(NON_DUPLICATE_DICT), [])
 
-    def test_convert_to_rack_vthunder_conf(self):
-        self.assertRaises(ConfigFileValueError, utils.convert_to_rack_vthunder_conf,
-                          DUPLICATE_PROJECT_RACK_DEVICE_LIST)
-        self.assertRaises(ConfigFileValueError, utils.convert_to_rack_vthunder_conf,
-                          DUPLICATE_PARTITION_RACK_DEVICE_LIST)
+    def test_convert_to_rack_vthunder_conf_valid(self):
         self.assertEqual(utils.convert_to_rack_vthunder_conf(RACK_DEVICE_LIST),
                          RESULT_RACK_DEVICE_LIST)
+        self.assertEqual(utils.convert_to_rack_vthunder_conf([]), {})
+
+    def test_convert_to_rack_vthunder_conf_invalid(self):
+        self.assertRaises(cfg.ConfigFileValueError, utils.convert_to_rack_vthunder_conf,
+                          DUPLICATE_PROJECT_RACK_DEVICE_LIST)
+        self.assertRaises(cfg.ConfigFileValueError, utils.convert_to_rack_vthunder_conf,
+                          DUPLICATE_PARTITION_RACK_DEVICE_LIST)

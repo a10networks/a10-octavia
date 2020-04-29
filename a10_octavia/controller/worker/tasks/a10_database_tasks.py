@@ -201,9 +201,9 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
     def execute(self, loadbalancer, vthunder_config):
         hierarchical_multitenancy = CONF.a10_global.enable_hierarchical_multitenancy
         if hierarchical_multitenancy:
-            partition = vthunder_config.project_id[:14]
+            partition_name = vthunder_config.project_id[:14]
         else:
-            partition = vthunder_config.partition
+            partition_name = vthunder_config.partition_name
         try:
             self.vthunder_repo.create(db_apis.get_session(),
                                       vthunder_id=uuidutils.generate_uuid(),
@@ -221,7 +221,7 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                                       last_udp_update=datetime.utcnow(),
                                       created_at=datetime.utcnow(),
                                       updated_at=datetime.utcnow(),
-                                      partition=partition,
+                                      partition_name=partition_name,
                                       hierarchical_multitenancy=hierarchical_multitenancy)
             LOG.info("Successfully created vthunder entry in database.")
         except Exception as e:
