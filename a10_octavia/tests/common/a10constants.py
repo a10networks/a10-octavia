@@ -26,4 +26,8 @@ MOCK_KEY_PASS = 'mock-key-pass-1'
 MOCK_TEMPLATE_NAME = 'mock-template-name-1'
 MOCK_CERT_ACTION = 'import'
 MOCK_CERT_TYPE = 'pem'
+
 A10_GLOBAL_OPTS = 'a10_global'
+MOCK_PARENT_PROJECT_ID = 'parent_project_id_with_length_32'
+MOCK_CHILD_PART = 'child_part'
+MOCK_CHILD_PROJECT_ID = 'child_project_id_with_length_32_'
