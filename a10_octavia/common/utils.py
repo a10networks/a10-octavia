@@ -36,9 +36,9 @@ def validate_ipv4(address):
 
 
 def validate_partition(rack_device):
-    partition_name = rack_device.get('partition')
+    partition_name = rack_device.get('partition_name')
     if not partition_name:
-        rack_device['partition'] = a10constants.SHARED_PARTITION
+        rack_device['partition_name'] = a10constants.SHARED_PARTITION
     elif len(partition_name) > 14:
         raise ValueError("Supplied partition value '%s' exceeds maximum length 14" %
                          (partition_name))
@@ -62,8 +62,8 @@ def validate_params(rack_info):
 
 def check_duplicate_entries(rack_dict):
     rack_count_dict = {}
-    for rack_value in rack_dict.values():
-        candidate = '{}:{}'.format(rack_value.ip_address, rack_value.partition)
+    for rack_device in rack_dict.values():
+        candidate = '{}:{}'.format(rack_device.ip_address, rack_device.partition_name)
         rack_count_dict[candidate] = rack_count_dict.get(candidate, 0) + 1
     return [k for k, v in rack_count_dict.items() if v > 1]
 
@@ -86,7 +86,7 @@ def convert_to_rack_vthunder_conf(rack_list):
     duplicates_list = check_duplicate_entries(rack_dict)
     if duplicates_list:
         raise ConfigFileValueError('Duplicates found for the following '
-                                   '\'ip_address:partition\' entries: {}'
+                                   '\'ip_address:partition_name\' entries: {}'
                                    .format(list(duplicates_list)))
     return rack_dict
 

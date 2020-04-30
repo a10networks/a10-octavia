@@ -137,7 +137,7 @@ class VThunder(BaseDataModel):
                  password=None, axapi_version=None, undercloud=None,
                  loadbalancer_id=None, project_id=None, compute_id=None,
                  topology="STANDALONE", role="MASTER", last_udp_update=None, status="ACTIVE",
-                 created_at=datetime.utcnow(), updated_at=datetime.utcnow(), partition=None,
+                 created_at=datetime.utcnow(), updated_at=datetime.utcnow(), partition_name=None,
                  hierarchical_multitenancy=None):
         self.id = id
         self.vthunder_id = vthunder_id
@@ -157,7 +157,7 @@ class VThunder(BaseDataModel):
         self.status = status
         self.created_at = created_at
         self.updated_at = updated_at
-        self.partition = partition
+        self.partition_name = partition_name
         self.hierarchical_multitenancy = hierarchical_multitenancy
 
 
