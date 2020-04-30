@@ -345,7 +345,6 @@ class HandleACOSPartitionChange(task.Task):
 
     """Task to switch to specified partition"""
 
-    @axapi_client_decorator
     def execute(self, vthunder):
         try:
             self.axapi_client.system.partition.create(vthunder.partition_name)
@@ -356,10 +355,17 @@ class HandleACOSPartitionChange(task.Task):
             LOG.exception("Failed to create parition on vThunder: %s", str(e))
             raise
 
-    @axapi_client_decorator
+
     def revert(self, vthunder, *args, **kwargs):
         try:
             self.axapi_client.system.partition.delete(vthunder.partition_name)
         except Exception as e:
             LOG.exception("Failed to revert partition create : %s", str(e))
             raise
+
+    def get_axapi_client(self, vthunder):
+        api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+        axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
+                                          vthunder.username, vthunder.password,
+                                          timeout=30)
+        return axapi_client

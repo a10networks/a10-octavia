@@ -29,3 +29,4 @@ MOCK_CERT_TYPE = 'pem'
 
 SERVICE_GROUP_CONF_SECTION = 'service_group'
 LISTENER_CONF_SECTION = 'listener'
+A10_GLOBAL_OPTS = 'a10_global'
