@@ -26,6 +26,7 @@ from octavia.common import constants
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 
+from a10_octavia.common import utils
 from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF
@@ -114,14 +115,20 @@ class DeleteVThunderEntry(BaseDatabaseTask):
 
 
 class GetVThunderByLoadBalancer(BaseDatabaseTask):
-
-    """ Get VThunder details from LoadBalancer"""
+    """Get VThunder from db using LoadBalancer"""
 
     def execute(self, loadbalancer):
         loadbalancer_id = loadbalancer.id
         vthunder = self.vthunder_repo.get_vthunder_from_lb(
             db_apis.get_session(), loadbalancer_id)
-        LOG.info("Successfully fetched vThunder details for LB")
+        if (vthunder and vthunder.undercloud and vthunder.hierarchical_multitenancy and
+            CONF.a10_global.use_parent_partition):
+            parent_project_id = utils.get_parent_project(vthunder.project_id)
+            if parent_project_id:
+                vthunder.partition = parent_project_id[0:14]
+        elif CONF.a10_global.use_parent_partition and not vthunder.hierarchical_multitenancy:
+            LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
+                        "configuration will not be applied.")
         return vthunder
 
 
@@ -204,6 +211,7 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
             partition = vthunder_config.project_id[:14]
         else:
             partition = vthunder_config.partition
+
         try:
             self.vthunder_repo.create(db_apis.get_session(),
                                       vthunder_id=uuidutils.generate_uuid(),

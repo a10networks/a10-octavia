@@ -20,6 +20,9 @@ import netaddr
 from oslo_config.cfg import ConfigFileValueError
 from oslo_log import log as logging
 
+from keystoneclient.v3 import client as keystone_client
+from octavia.common.keystone import KeystoneSession
+
 from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
 
@@ -86,3 +89,13 @@ def convert_to_rack_vthunder_conf(rack_list):
                                    '\'ip_address:partition\' entries: {}'
                                    .format(list(duplicates_list)))
     return rack_dict
+
+
+def get_parent_project(project_id):
+    key_session = KeystoneSession().get_session()
+    key_client = keystone_client.Client(session=key_session)
+    project = key_client.projects.get(project_id)
+    if project.parent_id == 'default':
+        return None
+    else:
+       return project.parent_id
