@@ -125,7 +125,7 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
             CONF.a10_global.use_parent_partition):
             parent_project_id = utils.get_parent_project(vthunder.project_id)
             if parent_project_id:
-                vthunder.partition_name = parent_project_id[0:14]
+                vthunder.partition_name = parent_project_id[:14]
         elif CONF.a10_global.use_parent_partition and not vthunder.hierarchical_multitenancy:
             LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
                         "configuration will not be applied.")
