@@ -95,7 +95,5 @@ def get_parent_project(project_id):
     key_session = KeystoneSession().get_session()
     key_client = keystone_client.Client(session=key_session)
     project = key_client.projects.get(project_id)
-    if project.parent_id == 'default':
-        return None
-    else:
+    if project.parent_id != 'default':
         return project.parent_id

@@ -14,11 +14,18 @@
 
 import copy
 import unittest
+try:
+    from unittest import mock
+    from unittest.mock import patch
+except ImportError:
+    import mock
+    from mock import patch
 
 from oslo_config import cfg
 
 from a10_octavia.common import data_models
 from a10_octavia.common import utils
+from a10_octavia.tests.common import a10constants
 
 SHARED_RACK_DEVICE = {'partition_name': 'shared'}
 RACK_DEVICE = {
@@ -74,6 +81,11 @@ RESULT_RACK_DEVICE_LIST = {'project-1': VTHUNDER_1,
                            'project-2': VTHUNDER_2}
 
 
+class FakeProject(object):
+    def __init__(self, parent_id='default'):
+        self.parent_id = parent_id
+
+
 class TestUtils(unittest.TestCase):
 
     def test_validate_ipv4_valid(self):
@@ -120,3 +132,21 @@ class TestUtils(unittest.TestCase):
                           DUPLICATE_PROJECT_RACK_DEVICE_LIST)
         self.assertRaises(cfg.ConfigFileValueError, utils.convert_to_rack_vthunder_conf,
                           DUPLICATE_PARTITION_RACK_DEVICE_LIST)
+
+    @patch('octavia.common.keystone.KeystoneSession')
+    @patch('a10_octavia.common.utils.keystone_client.Client')
+    def test_get_parent_project_exists(self, mock_key_client, mock_get_session):
+        client_mock = mock.Mock()
+        client_mock.projects.get.return_value = FakeProject(
+            parent_id=a10constants.MOCK_PARENT_PROJECT_ID)
+        mock_key_client.return_value = client_mock
+        self.assertEqual(utils.get_parent_project(a10constants.MOCK_CHILD_PROJECT_ID),
+                         a10constants.MOCK_PARENT_PROJECT_ID)
+
+    @patch('octavia.common.keystone.KeystoneSession')
+    @patch('a10_octavia.common.utils.keystone_client.Client')
+    def test_get_parent_project_not_exists(self, mock_key_client, mock_get_session):
+        client_mock = mock.Mock()
+        client_mock.projects.get.return_value = FakeProject()
+        mock_key_client.return_value = client_mock
+        self.assertIsNone(utils.get_parent_project(a10constants.MOCK_CHILD_PROJECT_ID))
