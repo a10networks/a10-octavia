@@ -131,8 +131,8 @@ class TestUtils(unittest.TestCase):
         self.assertRaises(cfg.ConfigFileValueError, utils.convert_to_rack_vthunder_conf,
                           DUPLICATE_PARTITION_RACK_DEVICE_LIST)
 
-    @patch('octavia.common.keystone.KeystoneSession')
-    @patch('a10_octavia.common.utils.keystone_client.Client')
+    @mock.patch('octavia.common.keystone.KeystoneSession')
+    @mock.patch('a10_octavia.common.utils.keystone_client.Client')
     def test_get_parent_project_exists(self, mock_key_client, mock_get_session):
         client_mock = mock.Mock()
         client_mock.projects.get.return_value = FakeProject(

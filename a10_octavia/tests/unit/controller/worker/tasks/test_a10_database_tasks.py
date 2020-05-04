@@ -41,7 +41,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
         self.conf.register_opts(A10_GLOBAL_OPTS,
                                 group=a10constants.A10_GLOBAL_OPTS)
-        self.db_session = mock.patch('a10_octavia.db.api.get_session')
+        self.db_session = mock.patch(
+            'a10_octavia.controller.worker.tasks.a10_database_tasks.db_apis.get_session')
         self.db_session.start()
 
     def tearDown(self):
@@ -53,7 +54,6 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
     def test_get_vthunder_by_loadbalancer_parent_partition_exists(self,
                                                                   mock_parent_project_id):
         self.conf.config(group=a10constants.A10_GLOBAL_OPTS, use_parent_partition=True)
-
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
         mock_vthunder.undercloud = True
