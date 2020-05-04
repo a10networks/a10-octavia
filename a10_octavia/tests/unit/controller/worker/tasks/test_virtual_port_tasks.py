@@ -47,26 +47,19 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         super(TestHandlerVirtualPortTasks, self).tearDown()
         self.conf.reset()
 
-    def _set_http_mock_conf(self, use_rcv_hop_for_resp, no_dest_nat, template_http):
-        self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
-                         use_rcv_hop_for_resp=use_rcv_hop_for_resp)
-        self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
-                         no_dest_nat=no_dest_nat)
-        self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
-                         template_http=template_http)
-
     def _mock_listener(self, protocol, conn_limit):
         listener = o_data_models.Listener(id=a10constants.MOCK_LISTENER_ID)
         listener.protocol = protocol
         listener.connection_limit = conn_limit
         return listener
 
-    def test_create_http_virtual_port_task(self):
+    def test_create_http_virtual_port_use_rcv_hop(self):
         listener = self._mock_listener('HTTP', 1000)
 
         listener_task = task.ListenersCreate()
         listener_task.axapi_client = self.client_mock
-        self._set_http_mock_conf(True, False, 'XFF')
+        self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
+                         use_rcv_hop_for_resp=True)
         listener_task.CONF = self.conf
 
         with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
@@ -75,22 +68,15 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
         self.assertIn('use_rcv_hop', kwargs)
-        self.assertIn('no_dest_nat', kwargs)
-        self.assertIn('conn_limit', kwargs)
-        self.assertIn('virtual_port_templates', kwargs)
         self.assertTrue(kwargs.get('use_rcv_hop'))
-        self.assertFalse(kwargs.get('no_dest_nat'))
-        self.assertEqual(kwargs.get('conn_limit'), 1000)
-        virtual_port_templates = kwargs.get('virtual_port_templates')
-        self.assertIn('template-http', virtual_port_templates)
-        self.assertEqual(virtual_port_templates['template-http'], 'XFF')
 
-    def test_update_http_virtual_port_task(self):
+    def test_update_http_virtual_port_use_rcv_hop(self):
         listener = self._mock_listener('HTTP', 1000)
 
         listener_task = task.ListenersUpdate()
         listener_task.axapi_client = self.client_mock
-        self._set_http_mock_conf(False, False, 'XFF')
+        self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
+                         use_rcv_hop_for_resp=False)
         listener_task.CONF = self.conf
 
         with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
@@ -99,12 +85,4 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.update.call_args
         self.assertIn('use_rcv_hop', kwargs)
-        self.assertIn('no_dest_nat', kwargs)
-        self.assertIn('conn_limit', kwargs)
-        self.assertIn('virtual_port_templates', kwargs)
         self.assertFalse(kwargs.get('use_rcv_hop'))
-        self.assertFalse(kwargs.get('no_dest_nat'))
-        self.assertEqual(kwargs.get('conn_limit'), 1000)
-        virtual_port_templates = kwargs.get('virtual_port_templates')
-        self.assertIn('template-http', virtual_port_templates)
-        self.assertEqual(virtual_port_templates['template-http'], 'XFF')
