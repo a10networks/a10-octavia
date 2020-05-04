@@ -65,7 +65,7 @@ class TestLoadBalancerFlows(base.TestCase):
                                 group=a10constants.A10_GLOBAL_CONF_SECTION)
         self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, network_type='vlan')
         target = self.flows.get_create_rack_vthunder_load_balancer_flow(
-                            RACK_DEVICE, constants.TOPOLOGY_SINGLE)
+            RACK_DEVICE, constants.TOPOLOGY_SINGLE)
         self.assertIsInstance(target, flow.Flow)
         self.assertIn("vlan_id", target.provides)
         self.assertIn("ve_interface", target.provides)
