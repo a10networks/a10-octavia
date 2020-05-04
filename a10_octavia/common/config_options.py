@@ -43,6 +43,9 @@ A10_GLOBAL_OPTS = [
                 help=_('VRID value')),
     cfg.StrOpt('vrid_floating_ip', default=None,
                help=_('Enable VRID floating IP feature')),
+    cfg.StrOpt('network_type',
+               default='flat',
+               help=_('Neutron ML2 Tenent Network Type')),
 ]
 
 A10_VTHUNDER_OPTS = [
