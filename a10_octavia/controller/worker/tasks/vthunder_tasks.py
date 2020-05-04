@@ -359,3 +359,70 @@ class HandleACOSPartitionChange(task.Task):
         except Exception as e:
             LOG.exception("Failed to revert partition create : %s", str(e))
             raise
+
+
+class CreateVLAN(task.Task):
+
+    """Task to create VLAN on vThunder device"""
+
+    default_provides = a10constants.VE_INTERFACE
+
+    @axapi_client_decorator
+    def execute(self, vlan_id, tag_interface, vthunder):
+        if tag_interface == 2:
+            if self.axapi_client.interface.ethernet.exists(tag_interface):
+                eth2 = self.axapi_client.interface.ethernet.get(tag_interface)
+                if 'action' not in eth2 or eth2['action'] == 'disable':
+                    LOG.warning("Create VLAN interface eth2 not enabled, enabling it")
+                    self.axapi_client.interface.ethernet.update(tag_interface, enable=True)
+            else:
+                tag_interface = 1
+
+        if tag_interface == 1:
+            if not self.axapi_client.interface.ethernet.exists(tag_interface):
+                LOG.error("Create VLAN tag interface %s does not exist", tag_interface)
+                raise
+            eth1 = self.axapi_client.interface.ethernet.get(tag_interface)
+            if 'action' not in eth1 or not eth1['action'] == 'disable':
+                LOG.warning("Create VLAN interface eth1 not enabled, enabling it")
+                self.axapi_client.interface.ethernet.update(tag_interface, enable=True)
+
+        if not self.axapi_client.vlan.exists(vlan_id):
+            LOG.info("Create VLAN with id %s on interface eth%s", vlan_id, tag_interface)
+            self.axapi_client.vlan.create(vlan_id, tagged_eths=[tag_interface], veth=True)
+
+        ve_interface = {'ifnum': vlan_id}
+        return ve_interface
+
+    @axapi_client_decorator
+    def revert(self, vlan_id, tag_interface, vthunder, *args, **kwargs):
+        if self.axapi_client.vlan.exists(vlan_id):
+            LOG.info("Revert VLAN with id %s", vlan_id)
+            self.axapi_client.vlan.delete(vlan_id)
+
+
+class DeleteVLAN(task.Task):
+
+    """Task to delete VLAN on vThunder device"""
+
+    @axapi_client_decorator
+    def execute(self, delete_vlan, vlan_id, vthunder):
+        if delete_vlan and self.axapi_client.vlan.exists(vlan_id):
+            LOG.info("Delete VLAN with id %s", vlan_id)
+            self.axapi_client.vlan.delete(vlan_id)
+
+
+class ConfigureVirtEthIface(task.Task):
+
+    """Task to configure VE interface"""
+
+    @axapi_client_decorator
+    def execute(self, ve_interface, vthunder):
+        LOG.info("Configure ve %s", ve_interface['ifnum'])
+        self.axapi_client.interface.ve.update(ve_interface['ifnum'], dhcp=True, enable=True)
+
+    @axapi_client_decorator
+    def revert(self, ve_interface, vthunder, *args, **kwargs):
+        if self.axapi_client.interface.ve.exists(ve_interface['ifnum']):
+            LOG.info("Revert ve %s", ve_interface['ifnum'])
+            self.axapi_client.interface.ve.delete(ve_interface['ifnum'])

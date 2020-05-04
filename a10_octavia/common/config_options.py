@@ -39,6 +39,9 @@ A10_GLOBAL_OPTS = [
     cfg.BoolOpt('use_parent_partition', default=False,
                 help=_('Use parent project partition on Thunder device '
                        'in hierarchical project architecture.')),
+    cfg.StrOpt('network_type',
+               default='flat',
+               help=_('Neutron ML2 Tenent Network Type')),
 ]
 
 A10_VTHUNDER_OPTS = [
