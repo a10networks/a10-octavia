@@ -48,6 +48,11 @@ PORT = 'port'
 MEMBER_COUNT = 'member_count'
 DELETE_VRID = 'delete_vrid'
 
+SUBNET_ID = "subnet_id"
+VLAN_ID = "vlan_id"
+TAG_INTERFACE = "tag_interface"
+VE_INTERFACE = "ve_interface"
+DELETE_VLAN = "delete_vlan"
 # Taskflow flow and task names
 
 BACKUP_AMPHORA_PLUG = 'backup-amphora-plug'
@@ -79,3 +84,5 @@ UPDATE_VIP_AFTER_ALLOCATION = 'update-vip-after-allocation'
 CREATE_VTHUNDER_ENTRY = 'create-vthunder-entry'
 VTHUNDER_BY_LB = 'vthunder-by-loadbalancer'
 CHANGE_PARTITION = 'change-partition'
+CREATE_VLAN_NETWORK_SUBFLOW = 'create-vlan-network-subflow'
+DELETE_VLAN_NETWORK_SUBFLOW = 'delete-vlan-network-subflow'
