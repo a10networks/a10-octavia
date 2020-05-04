@@ -33,6 +33,9 @@ LOG = logging.getLogger(__name__)
 
 
 A10_GLOBAL_OPTS = [
+    cfg.StrOpt('network_type',
+               default='flat',
+               help=_('Neutron ML2 Tenent Network Type')),
 ]
 
 A10_VTHUNDER_OPTS = [

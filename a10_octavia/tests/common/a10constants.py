@@ -26,3 +26,7 @@ MOCK_KEY_PASS = 'mock-key-pass-1'
 MOCK_TEMPLATE_NAME = 'mock-template-name-1'
 MOCK_CERT_ACTION = 'import'
 MOCK_CERT_TYPE = 'pem'
+MOCK_SUBNET_ID = 'mock-subnet-1'
+
+A10_GLOBAL_CONF_SECTION = 'a10_global'
+A10_RACK_VTHUNDER_CONF_SECTION = 'rack_vthunder'
