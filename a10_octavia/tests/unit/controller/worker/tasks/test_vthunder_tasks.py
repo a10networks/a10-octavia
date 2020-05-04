@@ -19,11 +19,8 @@ try:
 except ImportError:
     import mock
 
-from acos_client.v30 import interface
-
 from a10_octavia.common import data_models as a10_data_models
 from a10_octavia.controller.worker.tasks import vthunder_tasks as task
-from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
 VTHUNDER = a10_data_models.VThunder()
