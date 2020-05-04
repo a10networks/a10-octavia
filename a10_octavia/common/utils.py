@@ -16,12 +16,13 @@
 """A10 Octavia Helper Module
 
 """
+import acos_client
 import netaddr
 from oslo_config.cfg import ConfigFileValueError
 from oslo_log import log as logging
 
 from keystoneclient.v3 import client as keystone_client
-from octavia.common.keystone import KeystoneSession
+from octavia.common import keystone
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
@@ -92,8 +93,16 @@ def convert_to_rack_vthunder_conf(rack_list):
 
 
 def get_parent_project(project_id):
-    key_session = KeystoneSession().get_session()
+    key_session = keystone.KeystoneSession().get_session()
     key_client = keystone_client.Client(session=key_session)
     project = key_client.projects.get(project_id)
     if project.parent_id != 'default':
         return project.parent_id
+
+
+def get_axapi_client(vthunder):
+    api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+    axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
+                                      vthunder.username, vthunder.password,
+                                      timeout=30)
+    return axapi_client
