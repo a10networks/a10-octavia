@@ -16,10 +16,8 @@ import copy
 import unittest
 try:
     from unittest import mock
-    from unittest.mock import patch
 except ImportError:
     import mock
-    from mock import patch
 
 from oslo_config import cfg
 
@@ -143,8 +141,8 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(utils.get_parent_project(a10constants.MOCK_CHILD_PROJECT_ID),
                          a10constants.MOCK_PARENT_PROJECT_ID)
 
-    @patch('octavia.common.keystone.KeystoneSession')
-    @patch('a10_octavia.common.utils.keystone_client.Client')
+    @mock.patch('octavia.common.keystone.KeystoneSession')
+    @mock.patch('a10_octavia.common.utils.keystone_client.Client')
     def test_get_parent_project_not_exists(self, mock_key_client, mock_get_session):
         client_mock = mock.Mock()
         client_mock.projects.get.return_value = FakeProject()

@@ -121,14 +121,16 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
         loadbalancer_id = loadbalancer.id
         vthunder = self.vthunder_repo.get_vthunder_from_lb(
             db_apis.get_session(), loadbalancer_id)
-        if (vthunder and vthunder.undercloud and vthunder.hierarchical_multitenancy and
+        if vthunder is None:
+            raise
+        if (vthunder.undercloud and vthunder.hierarchical_multitenancy and
                 CONF.a10_global.use_parent_partition):
             parent_project_id = utils.get_parent_project(vthunder.project_id)
             if parent_project_id:
                 vthunder.partition_name = parent_project_id[:14]
         elif CONF.a10_global.use_parent_partition and not vthunder.hierarchical_multitenancy:
             LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
-                        "configuration will not be applied.")
+                        "configuration will not be applied for loadbalancer: %s", loadbalancer.id)
         return vthunder
 
 
