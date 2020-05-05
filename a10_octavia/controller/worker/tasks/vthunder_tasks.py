@@ -32,6 +32,7 @@ from octavia.db import api as db_apis
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
+from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 
 
@@ -46,7 +47,7 @@ class VThunderComputeConnectivityWait(task.Task):
     def execute(self, vthunder, amphora):
         """Execute get_info routine for a vThunder until it responds."""
         try:
-            axapi_client = utils.get_axapi_client(vthunder)
+            axapi_client = a10_utils.get_axapi_client(vthunder)
             LOG.info("Attempting to connect vThunder device for connection.")
             attempts = 30
             while attempts >= 0:
@@ -341,10 +342,10 @@ class HandleACOSPartitionChange(task.Task):
 
     def execute(self, vthunder):
         try:
-            axapi_client = utils.get_axapi_client(vthunder)
+            axapi_client = a10_utils.get_axapi_client(vthunder)
             if not axapi_client.system.partition.exists(vthunder.partition_name):
                 axapi_client.system.partition.create(vthunder.partition_name)
-            LOG.info("Partition %s created", vthunder.partition_name)
+                LOG.info("Partition %s created", vthunder.partition_name)
         except acos_errors.Exists:
             pass
         except Exception as e:
@@ -353,7 +354,7 @@ class HandleACOSPartitionChange(task.Task):
 
     def revert(self, vthunder, *args, **kwargs):
         try:
-            axapi_client = utils.get_axapi_client(vthunder)
+            axapi_client = a10_utils.get_axapi_client(vthunder)
             axapi_client.system.partition.delete(vthunder.partition_name)
         except Exception as e:
             LOG.exception("Failed to revert partition create : %s", str(e))
