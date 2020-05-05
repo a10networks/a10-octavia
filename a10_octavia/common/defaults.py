@@ -31,5 +31,6 @@ DEFAULT = {
     'templates': None,
     'conn_limit': None,
     'conn_resume': None,
-    'templates': None
+    'templates': None,
+    'use_rcv_hop_for_resp': False
 }
