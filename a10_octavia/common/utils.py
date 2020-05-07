@@ -88,27 +88,6 @@ def check_duplicate_entries(hardware_dict):
     return [k for k, v in hardware_count_dict.items() if v > 1]
 
 
-def convert_to_hardware_thunder_conf(hardware_list):
-    """Validate for all vthunder nouns for hardware devices configurations."""
-    hardware_dict = {}
-    for hardware_device in hardware_list:
-        hardware_device = validate_params(hardware_device)
-        if hardware_dict.get(hardware_device['project_id']):
-            raise cfg.ConfigFileValueError('Supplied duplicate project_id ' +
-                                           hardware_device['project_id'] +
-                                           ' in [hardware_thunder] section')
-        hardware_device['undercloud'] = True
-        vthunder_conf = data_models.VThunder(**hardware_device)
-        hardware_dict[hardware_device['project_id']] = vthunder_conf
-
-    duplicates_list = check_duplicate_entries(hardware_dict)
-    if duplicates_list:
-        raise cfg.ConfigFileValueError('Duplicates found for the following '
-                                       '\'ip_address:partition_name\' entries: {}'
-                                       .format(list(duplicates_list)))
-    return hardware_dict
-
-
 def get_parent_project(project_id):
     key_session = keystone.KeystoneSession().get_session()
     key_client = keystone_client.Client(session=key_session)
@@ -178,3 +157,77 @@ def get_vrid_floating_ip_for_project(project_id):
     if device_info:
         vrid_fp = device_info.vrid_floating_ip
         return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp
+
+
+def validate_mandatory_params(rack_info):
+    """Check for all the required parameters for rack configurations.
+    """
+    if all(k in rack_info for k in ('project_id', 'ip_address',
+                                    'username', 'password', 'device_name')):
+        if all(rack_info[x] is not None for x in ('project_id', 'ip_address',
+                                                  'username', 'password', 'device_name')):
+            if validate_ipv4(rack_info['ip_address']):
+                return True
+            raise ConfigFileValueError('Invalid IPAddress value given ' + rack_info['ip_address'])
+    raise ConfigFileValueError('Please check your configuration. The params `project_id`, '
+                               '`ip_address`, `username`, `password` and `device_name` '
+                               'under [rack_vthunder] section cannot be None ')
+    return False
+
+
+def validate_interface_vlan_map(rack_device):
+    if 'interface_vlan_map' not in rack_device:
+        return True
+
+    ivmap = rack_device['interface_vlan_map']
+    for ifnum in ivmap:
+        if_info = ivmap[ifnum]
+        for vlan_id in if_info:
+            ve_info = if_info[vlan_id]
+            if 'use_dhcp' in ve_info and ve_info['use_dhcp']:
+                if 'ip_last_octets' in ve_info and ve_info['ip_last_octets'] != '':
+                    raise ConfigFileValueError('Check settings for vlan ' + vlan_id +
+                                               '. Please do not set ip_last_octets in '
+                                               'interface_vlan_map when use_dhcp is True')
+            if 'use_dhcp' not in ve_info or not ve_info['use_dhcp']:
+                if 'ip_last_octets' not in ve_info or ve_info['ip_last_octets'] == '':
+                    raise ConfigFileValueError('Check settings for vlan ' + vlan_id +
+                                               '. Please set valid ip_last_octets in '
+                                               'interface_vlan_map when use_dhcp is False')
+                octets = ve_info['ip_last_octets'].split('.')
+                if len(octets) == 0 or len(octets) > 4:
+                    raise ConfigFileValueError('Improper ip_last_octets for vlan ' + vlan_id
+                                               + 'in interface_vlan_map')
+                for octet in octets:
+                    if not 0 <= int(octet) <= 255:
+                        raise ConfigFileValueError('Improper ip_last_octets for vlan ' +
+                                                   vlan_id + 'in interface_vlan_map')
+    return True
+
+
+def convert_to_rack_vthunder_conf(rack_list):
+    """ Validates for all vthunder nouns for rack devices
+        configurations.
+    """
+    rack_dict = {}
+    validation_flag = False
+    for rack_device in rack_list:
+        validation_flag = validate_mandatory_params(rack_device)
+        if validation_flag:
+            if rack_dict.get(rack_device['project_id']):
+                raise ConfigFileValueError('Supplied duplicate project_id ' +
+                                           rack_device['project_id'] +
+                                           ' in [rack_vthunder] section')
+            rack_device['undercloud'] = True
+            if not rack_device.get('partition'):
+                rack_device['partition'] = a10constants.SHARED_PARTITION
+            vthunder_conf = data_models.VThunder(**rack_device)
+            rack_dict[rack_device['project_id']] = vthunder_conf
+            validate_interface_vlan_map(rack_device)
+
+    duplicates_list = check_duplicate_entries(rack_dict)
+    if len(duplicates_list) != 0:
+        raise ConfigFileValueError('Duplicates found for the following '
+                                   '\'ip_address:partition\' entries: {}'
+                                   .format(list(duplicates_list)))
+    return rack_dict
