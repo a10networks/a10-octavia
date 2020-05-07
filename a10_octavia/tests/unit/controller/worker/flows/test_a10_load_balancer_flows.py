@@ -35,7 +35,8 @@ RACK_DEVICE = {
     "ip_address": "10.0.0.1",
     "device_name": "rack_vthunder",
     "username": "abc",
-    "password": "abc"
+    "password": "abc",
+    "interface_vlan_map": {"1": {"11": {"use_dhcp": True}, "12": {"use_dhcp": True}}}
 }
 
 
@@ -67,8 +68,6 @@ class TestLoadBalancerFlows(base.TestCase):
         target = self.flows.get_create_rack_vthunder_load_balancer_flow(
             RACK_DEVICE, constants.TOPOLOGY_SINGLE)
         self.assertIsInstance(target, flow.Flow)
-        self.assertIn("vlan_id", target.provides)
-        self.assertIn("ve_interface", target.provides)
 
     def test_delete_lb_rack_vthunder_vlan_flow(self, mock_net_driver):
         self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
@@ -82,5 +81,3 @@ class TestLoadBalancerFlows(base.TestCase):
                                         project_id='project-rack-vthunder')
         (del_flow, store) = self.flows.get_delete_load_balancer_flow(lb, False)
         self.assertIsInstance(del_flow, flow.Flow)
-        self.assertIn("delete_vlan", del_flow.provides)
-        self.assertIn("vlan_id", del_flow.provides)

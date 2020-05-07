@@ -28,7 +28,8 @@ RACK_DEVICE = {
     "ip_address": "10.0.0.1",
     "device_name": "rack_vthunder",
     "username": "abc",
-    "password": "abc"
+    "password": "abc",
+    "interface_vlan_map": {"1": {"11": {"use_dhcp": True}, "12": {"use_dhcp": True}}}
 }
 
 
@@ -48,8 +49,6 @@ class TestMemberFlows(base.TestCase):
         self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, network_type='vlan')
         create_flow = self.flows.get_rack_vthunder_create_member_flow()
         self.assertIsInstance(create_flow, flow.Flow)
-        self.assertIn("vlan_id", create_flow.provides)
-        self.assertIn("ve_interface", create_flow.provides)
 
     def test_delete_member_rack_vthunder_vlan_flow(self):
         self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
@@ -61,5 +60,3 @@ class TestMemberFlows(base.TestCase):
                          devices=[RACK_DEVICE])
         del_flow = self.flows.get_delete_member_flow()
         self.assertIsInstance(del_flow, flow.Flow)
-        self.assertIn("delete_vlan", del_flow.provides)
-        self.assertIn("vlan_id", del_flow.provides)

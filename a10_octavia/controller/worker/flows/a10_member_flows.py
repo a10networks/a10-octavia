@@ -130,7 +130,9 @@ class MemberFlows(object):
         delete_member_flow.add(database_tasks.DecrementMemberQuota(
             requires=constants.MEMBER))
         if CONF.a10_global.network_type == 'vlan':
-            delete_member_flow.add(*self._get_delete_member_vlan_network_subflow())
+            delete_member_flow.add(vthunder_tasks.DeleteEthernetTagIfNotInUseForMember(
+                requires=[constants.MEMBER,
+                          a10constants.VTHUNDER]))
         delete_member_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
         delete_member_flow.add(database_tasks.
@@ -147,21 +149,6 @@ class MemberFlows(object):
             requires=[a10constants.VRID, a10constants.DELETE_VRID]))
 
         return delete_member_flow
-
-    def _get_delete_member_vlan_network_subflow(self):
-        delete_vlan_subflow = linear_flow.Flow(a10constants.DELETE_VLAN_NETWORK_SUBFLOW)
-        delete_vlan_subflow.add(a10_database_tasks.CheckMemberVLANCanBeDeleted(
-            requires=constants.MEMBER,
-            provides=a10constants.DELETE_VLAN))
-        delete_vlan_subflow.add(a10_network_tasks.GetMemberSubnetVLANID(
-            requires=constants.MEMBER,
-            provides=a10constants.VLAN_ID))
-        delete_vlan_subflow.add(vthunder_tasks.DeleteVLAN(
-            requires=[a10constants.VTHUNDER,
-                      a10constants.VLAN_ID,
-                      a10constants.DELETE_VLAN]))
-
-        return delete_vlan_subflow
 
     def get_update_member_flow(self):
         """Create a flow to update a member
@@ -318,7 +305,9 @@ class MemberFlows(object):
         create_member_flow.add(a10_database_tasks.UpdateVRIDForProjectMember(
             requires=[constants.MEMBER, a10constants.VRID, a10constants.PORT]))
         if CONF.a10_global.network_type == 'vlan':
-            create_member_flow.add(*self._get_create_member_vlan_network_subflow())
+            create_member_flow.add(vthunder_tasks.TagEthernetForMember(
+                requires=[constants.MEMBER,
+                          a10constants.VTHUNDER]))
         create_member_flow.add(server_tasks.MemberCreate(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
         create_member_flow.add(database_tasks.MarkMemberActiveInDB(
@@ -330,19 +319,3 @@ class MemberFlows(object):
                                    requires=(constants.LOADBALANCER,
                                              constants.LISTENERS)))
         return create_member_flow
-
-    def _get_create_member_vlan_network_subflow(self):
-        vlan_network_subflow = linear_flow.Flow(a10constants.CREATE_VLAN_NETWORK_SUBFLOW)
-        vlan_network_subflow.add(a10_network_tasks.GetMemberSubnetVLANID(
-            requires=constants.MEMBER,
-            provides=a10constants.VLAN_ID))
-        vlan_network_subflow.add(vthunder_tasks.CreateVLAN(
-            inject={a10constants.TAG_INTERFACE: 2},
-            requires=[a10constants.VTHUNDER,
-                      a10constants.VLAN_ID,
-                      a10constants.TAG_INTERFACE],
-            provides=a10constants.VE_INTERFACE))
-        vlan_network_subflow.add(vthunder_tasks.ConfigureVirtEthIface(
-            requires=[a10constants.VTHUNDER,
-                      a10constants.VE_INTERFACE]))
-        return vlan_network_subflow
