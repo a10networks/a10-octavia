@@ -14,6 +14,8 @@
 
 import json
 import logging
+import socket
+import struct
 
 from a10_octavia.common.data_models import Certificate
 
@@ -60,3 +62,14 @@ def meta(lbaas_obj, key, default):
     except Exception:
         return default
     return meta_json.get(key, default)
+
+
+def check_in_range(server_ip, subnet, netmask):
+
+    """TODO: Use static typing on this when fully migrated to train w/ python3.6"""
+
+    int_ip = struct.unpack('>L', socket.inet_aton(server_ip))[0]
+    int_subnet = struct.unpack('>L', socket.inet_aton(subnet))[0]
+    int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
+
+    return int_ip & int_netmask == int_subnet

@@ -20,6 +20,8 @@ try:
 except ImportError:
     import httplib as http_client
 from requests import exceptions as req_exceptions
+import socket
+import struct
 from taskflow import task
 import time
 
@@ -34,6 +36,7 @@ from octavia.db import api as db_apis
 from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 
 
 CONF = cfg.CONF
@@ -365,68 +368,149 @@ class HandleACOSPartitionChange(task.Task):
             raise
 
 
-class CreateVLAN(task.Task):
+class TagEthernetBaseTask(task.Task):
 
-    """Task to create VLAN on vThunder device"""
+    def __init__(self, **kwargs):
+        super(TagEthernetBaseTask, self).__init__(**kwargs)
+        self._network_driver = None
 
-    default_provides = a10constants.VE_INTERFACE
+    @property
+    def network_driver(self):
+        if self._network_driver is None:
+            self._network_driver = utils.get_network_driver()
+        return self._network_driver
 
-    @axapi_client_decorator
-    def execute(self, vlan_id, tag_interface, vthunder):
-        if tag_interface == 2:
-            if self.axapi_client.interface.ethernet.exists(tag_interface):
-                eth2 = self.axapi_client.interface.ethernet.get(tag_interface)
-                if 'action' not in eth2 or eth2['action'] == 'disable':
-                    LOG.warning("Create VLAN interface eth2 not enabled, enabling it")
-                    self.axapi_client.interface.ethernet.update(tag_interface, enable=True)
-            else:
-                tag_interface = 1
+    def get_tag_interface_info(self, project_id, vlan_id):
+        if project_id in CONF.rack_vthunder.devices:
+            vthunder_conf = CONF.rack_vthunder.devices[project_id]
+            if vthunder_conf.interface_vlan_map is not None:
+                interface_vlan_map = vthunder_conf.interface_vlan_map
+                for ifnum in interface_vlan_map:
+                    vlan_dict = interface_vlan_map[ifnum]
+                    vlan_id_str = str(vlan_id)
+                    if vlan_id_str in vlan_dict:
+                        return (int(ifnum), vlan_dict[vlan_id_str])
+        return (1, None)
 
-        if tag_interface == 1:
-            if not self.axapi_client.interface.ethernet.exists(tag_interface):
-                LOG.error("Create VLAN tag interface %s does not exist", tag_interface)
-                raise
-            eth1 = self.axapi_client.interface.ethernet.get(tag_interface)
-            if 'action' not in eth1 or not eth1['action'] == 'disable':
-                LOG.warning("Create VLAN interface eth1 not enabled, enabling it")
-                self.axapi_client.interface.ethernet.update(tag_interface, enable=True)
+    def get_subnet_and_mask(self, subnet_id):
+        subnet = self.network_driver.get_subnet(subnet_id)
+        network, net_bits = subnet.cidr.split('/')
+        host_bits = 32 - int(net_bits)
+        netmask = socket.inet_ntoa(struct.pack('!I', (1 << 32) - (1 << host_bits)))
+        return network, netmask
+
+    def get_vlan_id(self, subnet_id):
+        network_id = self.network_driver.get_subnet(subnet_id).network_id
+        network = self.network_driver.get_network(network_id)
+        if network.provider_network_type != 'vlan':
+            raise
+        return network.provider_segmentation_id
+
+    def is_vlan_deletable(self, subnet, subnet_mask):
+        vs_list = self.axapi_client.slb.virtual_server.get(name="")
+        server_list = self.axapi_client.slb.server.get(name="")
+
+        if vs_list != '':
+            for vs in vs_list["virtual-server-list"]:
+                if a10_task_utils.check_in_range(vs["ip-address"], subnet, subnet_mask):
+                    return False
+
+        if server_list != '':
+            for server in server_list["server-list"]:
+                if a10_task_utils.check_in_range(server["host"], subnet, subnet_mask):
+                    return False
+
+        return True
+
+    def tag_interface(self, vlan_id, ifnum, ve_info):
+        if not self.axapi_client.interface.ethernet.exists(ifnum):
+            LOG.error("ethernet interface %s does not exist", ifnum)
+            raise
+
+        eth = self.axapi_client.interface.ethernet.get(ifnum)
+        if 'action' not in eth or not eth['action'] == 'disable':
+            LOG.warning("ethernet interface %s not enabled, enabling it", ifnum)
+            self.axapi_client.interface.ethernet.update(ifnum, enable=True)
 
         if not self.axapi_client.vlan.exists(vlan_id):
-            LOG.info("Create VLAN with id %s on interface eth%s", vlan_id, tag_interface)
-            self.axapi_client.vlan.create(vlan_id, tagged_eths=[tag_interface], veth=True)
+            self.axapi_client.vlan.create(vlan_id, tagged_eths=[ifnum], veth=True)
+            LOG.debug("Tagged ethernet interface %s with VLAN with id %s", ifnum, vlan_id)
 
-        ve_interface = {'ifnum': vlan_id}
-        return ve_interface
+        if ve_info is not None and 'use_dhcp' in ve_info and not ve_info['use_dhcp']:
+            LOG.error("vlan_id %s configuration use_dhcp false is currently not supported",
+                      vlan_id)
+            raise
+
+        self.axapi_client.interface.ve.update(vlan_id, dhcp=True, enable=True)
+
+
+class TagEthernetForLB(TagEthernetBaseTask):
+
+    """Task to tag EthernetInterface on a vThunder device from lb subnet"""
 
     @axapi_client_decorator
-    def revert(self, vlan_id, tag_interface, vthunder, *args, **kwargs):
+    def execute(self, loadbalancer, vthunder):
+        vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id)
+        ifnum, ve_info = self.get_tag_interface_info(loadbalancer.project_id, vlan_id)
+        self.tag_interface(vlan_id, ifnum, ve_info)
+
+    @axapi_client_decorator
+    def revert(self, loadbalancer, vthunder, *args, **kwargs):
+        vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id)
         if self.axapi_client.vlan.exists(vlan_id):
-            LOG.info("Revert VLAN with id %s", vlan_id)
+            LOG.debug("Revert TagEthernetForLB with VLAN id %s", vlan_id)
             self.axapi_client.vlan.delete(vlan_id)
 
 
-class DeleteVLAN(task.Task):
+class TagEthernetForMember(TagEthernetBaseTask):
 
-    """Task to delete VLAN on vThunder device"""
+    """Task to tag EthernetInterface on a vThunder device from member subnet"""
 
     @axapi_client_decorator
-    def execute(self, delete_vlan, vlan_id, vthunder):
-        if delete_vlan and self.axapi_client.vlan.exists(vlan_id):
-            LOG.info("Delete VLAN with id %s", vlan_id)
+    def execute(self, member, vthunder):
+        vlan_id = self.get_vlan_id(member.subnet_id)
+        ifnum, ve_info = self.get_tag_interface_info(member.project_id, vlan_id)
+        self.tag_interface(vlan_id, ifnum, ve_info)
+
+    @axapi_client_decorator
+    def revert(self, member, vthunder, *args, **kwargs):
+        vlan_id = self.get_vlan_id(member.subnet_id)
+        if self.axapi_client.vlan.exists(vlan_id):
+            LOG.debug("Revert TagEthernetForMember with VLAN id %s", vlan_id)
             self.axapi_client.vlan.delete(vlan_id)
 
 
-class ConfigureVirtEthIface(task.Task):
+class DeleteEthernetTagIfNotInUseForLB(TagEthernetBaseTask):
 
-    """Task to configure VE interface"""
-
-    @axapi_client_decorator
-    def execute(self, ve_interface, vthunder):
-        LOG.info("Configure ve %s", ve_interface['ifnum'])
-        self.axapi_client.interface.ve.update(ve_interface['ifnum'], dhcp=True, enable=True)
+    """Task to untag EthernetInterface on a vThunder device from lb subnet"""
 
     @axapi_client_decorator
-    def revert(self, ve_interface, vthunder, *args, **kwargs):
-        if self.axapi_client.interface.ve.exists(ve_interface['ifnum']):
-            LOG.info("Revert ve %s", ve_interface['ifnum'])
-            self.axapi_client.interface.ve.delete(ve_interface['ifnum'])
+    def execute(self, loadbalancer, vthunder):
+        try:
+            if loadbalancer.project_id in CONF.rack_vthunder.devices:
+                subnet, subnet_mask = self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
+                if self.is_vlan_deletable(subnet, subnet_mask):
+                    vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id)
+                    if self.axapi_client.vlan.exists(vlan_id):
+                        LOG.debug("Delete VLAN with id %s", vlan_id)
+                        self.axapi_client.vlan.delete(vlan_id)
+        except Exception as e:
+            LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
+
+
+class DeleteEthernetTagIfNotInUseForMember(TagEthernetBaseTask):
+
+    """Task to untag EthernetInterface on a vThunder device from member subnet"""
+
+    @axapi_client_decorator
+    def execute(self, member, vthunder):
+        try:
+            if member.project_id in CONF.rack_vthunder.devices:
+                subnet, subnet_mask = self.get_subnet_and_mask(member.subnet_id)
+                if self.is_vlan_deletable(subnet, subnet_mask):
+                    vlan_id = self.get_vlan_id(member.subnet_id)
+                    if self.axapi_client.vlan.exists(vlan_id):
+                        LOG.info("Delete VLAN with id %s", vlan_id)
+                        self.axapi_client.vlan.delete(vlan_id)
+        except Exception as e:
+            LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))

@@ -44,11 +44,9 @@ HTTP_TYPE = ['HTTP', 'HTTPS']
 PERS_TYPE = ['cookie_persistence', 'src_ip_persistence']
 NO_DEST_NAT_SUPPORTED_PROTOCOL = ['tcp', 'udp']
 SHARED_PARTITION = 'shared'
-SUBNET_ID = "subnet_id"
-VLAN_ID = "vlan_id"
-TAG_INTERFACE = "tag_interface"
-VE_INTERFACE = "ve_interface"
-DELETE_VLAN = "delete_vlan"
+VLAN = "vlan"
+FLAT = "flat"
+SUPPORTED_NETWORK_TYPE = [FLAT, VLAN]
 # Taskflow flow and task names
 
 BACKUP_AMPHORA_PLUG = 'backup-amphora-plug'
@@ -80,5 +78,3 @@ UPDATE_VIP_AFTER_ALLOCATION = 'update-vip-after-allocation'
 CREATE_VTHUNDER_ENTRY = 'create-vthunder-entry'
 VTHUNDER_BY_LB = 'vthunder-by-loadbalancer'
 CHANGE_PARTITION = 'change-partition'
-CREATE_VLAN_NETWORK_SUBFLOW = 'create-vlan-network-subflow'
-DELETE_VLAN_NETWORK_SUBFLOW = 'delete-vlan-network-subflow'

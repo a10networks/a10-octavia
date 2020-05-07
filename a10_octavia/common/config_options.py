@@ -27,6 +27,7 @@ from octavia.common import constants
 from octavia.i18n import _
 from octavia import version
 
+from a10_octavia.common import a10constants
 from a10_octavia.common import config_types
 
 LOG = logging.getLogger(__name__)
@@ -34,7 +35,8 @@ LOG = logging.getLogger(__name__)
 
 A10_GLOBAL_OPTS = [
     cfg.StrOpt('network_type',
-               default='flat',
+               default=a10constants.FLAT,
+               choices=a10constants.SUPPORTED_NETWORK_TYPE,
                help=_('Neutron ML2 Tenent Network Type')),
 ]
 
