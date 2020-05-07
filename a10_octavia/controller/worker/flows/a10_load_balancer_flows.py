@@ -175,12 +175,14 @@ class LoadBalancerFlows(object):
             inject={"status": constants.PENDING_DELETE}))
         delete_LB_flow.add(compute_tasks.NovaServerGroupDelete(
             requires=constants.SERVER_GROUP_ID))
-        if CONF.a10_global.network_type == 'vlan':
-            delete_LB_flow.add(*self._get_delete_lb_vlan_network_subflow())
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
+        if CONF.a10_global.network_type == 'vlan':
+            delete_LB_flow.add(vthunder_tasks.DeleteEthernetTagIfNotInUseForLB(
+                requires=[constants.LOADBALANCER,
+                          a10constants.VTHUNDER]))
 
         # delete_LB_flow.add(listeners_delete)
         # delete_LB_flow.add(network_tasks.UnplugVIP(
@@ -204,21 +206,6 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
 
         return (delete_LB_flow, store)
-
-    def _get_delete_lb_vlan_network_subflow(self):
-        delete_vlan_subflow = linear_flow.Flow(a10constants.DELETE_VLAN_NETWORK_SUBFLOW)
-        delete_vlan_subflow.add(a10_database_tasks.CheckVipVLANCanBeDeleted(
-            requires=constants.LOADBALANCER,
-            provides=a10constants.DELETE_VLAN))
-        delete_vlan_subflow.add(a10_network_tasks.GetVipSubnetVLANID(
-            requires=constants.LOADBALANCER,
-            provides=a10constants.VLAN_ID))
-        delete_vlan_subflow.add(vthunder_tasks.DeleteVLAN(
-            requires=[a10constants.VTHUNDER,
-                      a10constants.VLAN_ID,
-                      a10constants.DELETE_VLAN]))
-
-        return delete_vlan_subflow
 
     def get_new_lb_networking_subflow(self, topology):
         """Create a sub-flow to setup networking.
@@ -343,25 +330,11 @@ class LoadBalancerFlows(object):
         post_create_lb_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         if CONF.a10_global.network_type == 'vlan':
-            post_create_lb_flow.add(*self._get_create_lb_vlan_network_subflow())
+            post_create_lb_flow.add(vthunder_tasks.TagEthernetForLB(
+                requires=[constants.LOADBALANCER,
+                          a10constants.VTHUNDER]))
         if mark_active:
             post_create_lb_flow.add(database_tasks.MarkLBActiveInDB(
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
                 requires=constants.LOADBALANCER))
         return post_create_lb_flow
-
-    def _get_create_lb_vlan_network_subflow(self):
-        vlan_network_subflow = linear_flow.Flow(a10constants.CREATE_VLAN_NETWORK_SUBFLOW)
-        vlan_network_subflow.add(a10_network_tasks.GetVipSubnetVLANID(
-            requires=constants.LOADBALANCER,
-            provides=a10constants.VLAN_ID))
-        vlan_network_subflow.add(vthunder_tasks.CreateVLAN(
-            inject={a10constants.TAG_INTERFACE: 1},
-            requires=[a10constants.VTHUNDER,
-                      a10constants.VLAN_ID,
-                      a10constants.TAG_INTERFACE],
-            provides=a10constants.VE_INTERFACE))
-        vlan_network_subflow.add(vthunder_tasks.ConfigureVirtEthIface(
-            requires=[a10constants.VTHUNDER,
-                      a10constants.VE_INTERFACE]))
-        return vlan_network_subflow

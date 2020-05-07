@@ -42,9 +42,6 @@ class BaseDatabaseTask(task.Task):
         self.repos = repo.Repositories()
         self.vthunder_repo = a10_repo.VThunderRepository()
         self.amphora_repo = repo.AmphoraRepository()
-        self.load_balancer = repo.LoadBalancerRepository()
-        self.vip = repo.VipRepository()
-        self.member = repo.MemberRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -309,54 +306,3 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
             updated_at=datetime.utcnow())
         LOG.info("Successfully created vthunder entry in database.")
         return vthunder
-
-
-class CheckVLANCanBeDeletedParent(object):
-
-    """ Checks all vip and member subnet_ids for project ID"""
-
-    def is_vlan_deletable(self, project_id, subnet_id, is_vip):
-        if project_id not in CONF.rack_vthunder.devices:
-            return False
-
-        subnet_usage_count = 0
-
-        lbs = db_apis.get_session().query(self.load_balancer.model_class).filter(
-            self.load_balancer.model_class.project_id == project_id).all()
-        for lb in lbs:
-            vips = db_apis.get_session().query(self.vip.model_class).filter(
-                self.vip.model_class.load_balancer_id == lb.id).all()
-            for vip in vips:
-                if vip.subnet_id == subnet_id:
-                    subnet_usage_count += 1
-
-        members = db_apis.get_session().query(self.member.model_class).filter(
-            self.member.model_class.project_id == project_id).all()
-        for member in members:
-            if member.subnet_id == subnet_id:
-                subnet_usage_count += 1
-
-        if is_vip and subnet_usage_count == 1:
-            return True
-        elif subnet_usage_count == 0:
-            return True
-
-        return False
-
-
-class CheckVipVLANCanBeDeleted(CheckVLANCanBeDeletedParent, BaseDatabaseTask):
-
-    default_provides = a10constants.DELETE_VLAN
-
-    def execute(self, loadbalancer):
-        return self.is_vlan_deletable(loadbalancer.project_id,
-                                      loadbalancer.vip.subnet_id,
-                                      True)
-
-
-class CheckMemberVLANCanBeDeleted(CheckVLANCanBeDeletedParent, BaseDatabaseTask):
-
-    default_provides = a10constants.DELETE_VLAN
-
-    def execute(self, member):
-        return self.is_vlan_deletable(member.project_id, member.subnet_id, False)

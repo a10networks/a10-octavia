@@ -138,7 +138,7 @@ class VThunder(BaseDataModel):
                  loadbalancer_id=None, project_id=None, compute_id=None,
                  topology="STANDALONE", role="MASTER", last_udp_update=None, status="ACTIVE",
                  created_at=datetime.utcnow(), updated_at=datetime.utcnow(), partition_name=None,
-                 hierarchical_multitenancy=None):
+                 hierarchical_multitenancy=None, interface_vlan_map=None):
         self.id = id
         self.vthunder_id = vthunder_id
         self.amphora_id = amphora_id
@@ -159,6 +159,7 @@ class VThunder(BaseDataModel):
         self.updated_at = updated_at
         self.partition_name = partition_name
         self.hierarchical_multitenancy = hierarchical_multitenancy
+        self.interface_vlan_map = interface_vlan_map
 
 
 class Certificate(BaseDataModel):

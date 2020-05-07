@@ -26,7 +26,6 @@ MOCK_KEY_PASS = 'mock-key-pass-1'
 MOCK_TEMPLATE_NAME = 'mock-template-name-1'
 MOCK_CERT_ACTION = 'import'
 MOCK_CERT_TYPE = 'pem'
-MOCK_SUBNET_ID = 'mock-subnet-1'
 
 SERVICE_GROUP_CONF_SECTION = 'service_group'
 LISTENER_CONF_SECTION = 'listener'
