@@ -19,6 +19,8 @@
 import netaddr
 from oslo_config.cfg import ConfigFileValueError
 from oslo_log import log as logging
+import socket
+import struct
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
@@ -80,3 +82,13 @@ def convert_to_rack_vthunder_conf(rack_list):
                                    '\'ip_address:partition\' entries: {}'
                                    .format(list(duplicates_list)))
     return rack_dict
+
+
+def check_ip_in_subnet_range(ip, cidr):
+    network, net_bits = cidr.split('/')
+    host_bits = 32 - int(net_bits)
+    netmask = socket.inet_ntoa(struct.pack('!I', (1 << 32) - (1 << host_bits)))
+    int_ip = struct.unpack('>L', socket.inet_aton(ip))[0]
+    int_subnet = struct.unpack('>L', socket.inet_aton(network))[0]
+    int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
+    return int_ip & int_netmask == int_subnet
