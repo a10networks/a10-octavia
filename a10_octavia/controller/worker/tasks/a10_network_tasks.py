@@ -673,11 +673,11 @@ class HandleVRRPFloatingIPDelta(BaseNetworkTask):
             if ip_address == 'dhcp':
                 ip_address = None
             else:
-               subnet_cidr = self.network_driver.get_subnet(member.subnet_id).cidr
-               if not a10_utils.check_ip_in_subnet_range(ip_address, subnet_cidr):
-                   LOG.exception(
-                       "Invalid VRID floating IP. IP out of subnet range: %s", ip_address)
-                   raise
+                subnet_cidr = self.network_driver.get_subnet(member.subnet_id).cidr
+                if not a10_utils.check_ip_in_subnet_range(ip_address, subnet_cidr):
+                    LOG.exception(
+                        "Invalid VRID floating IP. IP out of subnet range: %s", ip_address)
+                    raise
 
             vrid = self.axapi_client.vrrpa.vrid.get(0)
             if vrid and vthunder.vrrp_floating_ip != 'dhcp':

@@ -22,7 +22,6 @@ except ImportError:
 
 from octavia.common import data_models as o_data_models
 from octavia.network import data_models as o_net_data_models
-from octavia.tests.common import constants as t_constants
 
 from a10_octavia.common import data_models
 from a10_octavia.controller.worker.tasks import a10_network_tasks
@@ -109,7 +108,6 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         member = copy.deepcopy(MEMBER)
         subnet = copy.deepcopy(SUBNET)
-        port = copy.deepcopy(PORT)
 
         vthunder.vrrp_port_id = a10constants.MOCK_VRRP_PORT_ID
         member.subnet_id = a10constants.MOCK_SUBNET_ID
