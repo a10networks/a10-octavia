@@ -129,7 +129,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.assertEqual(result, None)
 
     @mock.patch('a10_octavia.common.utils.check_ip_in_subnet_range', return_value=False)
-    def test_handle_vrrp_floatingip_delta_with_vrid_diffrent_fip(self, mock_utils):
+    def test_handle_vrrp_floatingip_delta_with_invalid_floating_ip(self, mock_utils):
         vthunder = copy.deepcopy(VTHUNDER)
         member = copy.deepcopy(MEMBER)
         subnet = copy.deepcopy(SUBNET)
