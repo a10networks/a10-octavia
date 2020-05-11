@@ -45,7 +45,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         super(TestA10DatabaseTasks, self).tearDown()
         self.db_session.stop()
 
-    def test_update_vthunder_vrrp_entry(self):
+    def test_update_vthunder_vrrp_entry_with_not_none_port(self):
         mock_vthunder_entry = task.UpdateVThunderVRRPEntry()
         mock_vthunder_entry.vthunder_repo = mock.Mock()
         mock_vthunder_entry.execute(VTHUNDER, PORT)
@@ -54,3 +54,9 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
             VTHUNDER_ID_1,
             vrrp_port_id=PORT.id,
             vrid_floating_ip=PORT.fixed_ips[0].ip_address)
+
+    def test_update_vthunder_vrrp_entry_with_none_port(self):
+        mock_vthunder_entry = task.UpdateVThunderVRRPEntry()
+        mock_vthunder_entry.vthunder_repo = mock.Mock()
+        mock_vthunder_entry.execute(VTHUNDER, None)
+        mock_vthunder_entry.vthunder_repo.update.assert_not_called()
