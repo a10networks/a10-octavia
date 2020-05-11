@@ -25,6 +25,9 @@ from octavia.controller.worker import task_utils
 from octavia.network import base
 from octavia.network import data_models as n_data_models
 
+from a10_octavia.common import utils as a10_utils
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 
@@ -658,3 +661,44 @@ class ApplyQosAmphora(BaseNetworkTask):
         except Exception as e:
             LOG.error('Failed to remove QoS policy: %s from port: %s due '
                       'to error: %s', orig_qos_id, amp_data.vrrp_port_id, e)
+
+
+class HandleVRRPFloatingIPDelta(BaseNetworkTask):
+    """Handle VRRP Floating IP port delta"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder, member):
+        if vthunder.vrrp_floating_ip:
+            ip_address = vthunder.vrrp_floating_ip
+            if ip_address == 'dhcp':
+                ip_address = None
+            else:
+               subnet_cidr = self.network_driver.get_subnet(member.subnet_id).cidr
+               if not a10_utils.check_ip_in_subnet_range(ip_address, subnet_cidr):
+                   LOG.exception(
+                       "Invalid VRID floating IP. IP out of subnet range: %s", ip_address)
+                   raise
+
+            vrid = self.axapi_client.vrrpa.vrid.get(0)
+            if vrid and vthunder.vrrp_floating_ip != 'dhcp':
+                floating_ip = vrid['floating-ip']['ip-address-cfg'][0]['ip-address']
+                if floating_ip == vthunder.vrrp_floating_ip:
+                    return None
+                if floating_ip != vthunder.vrrp_floating_ip and vthunder.vrrp_port_id:
+                    self.network_driver.delete_port(vthunder.vrrp_port_id)
+
+            fip_port = self.network_driver.create_port(member.subnet_id, fixed_ip=ip_address)
+            return fip_port
+
+    @axapi_client_decorator
+    def revert(self, result, vthunder, member, *args, **kwargs):
+        if isinstance(result, failure.Failure):
+            LOG.exception("Unable to allocate VRRP Floating IP Port")
+            return
+
+        if vthunder.vrrp_floating_ip:
+            if vthunder.vrrp_port_id:
+                try:
+                    self.network_driver.delete_port(vthunder.vrrp_port_id)
+                except Exception as e:
+                    LOG.exception("Failed to revert VRRP floating IP delta task: %s", str(e))

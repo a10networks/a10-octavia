@@ -706,3 +706,25 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
             except (neutron_client_exceptions.NotFound,
                     neutron_client_exceptions.PortNotFoundClient):
                 pass
+
+    def create_port(self, network_id, fixed_ip=False):
+        try:
+            port = {'port': {'name': 'octavia-port-' + network_id,
+                             'network_id': network_id,
+                             'admin_state_up': True,
+                             'device_owner': OCTAVIA_OWNER}}
+            if fixed_ip:
+                port['port']['fixed_ips'] = [{'ip_address': fixed_ip}]
+            new_port = self.neutron_client.create_port(port)
+            new_port = utils.convert_port_dict_to_model(new_port)
+        except Exception:
+            message = _('ERROR creating port')
+            LOG.exception(message)
+        return new_port
+
+    def delete_port(self, port_id):
+        try:
+            self.neutron_client.delete_port(port_id)
+        except Exception:
+            message = _('ERROR deleting port')
+            LOG.exception(message)

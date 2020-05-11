@@ -80,3 +80,7 @@ def convert_to_rack_vthunder_conf(rack_list):
                                    '\'ip_address:partition\' entries: {}'
                                    .format(list(duplicates_list)))
     return rack_dict
+
+
+def check_ip_in_subnet_range(ip, cidr):
+    pass
