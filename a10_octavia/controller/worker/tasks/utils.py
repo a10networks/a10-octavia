@@ -65,11 +65,14 @@ def meta(lbaas_obj, key, default):
 
 
 def check_in_range(server_ip, subnet, netmask):
-
-    """TODO: Use static typing on this when fully migrated to train w/ python3.6"""
-
     int_ip = struct.unpack('>L', socket.inet_aton(server_ip))[0]
     int_subnet = struct.unpack('>L', socket.inet_aton(subnet))[0]
-    int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
+
+    if isinstance(netmask, int):
+        int_netmask = (1 << 32)
+        if 0 < netmask <= 32:
+            int_netmask = (int_netmask - (1 << (32 - netmask)))
+    else:
+        int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
 
     return int_ip & int_netmask == int_subnet
