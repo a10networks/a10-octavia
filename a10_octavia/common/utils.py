@@ -84,11 +84,11 @@ def convert_to_rack_vthunder_conf(rack_list):
     return rack_dict
 
 
-def check_ip_in_subnet_range(ip, cidr):
-    network, net_bits = cidr.split('/')
-    host_bits = 32 - int(net_bits)
-    netmask = socket.inet_ntoa(struct.pack('!I', (1 << 32) - (1 << host_bits)))
+def check_ip_in_subnet_range(ip, cidr_string):
+    subnet_ip, cidr = cidr_string.split('/')
+    avail_hosts = 32 - int(cidr)
+    netmask = socket.inet_ntoa(struct.pack('>I', (1 << 32) - (1 << avail_hosts)))
     int_ip = struct.unpack('>L', socket.inet_aton(ip))[0]
-    int_subnet = struct.unpack('>L', socket.inet_aton(network))[0]
+    int_subnet = struct.unpack('>L', socket.inet_aton(subnet_ip))[0]
     int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
     return int_ip & int_netmask == int_subnet
