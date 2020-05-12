@@ -45,7 +45,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         super(TestA10DatabaseTasks, self).tearDown()
         self.db_session.stop()
 
-    def test_update_vthunder_vrrp_entry_with_not_none_port(self):
+    def test_update_vthunder_vrrp_entry_with_port_info(self):
         mock_vthunder_entry = task.UpdateVThunderVRRPEntry()
         mock_vthunder_entry.vthunder_repo = mock.Mock()
         mock_vthunder_entry.execute(VTHUNDER, PORT)

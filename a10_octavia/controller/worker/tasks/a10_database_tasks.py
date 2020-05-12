@@ -283,14 +283,12 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
 class UpdateVThunderVRRPEntry(BaseDatabaseTask):
     def execute(self, vthunder, port):
         if port:
-            port_id = port.id
-            vrid_floating_ip = port.fixed_ips[0].ip_address
             try:
                 vthunder = self.vthunder_repo.update(
                     db_apis.get_session(),
                     vthunder.id,
-                    vrrp_port_id=port_id,
-                    vrid_floating_ip=vrid_floating_ip)
+                    vrrp_port_id=port.id,
+                    vrid_floating_ip=port.fixed_ips[0].ip_address)
                 LOG.info("Updated vthunder entry in db with vrrp information")
             except Exception as e:
                 LOG.exception("Failed UpdateVThunderVRRPEntry: %s", str(e))
