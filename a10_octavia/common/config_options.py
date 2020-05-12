@@ -34,7 +34,7 @@ LOG = logging.getLogger(__name__)
 
 A10_GLOBAL_OPTS = [
     cfg.StrOpt('vrid_floating_ip', default=None,
-               regex="([dhcp]|(?:\d{1,3}\.){3}\d{1,3})\w+",
+               regex=r"([dhcp]|(?:\d{1,3}\.){3}\d{1,3})\w+",
                ignore_case=True,
                help=_('Enable VRID floating IP feature')),
     cfg.IntOpt('vrrp_floating_ip_octet', default=None,
