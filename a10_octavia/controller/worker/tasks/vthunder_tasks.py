@@ -19,8 +19,6 @@ try:
 except ImportError:
     import httplib as http_client
 from requests import exceptions as req_exceptions
-import socket
-import struct
 from taskflow import task
 import time
 
@@ -391,9 +389,7 @@ class TagEthernetBaseTask(task.Task):
     def get_subnet_and_mask(self, subnet_id):
         subnet = self.network_driver.get_subnet(subnet_id)
         network, net_bits = subnet.cidr.split('/')
-        host_bits = 32 - int(net_bits)
-        netmask = socket.inet_ntoa(struct.pack('!I', (1 << 32) - (1 << host_bits)))
-        return network, netmask
+        return network, int(net_bits)
 
     def get_vlan_id(self, subnet_id):
         network_id = self.network_driver.get_subnet(subnet_id).network_id
@@ -402,18 +398,18 @@ class TagEthernetBaseTask(task.Task):
             raise
         return network.provider_segmentation_id
 
-    def is_vlan_deletable(self, subnet, subnet_mask):
+    def is_vlan_deletable(self, subnet, mask):
         vs_list = self.axapi_client.slb.virtual_server.get(name="")
         server_list = self.axapi_client.slb.server.get(name="")
 
         if vs_list != '':
             for vs in vs_list["virtual-server-list"]:
-                if a10_task_utils.check_in_range(vs["ip-address"], subnet, subnet_mask):
+                if a10_task_utils.check_in_range(vs["ip-address"], subnet, mask):
                     return False
 
         if server_list != '':
             for server in server_list["server-list"]:
-                if a10_task_utils.check_in_range(server["host"], subnet, subnet_mask):
+                if a10_task_utils.check_in_range(server["host"], subnet, mask):
                     return False
 
         return True
@@ -484,8 +480,8 @@ class DeleteEthernetTagIfNotInUseForLB(TagEthernetBaseTask):
     def execute(self, loadbalancer, vthunder):
         try:
             if loadbalancer.project_id in CONF.rack_vthunder.devices:
-                subnet, subnet_mask = self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
-                if self.is_vlan_deletable(subnet, subnet_mask):
+                subnet, mask = self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
+                if self.is_vlan_deletable(subnet, mask):
                     vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id)
                     if self.axapi_client.vlan.exists(vlan_id):
                         LOG.debug("Delete VLAN with id %s", vlan_id)
@@ -502,8 +498,8 @@ class DeleteEthernetTagIfNotInUseForMember(TagEthernetBaseTask):
     def execute(self, member, vthunder):
         try:
             if member.project_id in CONF.rack_vthunder.devices:
-                subnet, subnet_mask = self.get_subnet_and_mask(member.subnet_id)
-                if self.is_vlan_deletable(subnet, subnet_mask):
+                subnet, mask = self.get_subnet_and_mask(member.subnet_id)
+                if self.is_vlan_deletable(subnet, mask):
                     vlan_id = self.get_vlan_id(member.subnet_id)
                     if self.axapi_client.vlan.exists(vlan_id):
                         LOG.info("Delete VLAN with id %s", vlan_id)
