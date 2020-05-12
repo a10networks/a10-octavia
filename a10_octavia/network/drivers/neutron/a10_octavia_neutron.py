@@ -718,13 +718,11 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
             new_port = self.neutron_client.create_port(port)
             new_port = utils.convert_port_dict_to_model(new_port)
         except Exception:
-            message = _('ERROR creating port')
-            LOG.exception(message)
+            LOG.exception("Error creating port in network: %s", network_id)
         return new_port
 
     def delete_port(self, port_id):
         try:
             self.neutron_client.delete_port(port_id)
         except Exception:
-            message = _('ERROR deleting port')
-            LOG.exception(message)
+            LOG.exception("Error deleting port: %s", port_id)
