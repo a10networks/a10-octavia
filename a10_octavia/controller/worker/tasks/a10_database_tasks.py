@@ -215,7 +215,7 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                                   last_udp_update=datetime.utcnow(),
                                   created_at=datetime.utcnow(),
                                   updated_at=datetime.utcnow(),
-                                  partition=vthunder_config.partition)
+                                  partition_name=vthunder_config.partition_name)
         LOG.info("Successfully created vthunder entry in database.")
 
 
