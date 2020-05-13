@@ -18,7 +18,7 @@ depends_on = None
 
 def upgrade():
     op.add_column('vthunders', sa.Column('vrid_port_id', sa.String(36), nullable=True))
-    op.add_column('vthunders', sa.Column('vrid_floating_ip', sa.String(64), nullable=True))
+    op.add_column('vthunders', sa.Column('vrid_floating_ip', sa.String(15), nullable=True))
 
 
 def downgrade():

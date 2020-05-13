@@ -49,7 +49,7 @@ class VThunder(base_models.BASE):
     updated_at = sa.Column(u'updated_at', sa.DateTime(), nullable=True)
     partition = sa.Column(sa.String(14), nullable=True)
     vrid_port_id = sa.Column('vrid_port_id', sa.String(36), nullable=True)
-    vrid_floating_ip = sa.Column('vrid_floating_ip', sa.String(64), nullable=True)
+    vrid_floating_ip = sa.Column('vrid_floating_ip', sa.String(15), nullable=True)
 
     @classmethod
     def find_by_loadbalancer_id(cls, loadbalancer_id, db_session=None):
