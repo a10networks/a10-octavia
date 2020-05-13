@@ -199,6 +199,9 @@ devices = [
                      "password":"<password>",
                      "device_name":"<device_name>",
                      "partition_name" : "<partition_name>"
+                     "interface_vlan_map":{
+                         {"1": {"11": {"use_dhcp": True}, "12":{"use_dhcp": True}}}
+                       }
                      }
              ]
 ```
