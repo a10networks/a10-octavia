@@ -108,7 +108,11 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.vlan.create.assert_called_with(VLAN_ID,
                                                         tagged_eths=[TAG_INTERFACE],
                                                         veth=True)
-        mock_task._network_driver.neutron_client.create_port.assert_called()
+        args, kwargs = mock_task._network_driver.neutron_client.create_port.call_args
+        self.assertIn('port', args[0])
+        port = args[0]['port']
+        fixed_ip = port['fixed_ips'][0]
+        self.assertEqual(VE_IP, fixed_ip['ip_address'])
 
     def test_revert_tag_ethernet_for_lb(self):
         lb = self._mock_lb()
@@ -137,7 +141,11 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.vlan.create.assert_called_with(VLAN_ID,
                                                         tagged_eths=[TAG_INTERFACE],
                                                         veth=True)
-        mock_task._network_driver.neutron_client.create_port.assert_called()
+        args, kwargs = mock_task._network_driver.neutron_client.create_port.call_args
+        self.assertIn('port', args[0])
+        port = args[0]['port']
+        fixed_ip = port['fixed_ips'][0]
+        self.assertEqual(VE_IP, fixed_ip['ip_address'])
 
     def test_revert_tag_ethernet_for_member(self):
         member = self._mock_member()
