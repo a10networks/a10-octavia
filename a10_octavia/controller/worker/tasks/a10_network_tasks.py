@@ -666,39 +666,49 @@ class ApplyQosAmphora(BaseNetworkTask):
 class HandleVRRPFloatingIPDelta(BaseNetworkTask):
     """Handle VRRP Floating IP port delta"""
 
+    def __init__(self, *arg, **kwargs):
+        self.fip_port = None
+        super(HandleVRRPFloatingIPDelta, self).__init__(*arg, **kwargs)
+
     @axapi_client_decorator
     def execute(self, vthunder, member):
-        if vthunder.vrrp_floating_ip:
-            ip_address = vthunder.vrrp_floating_ip
-            if ip_address == 'dhcp':
-                ip_address = None
+        floating_ip = vthunder.vrrp_floating_ip
+
+        if floating_ip:
+            if floating_ip == 'dhcp':
+                self.fip_port = self.network_driver.create_port(member.subnet_id)
             else:
+                # TODO(@omkartelee-A10) change get_net_info_from_subnet()
+                # subnet_ip, subnet_mask = get_net_info_from_subnet(subnet_id)
                 subnet_cidr = self.network_driver.get_subnet(member.subnet_id).cidr
-                if not a10_utils.check_ip_in_subnet_range(ip_address, subnet_cidr):
-                    LOG.exception(
-                        "Invalid VRID floating IP. IP out of subnet range: %s", ip_address)
+                if not a10_utils.check_ip_in_subnet_range(floating_ip, subnet_cidr):
+                    LOG.exception("Invalid VRID floating IP. IP out of subnet range: %s",
+                                  floating_ip)
                     raise
 
-            vrid = self.axapi_client.vrrpa.vrid.get(0)
-            if vrid and vthunder.vrrp_floating_ip != 'dhcp':
-                floating_ip = vrid['floating-ip']['ip-address-cfg'][0]['ip-address']
-                if floating_ip == vthunder.vrrp_floating_ip:
-                    return None
-                if floating_ip != vthunder.vrrp_floating_ip and vthunder.vrrp_port_id:
-                    self.network_driver.delete_port(vthunder.vrrp_port_id)
+                vrid = self.axapi_client.vrrpa.vrid.get(0)
+                vrid_ip = vrid['floating-ip']['ip-address-cfg'][0]['ip-address']
+                if floating_ip != vrid_ip:
+                    self.fip_port = self.network_driver.create_port(member.subnet_id,
+                                                                    fixed_ip=floating_ip)
 
-            fip_port = self.network_driver.create_port(member.subnet_id, fixed_ip=ip_address)
-            return fip_port
+            if self.fip_port:
+                self.axapi_client.vrrpa.vrid.update(0, self.fip_port.fixed_ips[0].ip_address)
+
+        if vthunder.vrrp_port_id and (self.fip_port or not floating_ip):
+            self.network_driver.delete_port(vthunder.vrrp_port_id)
+
+        return self.fip_port
 
     @axapi_client_decorator
     def revert(self, result, vthunder, member, *args, **kwargs):
         if isinstance(result, failure.Failure):
-            LOG.exception("Unable to allocate VRRP Floating IP Port")
+            LOG.exception("Unable to allocate & configure VRRP Floating IP Port")
             return
 
-        if vthunder.vrrp_floating_ip:
-            if vthunder.vrrp_port_id:
-                try:
-                    self.network_driver.delete_port(vthunder.vrrp_port_id)
-                except Exception as e:
-                    LOG.exception("Failed to revert VRRP floating IP delta task: %s", str(e))
+        if self.fip_port:
+            try:
+                self.network_driver.delete_port(self.fip_port.id)
+                self.axapi_client.vrrpa.vrid.update(0, vthunder.vrrp_floating_ip)
+            except Exception as e:
+                LOG.exception("Failed to revert VRRP floating IP delta task: %s", str(e))
