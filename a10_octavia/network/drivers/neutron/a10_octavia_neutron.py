@@ -12,8 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import ipaddress
+import six
+import time
+
+from neutronclient.common import exceptions as neutron_client_exceptions
+from novaclient import exceptions as nova_client_exceptions
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import uuidutils
 from stevedore import driver as stevedore_driver
 
 from octavia.network import data_models as n_data_models
@@ -157,3 +164,23 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         except Exception:
             message = "Error deleting port: {0}".format(port_id)
             LOG.exception(message)
+
+    def get_ve_port_id(self, ip):
+        try:
+            ports = self.neutron_client.list_ports(device_owner=OCTAVIA_OWNER)
+            if ports is None or 'ports' not in ports:
+                return None
+            for port in ports['ports']:
+                if 'fixed_ips' in port:
+                    fixed_ips = port['fixed_ips']
+                    for ipaddr in fixed_ips:
+                        if 'ip_address' in ipaddr and ipaddr['ip_address'] == ip:
+                            return port['id']
+        except (neutron_client_exceptions.NotFound,
+                neutron_client_exceptions.PortNotFoundClient):
+            pass
+        except Exception:
+            message = _('Error listing ports, ip {} ').format(ip)
+            LOG.exception(message)
+            pass
+        return None

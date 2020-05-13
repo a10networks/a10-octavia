@@ -15,10 +15,14 @@
 import json
 import logging
 import socket
+from stevedore import driver as stevedore_driver
 import struct
+
+from oslo_config import cfg
 
 from a10_octavia.common.data_models import Certificate
 
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -76,3 +80,11 @@ def check_in_range(server_ip, subnet, netmask):
         int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
 
     return int_ip & int_netmask == int_subnet
+
+
+def get_a10_network_driver():
+
+    driver = stevedore_driver.DriverManager(namespace='octavia.network.drivers',
+                                            name=CONF.a10_controller_worker.network_driver,
+                                            invoke_on_load=True).driver
+    return driver
