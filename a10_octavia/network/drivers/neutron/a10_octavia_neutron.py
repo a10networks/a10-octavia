@@ -13,14 +13,15 @@
 #    under the License.
 
 import ipaddress
+import six
+from stevedore import driver as stevedore_driver
 import time
 
 from neutronclient.common import exceptions as neutron_client_exceptions
 from novaclient import exceptions as nova_client_exceptions
 from oslo_config import cfg
 from oslo_log import log as logging
-import six
-from stevedore import driver as stevedore_driver
+from oslo_utils import uuidutils
 
 from octavia.common import constants
 from octavia.common import data_models
@@ -706,3 +707,51 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
             except (neutron_client_exceptions.NotFound,
                     neutron_client_exceptions.PortNotFoundClient):
                 pass
+
+    def create_ve_port(self, ip, subnet):
+        try:
+            name = 'octavia-lb-ve-' + uuidutils.generate_uuid()
+            fixed_ips = [{'ip_address': ip, 'subnet_id': subnet.id}]
+            port = {'port': {'name': name,
+                             'network_id': subnet.network_id,
+                             'fixed_ips': fixed_ips,
+                             'admin_state_up': True,
+                             'device_owner': OCTAVIA_OWNER}}
+            self.neutron_client.create_port(port)
+            LOG.debug('Created port name %s', name)
+
+        except (neutron_client_exceptions.IpAddressAlreadyAllocatedClient):
+            pass
+        except Exception:
+            message = _('Error creating port details: ip {ip} '
+                        'subnet {subnet_id}').format(ip=ip, subnet_id=subnet.id)
+            LOG.exception(message)
+            pass
+
+    def get_ve_port_id(self, ip):
+        try:
+            ports = self.neutron_client.list_ports(device_owner=OCTAVIA_OWNER)
+            if ports is None or 'ports' not in ports:
+                return None
+            for port in ports['ports']:
+                if 'fixed_ips' in port:
+                    fixed_ips = port['fixed_ips']
+                    for ipaddr in fixed_ips:
+                        if 'ip_address' in ipaddr and ipaddr['ip_address'] == ip:
+                            return port['id']
+        except (neutron_client_exceptions.NotFound,
+                neutron_client_exceptions.PortNotFoundClient):
+            pass
+        except Exception:
+            message = _('Error listing ports, ip {} ').format(ip)
+            LOG.exception(message)
+            pass
+        return None
+
+    def delete_port(self, port_id):
+        try:
+            self.neutron_client.delete_port(port_id)
+        except Exception:
+            message = _('Error deleting port {} ').format(port_id)
+            LOG.exception(message)
+            pass

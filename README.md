@@ -202,6 +202,9 @@ devices = """[
                      "password":"<password>",
                      "device_name":"<device_name>",
                      "axapi_version":"30",
+                     "interface_vlan_map":{
+                         {"1": {"11": {"use_dhcp": True}, "12":{"use_dhcp": True}}}
+                       }
                      }
              ]
        """
