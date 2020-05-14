@@ -36,30 +36,16 @@ def validate_ipv4(address):
         raise ConfigFileValueError('Invalid IPAddress value given in configuration: ' + address)
 
 
-def patch_ipv4_suffix(suffix, subnet):
-    """Patch the partial IPv4 suffix with subnet provided
-       If suffix contains valid ip returns suffix itself.
-       Returns patched_ip if valid patch else returns None
-    """
-    suffix_octets = suffix.split('.')
-    if suffix_octets[0] == '':
-        suffix_octets.pop(0)
+def validate_partial_ipv4(address):
+    """Validates the partial IPv4 suffix provided"""
+    partial_ip = address.lstrip('.')
+    octets = partial_ip.split('.')
+    for idx in range(4 - len(octets)):
+        octets.insert(0, '0')
 
-    suffix_len = len(suffix_octets)
-    if not 0 < suffix_len <= 4:
-        return None
-
-    prefix_octets = subnet.split('.')
-    idx = 4 - suffix_len
-    while idx > 0:
-        suffix_octets.insert(0, prefix_octets[idx - 1])
-        idx -= 1
-
-    patched_ip = '.'.join(suffix_octets)
-    if netaddr.valid_ipv4(patched_ip, netaddr.core.INET_PTON):
-        return patched_ip
-
-    return None
+    if not netaddr.valid_ipv4('.'.join(octets), netaddr.core.INET_PTON):
+        raise ConfigFileValueError('Invalid partial IPAddress value given in configuration: '
+                                   + address)
 
 
 def validate_partition(rack_device):

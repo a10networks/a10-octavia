@@ -93,17 +93,17 @@ class TestUtils(unittest.TestCase):
         self.assertRaises(cfg.ConfigFileValueError, utils.validate_ipv4, '192.0.20')
         self.assertRaises(cfg.ConfigFileValueError, utils.validate_ipv4, 'abc')
 
-    def test_patch_ipv4_suffix_valid(self):
-        self.assertEqual(utils.patch_ipv4_suffix('10', '10.0.0.0'), '10.0.0.10')
-        self.assertEqual(utils.patch_ipv4_suffix('.10', '10.0.0.0'), '10.0.0.10')
-        self.assertEqual(utils.patch_ipv4_suffix('11.10', '10.0.0.0'), '10.0.11.10')
-        self.assertEqual(utils.patch_ipv4_suffix('11.0.11.10', '10.0.0.0'), '11.0.11.10')
+    def test_validate_partial_ipv4_valid(self):
+        self.assertEqual(utils.validate_partial_ipv4('10'), None)
+        self.assertEqual(utils.validate_partial_ipv4('.10'), None)
+        self.assertEqual(utils.validate_partial_ipv4('.5.11.10'), None)
+        self.assertEqual(utils.validate_partial_ipv4('11.5.11.10'), None)
 
-    def test_patch_ipv4_suffix_invalid(self):
-        self.assertEqual(utils.patch_ipv4_suffix('325', '10.0.0.0'), None)
-        self.assertEqual(utils.patch_ipv4_suffix('abc.cef', '10.0.0.0'), None)
-        self.assertEqual(utils.patch_ipv4_suffix('11.10.0.11.10', '10.0.0.0'), None)
-        self.assertEqual(utils.patch_ipv4_suffix('10.abc.11.10', '10.0.0.0'), None)
+    def test_validate_partial_ipv4_invalid(self):
+        self.assertRaises(cfg.ConfigFileValueError, utils.validate_partial_ipv4, '777')
+        self.assertRaises(cfg.ConfigFileValueError, utils.validate_partial_ipv4, 'abc.cef')
+        self.assertRaises(cfg.ConfigFileValueError, utils.validate_partial_ipv4, '11.10.0.11.10')
+        self.assertRaises(cfg.ConfigFileValueError, utils.validate_partial_ipv4, '10.333.11.10')
 
     def test_validate_partition_valid(self):
         self.assertEqual(utils.validate_partition(RACK_DEVICE), RACK_DEVICE)
