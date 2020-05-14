@@ -29,3 +29,7 @@ MOCK_CERT_TYPE = 'pem'
 
 SERVICE_GROUP_CONF_SECTION = 'service_group'
 LISTENER_CONF_SECTION = 'listener'
+A10_GLOBAL_OPTS = 'a10_global'
+MOCK_PARENT_PROJECT_ID = 'parent_project_id_with_length_32'
+MOCK_CHILD_PART = 'child_part'
+MOCK_CHILD_PROJECT_ID = '_child_project_id_with_length_32'
