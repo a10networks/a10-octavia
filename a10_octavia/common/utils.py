@@ -58,10 +58,6 @@ def validate_params(rack_info):
             if rack_info['vrid_floating_ip']:
                 if rack_info['vrid_floating_ip'] != 'dhcp':
                     validate_ipv4(rack_info['vrid_floating_ip'])
-            if rack_info['vrrp_floating_ip_octet']:
-                if not rack_info['vrrp_floating_ip_octet'] in range(1, 254):
-                    raise ConfigFileValueError('VRRP Floating IP Octet in '
-                                               '`[rack_vthunder]` is out of range(1,253)')
             return rack_info
     raise ConfigFileValueError('Please check your configuration. The params `project_id`, '
                                '`ip_address`, `username`, `password` and `device_name` '
@@ -88,8 +84,6 @@ def convert_to_rack_vthunder_conf(rack_list):
                                        rack_device['project_id'] +
                                        ' in [rack_vthunder] section')
         rack_device['undercloud'] = True
-        if 'vrrp_floating_ip_octet' in rack_device:
-            del rack_device['vrrp_floating_ip_octet']
         vthunder_conf = data_models.VThunder(**rack_device)
         rack_dict[rack_device['project_id']] = vthunder_conf
 
