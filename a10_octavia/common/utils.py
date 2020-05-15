@@ -48,60 +48,60 @@ def validate_partial_ipv4(address):
                                    + address)
 
 
-def validate_partition(rack_device):
-    partition_name = rack_device.get('partition_name')
+def validate_partition(hardware_device):
+    partition_name = hardware_device.get('partition_name')
     if not partition_name:
-        rack_device['partition_name'] = a10constants.SHARED_PARTITION
+        hardware_device['partition_name'] = a10constants.SHARED_PARTITION
     elif len(partition_name) > 14:
         raise ValueError("Supplied partition value '%s' exceeds maximum length 14" %
                          (partition_name))
-    return rack_device
+    return hardware_device
 
 
-def validate_params(rack_info):
-    """Check for all the required parameters for rack configurations.
+def validate_params(hardware_info):
+    """Check for all the required parameters for hardware configurations.
     """
-    if all(k in rack_info for k in ('project_id', 'ip_address',
-                                    'username', 'password', 'device_name')):
-        if all(rack_info[x] is not None for x in ('project_id', 'ip_address',
-                                                  'username', 'password', 'device_name')):
-            validate_ipv4(rack_info['ip_address'])
-            rack_info = validate_partition(rack_info)
-            return rack_info
+    if all(k in hardware_info for k in ('project_id', 'ip_address',
+                                        'username', 'password', 'device_name')):
+        if all(hardware_info[x] is not None for x in ('project_id', 'ip_address',
+                                                      'username', 'password', 'device_name')):
+            validate_ipv4(hardware_info['ip_address'])
+            hardware_info = validate_partition(hardware_info)
+            return hardware_info
     raise ConfigFileValueError('Please check your configuration. The params `project_id`, '
                                '`ip_address`, `username`, `password` and `device_name` '
-                               'under [rack_vthunder] section cannot be None ')
+                               'under [hardware_thunder] section cannot be None ')
 
 
-def check_duplicate_entries(rack_dict):
-    rack_count_dict = {}
-    for rack_device in rack_dict.values():
-        candidate = '{}:{}'.format(rack_device.ip_address, rack_device.partition_name)
-        rack_count_dict[candidate] = rack_count_dict.get(candidate, 0) + 1
-    return [k for k, v in rack_count_dict.items() if v > 1]
+def check_duplicate_entries(hardware_dict):
+    hardware_count_dict = {}
+    for hardware_device in hardware_dict.values():
+        candidate = '{}:{}'.format(hardware_device.ip_address, hardware_device.partition_name)
+        hardware_count_dict[candidate] = hardware_count_dict.get(candidate, 0) + 1
+    return [k for k, v in hardware_count_dict.items() if v > 1]
 
 
-def convert_to_rack_vthunder_conf(rack_list):
-    """ Validates for all vthunder nouns for rack devices
+def convert_to_hardware_thunder_conf(hardware_list):
+    """ Validates for all vthunder nouns for hardware devices
         configurations.
     """
-    rack_dict = {}
-    for rack_device in rack_list:
-        rack_device = validate_params(rack_device)
-        if rack_dict.get(rack_device['project_id']):
+    hardware_dict = {}
+    for hardware_device in hardware_list:
+        hardware_device = validate_params(hardware_device)
+        if hardware_dict.get(hardware_device['project_id']):
             raise ConfigFileValueError('Supplied duplicate project_id ' +
-                                       rack_device['project_id'] +
-                                       ' in [rack_vthunder] section')
-        rack_device['undercloud'] = True
-        vthunder_conf = data_models.VThunder(**rack_device)
-        rack_dict[rack_device['project_id']] = vthunder_conf
+                                       hardware_device['project_id'] +
+                                       ' in [hardware_thunder] section')
+        hardware_device['undercloud'] = True
+        vthunder_conf = data_models.VThunder(**hardware_device)
+        hardware_dict[hardware_device['project_id']] = vthunder_conf
 
-    duplicates_list = check_duplicate_entries(rack_dict)
+    duplicates_list = check_duplicate_entries(hardware_dict)
     if duplicates_list:
         raise ConfigFileValueError('Duplicates found for the following '
                                    '\'ip_address:partition_name\' entries: {}'
                                    .format(list(duplicates_list)))
-    return rack_dict
+    return hardware_dict
 
 
 def get_parent_project(project_id):

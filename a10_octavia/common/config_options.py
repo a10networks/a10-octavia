@@ -109,24 +109,6 @@ A10_SERVICE_GROUP_OPTS = [
                help=_('Service Group Policy Template')),
 ]
 
-A10_L7_POLICY_OPTS = [
-    cfg.StrOpt('p1',
-               default=None,
-               help=_('For future reference')),
-    cfg.StrOpt('p2',
-               default=None,
-               help=_('For future reference')),
-]
-
-A10_L7_RULE_OPTS = [
-    cfg.StrOpt('r1',
-               default=None,
-               help=_('For future reference')),
-    cfg.StrOpt('r2',
-               default=None,
-               help=_('For future reference')),
-]
-
 A10_SERVER_OPTS = [
     cfg.IntOpt('conn_limit', min=1, max=64000000,
                default=64000000,
@@ -139,7 +121,7 @@ A10_SERVER_OPTS = [
                help=_('Template Server')),
 ]
 
-A10_RACK_VTHUNDER_OPTS = [
+A10_HARDWARE_THUNDER_OPTS = [
     config_types.ListOfDictOpt('devices', default=[],
                                item_type=config_types.ListOfObjects(),
                                bounds=True,
@@ -327,10 +309,8 @@ cfg.CONF.register_opts(A10_VTHUNDER_OPTS, group='vthunder')
 cfg.CONF.register_opts(A10_SLB_OPTS, group='slb')
 cfg.CONF.register_opts(A10_LISTENER_OPTS, group='listener')
 cfg.CONF.register_opts(A10_SERVICE_GROUP_OPTS, group='service_group')
-cfg.CONF.register_opts(A10_L7_POLICY_OPTS, group='l7policy')
-cfg.CONF.register_opts(A10_L7_RULE_OPTS, group='l7rule')
 cfg.CONF.register_opts(A10_SERVER_OPTS, group='server')
-cfg.CONF.register_opts(A10_RACK_VTHUNDER_OPTS, group='rack_vthunder')
+cfg.CONF.register_opts(A10_HARDWARE_THUNDER_OPTS, group='hardware_thunder')
 
 
 # Ensure that the control exchange is set correctly
