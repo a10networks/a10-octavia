@@ -73,7 +73,7 @@ class ListOfObjects(List):
         try:
             value_list = ast.literal_eval(value)
         except Exception as e:
-            raise ValueError('Unable to eval ' + value + ' exception ' + e)
+            raise e
         final_list = []
         for item in value_list:
             final_list.append(item)
