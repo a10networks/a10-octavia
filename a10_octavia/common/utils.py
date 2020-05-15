@@ -156,7 +156,7 @@ def get_network_driver():
     ).driver
     return network_driver
 
-def validate_mandatory_params(rack_info):
+def validate_params(rack_info):
     """Check for all the required parameters for rack configurations.
     """
     if all(k in rack_info for k in ('project_id', 'ip_address',
