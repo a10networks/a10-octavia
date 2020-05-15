@@ -36,6 +36,18 @@ def validate_ipv4(address):
         raise ConfigFileValueError('Invalid IPAddress value given in configuration: ' + address)
 
 
+def validate_partial_ipv4(address):
+    """Validates the partial IPv4 suffix provided"""
+    partial_ip = address.lstrip('.')
+    octets = partial_ip.split('.')
+    for idx in range(4 - len(octets)):
+        octets.insert(0, '0')
+
+    if not netaddr.valid_ipv4('.'.join(octets), netaddr.core.INET_PTON):
+        raise ConfigFileValueError('Invalid partial IPAddress value given in configuration: '
+                                   + address)
+
+
 def validate_partition(rack_device):
     partition_name = rack_device.get('partition_name')
     if not partition_name:
