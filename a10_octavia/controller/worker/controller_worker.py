@@ -194,7 +194,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             raise db_exceptions.NoResultFound
 
         load_balancer = listener.load_balancer
-        if listener.project_id in CONF.rack_vthunder.devices:
+        if listener.project_id in CONF.hardware_thunder.devices:
             create_listener_tf = self._taskflow_load(self._listener_flows.
                                                      get_rack_vthunder_create_listener_flow(
                                                          listener.project_id),
@@ -225,7 +225,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
         load_balancer = listener.load_balancer
-        if listener.project_id in CONF.rack_vthunder.devices:
+        if listener.project_id in CONF.hardware_thunder.devices:
             delete_listener_tf = self._taskflow_load(
                 self._listener_flows.get_delete_rack_listener_flow(),
                 store={constants.LOADBALANCER: load_balancer,
@@ -301,11 +301,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         store[constants.UPDATE_DICT] = {
             constants.TOPOLOGY: topology
         }
-        if lb.project_id in CONF.rack_vthunder.devices:
+        if lb.project_id in CONF.hardware_thunder.devices:
             LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'
                      'from config file for Rack Vthunder' % (lb.project_id))
             create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
-                vthunder_conf=CONF.rack_vthunder.devices[lb.project_id],
+                vthunder_conf=CONF.hardware_thunder.devices[lb.project_id],
                 topology=topology, listeners=lb.listeners)
             create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
         else:
@@ -417,7 +417,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = pool.load_balancer
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
-        if member.project_id in CONF.rack_vthunder.devices:
+        if member.project_id in CONF.hardware_thunder.devices:
             create_member_tf = self._taskflow_load(
                 self._member_flows.get_rack_vthunder_create_member_flow(),
                 store={

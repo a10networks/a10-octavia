@@ -81,4 +81,4 @@ class ListOfObjects(List):
             item = item.replace("\'", "\"")
             single_dict = json.loads(item)
             final_list.append(single_dict)
-        return utils.convert_to_rack_vthunder_conf(final_list)
+        return utils.convert_to_hardware_thunder_conf(final_list)

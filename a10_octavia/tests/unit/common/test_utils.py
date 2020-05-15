@@ -25,12 +25,12 @@ from a10_octavia.common import data_models
 from a10_octavia.common import utils
 from a10_octavia.tests.common import a10constants
 
-SHARED_RACK_DEVICE = {'partition_name': 'shared'}
-RACK_DEVICE = {
+SHARED_HARDWARE_DEVICE = {'partition_name': 'shared'}
+HARDWARE_DEVICE = {
     'partition_name': 'sample-1'
 }
 
-RACK_INFO = {
+HARDWARE_INFO = {
     'project_id': 'project-1',
     'ip_address': '10.10.10.10',
     'device_name': 'rack_thunder_1',
@@ -38,7 +38,7 @@ RACK_INFO = {
     'password': 'abc'
 }
 
-RACK_INFO_2 = {
+HARDWARE_INFO_2 = {
     'project_id': 'project-2',
     'ip_address': '12.12.12.12',
     'device_name': 'rack_thunder_2',
@@ -47,7 +47,7 @@ RACK_INFO_2 = {
     'partition_name': 'def-sample'
 }
 
-DUP_PARTITION_RACK_INFO = {
+DUP_PARTITION_HARDWARE_INFO = {
     'project_id': 'project-3',
     'ip_address': '10.10.10.10',
     'device_name': 'rack_thunder_3',
@@ -66,17 +66,17 @@ DUPLICATE_DICT = {'project_1': VTHUNDER_1,
 DUP_LIST = ['10.10.10.10:shared']
 NON_DUPLICATE_DICT = {'project_1': VTHUNDER_1, 'project_2': VTHUNDER_2}
 
-DUPLICATE_PROJECT_RACK_DEVICE_LIST = [
-    RACK_INFO, RACK_INFO
+DUPLICATE_PROJECT_HARDWARE_DEVICE_LIST = [
+    HARDWARE_INFO, HARDWARE_INFO
 ]
 
-RACK_DEVICE_LIST = [
-    RACK_INFO, RACK_INFO_2
+HARDWARE_DEVICE_LIST = [
+    HARDWARE_INFO, HARDWARE_INFO_2
 ]
 
-DUPLICATE_PARTITION_RACK_DEVICE_LIST = [DUP_PARTITION_RACK_INFO, RACK_INFO]
-RESULT_RACK_DEVICE_LIST = {'project-1': VTHUNDER_1,
-                           'project-2': VTHUNDER_2}
+DUPLICATE_PARTITION_HARDWARE_DEVICE_LIST = [DUP_PARTITION_HARDWARE_INFO, HARDWARE_INFO]
+RESULT_HARDWARE_DEVICE_LIST = {'project-1': VTHUNDER_1,
+                               'project-2': VTHUNDER_2}
 
 
 class FakeProject(object):
@@ -106,25 +106,27 @@ class TestUtils(unittest.TestCase):
         self.assertRaises(cfg.ConfigFileValueError, utils.validate_partial_ipv4, '10.333.11.10')
 
     def test_validate_partition_valid(self):
-        self.assertEqual(utils.validate_partition(RACK_DEVICE), RACK_DEVICE)
-        empty_rack_device = {}
-        self.assertEqual(utils.validate_partition(empty_rack_device), SHARED_RACK_DEVICE)
+        self.assertEqual(utils.validate_partition(HARDWARE_DEVICE), HARDWARE_DEVICE)
+        empty_hardware_device = {}
+        self.assertEqual(utils.validate_partition(empty_hardware_device), SHARED_HARDWARE_DEVICE)
 
     def test_validate_partition_invalid(self):
-        long_partition_rack_device = copy.deepcopy(RACK_DEVICE)
-        long_partition_rack_device['partition_name'] = 'sample_long_partition_name'
-        self.assertRaises(ValueError, utils.validate_partition, long_partition_rack_device)
+        long_partition_hardware_device = copy.deepcopy(HARDWARE_DEVICE)
+        long_partition_hardware_device['partition_name'] = 'sample_long_partition_name'
+        self.assertRaises(ValueError, utils.validate_partition, long_partition_hardware_device)
 
     def test_validate_params_valid(self):
-        shared_rack_info = copy.deepcopy(RACK_INFO)
-        shared_rack_info['partition_name'] = 'shared'
-        self.assertEqual(utils.validate_params(RACK_INFO), shared_rack_info)
+        shared_hardware_info = copy.deepcopy(HARDWARE_INFO)
+        shared_hardware_info['partition_name'] = 'shared'
+        self.assertEqual(utils.validate_params(HARDWARE_INFO), shared_hardware_info)
 
     def test_validate_params_invalid(self):
-        empty_param_rack_info = {}
-        missing_param_rack_info = {'project_id': 'abc'}
-        self.assertRaises(cfg.ConfigFileValueError, utils.validate_params, empty_param_rack_info)
-        self.assertRaises(cfg.ConfigFileValueError, utils.validate_params, missing_param_rack_info)
+        empty_param_hardware_info = {}
+        missing_param_hardware_info = {'project_id': 'abc'}
+        self.assertRaises(cfg.ConfigFileValueError, utils.validate_params,
+                          empty_param_hardware_info)
+        self.assertRaises(cfg.ConfigFileValueError, utils.validate_params,
+                          missing_param_hardware_info)
 
     def test_check_duplicate_entries_dup_found(self):
         self.assertEqual(utils.check_duplicate_entries(DUPLICATE_DICT), DUP_LIST)
@@ -132,16 +134,16 @@ class TestUtils(unittest.TestCase):
     def test_check_duplicate_entries_no_dup_found(self):
         self.assertEqual(utils.check_duplicate_entries(NON_DUPLICATE_DICT), [])
 
-    def test_convert_to_rack_vthunder_conf_valid(self):
-        self.assertEqual(utils.convert_to_rack_vthunder_conf(RACK_DEVICE_LIST),
-                         RESULT_RACK_DEVICE_LIST)
-        self.assertEqual(utils.convert_to_rack_vthunder_conf([]), {})
+    def test_convert_to_hardware_thunder_conf_valid(self):
+        self.assertEqual(utils.convert_to_hardware_thunder_conf(HARDWARE_DEVICE_LIST),
+                         RESULT_HARDWARE_DEVICE_LIST)
+        self.assertEqual(utils.convert_to_hardware_thunder_conf([]), {})
 
-    def test_convert_to_rack_vthunder_conf_invalid(self):
-        self.assertRaises(cfg.ConfigFileValueError, utils.convert_to_rack_vthunder_conf,
-                          DUPLICATE_PROJECT_RACK_DEVICE_LIST)
-        self.assertRaises(cfg.ConfigFileValueError, utils.convert_to_rack_vthunder_conf,
-                          DUPLICATE_PARTITION_RACK_DEVICE_LIST)
+    def test_convert_to_hardware_thunder_conf_invalid(self):
+        self.assertRaises(cfg.ConfigFileValueError, utils.convert_to_hardware_thunder_conf,
+                          DUPLICATE_PROJECT_HARDWARE_DEVICE_LIST)
+        self.assertRaises(cfg.ConfigFileValueError, utils.convert_to_hardware_thunder_conf,
+                          DUPLICATE_PARTITION_HARDWARE_DEVICE_LIST)
 
     @mock.patch('octavia.common.keystone.KeystoneSession')
     @mock.patch('a10_octavia.common.utils.keystone_client.Client')
