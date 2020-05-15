@@ -42,8 +42,8 @@ def axapi_client_decorator(func):
                                                    vthunder.username, vthunder.password,
                                                    timeout=30)
 
-            if vthunder.partition != a10constants.SHARED_PARTITION:
-                activate_partition(self.axapi_client, vthunder.partition)
+            if vthunder.partition_name != a10constants.SHARED_PARTITION:
+                activate_partition(self.axapi_client, vthunder.partition_name)
 
         else:
             self.axapi_client = None

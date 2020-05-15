@@ -13,7 +13,6 @@
 #    under the License.
 
 
-import acos_client
 from acos_client import errors as acos_errors
 try:
     import http.client as http_client
@@ -33,6 +32,7 @@ from octavia.db import api as db_apis
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
+from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 
 
@@ -47,17 +47,13 @@ class VThunderComputeConnectivityWait(task.Task):
     def execute(self, vthunder, amphora):
         """Execute get_info routine for a vThunder until it responds."""
         try:
-            api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-            self.axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
-                                                   vthunder.username, vthunder.password,
-                                                   timeout=30)
-
+            axapi_client = a10_utils.get_axapi_client(vthunder)
             LOG.info("Attempting to connect vThunder device for connection.")
             attempts = 30
             while attempts >= 0:
                 try:
                     attempts = attempts - 1
-                    self.axapi_client.system.information()
+                    axapi_client.system.information()
                     break
                 except (req_exceptions.ConnectionError, acos_errors.ACOSException,
                         http_client.BadStatusLine, req_exceptions.ReadTimeout):
@@ -342,24 +338,24 @@ class ConfirmVRRPStatus(task.Task):
 
 
 class HandleACOSPartitionChange(task.Task):
-
     """Task to switch to specified partition"""
 
-    @axapi_client_decorator
     def execute(self, vthunder):
         try:
-            self.axapi_client.system.partition.create(vthunder.partition)
-            LOG.info("Partition %s created", vthunder.partition)
+            axapi_client = a10_utils.get_axapi_client(vthunder)
+            if not axapi_client.system.partition.exists(vthunder.partition_name):
+                axapi_client.system.partition.create(vthunder.partition_name)
+                LOG.info("Partition %s created", vthunder.partition_name)
         except acos_errors.Exists:
             pass
         except Exception as e:
             LOG.exception("Failed to create parition on vThunder: %s", str(e))
             raise
 
-    @axapi_client_decorator
     def revert(self, vthunder, *args, **kwargs):
         try:
-            self.axapi_client.system.partition.delete(vthunder.partition)
+            axapi_client = a10_utils.get_axapi_client(vthunder)
+            axapi_client.system.partition.delete(vthunder.partition_name)
         except Exception as e:
             LOG.exception("Failed to revert partition create : %s", str(e))
             raise
