@@ -104,10 +104,10 @@ $ touch /etc/a10/a10-octavia.conf
 
 #### 3ac. Sample a10-octavia.conf for vThunders
 ```shell
-[VTHUNDER]
-DEFAULT_VTHUNDER_USERNAME = "admin"
-DEFAULT_VTHUNDER_PASSWORD = "a10"
-DEFAULT_AXAPI_VERSION = "30"
+[vthunder]
+default_vthunder_username = "admin"
+default_vthunder_password = "a10"
+default_axapi_version = "30"
 
 [a10_controller_worker]
 amp_image_owner_id = <admin_project_id>
@@ -183,25 +183,22 @@ amp_active_retries = 100
 amp_active_wait_sec = 2
 loadbalancer_topology = SINGLE
 
-[RACK_VTHUNDER]
+[hardware_thunder]
 devices = """[
                     {
                      "project_id":"<project_id>",
                      "ip_address":"10.0.0.4",
-                     "undercloud":"True",
                      "username":"<username>",
                      "password":"<password>",
                      "device_name":"<device_name>",
-                     "axapi_version":"30"
                      },
                      {
                      "project_id":"<another_project_id>",
                      "ip_address":"10.0.0.5",
-                     "undercloud":"True",
                      "username":"<username>",
                      "password":"<password>",
                      "device_name":"<device_name>",
-                     "axapi_version":"30",
+                     "partition_name" : "<partition_name>"
                      }
              ]
        """
@@ -255,22 +252,19 @@ These settings are added to the `a10-octavia.conf` file. They allow the operator
 #### Global section config example
 ```shell
 [a10_global]
-
+enable_hierarchical_multitenancy = False
+use_parent_partition = False
 ```
 #### Loadbalancer/virtual server config example
 ```shell
-[SLB]
+[slb]
 arp_disable = False
 default_virtual_server_vrid = "10"
-logging_template = "Logging_temp1"
-policy_template = "policy_temp1"
-template_virtual_server = "virtual_server_template1"
-default_virtual_server_vrid = 0
 ```
 
 #### Listener/virtual port config example
 ```shell
-[LISTENER]
+[listener]
 ipinip = False
 no_dest_nat = False
 ha_conn_mirror = False
@@ -280,20 +274,23 @@ template_policy = "policy_temp1"
 autosnat = True
 conn_limit = 5000
 template_http = "http_template"
+use_rcv_hop_for_resp = False
 ```
 
 #### Pool/service group config example
 ```shell
-[SERVICE - GROUP]
-templates = "server1"
+[service_group]
+template_server = "server_template"
+template_port = "port_template"
+template_policy = "policy_template"`
 ```
 
 #### Member config example
 ```shell
-[SERVER]
+[server]
 conn_limit = 5000
 conn_resume = 1
-templates = "server1"
+template_server = "server_template"
 ```
 
 Full list of options can be found here: [Config Options Module](https://github.com/a10networks/a10-octavia/blob/master/a10_octavia/common/config_options.py)
