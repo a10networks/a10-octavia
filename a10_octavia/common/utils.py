@@ -159,22 +159,6 @@ def get_vrid_floating_ip_for_project(project_id):
         return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp
 
 
-def validate_mandatory_params(rack_info):
-    """Check for all the required parameters for rack configurations.
-    """
-    if all(k in rack_info for k in ('project_id', 'ip_address',
-                                    'username', 'password', 'device_name')):
-        if all(rack_info[x] is not None for x in ('project_id', 'ip_address',
-                                                  'username', 'password', 'device_name')):
-            if validate_ipv4(rack_info['ip_address']):
-                return True
-            raise ConfigFileValueError('Invalid IPAddress value given ' + rack_info['ip_address'])
-    raise ConfigFileValueError('Please check your configuration. The params `project_id`, '
-                               '`ip_address`, `username`, `password` and `device_name` '
-                               'under [rack_vthunder] section cannot be None ')
-    return False
-
-
 def validate_interface_vlan_map(rack_device):
     if 'interface_vlan_map' not in rack_device:
         return True
