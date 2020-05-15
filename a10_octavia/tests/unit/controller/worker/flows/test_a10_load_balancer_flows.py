@@ -63,18 +63,18 @@ class TestLoadBalancerFlows(base.TestCase):
 
     def test_create_lb_rack_vthunder_vlan_flow(self, mock_net_driver):
         self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
-                                group=a10constants.A10_GLOBAL_CONF_SECTION)
-        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, network_type='vlan')
+                                group=a10constants.A10_GLOBAL_OPTS)
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS, network_type='vlan')
         target = self.flows.get_create_rack_vthunder_load_balancer_flow(
             RACK_DEVICE, constants.TOPOLOGY_SINGLE)
         self.assertIsInstance(target, flow.Flow)
 
     def test_delete_lb_rack_vthunder_vlan_flow(self, mock_net_driver):
         self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
-                                group=a10constants.A10_GLOBAL_CONF_SECTION)
+                                group=a10constants.A10_GLOBAL_OPTS)
         self.conf.register_opts(config_options.A10_RACK_VTHUNDER_OPTS,
                                 group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION)
-        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, network_type='vlan')
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS, network_type='vlan')
         self.conf.config(group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION,
                          devices=[RACK_DEVICE])
         lb = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,

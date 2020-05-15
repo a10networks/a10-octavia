@@ -38,6 +38,12 @@ A10_GLOBAL_OPTS = [
                default=a10constants.FLAT,
                choices=a10constants.SUPPORTED_NETWORK_TYPE,
                help=_('Neutron ML2 Tenent Network Type')),
+    cfg.BoolOpt('enable_hierarchical_multitenancy', default=False,
+                help=_('Enable Hierarchical Multitenancy '
+                       'for racked - hardware thunder devices.')),
+    cfg.BoolOpt('use_parent_partition', default=False,
+                help=_('Use parent project partition on Thunder device '
+                       'in hierarchical project architecture.')),
 ]
 
 A10_VTHUNDER_OPTS = [
@@ -91,6 +97,9 @@ A10_LISTENER_OPTS = [
                default=None,
                max_length=127,
                help=_('HTTP Template Name')),
+    cfg.BoolOpt('use_rcv_hop_for_resp',
+                default=False,
+                help=_('Use receive hop for response to client')),
 ]
 
 A10_SERVICE_GROUP_OPTS = [
