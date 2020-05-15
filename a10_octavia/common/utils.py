@@ -18,6 +18,9 @@
 """
 import acos_client
 import netaddr
+import socket
+import struct
+
 from oslo_config.cfg import ConfigFileValueError
 from oslo_log import log as logging
 
@@ -83,23 +86,16 @@ def validate_interface_vlan_map(rack_device):
         for vlan_id in if_info:
             ve_info = if_info[vlan_id]
             if 'use_dhcp' in ve_info and ve_info['use_dhcp']:
-                if 'ip_last_octets' in ve_info and ve_info['ip_last_octets'] != '':
+                if 've_ip_address' in ve_info and ve_info['ve_ip_address'] != '':
                     raise ConfigFileValueError('Check settings for vlan ' + vlan_id +
-                                               '. Please do not set ip_last_octets in '
+                                               '. Please do not set ve_ip_address in '
                                                'interface_vlan_map when use_dhcp is True')
             if 'use_dhcp' not in ve_info or not ve_info['use_dhcp']:
-                if 'ip_last_octets' not in ve_info or ve_info['ip_last_octets'] == '':
+                if 've_ip_address' not in ve_info or ve_info['ve_ip_address'] == '':
                     raise ConfigFileValueError('Check settings for vlan ' + vlan_id +
-                                               '. Please set valid ip_last_octets in '
+                                               '. Please set valid ve_ip_address in '
                                                'interface_vlan_map when use_dhcp is False')
-                octets = ve_info['ip_last_octets'].split('.')
-                if len(octets) == 0 or len(octets) > 4:
-                    raise ConfigFileValueError('Improper ip_last_octets for vlan ' + vlan_id
-                                               + 'in interface_vlan_map')
-                for octet in octets:
-                    if not 0 <= int(octet) <= 255:
-                        raise ConfigFileValueError('Improper ip_last_octets for vlan ' +
-                                                   vlan_id + 'in interface_vlan_map')
+                validate_partial_ipv4(ve_info['ve_ip_address'])
     return True
 
 
@@ -149,3 +145,30 @@ def get_axapi_client(vthunder):
                                       vthunder.username, vthunder.password,
                                       timeout=30)
     return axapi_client
+
+
+""" TODO(ssrinivasan10) use this changes from STACK-1215"""
+
+
+def get_net_info_from_cidr(cidr):
+    subnet_ip, mask = cidr.split('/')
+    avail_hosts = (1 << 32 - int(mask))
+    netmask = socket.inet_ntoa(struct.pack('>I', (1 << 32) - avail_hosts))
+    return subnet_ip, netmask
+
+
+def check_ip_in_subnet_range(ip, subnet, netmask):
+    int_ip = struct.unpack('>L', socket.inet_aton(ip))[0]
+    int_subnet = struct.unpack('>L', socket.inet_aton(subnet))[0]
+    int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
+    return int_ip & int_netmask == int_subnet
+
+
+def merge_host_and_network_ip(cidr, host_ip):
+    network_ip, mask = cidr.split('/')
+    host_bits = struct.pack('>L', ((1 << (32 - int(mask))) - 1))
+    int_host_bits = struct.unpack('>L', host_bits)[0]
+    int_host_ip = struct.unpack('>L', socket.inet_aton(host_ip))[0]
+    int_net_ip = struct.unpack('>L', socket.inet_aton(network_ip))[0]
+    full_ip_packed = struct.pack('>L', int_net_ip | (int_host_ip & int_host_bits))
+    return socket.inet_ntoa(full_ip_packed)
