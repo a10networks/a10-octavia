@@ -18,6 +18,9 @@
 """
 import acos_client
 import netaddr
+import socket
+import struct
+
 from oslo_config.cfg import ConfigFileValueError
 from oslo_log import log as logging
 
@@ -118,3 +121,27 @@ def get_axapi_client(vthunder):
                                       vthunder.username, vthunder.password,
                                       timeout=30)
     return axapi_client
+
+
+def get_net_info_from_cidr(cidr):
+    subnet_ip, mask = cidr.split('/')
+    avail_hosts = (1 << 32 - int(mask))
+    netmask = socket.inet_ntoa(struct.pack('>I', (1 << 32) - avail_hosts))
+    return subnet_ip, netmask
+
+
+def check_ip_in_subnet_range(ip, subnet, netmask):
+    int_ip = struct.unpack('>L', socket.inet_aton(ip))[0]
+    int_subnet = struct.unpack('>L', socket.inet_aton(subnet))[0]
+    int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
+    return int_ip & int_netmask == int_subnet
+
+
+def merge_host_and_network_ip(cidr, host_ip):
+    network_ip, mask = cidr.split('/')
+    host_bits = struct.pack('>L', ((1 << (32 - int(mask))) - 1))
+    int_host_bits = struct.unpack('>L', host_bits)[0]
+    int_host_ip = struct.unpack('>L', socket.inet_aton(host_ip))[0]
+    int_net_ip = struct.unpack('>L', socket.inet_aton(network_ip))[0]
+    full_ip_packed = struct.pack('>L', int_net_ip | (int_host_ip & int_host_bits))
+    return socket.inet_ntoa(full_ip_packed)

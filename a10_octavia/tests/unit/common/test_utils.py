@@ -162,3 +162,43 @@ class TestUtils(unittest.TestCase):
         client_mock.projects.get.return_value = FakeProject()
         mock_key_client.return_value = client_mock
         self.assertIsNone(utils.get_parent_project(a10constants.MOCK_CHILD_PROJECT_ID))
+
+    def test_get_net_info_from_cidr_valid(self):
+        self.assertEqual(utils.get_net_info_from_cidr('10.10.10.1/32'),
+                         ('10.10.10.1', '255.255.255.255'))
+        self.assertEqual(utils.get_net_info_from_cidr('10.10.10.0/24'),
+                         ('10.10.10.0', '255.255.255.0'))
+        self.assertEqual(utils.get_net_info_from_cidr('10.10.0.0/16'),
+                         ('10.10.0.0', '255.255.0.0'))
+
+    def test_get_net_info_from_cidr_invalid(self):
+        self.assertRaises(Exception, utils.get_net_info_from_cidr, '10.10.10.1/33')
+
+    def test_check_ip_in_subnet_range_valid(self):
+        self.assertEqual(utils.check_ip_in_subnet_range('10.10.10.1', '10.10.10.1',
+                         '255.255.255.255'), True)
+        self.assertEqual(utils.check_ip_in_subnet_range('10.10.10.1', '10.10.11.0',
+                         '255.255.255.0'), False)
+        self.assertEqual(utils.check_ip_in_subnet_range('10.10.10.1', '10.10.0.0',
+                         '255.255.0.0'), True)
+        self.assertEqual(utils.check_ip_in_subnet_range('10.11.10.2', '10.10.0.0',
+                         '255.255.0.0'), False)
+
+    def test_check_ip_in_subnet_range_invalid(self):
+        self.assertRaises(Exception, utils.check_ip_in_subnet_range, '1010.10.10.2',
+                          '10.10.10.1', '255.255.255.255')
+        self.assertRaises(Exception, utils.check_ip_in_subnet_range, '10.10.10.2',
+                          '10.333.10.0', '255.255.255.0')
+        self.assertRaises(Exception, utils.check_ip_in_subnet_range, '10.11.10.2',
+                          '10.10.0.0', '2555.255.0.0')
+
+    def test_merge_host_and_network_ip_valid(self):
+        self.assertEqual(utils.merge_host_and_network_ip('10.10.10.0/24', '0.0.0.9'),
+                         '10.10.10.9')
+        self.assertEqual(utils.merge_host_and_network_ip('10.10.10.0/24', '0.0.0.9'),
+                         '10.10.10.9')
+        self.assertEqual(utils.merge_host_and_network_ip('10.10.0.0/16', '0.0.11.9'),
+                         '10.10.11.9')
+
+    def test_merge_host_and_network_ip_invalid(self):
+        self.assertRaises(Exception, utils.merge_host_and_network_ip, '10.10.10.0/42', '99')
