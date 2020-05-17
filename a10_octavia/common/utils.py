@@ -18,6 +18,9 @@
 """
 import acos_client
 import netaddr
+import socket
+import struct
+
 from oslo_config.cfg import ConfigFileValueError
 from oslo_log import log as logging
 
@@ -48,60 +51,60 @@ def validate_partial_ipv4(address):
                                    + address)
 
 
-def validate_partition(rack_device):
-    partition_name = rack_device.get('partition_name')
+def validate_partition(hardware_device):
+    partition_name = hardware_device.get('partition_name')
     if not partition_name:
-        rack_device['partition_name'] = a10constants.SHARED_PARTITION
+        hardware_device['partition_name'] = a10constants.SHARED_PARTITION
     elif len(partition_name) > 14:
         raise ValueError("Supplied partition value '%s' exceeds maximum length 14" %
                          (partition_name))
-    return rack_device
+    return hardware_device
 
 
-def validate_params(rack_info):
-    """Check for all the required parameters for rack configurations.
+def validate_params(hardware_info):
+    """Check for all the required parameters for hardware configurations.
     """
-    if all(k in rack_info for k in ('project_id', 'ip_address',
-                                    'username', 'password', 'device_name')):
-        if all(rack_info[x] is not None for x in ('project_id', 'ip_address',
-                                                  'username', 'password', 'device_name')):
-            validate_ipv4(rack_info['ip_address'])
-            rack_info = validate_partition(rack_info)
-            return rack_info
+    if all(k in hardware_info for k in ('project_id', 'ip_address',
+                                        'username', 'password', 'device_name')):
+        if all(hardware_info[x] is not None for x in ('project_id', 'ip_address',
+                                                      'username', 'password', 'device_name')):
+            validate_ipv4(hardware_info['ip_address'])
+            hardware_info = validate_partition(hardware_info)
+            return hardware_info
     raise ConfigFileValueError('Please check your configuration. The params `project_id`, '
                                '`ip_address`, `username`, `password` and `device_name` '
-                               'under [rack_vthunder] section cannot be None ')
+                               'under [hardware_thunder] section cannot be None ')
 
 
-def check_duplicate_entries(rack_dict):
-    rack_count_dict = {}
-    for rack_device in rack_dict.values():
-        candidate = '{}:{}'.format(rack_device.ip_address, rack_device.partition_name)
-        rack_count_dict[candidate] = rack_count_dict.get(candidate, 0) + 1
-    return [k for k, v in rack_count_dict.items() if v > 1]
+def check_duplicate_entries(hardware_dict):
+    hardware_count_dict = {}
+    for hardware_device in hardware_dict.values():
+        candidate = '{}:{}'.format(hardware_device.ip_address, hardware_device.partition_name)
+        hardware_count_dict[candidate] = hardware_count_dict.get(candidate, 0) + 1
+    return [k for k, v in hardware_count_dict.items() if v > 1]
 
 
-def convert_to_rack_vthunder_conf(rack_list):
-    """ Validates for all vthunder nouns for rack devices
+def convert_to_hardware_thunder_conf(hardware_list):
+    """ Validates for all vthunder nouns for hardware devices
         configurations.
     """
-    rack_dict = {}
-    for rack_device in rack_list:
-        rack_device = validate_params(rack_device)
-        if rack_dict.get(rack_device['project_id']):
+    hardware_dict = {}
+    for hardware_device in hardware_list:
+        hardware_device = validate_params(hardware_device)
+        if hardware_dict.get(hardware_device['project_id']):
             raise ConfigFileValueError('Supplied duplicate project_id ' +
-                                       rack_device['project_id'] +
-                                       ' in [rack_vthunder] section')
-        rack_device['undercloud'] = True
-        vthunder_conf = data_models.VThunder(**rack_device)
-        rack_dict[rack_device['project_id']] = vthunder_conf
+                                       hardware_device['project_id'] +
+                                       ' in [hardware_thunder] section')
+        hardware_device['undercloud'] = True
+        vthunder_conf = data_models.VThunder(**hardware_device)
+        hardware_dict[hardware_device['project_id']] = vthunder_conf
 
-    duplicates_list = check_duplicate_entries(rack_dict)
+    duplicates_list = check_duplicate_entries(hardware_dict)
     if duplicates_list:
         raise ConfigFileValueError('Duplicates found for the following '
                                    '\'ip_address:partition_name\' entries: {}'
                                    .format(list(duplicates_list)))
-    return rack_dict
+    return hardware_dict
 
 
 def get_parent_project(project_id):
@@ -118,3 +121,27 @@ def get_axapi_client(vthunder):
                                       vthunder.username, vthunder.password,
                                       timeout=30)
     return axapi_client
+
+
+def get_net_info_from_cidr(cidr):
+    subnet_ip, mask = cidr.split('/')
+    avail_hosts = (1 << 32 - int(mask))
+    netmask = socket.inet_ntoa(struct.pack('>I', (1 << 32) - avail_hosts))
+    return subnet_ip, netmask
+
+
+def check_ip_in_subnet_range(ip, subnet, netmask):
+    int_ip = struct.unpack('>L', socket.inet_aton(ip))[0]
+    int_subnet = struct.unpack('>L', socket.inet_aton(subnet))[0]
+    int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
+    return int_ip & int_netmask == int_subnet
+
+
+def merge_host_and_network_ip(cidr, host_ip):
+    network_ip, mask = cidr.split('/')
+    host_bits = struct.pack('>L', ((1 << (32 - int(mask))) - 1))
+    int_host_bits = struct.unpack('>L', host_bits)[0]
+    int_host_ip = struct.unpack('>L', socket.inet_aton(host_ip))[0]
+    int_net_ip = struct.unpack('>L', socket.inet_aton(network_ip))[0]
+    full_ip_packed = struct.pack('>L', int_net_ip | (int_host_ip & int_host_bits))
+    return socket.inet_ntoa(full_ip_packed)
