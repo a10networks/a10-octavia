@@ -378,8 +378,8 @@ class TagEthernetBaseTask(task.Task):
         return self._network_driver
 
     def get_tag_interface_info(self, project_id, vlan_id):
-        if project_id in CONF.rack_vthunder.devices:
-            vthunder_conf = CONF.rack_vthunder.devices[project_id]
+        if project_id in CONF.hardware_thunder.devices:
+            vthunder_conf = CONF.hardware_thunder.devices[project_id]
             if vthunder_conf.interface_vlan_map:
                 interface_vlan_map = vthunder_conf.interface_vlan_map
                 for ifnum in interface_vlan_map:
@@ -540,7 +540,7 @@ class DeleteEthernetTagIfNotInUseForLB(TagEthernetBaseTask):
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
         try:
-            if loadbalancer.project_id in CONF.rack_vthunder.devices:
+            if loadbalancer.project_id in CONF.hardware_thunder.devices:
                 self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
                 if self.is_vlan_deletable():
                     vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
@@ -559,7 +559,7 @@ class DeleteEthernetTagIfNotInUseForMember(TagEthernetBaseTask):
     @axapi_client_decorator
     def execute(self, member, vthunder):
         try:
-            if member.project_id in CONF.rack_vthunder.devices:
+            if member.project_id in CONF.hardware_thunder.devices:
                 self.get_subnet_and_mask(member.subnet_id)
                 if self.is_vlan_deletable():
                     vlan_id = self.get_vlan_id(member.subnet_id, False)

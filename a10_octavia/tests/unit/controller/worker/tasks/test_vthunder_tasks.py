@@ -100,10 +100,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver = a10_octavia_neutron.A10OctaviaNeutronDriver()
 
     def test_tag_ethernet_for_lb(self):
-        self.conf.register_opts(config_options.A10_RACK_VTHUNDER_OPTS,
-                                group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([RACK_DEVICE])
-        self.conf.config(group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION,
+        self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
         lb = self._mock_lb()
         mock_task = task.TagEthernetForLB()
@@ -122,10 +122,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.assertEqual(VE_IP, fixed_ip['ip_address'])
 
     def test_tag_ethernet_for_lb_static_ve_ip(self):
-        self.conf.register_opts(config_options.A10_RACK_VTHUNDER_OPTS,
-                                group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([RACK_DEVICE])
-        self.conf.config(group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION,
+        self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
         lb = self._mock_lb()
         mock_task = task.TagEthernetForLB()
@@ -158,10 +158,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
 
     def test_tag_ethernet_for_member(self):
-        self.conf.register_opts(config_options.A10_RACK_VTHUNDER_OPTS,
-                                group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([RACK_DEVICE])
-        self.conf.config(group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION,
+        self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
         member = self._mock_member()
         mock_task = task.TagEthernetForMember()
@@ -191,10 +191,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
 
     def test_delete_ethernet_tag_if_not_in_use_for_lb(self):
-        self.conf.register_opts(config_options.A10_RACK_VTHUNDER_OPTS,
-                                group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([RACK_DEVICE])
-        self.conf.config(group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION,
+        self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
         lb = self._mock_lb()
         mock_task = task.DeleteEthernetTagIfNotInUseForLB()
@@ -209,10 +209,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
 
     def test_delete_ethernet_tag_if_not_in_use_for_member(self):
-        self.conf.register_opts(config_options.A10_RACK_VTHUNDER_OPTS,
-                                group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([RACK_DEVICE])
-        self.conf.config(group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION,
+        self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
         member = self._mock_member()
         mock_task = task.DeleteEthernetTagIfNotInUseForMember()

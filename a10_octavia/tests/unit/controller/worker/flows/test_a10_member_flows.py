@@ -53,10 +53,10 @@ class TestMemberFlows(base.TestCase):
     def test_delete_member_rack_vthunder_vlan_flow(self):
         self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
                                 group=a10constants.A10_GLOBAL_OPTS)
-        self.conf.register_opts(config_options.A10_RACK_VTHUNDER_OPTS,
-                                group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         self.conf.config(group=a10constants.A10_GLOBAL_OPTS, network_type='vlan')
-        self.conf.config(group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION,
+        self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=[RACK_DEVICE])
         del_flow = self.flows.get_delete_member_flow()
         self.assertIsInstance(del_flow, flow.Flow)

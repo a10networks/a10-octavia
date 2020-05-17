@@ -70,23 +70,23 @@ class TestConfigTypes(base.TestCase):
         self.conf.reset()
 
     def test_rack_device_valid_devices(self):
-        self.conf.register_opts(config_options.A10_RACK_VTHUNDER_OPTS,
-                                group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([RACK_DEVICE_1, RACK_DEVICE_2])
-        self.conf.config(group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION,
+        self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
-        self.assertIn('project-1', CONF.rack_vthunder.devices)
-        self.assertIn('project-2', CONF.rack_vthunder.devices)
-        self.assertEqual('rack_thunder_1', CONF.rack_vthunder.devices['project-1'].device_name)
-        self.assertEqual('rack_thunder_2', CONF.rack_vthunder.devices['project-2'].device_name)
+        self.assertIn('project-1', CONF.hardware_thunder.devices)
+        self.assertIn('project-2', CONF.hardware_thunder.devices)
+        self.assertEqual('rack_thunder_1', CONF.hardware_thunder.devices['project-1'].device_name)
+        self.assertEqual('rack_thunder_2', CONF.hardware_thunder.devices['project-2'].device_name)
 
     def test_rack_device_valid_no_devices(self):
-        self.conf.register_opts(config_options.A10_RACK_VTHUNDER_OPTS,
-                                group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([])
-        self.conf.config(group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION,
+        self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
-        self.assertEqual(CONF.rack_vthunder.devices, {})
+        self.assertEqual(CONF.hardware_thunder.devices, {})
 
     def test_rack_device_valid_invalid_array(self):
         devices_str = '[' + json.dumps(RACK_DEVICE_1)
