@@ -395,6 +395,7 @@ class TagEthernetBaseTask(task.Task):
         subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(self._subnet.cidr)
         self._subnet_ip = subnet_ip
         self._subnet_mask = subnet_mask
+        return subnet_ip, subnet_mask
 
     def get_vlan_id(self, subnet_id, is_revert):
         if self._subnet is None:
@@ -437,7 +438,7 @@ class TagEthernetBaseTask(task.Task):
             raise
 
         eth = self.axapi_client.interface.ethernet.get(ifnum)
-        if 'action' not in eth or not eth['action'] == 'disable':
+        if eth.get('action') != 'disable':
             LOG.warning("ethernet interface %s not enabled, enabling it", ifnum)
             self.axapi_client.interface.ethernet.update(ifnum, enable=True)
 
@@ -445,7 +446,7 @@ class TagEthernetBaseTask(task.Task):
             self.axapi_client.vlan.create(vlan_id, tagged_eths=[ifnum], veth=True)
             LOG.debug("Tagged ethernet interface %s with VLAN with id %s", ifnum, vlan_id)
 
-        if ve_info is None or 'use_dhcp' in ve_info and ve_info['use_dhcp']:
+        if not ve_info or ve_info.get('use_dhcp'):
             self.axapi_client.interface.ve.update(vlan_id, dhcp=True, enable=True)
         else:
             patched_ip = self._get_patched_ve_ip(ve_info['ve_ip_address'])
@@ -456,10 +457,10 @@ class TagEthernetBaseTask(task.Task):
     def _get_ve_ip(self, vlan_id):
         try:
             resp = self.axapi_client.interface.ve.get_oper(vlan_id)
-            ve = resp['ve']
-            if 'oper' in ve and 'ipv4_list' in ve['oper']:
+            ve = resp.get('ve')
+            if ve and ve.get('oper') and ve['oper'].get('ipv4_list'):
                 ipv4_list = ve['oper']['ipv4_list']
-                if len(ipv4_list) > 0:
+                if ipv4_list:
                     return ipv4_list[0]['addr']
         except Exception as e:
             LOG.exception("Failed to get ve ip from vThunder: %s", str(e))
@@ -498,7 +499,7 @@ class TagEthernetForLB(TagEthernetBaseTask):
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
         vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
-        self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
+        subnet_ip, subnet_mask = self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
         ifnum, ve_info = self.get_tag_interface_info(loadbalancer.project_id, vlan_id)
         self.tag_interface(vlan_id, ifnum, ve_info)
         self.reserve_ve_ip_with_neutron(vlan_id, ve_info, loadbalancer.vip.subnet_id)
@@ -519,7 +520,7 @@ class TagEthernetForMember(TagEthernetBaseTask):
     @axapi_client_decorator
     def execute(self, member, vthunder):
         vlan_id = self.get_vlan_id(member.subnet_id, False)
-        self.get_subnet_and_mask(member.subnet_id)
+        subnet_ip, subnet_mask = self.get_subnet_and_mask(member.subnet_id)
         ifnum, ve_info = self.get_tag_interface_info(member.project_id, vlan_id)
         self.tag_interface(vlan_id, ifnum, ve_info)
         self.reserve_ve_ip_with_neutron(vlan_id, ve_info, member.subnet_id)
@@ -541,7 +542,7 @@ class DeleteEthernetTagIfNotInUseForLB(TagEthernetBaseTask):
     def execute(self, loadbalancer, vthunder):
         try:
             if loadbalancer.project_id in CONF.hardware_thunder.devices:
-                self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
+                subnet_ip, subnet_mask = self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
                 if self.is_vlan_deletable():
                     vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
                     if self.axapi_client.vlan.exists(vlan_id):
@@ -560,7 +561,7 @@ class DeleteEthernetTagIfNotInUseForMember(TagEthernetBaseTask):
     def execute(self, member, vthunder):
         try:
             if member.project_id in CONF.hardware_thunder.devices:
-                self.get_subnet_and_mask(member.subnet_id)
+                subnet_ip, subnet_mask = self.get_subnet_and_mask(member.subnet_id)
                 if self.is_vlan_deletable():
                     vlan_id = self.get_vlan_id(member.subnet_id, False)
                     if self.axapi_client.vlan.exists(vlan_id):

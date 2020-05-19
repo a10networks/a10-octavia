@@ -731,13 +731,13 @@ class A10OctaviaNeutronDriver(neutron_base.BaseNeutronDriver):
     def get_ve_port_id(self, ip):
         try:
             ports = self.neutron_client.list_ports(device_owner=OCTAVIA_OWNER)
-            if ports is None or 'ports' not in ports:
+            if not ports or not ports.get('ports'):
                 return None
             for port in ports['ports']:
-                if 'fixed_ips' in port:
+                if port.get('fixed_ips'):
                     fixed_ips = port['fixed_ips']
                     for ipaddr in fixed_ips:
-                        if 'ip_address' in ipaddr and ipaddr['ip_address'] == ip:
+                        if ipaddr.get('ip_address') == ip:
                             return port['id']
         except (neutron_client_exceptions.NotFound,
                 neutron_client_exceptions.PortNotFoundClient):
