@@ -163,22 +163,21 @@ def validate_interface_vlan_map(rack_device):
     if 'interface_vlan_map' not in rack_device:
         return True
 
-    ivmap = rack_device['interface_vlan_map']
+    ivmap = hardware_device.get('interface_vlan_map')
     for ifnum in ivmap:
         if_info = ivmap[ifnum]
         for vlan_id in if_info:
             ve_info = if_info[vlan_id]
-            if 'use_dhcp' in ve_info and ve_info['use_dhcp']:
-                if 've_ip_address' in ve_info and ve_info['ve_ip_address'] != '':
-                    raise ConfigFileValueError('Check settings for vlan ' + vlan_id +
-                                               '. Please do not set ve_ip_address in '
-                                               'interface_vlan_map when use_dhcp is True')
-            if 'use_dhcp' not in ve_info or not ve_info['use_dhcp']:
-                if 've_ip_address' not in ve_info or ve_info['ve_ip_address'] == '':
-                    raise ConfigFileValueError('Check settings for vlan ' + vlan_id +
-                                               '. Please set valid ve_ip_address in '
-                                               'interface_vlan_map when use_dhcp is False')
-                validate_partial_ipv4(ve_info['ve_ip_address'])
+            if ve_info.get('use_dhcp') and ve_info.get('ve_ip_address'):
+                raise ConfigFileValueError('Check settings for vlan ' + vlan_id +
+                                           '. Please do not set ve_ip_address in '
+                                           'interface_vlan_map when use_dhcp is True')
+                if not ve_info.get('use_dhcp'):
+                    if not ve_info.get('ve_ip_address'):
+                        raise ConfigFileValueError('Check settings for vlan ' + vlan_id +
+                                                   '. Please set valid ve_ip_address in '
+                                                   'interface_vlan_map when use_dhcp is False')
+                    validate_partial_ipv4(ve_info['ve_ip_address'])
     return True
 
 
