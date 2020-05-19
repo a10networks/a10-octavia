@@ -90,6 +90,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._get_ve_ip = mock.Mock()
         mock_task._get_ve_ip.return_value = VE_IP
         mock_task.get_subnet_and_mask = mock.Mock()
+        mock_task.get_subnet_and_mask.return_value = [SUBNET_MASK[0], SUBNET_MASK[1]]
         mock_task._subnet_ip = SUBNET_MASK[0]
         mock_task._subnet_mask = SUBNET_MASK[1]
         mock_task._subnet = mock.Mock()
