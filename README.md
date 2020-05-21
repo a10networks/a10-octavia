@@ -190,7 +190,7 @@ devices = [
                      "ip_address":"10.0.0.4",
                      "username":"<username>",
                      "password":"<password>",
-                     "device_name":"<device_name>",
+                     "device_name":"<device_name>"
                      },
                      {
                      "project_id":"<another_project_id>",
@@ -204,6 +204,8 @@ devices = [
 ```
 
 Full list of options can be found here: [Config Options Module](https://github.com/a10networks/a10-octavia/blob/master/a10_octavia/common/config_options.py)
+
+*Note trailing "," are invalid in device config type*
 
 ### 4. Run database migrations
 
