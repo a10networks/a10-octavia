@@ -205,7 +205,7 @@ devices = [
 
 Full list of options can be found here: [Config Options Module](https://github.com/a10networks/a10-octavia/blob/master/a10_octavia/common/config_options.py)
 
-*Note trailing "," are invalid in device config type*
+*Note: trailing "," are invalid in device config type*
 
 ### 4. Run database migrations
 
