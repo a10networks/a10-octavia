@@ -238,7 +238,7 @@ This will install systemd services with names - `a10-controller-worker.service`,
 #### 5a. Make sure the services are up and running.
 
 ```shell
-$ systemctl status a10-controller-worker.service a10-health-manager.service a10-housekeeper-manager.service
+$ systemctl status a10-controller-worker.service a10-health-manager.service a10-house-keeper.service
 ```
 
 You can start/stop the services using systemctl/service commands.
@@ -302,7 +302,7 @@ You may check logs of the services using `journalctl` commands. For example:
 ```shell
 $ journalctl -af --unit a10-controller-worker.service
 $ journalctl -af --unit a10-health-manager.service
-$ journalctl -af --unit a10-housekeeper-manager.service
+$ journalctl -af --unit a10-house-keeper.service
 ```
 
 ## Contributing
