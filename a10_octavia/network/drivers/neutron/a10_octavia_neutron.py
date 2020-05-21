@@ -18,7 +18,6 @@ from oslo_utils import uuidutils
 from stevedore import driver as stevedore_driver
 
 from neutronclient.common import exceptions as neutron_client_exceptions
-from octavia.network import base
 from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron.allowed_address_pairs import AllowedAddressPairsDriver
 from octavia.network.drivers.neutron import utils
@@ -75,21 +74,6 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
         return {'port_id': subport.port_id,
                 'segmentation_type': subport.segmentation_type,
                 'segmentation_id': subport.segmentation_id}
-
-    def deallocate_security_group(self, vip):
-        """Delete the sec group (instance port) in case nova didn't
-
-        This can happen if a failover has occurred.
-        """
-        try:
-            port = self.get_port(vip.port_id)
-        except base.PortNotFound:
-            LOG.warning("Can't deallocate VIP because the vip port {0} "
-                        "cannot be found in neutron. "
-                        "Continuing cleanup.".format(vip.port_id))
-            port = None
-
-        self._delete_security_group(vip, port)
 
     def allocate_trunk(self, parent_port_id):
         payload = {"trunk": {"port_id": parent_port_id,
