@@ -233,7 +233,7 @@ With `a10-octavia` installed, run the following command to register the services
 $ install-a10-octavia
 ```
 
-This will install systemd services with names - `a10-controller-worker.service`, `a10-health-manager.service` and `a10-housekeeper-manager.service`.
+This will install systemd services with names - `a10-controller-worker.service`, `a10-health-manager.service` and `a10-house-keeper.service`.
 
 #### 5a. Make sure the services are up and running.
 
