@@ -14,8 +14,10 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import uuidutils
 from stevedore import driver as stevedore_driver
 
+from neutronclient.common import exceptions as neutron_client_exceptions
 from octavia.network import base
 from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron.allowed_address_pairs import AllowedAddressPairsDriver
@@ -174,3 +176,41 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
         except Exception:
             message = "Error deleting port: {0}".format(port_id)
             LOG.exception(message)
+
+    def create_ve_port(self, ip, subnet):
+        try:
+            name = 'octavia-lb-ve-' + uuidutils.generate_uuid()
+            fixed_ips = [{'ip_address': ip, 'subnet_id': subnet.id}]
+            port = {'port': {'name': name,
+                             'network_id': subnet.network_id,
+                             'fixed_ips': fixed_ips,
+                             'admin_state_up': True,
+                             'device_owner': OCTAVIA_OWNER}}
+            self.neutron_client.create_port(port)
+            LOG.debug('Created port name %s', name)
+
+        except (neutron_client_exceptions.IpAddressAlreadyAllocatedClient):
+            pass
+        except Exception:
+            message = "Error creating port details: ip {ip} "
+            "subnet {subnet_id}".format(ip=ip, subnet_id=subnet.id)
+            LOG.exception(message)
+
+    def get_ve_port_id(self, ip):
+        try:
+            ports = self.neutron_client.list_ports(device_owner=OCTAVIA_OWNER)
+            if not ports or not ports.get('ports'):
+                return None
+            for port in ports['ports']:
+                if port.get('fixed_ips'):
+                    fixed_ips = port['fixed_ips']
+                    for ipaddr in fixed_ips:
+                        if ipaddr.get('ip_address') == ip:
+                            return port['id']
+        except (neutron_client_exceptions.NotFound,
+                neutron_client_exceptions.PortNotFoundClient):
+            pass
+        except Exception:
+            message = "Error listing ports, ip {} ".format(ip)
+            LOG.exception(message)
+        return None
