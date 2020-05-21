@@ -184,7 +184,7 @@ amp_active_wait_sec = 2
 loadbalancer_topology = SINGLE
 
 [hardware_thunder]
-devices = """[
+devices = [
                     {
                      "project_id":"<project_id>",
                      "ip_address":"10.0.0.4",
@@ -201,7 +201,6 @@ devices = """[
                      "partition_name" : "<partition_name>"
                      }
              ]
-       """
 ```
 
 Full list of options can be found here: [Config Options Module](https://github.com/a10networks/a10-octavia/blob/master/a10_octavia/common/config_options.py)
