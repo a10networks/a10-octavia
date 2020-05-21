@@ -32,25 +32,26 @@ from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
 
 LOG = logging.getLogger(__name__)
+CONF = cfg.CONF
 
 
 def validate_ipv4(address):
-    """Validates for IP4 address format"""
+    """Validate for IP4 address format"""
     if not netaddr.valid_ipv4(address, netaddr.core.INET_PTON):
         raise cfg.ConfigFileValueError(
-            'Invalid IPAddress value given in configuration: ' + address)
+            'Invalid IPAddress value given in configuration: {0}'.format(address))
 
 
 def validate_partial_ipv4(address):
-    """Validates the partial IPv4 suffix provided"""
+    """Validate the partial IPv4 suffix provided"""
     partial_ip = address.lstrip('.')
     octets = partial_ip.split('.')
     for idx in range(4 - len(octets)):
         octets.insert(0, '0')
 
     if not netaddr.valid_ipv4('.'.join(octets), netaddr.core.INET_PTON):
-        raise cfg.ConfigFileValueError('Invalid partial IPAddress value given in configuration: '
-                                       + address)
+        raise cfg.ConfigFileValueError('Invalid partial IPAddress value given'
+                                       ' in configuration: {0}'.format(address))
 
 
 def validate_partition(hardware_device):
@@ -64,8 +65,7 @@ def validate_partition(hardware_device):
 
 
 def validate_params(hardware_info):
-    """Check for all the required parameters for hardware configurations.
-    """
+    """Check for all the required parameters for hardware configurations."""
     if all(k in hardware_info for k in ('project_id', 'ip_address',
                                         'username', 'password', 'device_name')):
         if all(hardware_info[x] is not None for x in ('project_id', 'ip_address',
@@ -87,9 +87,7 @@ def check_duplicate_entries(hardware_dict):
 
 
 def convert_to_hardware_thunder_conf(hardware_list):
-    """ Validates for all vthunder nouns for hardware devices
-        configurations.
-    """
+    """Validate for all vthunder nouns for hardware devices configurations."""
     hardware_dict = {}
     for hardware_device in hardware_list:
         hardware_device = validate_params(hardware_device)

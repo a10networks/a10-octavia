@@ -14,12 +14,11 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_utils import uuidutils
 from stevedore import driver as stevedore_driver
 
 from neutronclient.common import exceptions as neutron_client_exceptions
 from octavia.network import data_models as n_data_models
-from octavia.network.drivers.neutron.allowed_address_pairs import AllowedAddressPairsDriver
+from octavia.network.drivers.neutron import allowed_address_pairs
 from octavia.network.drivers.neutron import utils
 
 from a10_octavia.common import exceptions
@@ -33,10 +32,10 @@ OCTAVIA_OWNER = 'Octavia'
 CONF = cfg.CONF
 
 
-class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
+class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
 
     def __init__(self):
-        super(AllowedAddressPairsDriver, self).__init__()
+        super(allowed_address_pairs.AllowedAddressPairsDriver, self).__init__()
         self.compute = stevedore_driver.DriverManager(
             namespace='octavia.compute.drivers',
             name=CONF.controller_worker.compute_driver,
@@ -93,8 +92,7 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
         try:
             self.neutron_client.delete_trunk(trunk_id)
         except Exception:
-            message = "Trunk {0} already deleted. "
-            "Skipping. ".format(trunk_id)
+            message = 'Trunk {0} already deleted.Skipping'.format(trunk_id)
             LOG.exception(message)
             raise exceptions.DeallocateTrunkException(message)
 
@@ -138,12 +136,13 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
         new_port = None
         if not subnet_id:
             subnet_id = self.neutron_client.get_network(network_id).subnets[0]
+        fixed_ip = {'subnet_id': subnet_id}
         try:
             port = {'port': {'name': 'octavia-port-' + network_id,
                              'network_id': network_id,
                              'admin_state_up': True,
                              'device_owner': OCTAVIA_OWNER,
-                             'fixed_ips': [{'subnet_id': subnet_id}]}}
+                             'fixed_ips': [fixed_ip]}}
             if fixed_ip:
                 port['port']['fixed_ips'][0]['ip_address'] = fixed_ip
             new_port = self.neutron_client.create_port(port)
@@ -161,26 +160,7 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
             message = "Error deleting port: {0}".format(port_id)
             LOG.exception(message)
 
-    def create_ve_port(self, ip, subnet):
-        try:
-            name = 'octavia-lb-ve-' + uuidutils.generate_uuid()
-            fixed_ips = [{'ip_address': ip, 'subnet_id': subnet.id}]
-            port = {'port': {'name': name,
-                             'network_id': subnet.network_id,
-                             'fixed_ips': fixed_ips,
-                             'admin_state_up': True,
-                             'device_owner': OCTAVIA_OWNER}}
-            self.neutron_client.create_port(port)
-            LOG.debug('Created port name %s', name)
-
-        except (neutron_client_exceptions.IpAddressAlreadyAllocatedClient):
-            pass
-        except Exception:
-            message = "Error creating port details: ip {ip} "
-            "subnet {subnet_id}".format(ip=ip, subnet_id=subnet.id)
-            LOG.exception(message)
-
-    def get_ve_port_id(self, ip):
+    def get_port_by_ip(self, ip):
         try:
             ports = self.neutron_client.list_ports(device_owner=OCTAVIA_OWNER)
             if not ports or not ports.get('ports'):
@@ -190,7 +170,7 @@ class A10OctaviaNeutronDriver(AllowedAddressPairsDriver):
                     fixed_ips = port['fixed_ips']
                     for ipaddr in fixed_ips:
                         if ipaddr.get('ip_address') == ip:
-                            return port['id']
+                            return n_data_models.Port(id=port['id'])
         except (neutron_client_exceptions.NotFound,
                 neutron_client_exceptions.PortNotFoundClient):
             pass
