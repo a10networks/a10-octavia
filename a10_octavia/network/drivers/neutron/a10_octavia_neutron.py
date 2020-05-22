@@ -16,7 +16,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from stevedore import driver as stevedore_driver
 
-from neutronclient.common import exceptions as neutron_client_exceptions
 from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron import allowed_address_pairs
 from octavia.network.drivers.neutron import utils
@@ -159,22 +158,3 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         except Exception:
             message = "Error deleting port: {0}".format(port_id)
             LOG.exception(message)
-
-    def get_port_by_ip(self, ip):
-        try:
-            ports = self.neutron_client.list_ports(device_owner=OCTAVIA_OWNER)
-            if not ports or not ports.get('ports'):
-                return None
-            for port in ports['ports']:
-                if port.get('fixed_ips'):
-                    fixed_ips = port['fixed_ips']
-                    for ipaddr in fixed_ips:
-                        if ipaddr.get('ip_address') == ip:
-                            return n_data_models.Port(id=port['id'])
-        except (neutron_client_exceptions.NotFound,
-                neutron_client_exceptions.PortNotFoundClient):
-            pass
-        except Exception:
-            message = "Error listing ports, ip {} ".format(ip)
-            LOG.exception(message)
-        return None
