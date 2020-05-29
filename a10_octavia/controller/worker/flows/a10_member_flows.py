@@ -285,8 +285,7 @@ class MemberFlows(object):
             provides=a10constants.VRID))
         create_member_flow.add(a10_network_tasks.HandleVRIDFloatingIP(
             requires=[constants.MEMBER, a10constants.VTHUNDER, a10constants.VRID],
-            provides=a10constants.PORT
-            ))
+            provides=a10constants.PORT))
         create_member_flow.add(a10_database_tasks.UpdateVRIDForProjectMember(
             requires=[constants.MEMBER, a10constants.VRID, a10constants.PORT]))
 

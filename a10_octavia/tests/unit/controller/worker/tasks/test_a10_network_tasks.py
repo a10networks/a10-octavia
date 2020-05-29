@@ -51,14 +51,14 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.network_driver_mock = patcher.start()
         self.client_mock = mock.Mock()
 
-# 1 no vrid and no floating ip (shared)
+    # 1 no vrid and no floating ip (shared)
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project', return_value=None)
     def test_handle_vrrp_fip_with_no_vrid_no_fip(self, mock_utils):
         network_task = a10_network_tasks.HandleVRIDFloatingIP()
         result = network_task.execute(VTHUNDER, MEMBER, None)
         self.assertEqual(result, None)
 
-# 2.a (SHARED_PARTITION) NO VRIP, FIP provided
+    # 2.a (SHARED_PARTITION) NO VRIP, FIP provided
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
     @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
@@ -81,7 +81,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.client_mock.vrrpa.update.assert_called_with(
             0, floating_ip=a10constants.MOCK_VRID_FLOATING_IP_1)
 
-# 2.b (SPECIFIC PARTITION) NO VRIP, FIP provided
+    # 2.b (SPECIFIC PARTITION) NO VRIP, FIP provided
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
     @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
@@ -106,7 +106,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.client_mock.vrrpa.update.assert_called_with(
             0, floating_ip=a10constants.MOCK_VRID_FLOATING_IP_1, is_partition=True)
 
-# 3.a (SHARED_PARTITION) NO VRID, provided "DHCP" as FIP
+    # 3.a (SHARED_PARTITION) NO VRID, provided "DHCP" as FIP
     @mock.patch('a10_octavia.common.utils.check_ip_in_subnet_range', return_value=False)
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project', return_value='dhcp')
     def test_handle_vrid_fip_with_no_vrid_but_dhcp_fip_given_in_shared_partition(
@@ -127,7 +127,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.client_mock.vrrpa.update.assert_called_with(
             0, floating_ip=a10constants.MOCK_VRID_FLOATING_IP_1)
 
-# 3.b (SPECIFIC _PARTITION) NO VRID, provided "DHCP" as FIP
+    # 3.b (SPECIFIC _PARTITION) NO VRID, provided "DHCP" as FIP
     @mock.patch('a10_octavia.common.utils.check_ip_in_subnet_range', return_value=False)
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project', return_value='dhcp')
     def test_handle_vrid_fip_with_no_vrid_but_dhcp_fip_given_in_specific_partition(
@@ -150,14 +150,14 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.client_mock.vrrpa.update.assert_called_with(
             0, floating_ip=a10constants.MOCK_VRID_FLOATING_IP_1, is_partition=True)
 
-# 4 vrid given and no floating ip provided
+    # 4 vrid given and no floating ip provided
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project', return_value=None)
     def test_handle_vrrp_fip_with_vrid_given_but_no_fip(self, mock_utils):
         network_task = a10_network_tasks.HandleVRIDFloatingIP()
         result = network_task.execute(VTHUNDER, MEMBER, VRID)
         self.assertEqual(result, None)
 
-# 5 VRID Provided, same FIP as VRID
+    # 5 VRID Provided, same FIP as VRID
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
     @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
@@ -180,7 +180,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.network_driver_mock.create_port.assert_not_called()
         self.client_mock.vrrpa.update.assert_not_called()
 
-# 6.a (SHARED PARTITION) VRID Provided different FIP
+    # 6.a (SHARED PARTITION) VRID Provided different FIP
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_2)
     @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
@@ -208,7 +208,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
             0, floating_ip=a10constants.MOCK_VRID_FLOATING_IP_2)
         self.network_driver_mock.delete_port.assert_called_with(a10constants.MOCK_VRRP_PORT_ID)
 
-# 6.b (SPECIFIC PARTITION) VRID Provided different FIP
+    # 6.b (SPECIFIC PARTITION) VRID Provided different FIP
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_2)
     @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
@@ -238,7 +238,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
             0, floating_ip=a10constants.MOCK_VRID_FLOATING_IP_2, is_partition=True)
         self.network_driver_mock.delete_port.assert_called_with(a10constants.MOCK_VRRP_PORT_ID)
 
-# 7 VRID provided, FIP as DHCP from same subnet
+    # 7 VRID provided, FIP as DHCP from same subnet
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project', return_value='dhcp')
     def test_handle_vrid_fip_with_vrid_and_dhcp_fip_given_and_fip_is_from_same_subnet(
             self, get_floating_ip):
@@ -260,7 +260,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.network_driver_mock.delete_port.assert_not_called()
         self.assertEqual(fip_port, None)
 
-# 8.a (SHARED PARTITION) VRID provided FIP,  as DHCP from different subnet
+    # 8.a (SHARED PARTITION) VRID provided FIP,  as DHCP from different subnet
     @mock.patch('a10_octavia.common.utils.check_ip_in_subnet_range', return_value=False)
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project', return_value='dhcp')
     def test_handle_vrid_fip_with_vrid_and_dhcp_fip_and_fip_from_diff_subnet_in_shared_partition(
@@ -287,7 +287,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
             0, floating_ip=a10constants.MOCK_VRID_FLOATING_IP_1)
         self.network_driver_mock.delete_port.assert_called_with(a10constants.MOCK_VRRP_PORT_ID)
 
-# 8.b (SPECIFIC PARTITION) VRID provided FIP,  as DHCP from different subnet
+    # 8.b (SPECIFIC PARTITION) VRID provided FIP,  as DHCP from different subnet
     @mock.patch('a10_octavia.common.utils.check_ip_in_subnet_range', return_value=False)
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project', return_value='dhcp')
     def test_handle_vrid_fip_with_vrid_and_dhcp_fip_and_fip_from_diff_subnet_in_specific_partition(
@@ -315,8 +315,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
             0, floating_ip=a10constants.MOCK_VRID_FLOATING_IP_1, is_partition=True)
         self.network_driver_mock.delete_port.assert_called_with(a10constants.MOCK_VRRP_PORT_ID)
 
-
-# 9 Floating IP out of range
+    # 9 Floating IP out of range
     @mock.patch('a10_octavia.common.utils.check_ip_in_subnet_range', return_value=False)
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
@@ -338,7 +337,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.assertRaises(exceptions.VRIDIPNotInSubentRangeError,
                           mock_network_task.execute, VTHUNDER, member, vrid)
 
-# 10 partial VRID positive
+    # 10 partial VRID positive
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value=a10constants.MOCK_VRID_PARTIAL_FLOATING_IP)
     def test_handle_vrid_fip_with_no_vrid_but_partial_fip_given(self, get_floating_ip):
