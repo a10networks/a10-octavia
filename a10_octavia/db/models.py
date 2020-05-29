@@ -53,3 +53,14 @@ class VThunder(base_models.BASE):
     @classmethod
     def find_by_loadbalancer_id(cls, loadbalancer_id, db_session=None):
         return cls.find_by_attribute('loadbalancer_id', loadbalancer_id, db_session)
+
+
+class VRID(base_models.BASE):
+    __data_model__ = data_models.VRID
+    __tablename__ = 'vrid'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    project_id = sa.Column(sa.String(36), nullable=False)
+    vrid = sa.Column(sa.Integer, default=0)
+    vrid_port_id = sa.Column(sa.String(36), nullable=False)
+    vrid_floating_ip = sa.Column(sa.String(40))

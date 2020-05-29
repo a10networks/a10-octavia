@@ -23,6 +23,8 @@ from sqlalchemy import and_
 
 from octavia.common import constants as consts
 from octavia.db import models as base_models
+from octavia.db import repositories as repo
+
 from a10_octavia.db import models
 
 CONF = cfg.CONF
@@ -284,3 +286,26 @@ class VThunderRepository(BaseRepository):
 
 class LoadBalancerRepository(BaseRepository):
     model_class = base_models.LoadBalancer
+
+
+class VRIDRepository(BaseRepository):
+    model_class = models.VRID
+
+    def get_vrid_from_project_id(self, session, project_id):
+        model = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).first()
+
+        if not model:
+            return None
+
+        return model.to_data_model()
+
+
+class MemberRepository(repo.MemberRepository):
+
+    def get_member_count(self, session, project_id):
+        count = session.query(self.model_class).filter(
+            and_(self.model_class.project_id == project_id,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
+        return count

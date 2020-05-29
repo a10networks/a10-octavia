@@ -48,7 +48,6 @@ def validate_partial_ipv4(address):
     octets = partial_ip.split('.')
     for idx in range(4 - len(octets)):
         octets.insert(0, '0')
-
     if not netaddr.valid_ipv4('.'.join(octets), netaddr.core.INET_PTON):
         raise cfg.ConfigFileValueError('Invalid partial IPAddress value given'
                                        ' in configuration: {0}'.format(address))
@@ -72,6 +71,9 @@ def validate_params(hardware_info):
                                                       'username', 'password', 'device_name')):
             validate_ipv4(hardware_info['ip_address'])
             hardware_info = validate_partition(hardware_info)
+            if 'vrid_floating_ip' in hardware_info:
+                if hardware_info['vrid_floating_ip'] != 'dhcp':
+                    validate_ipv4(hardware_info['vrid_floating_ip'])
             return hardware_info
     raise cfg.ConfigFileValueError('Please check your configuration. The params `project_id`, '
                                    '`ip_address`, `username`, `password` and `device_name` '
@@ -131,6 +133,8 @@ def get_net_info_from_cidr(cidr):
 
 
 def check_ip_in_subnet_range(ip, subnet, netmask):
+    if ip is None or subnet is None or netmask is None:
+        return False
     int_ip = struct.unpack('>L', socket.inet_aton(ip))[0]
     int_subnet = struct.unpack('>L', socket.inet_aton(subnet))[0]
     int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
@@ -155,3 +159,21 @@ def get_network_driver():
         invoke_on_load=True
     ).driver
     return network_driver
+
+
+def get_patched_ip_address(ip, cidr):
+    host_ip = ip.lstrip('.')
+    octets = host_ip.split('.')
+    for idx in range(4 - len(octets)):
+        octets.insert(0, '0')
+    host_ip = '.'.join(octets)
+    return merge_host_and_network_ip(cidr, ip)
+
+
+def get_vrid_floating_ip_for_project(project_id):
+    vrid_fp = None
+    if project_id in CONF.hardware_thunder.devices:
+        vrid_fp = CONF.hardware_thunder.devices[project_id].vrid_floating_ip
+        if not vrid_fp:
+            vrid_fp = CONF.a10_global.vrid_floating_ip
+    return vrid_fp
