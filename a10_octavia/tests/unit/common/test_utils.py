@@ -176,13 +176,13 @@ class TestUtils(unittest.TestCase):
 
     def test_check_ip_in_subnet_range_valid(self):
         self.assertEqual(utils.check_ip_in_subnet_range('10.10.10.1', '10.10.10.1',
-                         '255.255.255.255'), True)
+                                                        '255.255.255.255'), True)
         self.assertEqual(utils.check_ip_in_subnet_range('10.10.10.1', '10.10.11.0',
-                         '255.255.255.0'), False)
+                                                        '255.255.255.0'), False)
         self.assertEqual(utils.check_ip_in_subnet_range('10.10.10.1', '10.10.0.0',
-                         '255.255.0.0'), True)
+                                                        '255.255.0.0'), True)
         self.assertEqual(utils.check_ip_in_subnet_range('10.11.10.2', '10.10.0.0',
-                         '255.255.0.0'), False)
+                                                        '255.255.0.0'), False)
 
     def test_check_ip_in_subnet_range_invalid(self):
         self.assertRaises(Exception, utils.check_ip_in_subnet_range, '1010.10.10.2',
@@ -202,3 +202,16 @@ class TestUtils(unittest.TestCase):
 
     def test_merge_host_and_network_ip_invalid(self):
         self.assertRaises(Exception, utils.merge_host_and_network_ip, '10.10.10.0/42', '99')
+
+    def test_get_patched_ip_address(self):
+        self.assertEqual(utils.get_patched_ip_address('45', '10.10.0.0/24'), '10.10.0.45')
+        self.assertEqual(utils.get_patched_ip_address('0.45', '10.10.0.0/24'), '10.10.0.45')
+        self.assertEqual(utils.get_patched_ip_address('0.0.45', '10.10.0.0/24'), '10.10.0.45')
+        self.assertEqual(utils.get_patched_ip_address('1.0.0.23', '10.10.0.0/24'), '1.0.0.23')
+
+    def test_get_patched_ip_address_invalid(self):
+        self.assertRaises(Exception, utils.get_patched_ip_address, '.45', '10.10.0.0/24')
+        self.assertRaises(Exception, utils.get_patched_ip_address, 'abc.cef', '10.10.0.0/24')
+        self.assertRaises(Exception, utils.get_patched_ip_address, '11.10.0.11.10', '10.10.0.0/24')
+        self.assertRaises(Exception, utils.get_patched_ip_address, '10.333.11.10', '10.10.0.0/24')
+        self.assertRaises(Exception, utils.get_patched_ip_address, '1e.3d.4f.1o', '10.10.0.0/24')
