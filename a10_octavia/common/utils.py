@@ -72,7 +72,7 @@ def validate_params(hardware_info):
             validate_ipv4(hardware_info['ip_address'])
             hardware_info = validate_partition(hardware_info)
             if 'vrid_floating_ip' in hardware_info:
-                if hardware_info['vrid_floating_ip'] != 'dhcp':
+                if hardware_info['vrid_floating_ip'].lower() != 'dhcp':
                     validate_ipv4(hardware_info['vrid_floating_ip'])
             return hardware_info
     raise cfg.ConfigFileValueError('Please check your configuration. The params `project_id`, '
@@ -164,6 +164,9 @@ def get_network_driver():
 def get_patched_ip_address(ip, cidr):
     host_ip = ip.lstrip('.')
     octets = host_ip.split('.')
+    if len(octets) == 4:
+        validate_ipv4(ip)
+        return ip
     for idx in range(4 - len(octets)):
         octets.insert(0, '0')
     host_ip = '.'.join(octets)
@@ -171,9 +174,7 @@ def get_patched_ip_address(ip, cidr):
 
 
 def get_vrid_floating_ip_for_project(project_id):
-    vrid_fp = None
-    if project_id in CONF.hardware_thunder.devices:
-        vrid_fp = CONF.hardware_thunder.devices[project_id].vrid_floating_ip
-        if not vrid_fp:
-            vrid_fp = CONF.a10_global.vrid_floating_ip
-    return vrid_fp
+    device_info = CONF.hardware_thunder.devices.get(project_id)
+    if device_info:
+        vrid_fp = device_info.vrid_floating_ip
+        return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp

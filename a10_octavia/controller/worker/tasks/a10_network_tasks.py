@@ -680,13 +680,13 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         if floating_ip:
             subnet = self.network_driver.get_subnet(member.subnet_id)
             subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(subnet.cidr)
-            if floating_ip == 'dhcp':
+            if floating_ip.lower() == 'dhcp':
                 if not a10_utils.check_ip_in_subnet_range(vrid_ip, subnet_ip, subnet_mask):
                     self.fip_port = self.network_driver.create_port(subnet.network_id,
                                                                     member.subnet_id)
 
             else:
-                # floating_ip = a10_utils.get_patched_ip_address(floating_ip, subnet.cidr)
+                floating_ip = a10_utils.get_patched_ip_address(floating_ip, subnet.cidr)
                 if not a10_utils.check_ip_in_subnet_range(floating_ip, subnet_ip, subnet_mask):
                     msg = "Invalid VRID floating IP. IP out of subnet range: " + str(floating_ip)
                     raise exceptions.VRIDIPNotInSubentRangeError(msg)
@@ -722,7 +722,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         vrid_value = 0
         if vrid:
             vrid_value = vrid.vrid
-        if vthunder.partition_name == "shared":
+        if not vthunder.partition_name or vthunder.partition_name == 'shared':
             self.axapi_client.vrrpa.update(vrid_value, floating_ip=floating_ip)
         else:
             self.axapi_client.vrrpa.update(vrid_value, floating_ip=floating_ip, is_partition=True)
