@@ -184,13 +184,13 @@ amp_active_wait_sec = 2
 loadbalancer_topology = SINGLE
 
 [hardware_thunder]
-devices = """[
+devices = [
                     {
                      "project_id":"<project_id>",
                      "ip_address":"10.0.0.4",
                      "username":"<username>",
                      "password":"<password>",
-                     "device_name":"<device_name>",
+                     "device_name":"<device_name>"
                      },
                      {
                      "project_id":"<another_project_id>",
@@ -201,10 +201,11 @@ devices = """[
                      "partition_name" : "<partition_name>"
                      }
              ]
-       """
 ```
 
 Full list of options can be found here: [Config Options Module](https://github.com/a10networks/a10-octavia/blob/master/a10_octavia/common/config_options.py)
+
+*Note: trailing "," are invalid in device config type*
 
 ### 4. Run database migrations
 
@@ -232,12 +233,12 @@ With `a10-octavia` installed, run the following command to register the services
 $ install-a10-octavia
 ```
 
-This will install systemd services with names - `a10-controller-worker.service`, `a10-health-manager.service` and `a10-housekeeper-manager.service`.
+This will install systemd services with names - `a10-controller-worker.service`, `a10-health-manager.service` and `a10-house-keeper.service`.
 
 #### 5a. Make sure the services are up and running.
 
 ```shell
-$ systemctl status a10-controller-worker.service a10-health-manager.service a10-housekeeper-manager.service
+$ systemctl status a10-controller-worker.service a10-health-manager.service a10-house-keeper.service
 ```
 
 You can start/stop the services using systemctl/service commands.
@@ -301,7 +302,7 @@ You may check logs of the services using `journalctl` commands. For example:
 ```shell
 $ journalctl -af --unit a10-controller-worker.service
 $ journalctl -af --unit a10-health-manager.service
-$ journalctl -af --unit a10-housekeeper-manager.service
+$ journalctl -af --unit a10-house-keeper.service
 ```
 
 ## Contributing
