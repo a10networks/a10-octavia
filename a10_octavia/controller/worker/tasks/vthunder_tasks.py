@@ -377,25 +377,105 @@ class TagEthernetBaseTask(task.Task):
             self._network_driver = a10_task_utils.get_a10_network_driver()
         return self._network_driver
 
-    def get_tag_interface_info(self, project_id, vlan_id):
-        if project_id in CONF.hardware_thunder.devices:
-            vthunder_conf = CONF.hardware_thunder.devices[project_id]
-            if vthunder_conf.interface_vlan_map:
-                interface_vlan_map = vthunder_conf.interface_vlan_map
-                for ifnum in interface_vlan_map:
-                    vlan_dict = interface_vlan_map[ifnum]
-                    vlan_id_str = str(vlan_id)
-                    if vlan_id_str in vlan_dict:
-                        return (int(ifnum), vlan_dict[vlan_id_str])
-        return (1, None)
+    def reserve_ve_ip_with_neutron(self, vlan_id, subnet_id):
+        ve_ip = self._get_ve_ip(vlan_id)
+        if ve_ip is None:
+            return
+
+        if not a10_utils.check_ip_in_subnet_range(ve_ip, self._subnet_ip, self._subnet_mask):
+            LOG.warning("Not creating neutron port, VE IP %s is out of range, subnet_ip %s,"
+                        "subnet_mask %s, subnet_id %s", ve_ip, self._subnet_ip,
+                        self._subnet_mask, subnet_id)
+            return
+
+        self.network_driver.create_port(self._subnet.network_id, fixed_ip=ve_ip)
+        return
+
+    def release_ve_ip_from_neutron(self, vlan_id, subnet_id):
+        ve_ip = self._get_ve_ip(vlan_id)
+        if ve_ip is None:
+            return
+
+        port_id = self.network_driver.get_port_id(ve_ip)
+        if port_id is None:
+            return
+
+        self.network_driver.delete_port(port_id)
+        return
+
+    def _get_ve_ip(self, vlan_id):
+        try:
+            resp = self.axapi_client.interface.ve.get_oper(vlan_id)
+            ve = resp.get('ve')
+            if ve and ve.get('oper') and ve['oper'].get('ipv4_list'):
+                ipv4_list = ve['oper']['ipv4_list']
+                if ipv4_list:
+                    return ipv4_list[0]['addr']
+        except Exception as e:
+            LOG.exception("Failed to get ve ip from vThunder: %s", str(e))
+        return None
 
     def get_subnet_and_mask(self, subnet_id):
-        if self._subnet is None:
-            self._subnet = self.network_driver.get_subnet(subnet_id)
+        self._subnet = self.network_driver.get_subnet(subnet_id)
         subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(self._subnet.cidr)
         self._subnet_ip = subnet_ip
         self._subnet_mask = subnet_mask
-        return subnet_ip, subnet_mask
+
+    def _get_patched_ve_ip(self, ve_ip):
+        ve_ip = ve_ip.lstrip('.')
+        octets = ve_ip.split('.')
+        for idx in range(4 - len(octets)):
+            octets.insert(0, '0')
+        ve_ip = '.'.join(octets)
+        return a10_utils.merge_host_and_network_ip(self._subnet.cidr, ve_ip)
+
+    def tag_interface(self, vlan_id, ifnum, ve_info, vlan_subnet_id_dict):
+        if vlan_id not in vlan_subnet_id_dict:
+            LOG.warning("vlan_id %s not in vlan_subnet_id_dict %s", vlan_id,
+                        vlan_subnet_id_dict)
+            return
+
+        self.get_subnet_and_mask(vlan_subnet_id_dict[vlan_id])
+
+        if not self.axapi_client.interface.ethernet.exists(ifnum):
+            LOG.error("ethernet interface %s does not exist", ifnum)
+            raise
+
+        eth = self.axapi_client.interface.ethernet.get(ifnum)
+        if 'action' not in eth or not eth['action'] == 'disable':
+            LOG.warning("ethernet interface %s not enabled, enabling it", ifnum)
+            self.axapi_client.interface.ethernet.update(ifnum, enable=True)
+
+        if not self.axapi_client.vlan.exists(vlan_id):
+            self.axapi_client.vlan.create(vlan_id, tagged_eths=[ifnum], veth=True)
+            LOG.debug("Tagged ethernet interface %s with VLAN with id %s", ifnum, vlan_id)
+        else:
+            self.release_ve_ip_from_neutron(vlan_id, vlan_subnet_id_dict[vlan_id])
+
+        if ve_info is None or 'use_dhcp' in ve_info and ve_info['use_dhcp']:
+            self.axapi_client.interface.ve.update(vlan_id, dhcp=True, enable=True)
+        else:
+            patched_ip = self._get_patched_ve_ip(ve_info['ve_ip_address'])
+            self.axapi_client.interface.ve.update(vlan_id, ip_address=patched_ip,
+                                                  ip_netmask=self._subnet_mask, enable=True)
+        self.reserve_ve_ip_with_neutron(vlan_id, vlan_subnet_id_dict[vlan_id])
+        return
+
+    def tag_all_interfaces(self, project_id):
+        if project_id in CONF.hardware_thunder.devices:
+            vthunder_conf = CONF.hardware_thunder.devices[project_id]
+            if vthunder_conf.interface_vlan_map:
+                network_list = self.network_driver.list_networks()
+                vlan_subnet_id_dict = {}
+                for network in network_list:
+                    vlan_id = network.provider_segmentation_id
+                    vlan_subnet_id_dict[str(vlan_id)] = network.subnets[0]
+                interface_vlan_map = vthunder_conf.interface_vlan_map
+                for ifnum in interface_vlan_map:
+                    vlan_dict = interface_vlan_map[ifnum]
+                    for vlan_id in vlan_dict:
+                        self.tag_interface(vlan_id, ifnum, vlan_dict[vlan_id],
+                                           vlan_subnet_id_dict)
 
     def get_vlan_id(self, subnet_id, is_revert):
         if self._subnet is None:
@@ -424,73 +504,6 @@ class TagEthernetBaseTask(task.Task):
 
         return True
 
-    def _get_patched_ve_ip(self, ve_ip):
-        ve_ip = ve_ip.lstrip('.')
-        octets = ve_ip.split('.')
-        for idx in range(4 - len(octets)):
-            octets.insert(0, '0')
-        ve_ip = '.'.join(octets)
-        return a10_utils.merge_host_and_network_ip(self._subnet.cidr, ve_ip)
-
-    def tag_interface(self, vlan_id, ifnum, ve_info):
-        if not self.axapi_client.interface.ethernet.exists(ifnum):
-            LOG.error("ethernet interface %s does not exist", ifnum)
-            raise
-
-        eth = self.axapi_client.interface.ethernet.get(ifnum)
-        if eth.get('action') != 'disable':
-            LOG.warning("ethernet interface %s not enabled, enabling it", ifnum)
-            self.axapi_client.interface.ethernet.update(ifnum, enable=True)
-
-        if not self.axapi_client.vlan.exists(vlan_id):
-            self.axapi_client.vlan.create(vlan_id, tagged_eths=[ifnum], veth=True)
-            LOG.debug("Tagged ethernet interface %s with VLAN with id %s", ifnum, vlan_id)
-
-        if not ve_info or ve_info.get('use_dhcp'):
-            self.axapi_client.interface.ve.update(vlan_id, dhcp=True, enable=True)
-        else:
-            patched_ip = self._get_patched_ve_ip(ve_info['ve_ip_address'])
-            self.axapi_client.interface.ve.update(vlan_id, ip_address=patched_ip,
-                                                  ip_netmask=self._subnet_mask, enable=True)
-        return
-
-    def _get_ve_ip(self, vlan_id):
-        try:
-            resp = self.axapi_client.interface.ve.get_oper(vlan_id)
-            ve = resp.get('ve')
-            if ve and ve.get('oper') and ve['oper'].get('ipv4_list'):
-                ipv4_list = ve['oper']['ipv4_list']
-                if ipv4_list:
-                    return ipv4_list[0]['addr']
-        except Exception as e:
-            LOG.exception("Failed to get ve ip from vThunder: %s", str(e))
-        return None
-
-    def reserve_ve_ip_with_neutron(self, vlan_id, ve_info, subnet_id):
-        ve_ip = self._get_ve_ip(vlan_id)
-        if ve_ip is None:
-            return
-
-        if not a10_utils.check_ip_in_subnet_range(ve_ip, self._subnet_ip, self._subnet_mask):
-            LOG.debug("Not creating neutron port, VE IP not in range %s subnet_id %s",
-                      ve_ip, subnet_id)
-            return
-
-        self.network_driver.create_ve_port(ve_ip, self._subnet)
-        return
-
-    def release_ve_ip_from_neutron(self, vlan_id, subnet_id):
-        ve_ip = self._get_ve_ip(vlan_id)
-        if ve_ip is None:
-            return
-
-        port_id = self.network_driver.get_ve_port_id(ve_ip)
-        if port_id is None:
-            return
-
-        self.network_driver.delete_port(port_id)
-        return
-
 
 class TagEthernetForLB(TagEthernetBaseTask):
 
@@ -498,11 +511,7 @@ class TagEthernetForLB(TagEthernetBaseTask):
 
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
-        vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
-        subnet_ip, subnet_mask = self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
-        ifnum, ve_info = self.get_tag_interface_info(loadbalancer.project_id, vlan_id)
-        self.tag_interface(vlan_id, ifnum, ve_info)
-        self.reserve_ve_ip_with_neutron(vlan_id, ve_info, loadbalancer.vip.subnet_id)
+        self.tag_all_interfaces(loadbalancer.project_id)
 
     @axapi_client_decorator
     def revert(self, loadbalancer, vthunder, *args, **kwargs):
@@ -519,11 +528,7 @@ class TagEthernetForMember(TagEthernetBaseTask):
 
     @axapi_client_decorator
     def execute(self, member, vthunder):
-        vlan_id = self.get_vlan_id(member.subnet_id, False)
-        subnet_ip, subnet_mask = self.get_subnet_and_mask(member.subnet_id)
-        ifnum, ve_info = self.get_tag_interface_info(member.project_id, vlan_id)
-        self.tag_interface(vlan_id, ifnum, ve_info)
-        self.reserve_ve_ip_with_neutron(vlan_id, ve_info, member.subnet_id)
+        self.tag_all_interfaces(member.project_id)
 
     @axapi_client_decorator
     def revert(self, member, vthunder, *args, **kwargs):
@@ -542,7 +547,7 @@ class DeleteEthernetTagIfNotInUseForLB(TagEthernetBaseTask):
     def execute(self, loadbalancer, vthunder):
         try:
             if loadbalancer.project_id in CONF.hardware_thunder.devices:
-                subnet_ip, subnet_mask = self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
+                self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
                 if self.is_vlan_deletable():
                     vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
                     if self.axapi_client.vlan.exists(vlan_id):
@@ -561,7 +566,7 @@ class DeleteEthernetTagIfNotInUseForMember(TagEthernetBaseTask):
     def execute(self, member, vthunder):
         try:
             if member.project_id in CONF.hardware_thunder.devices:
-                subnet_ip, subnet_mask = self.get_subnet_and_mask(member.subnet_id)
+                self.get_subnet_and_mask(member.subnet_id)
                 if self.is_vlan_deletable():
                     vlan_id = self.get_vlan_id(member.subnet_id, False)
                     if self.axapi_client.vlan.exists(vlan_id):

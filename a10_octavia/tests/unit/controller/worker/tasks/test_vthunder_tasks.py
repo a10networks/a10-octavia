@@ -23,6 +23,9 @@ except ImportError:
 from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
 
+from octavia.network import data_models as n_data_models
+from octavia.network.drivers.neutron import utils
+
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models as a10_data_models
 from a10_octavia.controller.worker.tasks import vthunder_tasks as task
@@ -31,10 +34,10 @@ from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
 VTHUNDER = a10_data_models.VThunder()
-VLAN_ID = 11
-VE_IP_VLAN_ID = 12
+VLAN_ID = '11'
+VE_IP_VLAN_ID = '12'
 DELETE_VLAN = True
-TAG_INTERFACE = 5
+TAG_INTERFACE = '5'
 ETH_DATA = {"action": "enable"}
 SUBNET_MASK = ["10.0.11.0", "255.255.255.0", "10.0.11.0/24"]
 VE_IP_SUBNET_MASK = ["10.0.12.0", "255.255.255.0", "10.0.12.0/24"]
@@ -52,6 +55,10 @@ DEL_SERVER_LIST = {"server-list": [{"host": "10.0.2.1"}]}
 DEL_PORT_ID = "mock-port-id"
 VE_IP = "10.0.11.10"
 STATIC_VE_IP = "10.0.12.10"
+NETWORK_11 = n_data_models.Network(id="mock-network-1", subnets=["mock-subnet-1"],
+                                   provider_segmentation_id=11)
+NETWORK_12 = n_data_models.Network(id="mock-network-2", subnets=["mock-subnet-2"],
+                                   provider_segmentation_id=12)
 
 
 class TestVThunderTasks(base.BaseTaskTestCase):
@@ -97,7 +104,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._subnet.cidr = SUBNET_MASK[2]
         mock_task._subnet = mock.Mock()
         mock_task._subnet.id = mock.Mock()
-        mock_task._subnet.network_id = mock.Mock()
+        mock_task._subnet.network_id = "mock-network-1"
         mock_task._network_driver = a10_octavia_neutron.A10OctaviaNeutronDriver()
 
     def test_tag_ethernet_for_lb(self):
@@ -112,6 +119,11 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.interface.ethernet.get.return_value = ETH_DATA
         self.client_mock.vlan.exists.return_value = False
         mock_task._network_driver.neutron_client.create_port = mock.Mock()
+        utils.convert_port_dict_to_model = mock.Mock()
+        mock_task._network_driver.get_network = mock.Mock()
+        mock_task._network_driver.get_network.return_value = NETWORK_11
+        mock_task._network_driver.list_networks = mock.Mock()
+        mock_task._network_driver.list_networks.return_value = [NETWORK_11]
         mock_task.execute(lb, VTHUNDER)
         self.client_mock.vlan.create.assert_called_with(VLAN_ID,
                                                         tagged_eths=[TAG_INTERFACE],
@@ -138,6 +150,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.interface.ethernet.get.return_value = ETH_DATA
         self.client_mock.vlan.exists.return_value = False
         mock_task._network_driver.neutron_client.create_port = mock.Mock()
+        mock_task._network_driver.get_network = mock.Mock()
+        mock_task._network_driver.get_network.return_value = NETWORK_12
+        mock_task._network_driver.list_networks = mock.Mock()
+        mock_task._network_driver.list_networks.return_value = [NETWORK_12]
         mock_task.execute(lb, VTHUNDER)
         self.client_mock.vlan.create.assert_called_with(VE_IP_VLAN_ID,
                                                         tagged_eths=[TAG_INTERFACE],
@@ -151,9 +167,9 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         lb = self._mock_lb()
         mock_task = task.TagEthernetForLB()
         self._mock_tag_task(mock_task)
-        mock_task._network_driver.get_ve_port_id = mock.Mock()
+        mock_task._network_driver.get_port_id = mock.Mock()
         mock_task._network_driver.neutron_client.delete_port = mock.Mock()
-        mock_task._network_driver.get_ve_port_id.return_value = DEL_PORT_ID
+        mock_task._network_driver.get_port_id.return_value = DEL_PORT_ID
         mock_task.revert(lb, VTHUNDER)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
@@ -170,6 +186,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.interface.ethernet.get.return_value = ETH_DATA
         self.client_mock.vlan.exists.return_value = False
         mock_task._network_driver.neutron_client.create_port = mock.Mock()
+        mock_task._network_driver.get_network = mock.Mock()
+        mock_task._network_driver.get_network.return_value = NETWORK_11
+        mock_task._network_driver.list_networks = mock.Mock()
+        mock_task._network_driver.list_networks.return_value = [NETWORK_11]
         mock_task.execute(member, VTHUNDER)
         self.client_mock.vlan.create.assert_called_with(VLAN_ID,
                                                         tagged_eths=[TAG_INTERFACE],
@@ -184,9 +204,9 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         member = self._mock_member()
         mock_task = task.TagEthernetForMember()
         self._mock_tag_task(mock_task)
-        mock_task._network_driver.get_ve_port_id = mock.Mock()
+        mock_task._network_driver.get_port_id = mock.Mock()
         mock_task._network_driver.neutron_client.delete_port = mock.Mock()
-        mock_task._network_driver.get_ve_port_id.return_value = DEL_PORT_ID
+        mock_task._network_driver.get_port_id.return_value = DEL_PORT_ID
         mock_task.revert(member, VTHUNDER)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
@@ -202,9 +222,9 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self._mock_tag_task(mock_task)
         mock_task.axapi_client.slb.virtual_server.get.return_value = DEL_VS_LIST
         mock_task.axapi_client.slb.server.get.return_value = DEL_SERVER_LIST
-        mock_task._network_driver.get_ve_port_id = mock.Mock()
+        mock_task._network_driver.get_port_id = mock.Mock()
         mock_task._network_driver.neutron_client.delete_port = mock.Mock()
-        mock_task._network_driver.get_ve_port_id.return_value = DEL_PORT_ID
+        mock_task._network_driver.get_port_id.return_value = DEL_PORT_ID
         mock_task.execute(lb, VTHUNDER)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
@@ -220,9 +240,9 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self._mock_tag_task(mock_task)
         mock_task.axapi_client.slb.virtual_server.get.return_value = DEL_VS_LIST
         mock_task.axapi_client.slb.server.get.return_value = DEL_SERVER_LIST
-        mock_task._network_driver.get_ve_port_id = mock.Mock()
+        mock_task._network_driver.get_port_id = mock.Mock()
         mock_task._network_driver.neutron_client.delete_port = mock.Mock()
-        mock_task._network_driver.get_ve_port_id.return_value = DEL_PORT_ID
+        mock_task._network_driver.get_port_id.return_value = DEL_PORT_ID
         mock_task.execute(member, VTHUNDER)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)

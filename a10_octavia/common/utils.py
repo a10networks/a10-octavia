@@ -21,34 +21,37 @@ import netaddr
 import socket
 import struct
 
-from oslo_config.cfg import ConfigFileValueError
+from oslo_config import cfg
 from oslo_log import log as logging
 
 from keystoneclient.v3 import client as keystone_client
 from octavia.common import keystone
+from stevedore import driver as stevedore_driver
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
 
 LOG = logging.getLogger(__name__)
+CONF = cfg.CONF
 
 
 def validate_ipv4(address):
-    """Validates for IP4 address format"""
+    """Validate for IP4 address format"""
     if not netaddr.valid_ipv4(address, netaddr.core.INET_PTON):
-        raise ConfigFileValueError('Invalid IPAddress value given in configuration: ' + address)
+        raise cfg.ConfigFileValueError(
+            'Invalid IPAddress value given in configuration: {0}'.format(address))
 
 
 def validate_partial_ipv4(address):
-    """Validates the partial IPv4 suffix provided"""
+    """Validate the partial IPv4 suffix provided"""
     partial_ip = address.lstrip('.')
     octets = partial_ip.split('.')
     for idx in range(4 - len(octets)):
         octets.insert(0, '0')
 
     if not netaddr.valid_ipv4('.'.join(octets), netaddr.core.INET_PTON):
-        raise ConfigFileValueError('Invalid partial IPAddress value given in configuration: '
-                                   + address)
+        raise cfg.ConfigFileValueError('Invalid partial IPAddress value given'
+                                       ' in configuration: {0}'.format(address))
 
 
 def validate_partition(hardware_device):
@@ -62,8 +65,7 @@ def validate_partition(hardware_device):
 
 
 def validate_params(hardware_info):
-    """Check for all the required parameters for hardware configurations.
-    """
+    """Check for all the required parameters for hardware configurations."""
     if all(k in hardware_info for k in ('project_id', 'ip_address',
                                         'username', 'password', 'device_name')):
         if all(hardware_info[x] is not None for x in ('project_id', 'ip_address',
@@ -71,9 +73,9 @@ def validate_params(hardware_info):
             validate_ipv4(hardware_info['ip_address'])
             hardware_info = validate_partition(hardware_info)
             return hardware_info
-    raise ConfigFileValueError('Please check your configuration. The params `project_id`, '
-                               '`ip_address`, `username`, `password` and `device_name` '
-                               'under [hardware_thunder] section cannot be None ')
+    raise cfg.ConfigFileValueError('Please check your configuration. The params `project_id`, '
+                                   '`ip_address`, `username`, `password` and `device_name` '
+                                   'under [hardware_thunder] section cannot be None ')
 
 
 def validate_interface_vlan_map(hardware_device):
@@ -86,14 +88,14 @@ def validate_interface_vlan_map(hardware_device):
         for vlan_id in if_info:
             ve_info = if_info[vlan_id]
             if ve_info.get('use_dhcp') and ve_info.get('ve_ip_address'):
-                raise ConfigFileValueError('Check settings for vlan ' + vlan_id +
-                                           '. Please do not set ve_ip_address in '
-                                           'interface_vlan_map when use_dhcp is True')
+                raise cfg.ConfigFileValueError('Check settings for vlan ' + vlan_id +
+                                               '. Please do not set ve_ip_address in '
+                                               'interface_vlan_map when use_dhcp is True')
                 if not ve_info.get('use_dhcp'):
                     if not ve_info.get('ve_ip_address'):
-                        raise ConfigFileValueError('Check settings for vlan ' + vlan_id +
-                                                   '. Please set valid ve_ip_address in '
-                                                   'interface_vlan_map when use_dhcp is False')
+                        raise cfg.ConfigFileValueError('Check settings for vlan ' + vlan_id +
+                                                       '. Please set valid ve_ip_address in '
+                                                       'interface_vlan_map when use_dhcp is False')
                     validate_partial_ipv4(ve_info['ve_ip_address'])
     return True
 
@@ -107,16 +109,14 @@ def check_duplicate_entries(hardware_dict):
 
 
 def convert_to_hardware_thunder_conf(hardware_list):
-    """ Validates for all vthunder nouns for hardware devices
-        configurations.
-    """
+    """Validate for all vthunder nouns for hardware devices configurations."""
     hardware_dict = {}
     for hardware_device in hardware_list:
         hardware_device = validate_params(hardware_device)
         if hardware_dict.get(hardware_device['project_id']):
-            raise ConfigFileValueError('Supplied duplicate project_id ' +
-                                       hardware_device['project_id'] +
-                                       ' in [hardware_thunder] section')
+            raise cfg.ConfigFileValueError('Supplied duplicate project_id ' +
+                                           hardware_device['project_id'] +
+                                           ' in [hardware_thunder] section')
         validate_interface_vlan_map(hardware_device)
         hardware_device['undercloud'] = True
         vthunder_conf = data_models.VThunder(**hardware_device)
@@ -124,9 +124,9 @@ def convert_to_hardware_thunder_conf(hardware_list):
 
     duplicates_list = check_duplicate_entries(hardware_dict)
     if duplicates_list:
-        raise ConfigFileValueError('Duplicates found for the following '
-                                   '\'ip_address:partition_name\' entries: {}'
-                                   .format(list(duplicates_list)))
+        raise cfg.ConfigFileValueError('Duplicates found for the following '
+                                       '\'ip_address:partition_name\' entries: {}'
+                                       .format(list(duplicates_list)))
     return hardware_dict
 
 
@@ -168,3 +168,13 @@ def merge_host_and_network_ip(cidr, host_ip):
     int_net_ip = struct.unpack('>L', socket.inet_aton(network_ip))[0]
     full_ip_packed = struct.pack('>L', int_net_ip | (int_host_ip & int_host_bits))
     return socket.inet_ntoa(full_ip_packed)
+
+
+def get_network_driver():
+    CONF.import_group('a10_controller_worker', 'a10_octavia.common.config_options')
+    network_driver = stevedore_driver.DriverManager(
+        namespace='octavia.network.drivers',
+        name=CONF.a10_controller_worker.network_driver,
+        invoke_on_load=True
+    ).driver
+    return network_driver
