@@ -701,6 +701,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
         if vrid and vrid.vrid_port_id and (self.fip_port or not floating_ip):
             self.network_driver.delete_port(vrid.vrid_port_id)
+            if not floating_ip:
+                self.axapi_client.vrrpa.delete(vrid.vrid)
 
         return self.fip_port
 
@@ -714,7 +716,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             try:
                 self.network_driver.delete_port(self.fip_port.id)
                 if vrid:
-                    self.axapi_client.vrrpa.update(0, vrid.vrid_floating_ip)
+                    self.axapi_client.vrrpa.update(vrid.vrid, vrid.vrid_floating_ip)
             except Exception as e:
                 LOG.exception("Failed to revert VRRP floating IP delta task: %s", str(e))
 
@@ -732,11 +734,11 @@ class DeleteMemberVRIDPort(BaseNetworkTask):
     """Delete VRID Port if the last member associated with it is deleted
     """
     @axapi_client_decorator
-    def execute(self, vthunder, vrid, count):
-        if vrid and count == 1:
+    def execute(self, vthunder, vrid, member_count):
+        if vrid and member_count == 1:
             try:
                 self.network_driver.delete_port(vrid.vrid_port_id)
-                self.axapi_client.vrrpa.delete(0)
+                self.axapi_client.vrrpa.delete(vrid.vrid)
                 LOG.info("VRID port : %s deleted", vrid.vrid_port_id)
                 return True
             except Exception as e:

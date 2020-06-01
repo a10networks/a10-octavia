@@ -51,7 +51,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.network_driver_mock = patcher.start()
         self.client_mock = mock.Mock()
 
-    # 1 no vrid and no floating ip (shared)
+    # 1 no vrid and no floating ip
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project', return_value=None)
     def test_handle_vrrp_fip_with_no_vrid_no_fip(self, mock_utils):
         network_task = a10_network_tasks.HandleVRIDFloatingIP()
@@ -81,7 +81,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.client_mock.vrrpa.update.assert_called_with(
             0, floating_ip=a10constants.MOCK_VRID_FLOATING_IP_1)
 
-    # 2.b (SPECIFIC PARTITION) NO VRIP, FIP provided
+    # 2.b (SPECIFIC PARTITION) NO VRID, FIP provided
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
     @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
@@ -153,8 +153,14 @@ class TestNetworkTasks(base.BaseTaskTestCase):
     # 4 vrid given and no floating ip provided
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project', return_value=None)
     def test_handle_vrrp_fip_with_vrid_given_but_no_fip(self, mock_utils):
-        network_task = a10_network_tasks.HandleVRIDFloatingIP()
-        result = network_task.execute(VTHUNDER, MEMBER, VRID)
+        vrid = copy.deepcopy(VRID)
+        vrid.vrid_port_id = a10constants.MOCK_VRRP_PORT_ID
+        vrid.vrid = 0
+        mock_network_task = a10_network_tasks.HandleVRIDFloatingIP()
+        mock_network_task.axapi_client = self.client_mock
+        result = mock_network_task.execute(VTHUNDER, MEMBER, vrid)
+        self.network_driver_mock.delete_port.assert_called_with(vrid.vrid_port_id)
+        self.client_mock.vrrpa.delete(vrid.vrid)
         self.assertEqual(result, None)
 
     # 5 VRID Provided, same FIP as VRID
