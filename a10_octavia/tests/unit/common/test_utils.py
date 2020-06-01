@@ -13,17 +13,20 @@
 #    under the License.
 
 import copy
-import unittest
+import imp
 try:
     from unittest import mock
 except ImportError:
     import mock
 
 from oslo_config import cfg
+from oslo_config import fixture as oslo_fixture
 
+from a10_octavia.common import config_options
 from a10_octavia.common import data_models
 from a10_octavia.common import utils
 from a10_octavia.tests.common import a10constants
+from a10_octavia.tests.unit import base
 
 SHARED_HARDWARE_DEVICE = {'partition_name': 'shared'}
 HARDWARE_DEVICE = {
@@ -84,7 +87,18 @@ class FakeProject(object):
         self.parent_id = parent_id
 
 
-class TestUtils(unittest.TestCase):
+class TestUtils(base.BaseTaskTestCase):
+
+    def setUp(self):
+        super(TestUtils, self).setUp()
+        imp.reload(utils)
+        self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.HARDWARE_THUNDER_CONF_SECTION)
+
+    def tearDown(self):
+        super(TestUtils, self).tearDown()
+        self.conf.reset()
 
     def test_validate_ipv4_valid(self):
         self.assertEqual(utils.validate_ipv4('10.43.12.122'), None)
@@ -215,3 +229,58 @@ class TestUtils(unittest.TestCase):
         self.assertRaises(Exception, utils.get_patched_ip_address, '11.10.0.11.10', '10.10.0.0/24')
         self.assertRaises(Exception, utils.get_patched_ip_address, '10.333.11.10', '10.10.0.0/24')
         self.assertRaises(Exception, utils.get_patched_ip_address, '1e.3d.4f.1o', '10.10.0.0/24')
+
+    def test_get_vrid_floating_ip_for_project_with_only_local_config(self):
+        vthunder = copy.deepcopy(VTHUNDER_1)
+        vthunder.vrid_floating_ip = '10.10.0.75'
+        vthunder.project_id = a10constants.MOCK_PROJECT_ID
+        hardware_device_conf = [{"project_id": a10constants.MOCK_PROJECT_ID,
+                                 "username": vthunder.username,
+                                 "password": vthunder.password,
+                                 "device_name": vthunder.device_name,
+                                 "vrid_floating_ip": vthunder.vrid_floating_ip,
+                                 "ip_address": vthunder.ip_address}]
+        self.conf.config(group=a10constants.HARDWARE_THUNDER_CONF_SECTION,
+                         devices=hardware_device_conf)
+        self.conf.conf.hardware_thunder.devices = {a10constants.MOCK_PROJECT_ID: vthunder}
+        utils.get_vrid_floating_ip_for_project.CONF = self.conf
+        self.assertEqual(utils.get_vrid_floating_ip_for_project(
+            a10constants.MOCK_PROJECT_ID), '10.10.0.75')
+        self.assertEqual(utils.get_vrid_floating_ip_for_project('project-2'), None)
+
+    def test_get_vrid_floating_ip_for_project_with_only_global_config(self):
+        vthunder = copy.deepcopy(VTHUNDER_1)
+        vthunder.project_id = a10constants.MOCK_PROJECT_ID
+        hardware_device_conf = [{"project_id": a10constants.MOCK_PROJECT_ID,
+                                 "username": vthunder.username,
+                                 "password": vthunder.password,
+                                 "device_name": vthunder.device_name,
+                                 "vrid_floating_ip": vthunder.vrid_floating_ip,
+                                 "ip_address": vthunder.ip_address}]
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         vrid_floating_ip='10.10.0.72')
+        self.conf.config(group=a10constants.HARDWARE_THUNDER_CONF_SECTION,
+                         devices=hardware_device_conf)
+        self.conf.conf.hardware_thunder.devices = {a10constants.MOCK_PROJECT_ID: vthunder}
+        utils.get_vrid_floating_ip_for_project.CONF = self.conf
+        self.assertEqual(utils.get_vrid_floating_ip_for_project(
+            a10constants.MOCK_PROJECT_ID), '10.10.0.72')
+
+    def test_get_vrid_floating_ip_for_project_with_both_local_and_global_config(self):
+        vthunder = copy.deepcopy(VTHUNDER_1)
+        vthunder.vrid_floating_ip = '10.10.0.75'
+        vthunder.project_id = a10constants.MOCK_PROJECT_ID
+        hardware_device_conf = [{"project_id": a10constants.MOCK_PROJECT_ID,
+                                 "username": vthunder.username,
+                                 "password": vthunder.password,
+                                 "device_name": vthunder.device_name,
+                                 "vrid_floating_ip": vthunder.vrid_floating_ip,
+                                 "ip_address": vthunder.ip_address}]
+        self.conf.config(group=a10constants.HARDWARE_THUNDER_CONF_SECTION,
+                         devices=hardware_device_conf)
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         vrid_floating_ip='10.10.0.72')
+        self.conf.conf.hardware_thunder.devices = {a10constants.MOCK_PROJECT_ID: vthunder}
+        utils.get_vrid_floating_ip_for_project.CONF = self.conf
+        self.assertEqual(utils.get_vrid_floating_ip_for_project(
+            a10constants.MOCK_PROJECT_ID), '10.10.0.75')

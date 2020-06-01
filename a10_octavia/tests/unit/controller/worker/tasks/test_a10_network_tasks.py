@@ -160,7 +160,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         mock_network_task.axapi_client = self.client_mock
         result = mock_network_task.execute(VTHUNDER, MEMBER, vrid)
         self.network_driver_mock.delete_port.assert_called_with(vrid.vrid_port_id)
-        self.client_mock.vrrpa.delete(vrid.vrid)
+        self.client_mock.vrrpa.delete.assert_called_with(vrid.vrid)
         self.assertEqual(result, None)
 
     # 5 VRID Provided, same FIP as VRID

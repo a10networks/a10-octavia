@@ -37,6 +37,7 @@ MOCK_VRRP_PORT_ID = 'mock-vrrp-port-id'
 
 SERVICE_GROUP_CONF_SECTION = 'service_group'
 LISTENER_CONF_SECTION = 'listener'
+HARDWARE_THUNDER_CONF_SECTION = 'hardware_thunder'
 A10_GLOBAL_OPTS = 'a10_global'
 MOCK_PARENT_PROJECT_ID = 'parent_project_id_with_length_32'
 MOCK_CHILD_PART = 'child_part'
