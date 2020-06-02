@@ -180,6 +180,9 @@ class MemberFlows(object):
             requires=(constants.MEMBER, a10constants.VTHUNDER)))
         update_member_flow.add(database_tasks.UpdateMemberInDB(
             requires=[constants.MEMBER, constants.UPDATE_DICT]))
+        if CONF.a10_global.network_type == 'vlan':
+            update_member_flow.add(vthunder_tasks.TagEthernetForMember(
+                requires=[constants.MEMBER, a10constants.VTHUNDER]))
         update_member_flow.add(database_tasks.MarkMemberActiveInDB(
             requires=constants.MEMBER))
         update_member_flow.add(database_tasks.MarkPoolActiveInDB(
