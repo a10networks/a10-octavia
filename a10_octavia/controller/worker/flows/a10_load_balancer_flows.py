@@ -285,6 +285,10 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
+        if CONF.a10_global.network_type == 'vlan':
+            update_LB_flow.add(vthunder_tasks.TagEthernetForLB(
+                requires=[constants.LOADBALANCER,
+                          a10constants.VTHUNDER]))
         update_LB_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
         return update_LB_flow

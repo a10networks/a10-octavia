@@ -141,7 +141,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
     def create_port(self, network_id, subnet_id=None, fixed_ip=None):
         new_port = None
         if not subnet_id:
-            subnet_id = self.neutron_client.get_network(network_id).subnets[0]
+            subnet_id = self.get_network(network_id).subnets[0]
         try:
             port = {'port': {'name': 'octavia-port-' + network_id,
                              'network_id': network_id,
@@ -158,14 +158,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             raise exceptions.PortCreationFailedException(message)
         return new_port
 
-    def delete_port(self, port_id):
-        try:
-            self.neutron_client.delete_port(port_id)
-        except Exception:
-            message = "Error deleting port: {0}".format(port_id)
-            LOG.exception(message)
-
-    def get_ve_port_id(self, ip):
+    def get_port_id_from_ip(self, ip):
         try:
             ports = self.neutron_client.list_ports(device_owner=OCTAVIA_OWNER)
             if not ports or not ports.get('ports'):
