@@ -41,15 +41,13 @@ class CreateAndAssociateHealthMonitor(task.Task):
             expect_code = health_mon.expected_codes
         args = utils.meta(health_mon, 'hm', {})
 
-        if listeners:
-            listener_port = listeners[0].protocol_port
         try:
             self.axapi_client.slb.hm.create(health_mon.id[0:5],
                                             openstack_mappings.hm_type(self.axapi_client,
                                                                        health_mon.type),
                                             health_mon.delay, health_mon.timeout,
                                             health_mon.rise_threshold, method=method,
-                                            port=listener_port, url=url,
+                                            port=listeners[0].protocol_port, url=url,
                                             expect_code=expect_code, axapi_args=args)
             LOG.debug("Health Monitor created successfully: %s", health_mon.id)
         except Exception as e:
@@ -103,15 +101,13 @@ class UpdateHealthMonitor(task.Task):
             url = health_mon.url_path
             expect_code = health_mon.expected_codes
         args = utils.meta(health_mon, 'hm', {})
-        if listeners:
-            listener_port = listeners[0].protocol_port
         try:
             self.axapi_client.slb.hm.update(
                 health_mon.id[0:5],
                 openstack_mappings.hm_type(self.axapi_client, health_mon.type),
                 health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
                 method=method, url=url, expect_code=expect_code,
-                port=listener_port, axapi_args=args)
+                port=listeners[0].protocol_port, axapi_args=args)
             LOG.debug("Health Monitor updated successfully: %s", health_mon.id)
         except Exception as e:
             LOG.exception("Failed to update Health Monitor: %s", str(e))
