@@ -34,14 +34,26 @@ from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
-from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class VThunderComputeConnectivityWait(task.Task):
+class VThunderBaseTask(task.Task):
+
+    def __init__(self, **kwargs):
+        super(VThunderBaseTask, self).__init__(**kwargs)
+        self._network_driver = None
+
+    @property
+    def network_driver(self):
+        if self._network_driver is None:
+            self._network_driver = a10_utils.get_network_driver()
+        return self._network_driver
+
+
+class VThunderComputeConnectivityWait(VThunderBaseTask):
 
     """Task to wait for the compute instance to be up"""
 
@@ -77,7 +89,7 @@ class VThunderComputeConnectivityWait(task.Task):
             raise
 
 
-class AmphoraePostVIPPlug(task.Task):
+class AmphoraePostVIPPlug(VThunderBaseTask):
 
     """Task to reboot and configure vThunder device"""
 
@@ -95,7 +107,7 @@ class AmphoraePostVIPPlug(task.Task):
             raise
 
 
-class AmphoraePostMemberNetworkPlug(task.Task):
+class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
 
     """Task to reboot and configure vThunder device"""
 
@@ -116,7 +128,7 @@ class AmphoraePostMemberNetworkPlug(task.Task):
             raise
 
 
-class EnableInterface(task.Task):
+class EnableInterface(VThunderBaseTask):
 
     """Task to configure vThunder ports"""
 
@@ -130,7 +142,7 @@ class EnableInterface(task.Task):
             raise
 
 
-class EnableInterfaceForMembers(task.Task):
+class EnableInterfaceForMembers(VThunderBaseTask):
 
     """Task to enable an interface associated with a member"""
 
@@ -161,7 +173,7 @@ class EnableInterfaceForMembers(task.Task):
             raise
 
 
-class ConfigureVRRPMaster(task.Task):
+class ConfigureVRRPMaster(VThunderBaseTask):
 
     """Task to configure Master vThunder VRRP"""
 
@@ -175,7 +187,7 @@ class ConfigureVRRPMaster(task.Task):
             raise
 
 
-class ConfigureVRRPBackup(task.Task):
+class ConfigureVRRPBackup(VThunderBaseTask):
 
     """Task to configure Master vThunder VRRP"""
 
@@ -189,7 +201,7 @@ class ConfigureVRRPBackup(task.Task):
             raise
 
 
-class ConfigureVRID(task.Task):
+class ConfigureVRID(VThunderBaseTask):
 
     """Task to configure vThunder VRID"""
 
@@ -203,7 +215,7 @@ class ConfigureVRID(task.Task):
             raise
 
 
-class ConfigureVRRPSync(task.Task):
+class ConfigureVRRPSync(VThunderBaseTask):
 
     """Task to sync vThunder VRRP"""
 
@@ -229,7 +241,7 @@ def configure_avcs(axapi_client, device_id, device_priority, floating_ip, floati
     axapi_client.system.action.vcs_reload()
 
 
-class ConfigureaVCSMaster(task.Task):
+class ConfigureaVCSMaster(VThunderBaseTask):
 
     """Task to configure aVCS"""
 
@@ -246,7 +258,7 @@ class ConfigureaVCSMaster(task.Task):
             raise
 
 
-class ConfigureaVCSBackup(task.Task):
+class ConfigureaVCSBackup(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder, device_id=2, device_priority=100,
@@ -270,7 +282,7 @@ class ConfigureaVCSBackup(task.Task):
             raise
 
 
-class CreateHealthMonitorOnVThunder(task.Task):
+class CreateHealthMonitorOnVThunder(VThunderBaseTask):
 
     """Task to create a Health Monitor and server for HM service"""
 
@@ -314,7 +326,7 @@ class CreateHealthMonitorOnVThunder(task.Task):
                 LOG.exception("Failed to create health monitor server: %s", str(e))
 
 
-class CheckVRRPStatus(task.Task):
+class CheckVRRPStatus(VThunderBaseTask):
 
     """Task to check VRRP status"""
 
@@ -327,7 +339,7 @@ class CheckVRRPStatus(task.Task):
             return False
 
 
-class ConfirmVRRPStatus(task.Task):
+class ConfirmVRRPStatus(VThunderBaseTask):
 
     """Task to confirm master and backup VRRP status"""
 
@@ -338,7 +350,7 @@ class ConfirmVRRPStatus(task.Task):
             return False
 
 
-class HandleACOSPartitionChange(task.Task):
+class HandleACOSPartitionChange(VThunderBaseTask):
     """Task to switch to specified partition"""
 
     def execute(self, vthunder):
@@ -362,7 +374,7 @@ class HandleACOSPartitionChange(task.Task):
             raise
 
 
-class TagEthernetBaseTask(task.Task):
+class TagEthernetBaseTask(VThunderBaseTask):
 
     def __init__(self, **kwargs):
         super(TagEthernetBaseTask, self).__init__(**kwargs)
@@ -444,7 +456,7 @@ class TagEthernetBaseTask(task.Task):
 
         vlan_exists = self.axapi_client.vlan.exists(vlan_id)
         if not vlan_exists and str(create_vlan_id) != vlan_id:
-            return
+            return None
 
         if not vlan_exists:
             self.axapi_client.vlan.create(vlan_id, tagged_eths=[ifnum], veth=True)
