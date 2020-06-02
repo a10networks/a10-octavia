@@ -222,9 +222,9 @@ class TestUtils(base.BaseTaskTestCase):
         self.assertEqual(utils.get_patched_ip_address('0.45', '10.10.0.0/24'), '10.10.0.45')
         self.assertEqual(utils.get_patched_ip_address('0.0.45', '10.10.0.0/24'), '10.10.0.45')
         self.assertEqual(utils.get_patched_ip_address('1.0.0.23', '10.10.0.0/24'), '1.0.0.23')
+        self.assertEqual(utils.get_patched_ip_address('.45', '10.10.0.0/24'), '10.10.0.45')
 
     def test_get_patched_ip_address_invalid(self):
-        self.assertRaises(Exception, utils.get_patched_ip_address, '.45', '10.10.0.0/24')
         self.assertRaises(Exception, utils.get_patched_ip_address, 'abc.cef', '10.10.0.0/24')
         self.assertRaises(Exception, utils.get_patched_ip_address, '11.10.0.11.10', '10.10.0.0/24')
         self.assertRaises(Exception, utils.get_patched_ip_address, '10.333.11.10', '10.10.0.0/24')
@@ -255,7 +255,7 @@ class TestUtils(base.BaseTaskTestCase):
                                  "username": vthunder.username,
                                  "password": vthunder.password,
                                  "device_name": vthunder.device_name,
-                                 "vrid_floating_ip": vthunder.vrid_floating_ip,
+                                 "vrid_floating_ip": None,
                                  "ip_address": vthunder.ip_address}]
         self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
                          vrid_floating_ip='10.10.0.72')

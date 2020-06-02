@@ -170,7 +170,7 @@ def get_patched_ip_address(ip, cidr):
     for idx in range(4 - len(octets)):
         octets.insert(0, '0')
     host_ip = '.'.join(octets)
-    return merge_host_and_network_ip(cidr, ip)
+    return merge_host_and_network_ip(cidr, host_ip)
 
 
 def get_vrid_floating_ip_for_project(project_id):
