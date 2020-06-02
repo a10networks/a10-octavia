@@ -159,6 +159,16 @@ class MemberFlows(object):
         update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        # Handle VRID settings
+        update_member_flow.add(a10_database_tasks.GetVRIDForProjectMember(
+            requires=constants.MEMBER,
+            provides=a10constants.VRID))
+        update_member_flow.add(a10_network_tasks.HandleVRIDFloatingIP(
+            requires=[constants.MEMBER, a10constants.VTHUNDER, a10constants.VRID],
+            provides=a10constants.PORT))
+        update_member_flow.add(a10_database_tasks.UpdateVRIDForProjectMember(
+            requires=[constants.MEMBER, a10constants.VRID, a10constants.PORT]))
+
         update_member_flow.add(server_tasks.MemberUpdate(
             requires=(constants.MEMBER, a10constants.VTHUNDER)))
         update_member_flow.add(database_tasks.UpdateMemberInDB(
