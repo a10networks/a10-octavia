@@ -442,7 +442,11 @@ class TagEthernetBaseTask(task.Task):
             LOG.warning("ethernet interface %s not enabled, enabling it", ifnum)
             self.axapi_client.interface.ethernet.update(ifnum, enable=True)
 
-        if not self.axapi_client.vlan.exists(vlan_id):
+        vlan_exists = self.axapi_client.vlan.exists(vlan_id)
+        if not vlan_exists and str(create_vlan_id) != vlan_id:
+            return
+
+        if not vlan_exists:
             self.axapi_client.vlan.create(vlan_id, tagged_eths=[ifnum], veth=True)
             LOG.debug("Tagged ethernet interface %s with VLAN with id %s", ifnum, vlan_id)
 
@@ -454,22 +458,29 @@ class TagEthernetBaseTask(task.Task):
                                                   ip_netmask=self._subnet_mask, enable=True)
         return
 
-    def _get_ve_ip(self, vlan_id):
-        try:
-            resp = self.axapi_client.interface.ve.get_oper(vlan_id)
-            ve = resp.get('ve')
-            if ve and ve.get('oper') and ve['oper'].get('ipv4_list'):
-                ipv4_list = ve['oper']['ipv4_list']
-                if ipv4_list:
-                    return ipv4_list[0]['addr']
-        except Exception as e:
-            LOG.exception("Failed to get ve ip from vThunder: %s", str(e))
-        return None
+    def tag_interfaces(self, project_id, create_vlan_id):
+        if project_id in CONF.hardware_thunder.devices:
+            vthunder_conf = CONF.hardware_thunder.devices[project_id]
+            if vthunder_conf.interface_vlan_map:
+                network_list = self.network_driver.list_networks()
+                vlan_subnet_id_dict = {}
+                for network in network_list:
+                    vlan_id = network.provider_segmentation_id
+                    vlan_subnet_id_dict[str(vlan_id)] = network.subnets[0]
+                interface_vlan_map = vthunder_conf.interface_vlan_map
+                for ifnum in interface_vlan_map:
+                    vlan_dict = interface_vlan_map[ifnum]
+                    for vlan_id in vlan_dict:
+                        self.tag_interface(create_vlan_id, vlan_id, ifnum,
+                                           vlan_dict[vlan_id], vlan_subnet_id_dict)
 
-    def reserve_ve_ip_with_neutron(self, vlan_id, ve_info, subnet_id):
-        ve_ip = self._get_ve_ip(vlan_id)
-        if ve_ip is None:
-            return
+    def get_vlan_id(self, subnet_id, is_revert):
+        self._subnet = self.network_driver.get_subnet(subnet_id)
+        network_id = self._subnet.network_id
+        network = self.network_driver.get_network(network_id)
+        if network.provider_network_type != 'vlan' and not is_revert:
+            raise
+        return network.provider_segmentation_id
 
         if not a10_utils.check_ip_in_subnet_range(ve_ip, self._subnet_ip, self._subnet_mask):
             LOG.debug("Not creating neutron port, VE IP not in range %s subnet_id %s",
