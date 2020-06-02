@@ -105,7 +105,7 @@ class HealthMonitorFlows(object):
             provides=a10constants.VTHUNDER))
         update_hm_flow.add(health_monitor_tasks.UpdateHealthMonitor(
             requires=[constants.LISTENERS, constants.HEALTH_MON,
-                a10constants.VTHUNDER, constants.UPDATE_DICT]))
+                      a10constants.VTHUNDER, constants.UPDATE_DICT]))
         update_hm_flow.add(database_tasks.UpdateHealthMonInDB(
             requires=[constants.HEALTH_MON, constants.UPDATE_DICT]))
         update_hm_flow.add(database_tasks.MarkHealthMonitorActiveInDB(
