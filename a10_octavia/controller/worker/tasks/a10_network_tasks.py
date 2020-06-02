@@ -688,7 +688,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             else:
                 conf_floating_ip = a10_utils.get_patched_ip_address(conf_floating_ip, subnet.cidr)
                 if not a10_utils.check_ip_in_subnet_range(conf_floating_ip, subnet_ip, subnet_mask):
-                    msg = "Invalid VRID floating IP. IP out of subnet range: " + str(conf_floating_ip)
+                    msg = "Invalid VRID floating IP. IP out of subnet range: "
+                    msg += str(conf_floating_ip)
                     raise exceptions.VRIDIPNotInSubentRangeError(msg)
 
                 if conf_floating_ip != device_vrid_ip:
@@ -727,7 +728,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         if not vthunder.partition_name or vthunder.partition_name == 'shared':
             self.axapi_client.vrrpa.update(vrid_value, floating_ip=conf_floating_ip)
         else:
-            self.axapi_client.vrrpa.update(vrid_value, floating_ip=conf_floating_ip, is_partition=True)
+            self.axapi_client.vrrpa.update(vrid_value, floating_ip=conf_floating_ip,
+                                           is_partition=True)
 
 
 class DeleteMemberVRIDPort(BaseNetworkTask):
