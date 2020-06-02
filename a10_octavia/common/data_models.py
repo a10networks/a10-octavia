@@ -138,7 +138,7 @@ class VThunder(BaseDataModel):
                  loadbalancer_id=None, project_id=None, compute_id=None,
                  topology="STANDALONE", role="MASTER", last_udp_update=None, status="ACTIVE",
                  created_at=datetime.utcnow(), updated_at=datetime.utcnow(), partition_name=None,
-                 hierarchical_multitenancy=None):
+                 hierarchical_multitenancy=None, vrid_floating_ip=None):
         self.id = id
         self.vthunder_id = vthunder_id
         self.amphora_id = amphora_id
@@ -159,6 +159,7 @@ class VThunder(BaseDataModel):
         self.updated_at = updated_at
         self.partition_name = partition_name
         self.hierarchical_multitenancy = hierarchical_multitenancy
+        self.vrid_floating_ip = vrid_floating_ip
 
 
 class Certificate(BaseDataModel):
@@ -171,3 +172,14 @@ class Certificate(BaseDataModel):
         self.key_content = key_content
         self.key_pass = key_pass
         self.template_name = template_name
+
+
+class VRID(BaseDataModel):
+
+    def __init__(self, id=None, project_id=None, vrid=None, vrid_port_id=None,
+                 vrid_floating_ip=None):
+        self.id = id
+        self.project_id = project_id
+        self.vrid = vrid
+        self.vrid_port_id = vrid_port_id
+        self.vrid_floating_ip = vrid_floating_ip

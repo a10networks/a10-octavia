@@ -358,4 +358,3 @@ class HandleACOSPartitionChange(task.Task):
             axapi_client.system.partition.delete(vthunder.partition_name)
         except Exception as e:
             LOG.exception("Failed to revert partition create : %s", str(e))
-            raise

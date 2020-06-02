@@ -20,10 +20,13 @@ from taskflow import task
 from taskflow.types import failure
 
 from octavia.common import constants
-from octavia.common import utils
 from octavia.controller.worker import task_utils
 from octavia.network import base
 from octavia.network import data_models as n_data_models
+
+from a10_octavia.common import exceptions
+from a10_octavia.common import utils as a10_utils
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -40,7 +43,7 @@ class BaseNetworkTask(task.Task):
     @property
     def network_driver(self):
         if self._network_driver is None:
-            self._network_driver = utils.get_network_driver()
+            self._network_driver = a10_utils.get_network_driver()
         return self._network_driver
 
 
@@ -658,3 +661,88 @@ class ApplyQosAmphora(BaseNetworkTask):
         except Exception as e:
             LOG.error('Failed to remove QoS policy: %s from port: %s due '
                       'to error: %s', orig_qos_id, amp_data.vrrp_port_id, e)
+
+
+class HandleVRIDFloatingIP(BaseNetworkTask):
+    """Handle VRID floating IP configurations for member"""
+
+    def __init__(self, *arg, **kwargs):
+        self.fip_port = None
+        super(HandleVRIDFloatingIP, self).__init__(*arg, **kwargs)
+
+    @axapi_client_decorator
+    def execute(self, vthunder, member, vrid):
+        device_vrid_ip = None
+        if vrid:
+            device_vrid_ip = vrid.vrid_floating_ip
+
+        conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(member.project_id)
+        if conf_floating_ip:
+            subnet = self.network_driver.get_subnet(member.subnet_id)
+            subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(subnet.cidr)
+            if conf_floating_ip.lower() == 'dhcp':
+                if not a10_utils.check_ip_in_subnet_range(device_vrid_ip, subnet_ip, subnet_mask):
+                    self.fip_port = self.network_driver.create_port(subnet.network_id,
+                                                                    member.subnet_id)
+
+            else:
+                conf_floating_ip = a10_utils.get_patched_ip_address(conf_floating_ip, subnet.cidr)
+                if not a10_utils.check_ip_in_subnet_range(conf_floating_ip, subnet_ip, subnet_mask):
+                    msg = "Invalid VRID floating IP. IP out of subnet range: "
+                    msg += str(conf_floating_ip)
+                    raise exceptions.VRIDIPNotInSubentRangeError(msg)
+
+                if conf_floating_ip != device_vrid_ip:
+                    self.fip_port = self.network_driver.create_port(subnet.network_id,
+                                                                    member.subnet_id,
+                                                                    fixed_ip=conf_floating_ip)
+
+            if self.fip_port:
+                self.update_device_vrid_fip(self.fip_port.fixed_ips[0].ip_address, vthunder, vrid)
+
+        if vrid and vrid.vrid_port_id and (self.fip_port or not conf_floating_ip):
+            self.network_driver.delete_port(vrid.vrid_port_id)
+            if not conf_floating_ip:
+                self.axapi_client.vrrpa.delete(vrid.vrid)
+
+        return self.fip_port
+
+    @axapi_client_decorator
+    def revert(self, result, vthunder, member, vrid, *args, **kwargs):
+        if isinstance(result, failure.Failure):
+            LOG.exception("Unable to allocate & configure VRRP Floating IP Port")
+            return
+
+        if self.fip_port:
+            try:
+                self.network_driver.delete_port(self.fip_port.id)
+                if vrid:
+                    self.axapi_client.vrrpa.update(vrid.vrid, vrid.vrid_floating_ip)
+            except Exception as e:
+                LOG.exception("Failed to revert VRRP floating IP delta task: %s", str(e))
+
+    def update_device_vrid_fip(self, conf_floating_ip, vthunder, vrid):
+        vrid_value = 0
+        if vrid:
+            vrid_value = vrid.vrid
+        if not vthunder.partition_name or vthunder.partition_name == 'shared':
+            self.axapi_client.vrrpa.update(vrid_value, floating_ip=conf_floating_ip)
+        else:
+            self.axapi_client.vrrpa.update(vrid_value, floating_ip=conf_floating_ip,
+                                           is_partition=True)
+
+
+class DeleteMemberVRIDPort(BaseNetworkTask):
+    """Delete VRID Port if the last member associated with it is deleted
+    """
+    @axapi_client_decorator
+    def execute(self, vthunder, vrid, member_count):
+        if vrid and member_count == 1:
+            try:
+                self.network_driver.delete_port(vrid.vrid_port_id)
+                self.axapi_client.vrrpa.delete(vrid.vrid)
+                LOG.info("VRID port : %s deleted", vrid.vrid_port_id)
+                return True
+            except Exception as e:
+                LOG.exception("Failed to delete vrid port : %s", str(e))
+        return False
