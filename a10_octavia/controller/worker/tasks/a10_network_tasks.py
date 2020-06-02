@@ -672,36 +672,36 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
     @axapi_client_decorator
     def execute(self, vthunder, member, vrid):
-        vrid_ip = None
+        device_vrid_ip = None
         if vrid:
-            vrid_ip = vrid.vrid_floating_ip
+            device_vrid_ip = vrid.vrid_floating_ip
 
-        floating_ip = a10_utils.get_vrid_floating_ip_for_project(member.project_id)
-        if floating_ip:
+        conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(member.project_id)
+        if conf_floating_ip:
             subnet = self.network_driver.get_subnet(member.subnet_id)
             subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(subnet.cidr)
-            if floating_ip.lower() == 'dhcp':
-                if not a10_utils.check_ip_in_subnet_range(vrid_ip, subnet_ip, subnet_mask):
+            if conf_floating_ip.lower() == 'dhcp':
+                if not a10_utils.check_ip_in_subnet_range(device_vrid_ip, subnet_ip, subnet_mask):
                     self.fip_port = self.network_driver.create_port(subnet.network_id,
                                                                     member.subnet_id)
 
             else:
-                floating_ip = a10_utils.get_patched_ip_address(floating_ip, subnet.cidr)
-                if not a10_utils.check_ip_in_subnet_range(floating_ip, subnet_ip, subnet_mask):
-                    msg = "Invalid VRID floating IP. IP out of subnet range: " + str(floating_ip)
+                conf_floating_ip = a10_utils.get_patched_ip_address(conf_floating_ip, subnet.cidr)
+                if not a10_utils.check_ip_in_subnet_range(conf_floating_ip, subnet_ip, subnet_mask):
+                    msg = "Invalid VRID floating IP. IP out of subnet range: " + str(conf_floating_ip)
                     raise exceptions.VRIDIPNotInSubentRangeError(msg)
 
-                if floating_ip != vrid_ip:
+                if conf_floating_ip != device_vrid_ip:
                     self.fip_port = self.network_driver.create_port(subnet.network_id,
                                                                     member.subnet_id,
-                                                                    fixed_ip=floating_ip)
+                                                                    fixed_ip=conf_floating_ip)
 
             if self.fip_port:
                 self.update_device_vrid_fip(self.fip_port.fixed_ips[0].ip_address, vthunder, vrid)
 
-        if vrid and vrid.vrid_port_id and (self.fip_port or not floating_ip):
+        if vrid and vrid.vrid_port_id and (self.fip_port or not conf_floating_ip):
             self.network_driver.delete_port(vrid.vrid_port_id)
-            if not floating_ip:
+            if not conf_floating_ip:
                 self.axapi_client.vrrpa.delete(vrid.vrid)
 
         return self.fip_port
@@ -720,14 +720,14 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             except Exception as e:
                 LOG.exception("Failed to revert VRRP floating IP delta task: %s", str(e))
 
-    def update_device_vrid_fip(self, floating_ip, vthunder, vrid):
+    def update_device_vrid_fip(self, conf_floating_ip, vthunder, vrid):
         vrid_value = 0
         if vrid:
             vrid_value = vrid.vrid
         if not vthunder.partition_name or vthunder.partition_name == 'shared':
-            self.axapi_client.vrrpa.update(vrid_value, floating_ip=floating_ip)
+            self.axapi_client.vrrpa.update(vrid_value, floating_ip=conf_floating_ip)
         else:
-            self.axapi_client.vrrpa.update(vrid_value, floating_ip=floating_ip, is_partition=True)
+            self.axapi_client.vrrpa.update(vrid_value, floating_ip=conf_floating_ip, is_partition=True)
 
 
 class DeleteMemberVRIDPort(BaseNetworkTask):
