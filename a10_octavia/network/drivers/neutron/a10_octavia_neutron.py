@@ -136,13 +136,12 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         new_port = None
         if not subnet_id:
             subnet_id = self.get_network(network_id).subnets[0]
-        fixed_ip_dict = {'subnet_id': subnet_id}
         try:
             port = {'port': {'name': 'octavia-port-' + network_id,
                              'network_id': network_id,
                              'admin_state_up': True,
                              'device_owner': OCTAVIA_OWNER,
-                             'fixed_ips': [fixed_ip_dict]}}
+                             'fixed_ips': [{'subnet_id': subnet_id}]}}
             if fixed_ip:
                 port['port']['fixed_ips'][0]['ip_address'] = fixed_ip
             new_port = self.neutron_client.create_port(port)
@@ -153,7 +152,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             raise exceptions.PortCreationFailedException(message)
         return new_port
 
-    def get_port_id(self, ip):
+    def get_port_id_from_ip(self, ip):
         try:
             ports = self.neutron_client.list_ports(device_owner=OCTAVIA_OWNER)
             if not ports or not ports.get('ports'):

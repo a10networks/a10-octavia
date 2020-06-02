@@ -34,14 +34,26 @@ from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
-from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class VThunderComputeConnectivityWait(task.Task):
+class VThunderBaseTask(task.Task):
+
+    def __init__(self, **kwargs):
+        super(VThunderBaseTask, self).__init__(**kwargs)
+        self._network_driver = None
+
+    @property
+    def network_driver(self):
+        if self._network_driver is None:
+            self._network_driver = a10_utils.get_network_driver()
+        return self._network_driver
+
+
+class VThunderComputeConnectivityWait(VThunderBaseTask):
 
     """Task to wait for the compute instance to be up"""
 
@@ -77,7 +89,7 @@ class VThunderComputeConnectivityWait(task.Task):
             raise
 
 
-class AmphoraePostVIPPlug(task.Task):
+class AmphoraePostVIPPlug(VThunderBaseTask):
 
     """Task to reboot and configure vThunder device"""
 
@@ -95,7 +107,7 @@ class AmphoraePostVIPPlug(task.Task):
             raise
 
 
-class AmphoraePostMemberNetworkPlug(task.Task):
+class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
 
     """Task to reboot and configure vThunder device"""
 
@@ -116,7 +128,7 @@ class AmphoraePostMemberNetworkPlug(task.Task):
             raise
 
 
-class EnableInterface(task.Task):
+class EnableInterface(VThunderBaseTask):
 
     """Task to configure vThunder ports"""
 
@@ -130,7 +142,7 @@ class EnableInterface(task.Task):
             raise
 
 
-class EnableInterfaceForMembers(task.Task):
+class EnableInterfaceForMembers(VThunderBaseTask):
 
     """Task to enable an interface associated with a member"""
 
@@ -161,7 +173,7 @@ class EnableInterfaceForMembers(task.Task):
             raise
 
 
-class ConfigureVRRPMaster(task.Task):
+class ConfigureVRRPMaster(VThunderBaseTask):
 
     """Task to configure Master vThunder VRRP"""
 
@@ -175,7 +187,7 @@ class ConfigureVRRPMaster(task.Task):
             raise
 
 
-class ConfigureVRRPBackup(task.Task):
+class ConfigureVRRPBackup(VThunderBaseTask):
 
     """Task to configure Master vThunder VRRP"""
 
@@ -189,7 +201,7 @@ class ConfigureVRRPBackup(task.Task):
             raise
 
 
-class ConfigureVRID(task.Task):
+class ConfigureVRID(VThunderBaseTask):
 
     """Task to configure vThunder VRID"""
 
@@ -203,7 +215,7 @@ class ConfigureVRID(task.Task):
             raise
 
 
-class ConfigureVRRPSync(task.Task):
+class ConfigureVRRPSync(VThunderBaseTask):
 
     """Task to sync vThunder VRRP"""
 
@@ -229,7 +241,7 @@ def configure_avcs(axapi_client, device_id, device_priority, floating_ip, floati
     axapi_client.system.action.vcs_reload()
 
 
-class ConfigureaVCSMaster(task.Task):
+class ConfigureaVCSMaster(VThunderBaseTask):
 
     """Task to configure aVCS"""
 
@@ -246,7 +258,7 @@ class ConfigureaVCSMaster(task.Task):
             raise
 
 
-class ConfigureaVCSBackup(task.Task):
+class ConfigureaVCSBackup(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder, device_id=2, device_priority=100,
@@ -270,7 +282,7 @@ class ConfigureaVCSBackup(task.Task):
             raise
 
 
-class CreateHealthMonitorOnVThunder(task.Task):
+class CreateHealthMonitorOnVThunder(VThunderBaseTask):
 
     """Task to create a Health Monitor and server for HM service"""
 
@@ -314,7 +326,7 @@ class CreateHealthMonitorOnVThunder(task.Task):
                 LOG.exception("Failed to create health monitor server: %s", str(e))
 
 
-class CheckVRRPStatus(task.Task):
+class CheckVRRPStatus(VThunderBaseTask):
 
     """Task to check VRRP status"""
 
@@ -327,7 +339,7 @@ class CheckVRRPStatus(task.Task):
             return False
 
 
-class ConfirmVRRPStatus(task.Task):
+class ConfirmVRRPStatus(VThunderBaseTask):
 
     """Task to confirm master and backup VRRP status"""
 
@@ -338,7 +350,7 @@ class ConfirmVRRPStatus(task.Task):
             return False
 
 
-class HandleACOSPartitionChange(task.Task):
+class HandleACOSPartitionChange(VThunderBaseTask):
     """Task to switch to specified partition"""
 
     def execute(self, vthunder):
@@ -362,7 +374,7 @@ class HandleACOSPartitionChange(task.Task):
             raise
 
 
-class TagEthernetBaseTask(task.Task):
+class TagEthernetBaseTask(VThunderBaseTask):
 
     def __init__(self, **kwargs):
         super(TagEthernetBaseTask, self).__init__(**kwargs)
@@ -371,37 +383,24 @@ class TagEthernetBaseTask(task.Task):
         self._subnet_ip = None
         self._subnet_mask = None
 
-    @property
-    def network_driver(self):
-        if self._network_driver is None:
-            self._network_driver = a10_task_utils.get_a10_network_driver()
-        return self._network_driver
-
     def reserve_ve_ip_with_neutron(self, vlan_id, subnet_id):
         ve_ip = self._get_ve_ip(vlan_id)
         if ve_ip is None:
-            return
+            return None
 
         if not a10_utils.check_ip_in_subnet_range(ve_ip, self._subnet_ip, self._subnet_mask):
             LOG.warning("Not creating neutron port, VE IP %s is out of range, subnet_ip %s,"
                         "subnet_mask %s, subnet_id %s", ve_ip, self._subnet_ip,
                         self._subnet_mask, subnet_id)
-            return
+            return None
 
         self.network_driver.create_port(self._subnet.network_id, fixed_ip=ve_ip)
-        return
 
     def release_ve_ip_from_neutron(self, vlan_id, subnet_id):
         ve_ip = self._get_ve_ip(vlan_id)
-        if ve_ip is None:
-            return
-
-        port_id = self.network_driver.get_port_id(ve_ip)
-        if port_id is None:
-            return
-
-        self.network_driver.delete_port(port_id)
-        return
+        port_id = self.network_driver.get_port_id_from_ip(ve_ip)
+        if ve_ip and port_id:
+            self.network_driver.delete_port(port_id)
 
     def _get_ve_ip(self, vlan_id):
         try:
@@ -433,7 +432,7 @@ class TagEthernetBaseTask(task.Task):
         if vlan_id not in vlan_subnet_id_dict:
             LOG.warning("vlan_id %s not in vlan_subnet_id_dict %s", vlan_id,
                         vlan_subnet_id_dict)
-            return
+            return None
 
         self.get_subnet_and_mask(vlan_subnet_id_dict[vlan_id])
 
@@ -448,7 +447,7 @@ class TagEthernetBaseTask(task.Task):
 
         vlan_exists = self.axapi_client.vlan.exists(vlan_id)
         if not vlan_exists and str(create_vlan_id) != vlan_id:
-            return
+            return None
 
         if not vlan_exists:
             self.axapi_client.vlan.create(vlan_id, tagged_eths=[ifnum], veth=True)
@@ -463,7 +462,6 @@ class TagEthernetBaseTask(task.Task):
             self.axapi_client.interface.ve.update(vlan_id, ip_address=patched_ip,
                                                   ip_netmask=self._subnet_mask, enable=True)
         self.reserve_ve_ip_with_neutron(vlan_id, vlan_subnet_id_dict[vlan_id])
-        return
 
     def tag_interfaces(self, project_id, create_vlan_id):
         if project_id in CONF.hardware_thunder.devices:

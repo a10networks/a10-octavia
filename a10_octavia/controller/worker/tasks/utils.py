@@ -14,7 +14,6 @@
 
 import json
 import logging
-from stevedore import driver as stevedore_driver
 
 from oslo_config import cfg
 
@@ -64,11 +63,3 @@ def meta(lbaas_obj, key, default):
     except Exception:
         return default
     return meta_json.get(key, default)
-
-
-def get_a10_network_driver():
-
-    driver = stevedore_driver.DriverManager(namespace='octavia.network.drivers',
-                                            name=CONF.a10_controller_worker.network_driver,
-                                            invoke_on_load=True).driver
-    return driver
