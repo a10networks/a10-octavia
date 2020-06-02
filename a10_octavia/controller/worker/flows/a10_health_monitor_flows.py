@@ -43,7 +43,7 @@ class HealthMonitorFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         create_hm_flow.add(health_monitor_tasks.CreateAndAssociateHealthMonitor(
-            requires=[constants.HEALTH_MON, a10constants.VTHUNDER]))
+            requires=[constants.LISTENERS, constants.HEALTH_MON, a10constants.VTHUNDER]))
         create_hm_flow.add(database_tasks.MarkHealthMonitorActiveInDB(
             requires=constants.HEALTH_MON))
         create_hm_flow.add(database_tasks.MarkPoolActiveInDB(
@@ -104,7 +104,8 @@ class HealthMonitorFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_hm_flow.add(health_monitor_tasks.UpdateHealthMonitor(
-            requires=[constants.HEALTH_MON, a10constants.VTHUNDER, constants.UPDATE_DICT]))
+            requires=[constants.LISTENERS, constants.HEALTH_MON,
+                      a10constants.VTHUNDER, constants.UPDATE_DICT]))
         update_hm_flow.add(database_tasks.UpdateHealthMonInDB(
             requires=[constants.HEALTH_MON, constants.UPDATE_DICT]))
         update_hm_flow.add(database_tasks.MarkHealthMonitorActiveInDB(
