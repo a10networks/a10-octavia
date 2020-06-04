@@ -12,15 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import ipaddress
-import six
-import time
-
 from neutronclient.common import exceptions as neutron_client_exceptions
-from novaclient import exceptions as nova_client_exceptions
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_utils import uuidutils
 from stevedore import driver as stevedore_driver
 
 from octavia.network import data_models as n_data_models

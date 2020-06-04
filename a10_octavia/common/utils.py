@@ -159,8 +159,8 @@ def get_vrid_floating_ip_for_project(project_id):
         return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp
 
 
-def validate_interface_vlan_map(rack_device):
-    if 'interface_vlan_map' not in rack_device:
+def validate_interface_vlan_map(hardware_device):
+    if 'interface_vlan_map' not in hardware_device:
         return True
 
     ivmap = hardware_device.get('interface_vlan_map')
@@ -169,14 +169,14 @@ def validate_interface_vlan_map(rack_device):
         for vlan_id in if_info:
             ve_info = if_info[vlan_id]
             if ve_info.get('use_dhcp') and ve_info.get('ve_ip_address'):
-                raise ConfigFileValueError('Check settings for vlan ' + vlan_id +
-                                           '. Please do not set ve_ip_address in '
-                                           'interface_vlan_map when use_dhcp is True')
+                raise cfg.ConfigFileValueError('Check settings for vlan ' + vlan_id +
+                                               '. Please do not set ve_ip_address in '
+                                               'interface_vlan_map when use_dhcp is True')
                 if not ve_info.get('use_dhcp'):
                     if not ve_info.get('ve_ip_address'):
-                        raise ConfigFileValueError('Check settings for vlan ' + vlan_id +
-                                                   '. Please set valid ve_ip_address in '
-                                                   'interface_vlan_map when use_dhcp is False')
+                        raise cfg.ConfigFileValueError('Check settings for vlan ' + vlan_id +
+                                                       '. Please set valid ve_ip_address in '
+                                                       'interface_vlan_map when use_dhcp is False')
                     validate_partial_ipv4(ve_info['ve_ip_address'])
     return True
 
