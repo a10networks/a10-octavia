@@ -24,7 +24,7 @@ from oslo_config import fixture as oslo_fixture
 
 from octavia.common import data_models as o_data_models
 
-from a10_octavia.common.config_options import A10_GLOBAL_OPTS
+from a10_octavia.common import config_options
 from a10_octavia.common import data_models
 from a10_octavia.controller.worker.tasks import a10_database_tasks as task
 from a10_octavia.tests.common import a10constants
@@ -39,8 +39,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         super(TestA10DatabaseTasks, self).setUp()
         imp.reload(task)
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
-        self.conf.register_opts(A10_GLOBAL_OPTS,
-                                group=a10constants.A10_GLOBAL_OPTS)
+        self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
+                                group=a10constants.A10_GLOBAL_CONF_SECTION)
         self.db_session = mock.patch(
             'a10_octavia.controller.worker.tasks.a10_database_tasks.db_apis.get_session')
         self.db_session.start()
@@ -53,7 +53,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
                 return_value=a10constants.MOCK_PARENT_PROJECT_ID)
     def test_get_vthunder_by_loadbalancer_parent_partition_exists(self,
                                                                   mock_parent_project_id):
-        self.conf.config(group=a10constants.A10_GLOBAL_OPTS, use_parent_partition=True)
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
         mock_vthunder.undercloud = True
@@ -69,7 +69,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
                 return_value=None)
     def test_get_vthunder_by_loadbalancer_parent_partition_not_exists(self,
                                                                       mock_parent_project_id):
-        self.conf.config(group=a10constants.A10_GLOBAL_OPTS, use_parent_partition=True)
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
 
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
@@ -83,7 +83,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PART)
 
     def test_get_vthunder_by_loadbalancer_parent_partition_no_ohm(self):
-        self.conf.config(group=a10constants.A10_GLOBAL_OPTS, use_parent_partition=True)
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
 
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
@@ -97,7 +97,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PART)
 
     def test_get_vthunder_by_loadbalancer_parent_partition_ohm_no_use_parent_partition(self):
-        self.conf.config(group=a10constants.A10_GLOBAL_OPTS, use_parent_partition=False)
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=False)
 
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PROJECT_ID[:14]

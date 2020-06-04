@@ -77,4 +77,4 @@ class ListOfObjects(List):
         final_list = []
         for item in value_list:
             final_list.append(item)
-        return utils.convert_to_rack_vthunder_conf(final_list)
+        return utils.convert_to_hardware_thunder_conf(final_list)
