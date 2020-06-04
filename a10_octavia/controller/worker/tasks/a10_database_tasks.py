@@ -27,7 +27,6 @@ from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 
 from a10_octavia.common import utils
-from a10_octavia.common import a10constants
 from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF
