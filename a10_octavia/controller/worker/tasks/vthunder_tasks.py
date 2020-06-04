@@ -389,18 +389,6 @@ class TagEthernetBaseTask(VThunderBaseTask):
             self._network_driver = a10_task_utils.get_a10_network_driver()
         return self._network_driver
 
-    def get_tag_interface_info(self, project_id, vlan_id):
-        if project_id in CONF.rack_vthunder.devices:
-            vthunder_conf = CONF.rack_vthunder.devices[project_id]
-            if vthunder_conf.interface_vlan_map:
-                interface_vlan_map = vthunder_conf.interface_vlan_map
-                for ifnum in interface_vlan_map:
-                    vlan_dict = interface_vlan_map[ifnum]
-                    vlan_id_str = str(vlan_id)
-                    if vlan_id_str in vlan_dict:
-                        return (int(ifnum), vlan_dict[vlan_id_str])
-        return (1, None)
-
     def get_subnet_and_mask(self, subnet_id):
         if self._subnet is None:
             self._subnet = self.network_driver.get_subnet(subnet_id)
@@ -507,7 +495,7 @@ class TagEthernetBaseTask(VThunderBaseTask):
         if ve_ip is None:
             return
 
-        port_id = self.network_driver.get_ve_port_id(ve_ip)
+        port_id = self.network_driver.get_port_id_from_ip(ve_ip)
         if port_id is None:
             return
 
@@ -522,10 +510,7 @@ class TagEthernetForLB(TagEthernetBaseTask):
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
         vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
-        subnet_ip, subnet_mask = self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
-        ifnum, ve_info = self.get_tag_interface_info(loadbalancer.project_id, vlan_id)
-        self.tag_interface(vlan_id, ifnum, ve_info)
-        self.reserve_ve_ip_with_neutron(vlan_id, ve_info, loadbalancer.vip.subnet_id)
+        self.tag_interfaces(loadbalancer.project_id, vlan_id)
 
     @axapi_client_decorator
     def revert(self, loadbalancer, vthunder, *args, **kwargs):
@@ -543,10 +528,7 @@ class TagEthernetForMember(TagEthernetBaseTask):
     @axapi_client_decorator
     def execute(self, member, vthunder):
         vlan_id = self.get_vlan_id(member.subnet_id, False)
-        subnet_ip, subnet_mask = self.get_subnet_and_mask(member.subnet_id)
-        ifnum, ve_info = self.get_tag_interface_info(member.project_id, vlan_id)
-        self.tag_interface(vlan_id, ifnum, ve_info)
-        self.reserve_ve_ip_with_neutron(vlan_id, ve_info, member.subnet_id)
+        self.tag_interfaces(member.project_id, vlan_id)
 
     @axapi_client_decorator
     def revert(self, member, vthunder, *args, **kwargs):

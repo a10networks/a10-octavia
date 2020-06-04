@@ -158,6 +158,13 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             raise exceptions.PortCreationFailedException(message)
         return new_port
 
+    def delete_port(self, port_id):
+        try:
+            self.neutron_client.delete_port(port_id)
+        except Exception:
+            message = "Error deleting port: {0}".format(port_id)
+            LOG.exception(message)
+
     def get_port_id_from_ip(self, ip):
         try:
             ports = self.neutron_client.list_ports(device_owner=OCTAVIA_OWNER)
@@ -177,3 +184,21 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             LOG.exception(message)
             pass
         return None
+
+    def list_networks(self):
+        network_list = self.neutron_client.list_networks()
+        network_list_datamodel = []
+
+        for network in network_list.get('networks'):
+            network_list_datamodel.append(n_data_models.Network(
+                id=network.get('id'),
+                name=network.get('name'),
+                subnets=network.get('subnets'),
+                project_id=network.get('project_id'),
+                admin_state_up=network.get('admin_state_up'),
+                mtu=network.get('mtu'),
+                provider_network_type=network.get('provider:network_type'),
+                provider_physical_network=network.get('provider:physical_network'),
+                provider_segmentation_id=network.get('provider:segmentation_id'),
+                router_external=network.get('router:external')))
+        return network_list_datamodel
