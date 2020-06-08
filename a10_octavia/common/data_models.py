@@ -196,3 +196,19 @@ class VRID(BaseDataModel):
         self.vrid = vrid
         self.vrid_port_id = vrid_port_id
         self.vrid_floating_ip = vrid_floating_ip
+
+
+class Interface(BaseDataModel):
+
+    def __init__(self, interface_num=None, tags=None, ve_ips=None):
+        self.interface_num = interface_num
+        self.tags = tags or []
+        self.ve_ips = ve_ips or []
+
+
+class DeviceNetworkMap(BaseDataModel):
+
+    def __init__(self, device_id=None, ethernet_interfaces=None, trunk_interfaces=None):
+        self.device_id = device_id
+        self.ethernet_interfaces = ethernet_interfaces or []
+        self.trunk_interfaces = trunk_interfaces or []
