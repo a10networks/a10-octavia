@@ -167,7 +167,7 @@ class Thunder(BaseDataModel):
 class HardwareThunder(Thunder):
     def __init__(self, device_network_map=None, **kwargs):
         Thunder.__init__(self, **kwargs)
-        self.device_netork_map = device_netork_map
+        self.device_network_map = device_network_map
 
 
 class VThunder(Thunder):
