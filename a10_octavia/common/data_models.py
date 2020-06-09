@@ -130,7 +130,7 @@ class BaseDataModel(object):
             setattr(self, key, value)
 
 
-class VThunder(BaseDataModel):
+class Thunder(BaseDataModel):
 
     def __init__(self, id=None, vthunder_id=None, amphora_id=None,
                  device_name=None, ip_address=None, username=None,
@@ -138,7 +138,7 @@ class VThunder(BaseDataModel):
                  loadbalancer_id=None, project_id=None, compute_id=None,
                  topology="STANDALONE", role="MASTER", last_udp_update=None, status="ACTIVE",
                  created_at=datetime.utcnow(), updated_at=datetime.utcnow(), partition_name=None,
-                 hierarchical_multitenancy=None, interface_vlan_map=None):
+                 hierarchical_multitenancy=None):
         self.id = id
         self.vthunder_id = vthunder_id
         self.amphora_id = amphora_id
@@ -159,7 +159,17 @@ class VThunder(BaseDataModel):
         self.updated_at = updated_at
         self.partition_name = partition_name
         self.hierarchical_multitenancy = hierarchical_multitenancy
-        self.interface_vlan_map = interface_vlan_map
+
+
+class HardwareThunder(Thunder):
+    def __init__(self, device_network_map=None, **kwargs):
+        Thunder.__init__(self, **kwargs)
+        self.device_network_map = device_network_map
+
+
+class VThunder(Thunder):
+    def __init__(self, **kwargs):
+        Thunder.__init__(self, **kwargs)
 
 
 class Certificate(BaseDataModel):
