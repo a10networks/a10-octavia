@@ -455,10 +455,10 @@ class TagEthernetBaseTask(VThunderBaseTask):
         else:
             self.release_ve_ip_from_neutron(vlan_id, vlan_subnet_id_dict[vlan_id])
 
-        if ve_info is None or 'use_dhcp' in ve_info and ve_info['use_dhcp']:
+        if ve_info == 'dhcp':
             self.axapi_client.interface.ve.update(vlan_id, dhcp=True, enable=True)
         else:
-            patched_ip = self._get_patched_ve_ip(ve_info['ve_ip_address'])
+            patched_ip = self._get_patched_ve_ip(ve_info)
             self.axapi_client.interface.ve.update(vlan_id, ip_address=patched_ip,
                                                   ip_netmask=self._subnet_mask, enable=True)
         self.reserve_ve_ip_with_neutron(vlan_id, vlan_subnet_id_dict[vlan_id])
@@ -466,18 +466,18 @@ class TagEthernetBaseTask(VThunderBaseTask):
     def tag_interfaces(self, project_id, create_vlan_id):
         if project_id in CONF.hardware_thunder.devices:
             vthunder_conf = CONF.hardware_thunder.devices[project_id]
-            if vthunder_conf.interface_vlan_map:
+            if vthunder_conf.device_network_map:
                 network_list = self.network_driver.list_networks()
                 vlan_subnet_id_dict = {}
                 for network in network_list:
                     vlan_id = network.provider_segmentation_id
                     vlan_subnet_id_dict[str(vlan_id)] = network.subnets[0]
-                interface_vlan_map = vthunder_conf.interface_vlan_map
-                for ifnum in interface_vlan_map:
-                    vlan_dict = interface_vlan_map[ifnum]
-                    for vlan_id in vlan_dict:
-                        self.tag_interface(create_vlan_id, vlan_id, ifnum,
-                                           vlan_dict[vlan_id], vlan_subnet_id_dict)
+                for device_obj in vthunder_conf.device_network_map:
+                    for eth_interface in device_obj.ethernet_interfaces:
+                        ifnum = eth_interface.interface_num
+                        for tag, ve_ip in list(zip(eth_interface.tags, eth_interface.ve_ips)):
+                            self.tag_interface(create_vlan_id, str(tag), str(ifnum),
+                                               ve_ip, vlan_subnet_id_dict)
 
     def get_vlan_id(self, subnet_id, is_revert):
         self._subnet = self.network_driver.get_subnet(subnet_id)
