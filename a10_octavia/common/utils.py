@@ -96,7 +96,10 @@ def convert_to_hardware_thunder_conf(hardware_list):
                                            hardware_device['project_id'] +
                                            ' in [hardware_thunder] section')
         hardware_device['undercloud'] = True
-        vthunder_conf = data_models.VThunder(**hardware_device)
+        if hardware_device.get('interface_vlan_map'):
+            hardware_device = validate_interface_vlan_map(hardware_device)
+            del hardware_device['interface_vlan_map']
+        vthunder_conf = data_models.HardwareThunder(**hardware_device)
         hardware_dict[hardware_device['project_id']] = vthunder_conf
 
     duplicates_list = check_duplicate_entries(hardware_dict)
@@ -157,23 +160,76 @@ def get_network_driver():
     return network_driver
 
 
-def validate_interface_vlan_map(hardware_device):
-    if 'interface_vlan_map' not in hardware_device:
-        return True
+def validate_interface_object(interface):
+    tags = []
+    ve_ips = []
+    new_interface_obj = {}
+    if not interface.get('interface_num'):
+        raise cfg.ConfigFileValueError(
+            'Missing `interface_num` in `interface_vlan_map` under [hardware_thunder] section.')
+    if interface.get('vlan_tags'):
+        for vlan_tag in interface.get('vlan_tags'):
+            if not vlan_tag.get('vlan_id'):
+                raise cfg.ConfigFileValueError('Missing `vlan_id` for `interface_num` ' +
+                                               str(interface.get('interface_num')) +
+                                               ' in `interface_vlan_map` under ' +
+                                               '[hardware_thunder] section.')
+            if vlan_tag.get('vlan_id') and vlan_tag.get('vlan_id') in tags:
+                raise cfg.ConfigFileValueError('Duplicate `vlan_tags` entry for `vlan_id` '
+                                               + str(vlan_tag.get('vlan_id')) +
+                                               ' found for `interface_num` '
+                                               + str(interface.get('interface_num')) +
+                                               ' in `interface_vlan_map` under ' +
+                                               '[hardware_thunder] section.')
+            tags.append(vlan_tag.get('vlan_id'))
+            ve_ips.append(validate_ve_ips(vlan_tag))
+    new_interface_obj['interface_num'] = interface.get('interface_num')
+    new_interface_obj['tags'] = tags
+    new_interface_obj['ve_ips'] = ve_ips
+    return data_models.Interface(**new_interface_obj)
 
+
+def validate_ve_ips(vlan_tag):
+    if vlan_tag.get('use_dhcp') and vlan_tag.get('ve_ip'):
+        raise cfg.ConfigFileValueError('Check settings for `vlan_id` ' +
+                                       str(vlan_tag.get('vlan_id')) +
+                                       '. Please do not set `ve_ip` in `interface_vlan_map`' +
+                                       ' when `use_dhcp` is True')
+        if not vlan_tag.get('use_dhcp'):
+            if not vlan_tag.get('ve_ip'):
+                raise cfg.ConfigFileValueError('Check settings for `vlan_id` ' +
+                                               str(vlan_tag.get('vlan_id')) +
+                                               '. Please set valid `ve_ip` in ' +
+                                               '`interface_vlan_map` when `use_dhcp` is False')
+            validate_partial_ipv4(vlan_tag.get('ve_ip'))
+    elif not vlan_tag.get('use_dhcp') and not vlan_tag.get('ve_ip'):
+        raise cfg.ConfigFileValueError('Missing both `use_dhcp` and `ve_ip` in config' +
+                                       ' for `vlan_id` ' + str(vlan_tag.get('vlan_id')) +
+                                       ' in `interface_vlan_map` ' +
+                                       'under [hardware_thunder] section. ' +
+                                       'Please provide either of them.')
+    if vlan_tag.get('use_dhcp'):
+        return 'dhcp'
+    else:
+        return vlan_tag.get('ve_ip')
+
+
+def validate_interface_vlan_map(hardware_device):
     ivmap = hardware_device.get('interface_vlan_map')
-    for ifnum in ivmap:
-        if_info = ivmap[ifnum]
-        for vlan_id in if_info:
-            ve_info = if_info[vlan_id]
-            if ve_info.get('use_dhcp') and ve_info.get('ve_ip_address'):
-                raise cfg.ConfigFileValueError('Check settings for vlan ' + vlan_id +
-                                               '. Please do not set ve_ip_address in '
-                                               'interface_vlan_map when use_dhcp is True')
-                if not ve_info.get('use_dhcp'):
-                    if not ve_info.get('ve_ip_address'):
-                        raise cfg.ConfigFileValueError('Check settings for vlan ' + vlan_id +
-                                                       '. Please set valid ve_ip_address in '
-                                                       'interface_vlan_map when use_dhcp is False')
-                    validate_partial_ipv4(ve_info['ve_ip_address'])
-    return True
+    device_network_map = []
+    interface_map = {}
+    eth_list = []
+    trunk_list = []
+    for device, device_obj in ivmap.items():
+        if device_obj.get('ethernet_interfaces'):
+            for eth in device_obj.get('ethernet_interfaces'):
+                eth_list.append(validate_interface_object(eth))
+        if device_obj.get('trunk_interfaces'):
+            for eth in device_obj.get('trunk_interfaces'):
+                trunk_list.append(validate_interface_object(eth))
+        interface_map['device_id'] = device[-1]
+        interface_map['ethernet_interfaces'] = eth_list
+        interface_map['trunk_interfaces'] = trunk_list
+        device_network_map.append(data_models.DeviceNetworkMap(**interface_map))
+    hardware_device['device_network_map'] = device_network_map
+    return hardware_device
