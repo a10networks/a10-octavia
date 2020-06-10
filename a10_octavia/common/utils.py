@@ -88,6 +88,30 @@ def check_duplicate_entries(hardware_dict):
     return [k for k, v in hardware_count_dict.items() if v > 1]
 
 
+def convert_to_hardware_thunder_conf(hardware_list):
+    """Validate for all vthunder nouns for hardware devices configurations."""
+    hardware_dict = {}
+    for hardware_device in hardware_list:
+        hardware_device = validate_params(hardware_device)
+        if hardware_dict.get(hardware_device['project_id']):
+            raise cfg.ConfigFileValueError('Supplied duplicate project_id ' +
+                                           hardware_device['project_id'] +
+                                           ' in [hardware_thunder] section')
+        hardware_device['undercloud'] = True
+        if hardware_device.get('interface_vlan_map'):
+            hardware_device = validate_interface_vlan_map(hardware_device)
+            del hardware_device['interface_vlan_map']
+        vthunder_conf = data_models.HardwareThunder(**hardware_device)
+        hardware_dict[hardware_device['project_id']] = vthunder_conf
+
+    duplicates_list = check_duplicate_entries(hardware_dict)
+    if duplicates_list:
+        raise cfg.ConfigFileValueError('Duplicates found for the following '
+                                       '\'ip_address:partition_name\' entries: {}'
+                                       .format(list(duplicates_list)))
+    return hardware_dict
+
+
 def get_parent_project(project_id):
     key_session = keystone.KeystoneSession().get_session()
     key_client = keystone_client.Client(session=key_session)
@@ -159,94 +183,76 @@ def get_vrid_floating_ip_for_project(project_id):
         return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp
 
 
+def validate_interface_object(interface):
+    tags = []
+    ve_ips = []
+    new_interface_obj = {}
+    if not interface.get('interface_num'):
+        raise cfg.ConfigFileValueError(
+            'Missing `interface_num` in `interface_vlan_map` under [hardware_thunder] section.')
+    if interface.get('vlan_tags'):
+        for vlan_tag in interface.get('vlan_tags'):
+            if not vlan_tag.get('vlan_id'):
+                raise cfg.ConfigFileValueError('Missing `vlan_id` for `interface_num` ' +
+                                               str(interface.get('interface_num')) +
+                                               ' in `interface_vlan_map` under ' +
+                                               '[hardware_thunder] section.')
+            if vlan_tag.get('vlan_id') and vlan_tag.get('vlan_id') in tags:
+                raise cfg.ConfigFileValueError('Duplicate `vlan_tags` entry for `vlan_id` '
+                                               + str(vlan_tag.get('vlan_id')) +
+                                               ' found for `interface_num` '
+                                               + str(interface.get('interface_num')) +
+                                               ' in `interface_vlan_map` under ' +
+                                               '[hardware_thunder] section.')
+            tags.append(vlan_tag.get('vlan_id'))
+            ve_ips.append(validate_ve_ips(vlan_tag))
+    new_interface_obj['interface_num'] = interface.get('interface_num')
+    new_interface_obj['tags'] = tags
+    new_interface_obj['ve_ips'] = ve_ips
+    return data_models.Interface(**new_interface_obj)
+
+
+def validate_ve_ips(vlan_tag):
+    if vlan_tag.get('use_dhcp') and vlan_tag.get('ve_ip'):
+        raise cfg.ConfigFileValueError('Check settings for `vlan_id` ' +
+                                       str(vlan_tag.get('vlan_id')) +
+                                       '. Please do not set `ve_ip` in `interface_vlan_map`' +
+                                       ' when `use_dhcp` is True')
+        if not vlan_tag.get('use_dhcp'):
+            if not vlan_tag.get('ve_ip'):
+                raise cfg.ConfigFileValueError('Check settings for `vlan_id` ' +
+                                               str(vlan_tag.get('vlan_id')) +
+                                               '. Please set valid `ve_ip` in ' +
+                                               '`interface_vlan_map` when `use_dhcp` is False')
+            validate_partial_ipv4(vlan_tag.get('ve_ip'))
+    elif not vlan_tag.get('use_dhcp') and not vlan_tag.get('ve_ip'):
+        raise cfg.ConfigFileValueError('Missing both `use_dhcp` and `ve_ip` in config' +
+                                       ' for `vlan_id` ' + str(vlan_tag.get('vlan_id')) +
+                                       ' in `interface_vlan_map` ' +
+                                       'under [hardware_thunder] section. ' +
+                                       'Please provide either of them.')
+    if vlan_tag.get('use_dhcp'):
+        return 'dhcp'
+    else:
+        return vlan_tag.get('ve_ip')
+
+
 def validate_interface_vlan_map(hardware_device):
-    if 'interface_vlan_map' not in hardware_device:
-        return True
-
     ivmap = hardware_device.get('interface_vlan_map')
-    for ifnum in ivmap:
-        if_info = ivmap[ifnum]
-        for vlan_id in if_info:
-            ve_info = if_info[vlan_id]
-            if ve_info.get('use_dhcp') and ve_info.get('ve_ip_address'):
-                raise cfg.ConfigFileValueError('Check settings for vlan ' + vlan_id +
-                                               '. Please do not set ve_ip_address in '
-                                               'interface_vlan_map when use_dhcp is True')
-                if not ve_info.get('use_dhcp'):
-                    if not ve_info.get('ve_ip_address'):
-                        raise cfg.ConfigFileValueError('Check settings for vlan ' + vlan_id +
-                                                       '. Please set valid ve_ip_address in '
-                                                       'interface_vlan_map when use_dhcp is False')
-                    validate_partial_ipv4(ve_info['ve_ip_address'])
-    return True
-
-
-def convert_to_rack_vthunder_conf(rack_list):
-    """ Validates for all vthunder nouns for rack devices
-        configurations.
-    """
-    rack_dict = {}
-    validation_flag = False
-    for rack_device in rack_list:
-        validation_flag = validate_mandatory_params(rack_device)
-        if validation_flag:
-            if rack_dict.get(rack_device['project_id']):
-                raise ConfigFileValueError('Supplied duplicate project_id ' +
-                                           rack_device['project_id'] +
-                                           ' in [rack_vthunder] section')
-            rack_device['undercloud'] = True
-            if not rack_device.get('partition'):
-                rack_device['partition'] = a10constants.SHARED_PARTITION
-            vthunder_conf = data_models.VThunder(**rack_device)
-            rack_dict[rack_device['project_id']] = vthunder_conf
-            validate_interface_vlan_map(rack_device)
-
-    duplicates_list = check_duplicate_entries(rack_dict)
-    if len(duplicates_list) != 0:
-        raise ConfigFileValueError('Duplicates found for the following '
-                                   '\'ip_address:partition\' entries: {}'
-                                   .format(list(duplicates_list)))
-    return rack_dict
-
-
-def get_parent_project(project_id):
-    key_session = keystone.KeystoneSession().get_session()
-    key_client = keystone_client.Client(session=key_session)
-    project = key_client.projects.get(project_id)
-    if project.parent_id != 'default':
-        return project.parent_id
-
-
-def get_axapi_client(vthunder):
-    api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
-    axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
-                                      vthunder.username, vthunder.password,
-                                      timeout=30)
-    return axapi_client
-
-
-""" TODO(ssrinivasan10) use this changes from STACK-1215"""
-
-
-def get_net_info_from_cidr(cidr):
-    subnet_ip, mask = cidr.split('/')
-    avail_hosts = (1 << 32 - int(mask))
-    netmask = socket.inet_ntoa(struct.pack('>I', (1 << 32) - avail_hosts))
-    return subnet_ip, netmask
-
-
-def check_ip_in_subnet_range(ip, subnet, netmask):
-    int_ip = struct.unpack('>L', socket.inet_aton(ip))[0]
-    int_subnet = struct.unpack('>L', socket.inet_aton(subnet))[0]
-    int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
-    return int_ip & int_netmask == int_subnet
-
-
-def merge_host_and_network_ip(cidr, host_ip):
-    network_ip, mask = cidr.split('/')
-    host_bits = struct.pack('>L', ((1 << (32 - int(mask))) - 1))
-    int_host_bits = struct.unpack('>L', host_bits)[0]
-    int_host_ip = struct.unpack('>L', socket.inet_aton(host_ip))[0]
-    int_net_ip = struct.unpack('>L', socket.inet_aton(network_ip))[0]
-    full_ip_packed = struct.pack('>L', int_net_ip | (int_host_ip & int_host_bits))
-    return socket.inet_ntoa(full_ip_packed)
+    device_network_map = []
+    interface_map = {}
+    eth_list = []
+    trunk_list = []
+    for device, device_obj in ivmap.items():
+        if device_obj.get('ethernet_interfaces'):
+            for eth in device_obj.get('ethernet_interfaces'):
+                eth_list.append(validate_interface_object(eth))
+        if device_obj.get('trunk_interfaces'):
+            for eth in device_obj.get('trunk_interfaces'):
+                trunk_list.append(validate_interface_object(eth))
+        interface_map['device_id'] = device[-1]
+        interface_map['ethernet_interfaces'] = eth_list
+        interface_map['trunk_interfaces'] = trunk_list
+        device_network_map.append(data_models.DeviceNetworkMap(**interface_map))
+    hardware_device['device_network_map'] = device_network_map
+    return hardware_device
