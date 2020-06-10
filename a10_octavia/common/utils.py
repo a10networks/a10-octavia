@@ -30,6 +30,7 @@ from stevedore import driver as stevedore_driver
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
+from a10_octavia.common import exceptions
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -99,7 +100,7 @@ def convert_to_hardware_thunder_conf(hardware_list):
                                            ' in [hardware_thunder] section')
         hardware_device['undercloud'] = True
         if hardware_device.get('interface_vlan_map'):
-            hardware_device = validate_interface_vlan_map(hardware_device)
+            hardware_device['device_network_map'] = validate_interface_vlan_map(hardware_device)
             del hardware_device['interface_vlan_map']
         vthunder_conf = data_models.HardwareThunder(**hardware_device)
         hardware_dict[hardware_device['project_id']] = vthunder_conf
@@ -183,76 +184,44 @@ def get_vrid_floating_ip_for_project(project_id):
         return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp
 
 
-def validate_interface_object(interface):
-    tags = []
-    ve_ips = []
-    new_interface_obj = {}
-    if not interface.get('interface_num'):
-        raise cfg.ConfigFileValueError(
-            'Missing `interface_num` in `interface_vlan_map` under [hardware_thunder] section.')
-    if interface.get('vlan_tags'):
-        for vlan_tag in interface.get('vlan_tags'):
-            if not vlan_tag.get('vlan_id'):
-                raise cfg.ConfigFileValueError('Missing `vlan_id` for `interface_num` ' +
-                                               str(interface.get('interface_num')) +
-                                               ' in `interface_vlan_map` under ' +
-                                               '[hardware_thunder] section.')
-            if vlan_tag.get('vlan_id') and vlan_tag.get('vlan_id') in tags:
-                raise cfg.ConfigFileValueError('Duplicate `vlan_tags` entry for `vlan_id` '
-                                               + str(vlan_tag.get('vlan_id')) +
-                                               ' found for `interface_num` '
-                                               + str(interface.get('interface_num')) +
-                                               ' in `interface_vlan_map` under ' +
-                                               '[hardware_thunder] section.')
-            tags.append(vlan_tag.get('vlan_id'))
-            ve_ips.append(validate_ve_ips(vlan_tag))
-    new_interface_obj['interface_num'] = interface.get('interface_num')
-    new_interface_obj['tags'] = tags
-    new_interface_obj['ve_ips'] = ve_ips
-    return data_models.Interface(**new_interface_obj)
+def convert_interface_to_data_model(interface_obj):
+    vlan_map_list = interface_obj.get('vlan_map_list')
+    interface_num = interface_obj.get('interface_num')
+    interface_dm = data_models.Interface()
+    if not interface_num:
+        raise exceptions.MissingInterfaceNumConfigError()
+    if not vlan_map_list:
+        LOG.warning("Empty vlan map provided in configuration file")
+    for vlan_map in vlan_map_list:
+        vlan_id = vlan_map.get('vlan_id')
+        if not vlan_id:
+            raise exceptions.MissingVlanIDConfigError(interface_num)
+        if vlan_id in interface_dm.tags:
+            raise exceptions.DuplicateVlanTagsConfigError(interface_num, vlan_id)
+        if vlan_map.get('use_dhcp'):
+            if vlan_map.get('ve_ip'):
+                raise exceptions.VirtEthCollisionConfigError(interface_num, vlan_id)
+            else:
+                interface_dm.ve_ips.append('dhcp')
+        else:
+            if not vlan_map.get('ve_ip'):
+                raise exceptions.VirtEthMissingConfigError(interface_num, vlan_id)
+            interface_dm.ve_ips.append(validate_partial_ipv4(vlan_map.get('ve_ip')))
+        interface_dm.tags.append(vlan_id)
+    interface_dm.interface_num = interface_num
 
-
-def validate_ve_ips(vlan_tag):
-    if vlan_tag.get('use_dhcp') and vlan_tag.get('ve_ip'):
-        raise cfg.ConfigFileValueError('Check settings for `vlan_id` ' +
-                                       str(vlan_tag.get('vlan_id')) +
-                                       '. Please do not set `ve_ip` in `interface_vlan_map`' +
-                                       ' when `use_dhcp` is True')
-        if not vlan_tag.get('use_dhcp'):
-            if not vlan_tag.get('ve_ip'):
-                raise cfg.ConfigFileValueError('Check settings for `vlan_id` ' +
-                                               str(vlan_tag.get('vlan_id')) +
-                                               '. Please set valid `ve_ip` in ' +
-                                               '`interface_vlan_map` when `use_dhcp` is False')
-            validate_partial_ipv4(vlan_tag.get('ve_ip'))
-    elif not vlan_tag.get('use_dhcp') and not vlan_tag.get('ve_ip'):
-        raise cfg.ConfigFileValueError('Missing both `use_dhcp` and `ve_ip` in config' +
-                                       ' for `vlan_id` ' + str(vlan_tag.get('vlan_id')) +
-                                       ' in `interface_vlan_map` ' +
-                                       'under [hardware_thunder] section. ' +
-                                       'Please provide either of them.')
-    if vlan_tag.get('use_dhcp'):
-        return 'dhcp'
-    else:
-        return vlan_tag.get('ve_ip')
+    return interface_dm
 
 
 def validate_interface_vlan_map(hardware_device):
-    ivmap = hardware_device.get('interface_vlan_map')
     device_network_map = []
-    interface_map = {}
-    eth_list = []
-    trunk_list = []
-    for device, device_obj in ivmap.items():
+    for device_id, device_obj in hardware_device.get('interface_vlan_map').items():
+        device_map = data_models.DeviceNetworkMap(device_id)
         if device_obj.get('ethernet_interfaces'):
             for eth in device_obj.get('ethernet_interfaces'):
-                eth_list.append(validate_interface_object(eth))
+                device_map.ethernet_interfaces.append(convert_interface_to_data_model(eth))
         if device_obj.get('trunk_interfaces'):
-            for eth in device_obj.get('trunk_interfaces'):
-                trunk_list.append(validate_interface_object(eth))
-        interface_map['device_id'] = device[-1]
-        interface_map['ethernet_interfaces'] = eth_list
-        interface_map['trunk_interfaces'] = trunk_list
-        device_network_map.append(data_models.DeviceNetworkMap(**interface_map))
-    hardware_device['device_network_map'] = device_network_map
-    return hardware_device
+            for trunk in device_obj.get('trunk_interfaces'):
+                device_map.trunk_interfaces.append(convert_interface_to_data_model(trunk))
+        device_network_map.append(device_map)
+    return device_network_map
