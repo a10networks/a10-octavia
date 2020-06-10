@@ -475,7 +475,7 @@ class TagEthernetBaseTask(VThunderBaseTask):
                 for device_obj in vthunder_conf.device_network_map:
                     for eth_interface in device_obj.ethernet_interfaces:
                         ifnum = eth_interface.interface_num
-                        for tag, ve_ip in list(zip(eth_interface.tags, eth_interface.ve_ips)):
+                        for tag, ve_ip in zip(eth_interface.tags, eth_interface.ve_ips):
                             self.tag_interface(create_vlan_id, str(tag), str(ifnum),
                                                ve_ip, vlan_subnet_id_dict)
 

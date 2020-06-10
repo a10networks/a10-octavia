@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from octavia.common import exceptions
 from octavia.i18n import _
 from octavia.network import base
@@ -32,3 +34,46 @@ class DeallocateTrunkException(base.NetworkException):
 
 class AllocateTrunkException(base.NetworkException):
     pass
+
+
+class MissingVlanIDConfigError(cfg.ConfigFileValueError):
+
+    def __init__(self, interface_num):
+        msg = ('Missing `vlan_id` attribute for `interface_num` {0} ' +
+               ' in `interface_vlan_map` under ' +
+               '[hardware_thunder] section.').format(interface_num)
+        super(MissingVlanIDConfigError, self).__init__(msg=msg)
+
+
+class DuplicateVlanTagsConfigError(cfg.ConfigFileValueError):
+
+    def __init__(self, interface_num, vlan_id):
+        msg = ('Duplicate `vlan_tags` entry of `vlan_id` {0} ' +
+               'found for `interface_num` {1} in `interface_vlan_map` under ' +
+               '[hardware_thunder] section.').format(vlan_id, interface_num)
+        super(DuplicateVlanTagsConfigError, self).__init__(msg=msg)
+
+
+class MissingInterfaceNumConfigError(cfg.ConfigFileValueError):
+
+    def __init__(self):
+        msg = ('Missing `interface_num` in `interface_vlan_map` under [hardware_thunder] section.')
+        super(MissingInterfaceNumConfigError, self).__init__(msg=msg)
+
+
+class VirtEthCollisionConfigError(cfg.ConfigFileValueError):
+
+    def __init__(self, interface_num, vlan_id):
+        msg = ('Check settings for `vlan_id` {0} of `interface_num` {1}. ' +
+               'Please set `use_dhcp` to False ' +
+               'before setting the `ve_ip`').format(vlan_id, interface_num)
+        super(VirtEthCollisionConfigError, self).__init__(msg=msg)
+
+
+class VirtEthMissingConfigError(cfg.ConfigFileValueError):
+
+    def __init__(self, interface_num, vlan_id):
+        msg = ('Check settings for `vlan_id` {0} of `interface_num` {1}. ' +
+               'Missing `use_dhcp` and `ve_ip` in config. ' +
+               'Please provide either.').format(vlan_id, interface_num)
+        super(VirtEthMissingConfigError, self).__init__(msg=msg)
