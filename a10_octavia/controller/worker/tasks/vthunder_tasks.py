@@ -34,7 +34,6 @@ from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
-from a10_octavia.controller.worker.tasks.decorators import device_context_switch_decorator
 
 
 CONF = cfg.CONF
@@ -429,24 +428,22 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         ve_ip = '.'.join(octets)
         return a10_utils.merge_host_and_network_ip(self._subnet.cidr, ve_ip)
 
-    @device_context_switch_decorator
     def tag_interface(self, is_trunk, create_vlan_id, vlan_id, ifnum, ve_info,
-                      vlan_subnet_id_dict, device_id=None, default_device_id=None):
+                      vlan_subnet_id_dict):
         if vlan_id not in vlan_subnet_id_dict:
             LOG.warning("vlan_id %s not in vlan_subnet_id_dict %s", vlan_id,
                         vlan_subnet_id_dict)
             return None
 
-        if_type = "trunk" if is_trunk else "ethernet"
         self.get_subnet_and_mask(vlan_subnet_id_dict[vlan_id])
 
         if not is_trunk:
             if not self.axapi_client.interface.ethernet.exists(ifnum):
-                LOG.error("%s interface %s does not exist", if_type, ifnum)
+                LOG.error("ethernet interface %s does not exist", ifnum)
                 raise
             eth = self.axapi_client.interface.ethernet.get(ifnum)
             if 'action' not in eth or not eth['action'] == 'disable':
-                LOG.warning("%s interface %s not enabled, enabling it", if_type, ifnum)
+                LOG.warning("ethernet interface %s not enabled, enabling it", ifnum)
                 self.axapi_client.interface.ethernet.update(ifnum, enable=True)
 
         vlan_exists = self.axapi_client.vlan.exists(vlan_id)
@@ -456,9 +453,10 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         if not vlan_exists:
             if is_trunk:
                 self.axapi_client.vlan.create(vlan_id, tagged_trunks=[ifnum], veth=True)
+                LOG.debug("Tagged ethernet interface %s with VLAN with id %s", ifnum, vlan_id)
             else:
                 self.axapi_client.vlan.create(vlan_id, tagged_eths=[ifnum], veth=True)
-            LOG.debug("Tagged %s interface %s with VLAN with id %s", if_type, ifnum, vlan_id)
+                LOG.debug("Tagged trunk interface %s with VLAN with id %s", ifnum, vlan_id)
         else:
             self.release_ve_ip_from_neutron(vlan_id, vlan_subnet_id_dict[vlan_id])
 
@@ -483,35 +481,13 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                     for eth_interface in device_obj.ethernet_interfaces:
                         ifnum = eth_interface.interface_num
                         for tag, ve_ip in zip(eth_interface.tags, eth_interface.ve_ips):
-                            self.tag_interface(create_vlan_id, str(tag), str(ifnum),
-                                               ve_ip, vlan_subnet_id_dict)
-
-"""
-TODO: need to refactor with above funcdef
-    def tag_interfaces(self, project_id, create_vlan_id):
-        if project_id in CONF.hardware_thunder.devices:
-            vthunder_conf = CONF.hardware_thunder.devices[project_id]
-            if vthunder_conf.device_network_map:
-                network_list = self.network_driver.list_networks()
-                vlan_subnet_id_dict = {}
-                for network in network_list:
-                    vlan_id = network.provider_segmentation_id
-                    vlan_subnet_id_dict[str(vlan_id)] = network.subnets[0]
-                default_device_id = self.axapi_client.system.action.get_vrrp_device_id()
-                interface_vlan_map = vthunder_conf.interface_vlan_map
-                for device_id in vthunder_conf.interface_vlan_map:
-                    interface_vlan_map = vthunder_conf.interface_vlan_map.get(device_id)
-                    for ifnum in interface_vlan_map:
-                        vlan_dict = interface_vlan_map[ifnum].get("vlan_map")
-                        is_trunk = False
-                        if "is_trunk" in interface_vlan_map[ifnum]:
-                            is_trunk = interface_vlan_map[ifnum].get("is_trunk")
-                        for vlan_id in vlan_dict:
-                            self.tag_interface(is_trunk, create_vlan_id, vlan_id, ifnum,
-                                               vlan_dict[vlan_id], vlan_subnet_id_dict,
-                                               device_id=device_id, 
-                                               default_device_id=default_device_id)
-"""
+                            self.tag_interface(False, create_vlan_id, str(tag),
+                                               str(ifnum), ve_ip, vlan_subnet_id_dict)
+                    for trunk_interface in device_obj.trunk_interfaces:
+                        ifnum = trunk_interface.interface_num
+                        for tag, ve_ip in zip(trunk_interface.tags, trunk_interface.ve_ips):
+                            self.tag_interface(True, create_vlan_id, str(tag),
+                                               str(ifnum), ve_ip, vlan_subnet_id_dict)
 
     def get_vlan_id(self, subnet_id, is_revert):
         self._subnet = self.network_driver.get_subnet(subnet_id)
