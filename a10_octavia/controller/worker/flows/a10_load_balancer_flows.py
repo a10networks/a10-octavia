@@ -180,7 +180,7 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         if CONF.a10_global.network_type == 'vlan':
-            delete_LB_flow.add(vthunder_tasks.DeleteEthernetTagIfNotInUseForLB(
+            delete_LB_flow.add(vthunder_tasks.DeleteInterfaceTagIfNotInUseForLB(
                 requires=[constants.LOADBALANCER,
                           a10constants.VTHUNDER]))
 
@@ -286,7 +286,7 @@ class LoadBalancerFlows(object):
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         if CONF.a10_global.network_type == 'vlan':
-            update_LB_flow.add(vthunder_tasks.TagEthernetForLB(
+            update_LB_flow.add(vthunder_tasks.TagInterfaceForLB(
                 requires=[constants.LOADBALANCER,
                           a10constants.VTHUNDER]))
         update_LB_flow.add(database_tasks.MarkLBActiveInDB(
@@ -334,7 +334,7 @@ class LoadBalancerFlows(object):
         post_create_lb_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         if CONF.a10_global.network_type == 'vlan':
-            post_create_lb_flow.add(vthunder_tasks.TagEthernetForLB(
+            post_create_lb_flow.add(vthunder_tasks.TagInterfaceForLB(
                 requires=[constants.LOADBALANCER,
                           a10constants.VTHUNDER]))
         if mark_active:
