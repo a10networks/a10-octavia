@@ -52,6 +52,7 @@ def validate_partial_ipv4(address):
     if not netaddr.valid_ipv4('.'.join(octets), netaddr.core.INET_PTON):
         raise cfg.ConfigFileValueError('Invalid partial IPAddress value given'
                                        ' in configuration: {0}'.format(address))
+    return address
 
 
 def validate_partition(hardware_device):
@@ -185,7 +186,7 @@ def get_vrid_floating_ip_for_project(project_id):
 
 
 def convert_interface_to_data_model(interface_obj):
-    vlan_map_list = interface_obj.get('vlan_map_list')
+    vlan_map_list = interface_obj.get('vlan_map')
     interface_num = interface_obj.get('interface_num')
     interface_dm = data_models.Interface()
     if not interface_num:
