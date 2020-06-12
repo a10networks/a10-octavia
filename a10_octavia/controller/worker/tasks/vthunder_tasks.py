@@ -479,15 +479,21 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                     vlan_subnet_id_dict[str(vlan_id)] = network.subnets[0]
                 for device_obj in vthunder_conf.device_network_map:
                     for eth_interface in device_obj.ethernet_interfaces:
-                        ifnum = eth_interface.interface_num
-                        for tag, ve_ip in zip(eth_interface.tags, eth_interface.ve_ips):
-                            self.tag_interface(False, create_vlan_id, str(tag),
-                                               str(ifnum), ve_ip, vlan_subnet_id_dict)
+                        ifnum = str(eth_interface.interface_num)
+                        assert len(eth_interface.tags) == len(eth_interface.ve_ips)
+                        for i in range(len(eth_interface.tags)):
+                            tag = str(eth_interface.tags[i])
+                            ve_ip = eth_interface.ve_ips[i]
+                            self.tag_interface(False, create_vlan_id, tag, ifnum,
+                                               ve_ip, vlan_subnet_id_dict)
                     for trunk_interface in device_obj.trunk_interfaces:
-                        ifnum = trunk_interface.interface_num
-                        for tag, ve_ip in zip(trunk_interface.tags, trunk_interface.ve_ips):
-                            self.tag_interface(True, create_vlan_id, str(tag),
-                                               str(ifnum), ve_ip, vlan_subnet_id_dict)
+                        ifnum = str(trunk_interface.interface_num)
+                        assert len(trunk_interface.tags) == len(trunk_interface.ve_ips)
+                        for i in range(len(trunk_interface.tags)):
+                            tag = str(trunk_interface.tags[i])
+                            ve_ip = trunk_interface.ve_ips[i]
+                            self.tag_interface(True, create_vlan_id, tag, ifnum,
+                                               ve_ip, vlan_subnet_id_dict)
 
     def get_vlan_id(self, subnet_id, is_revert):
         self._subnet = self.network_driver.get_subnet(subnet_id)
