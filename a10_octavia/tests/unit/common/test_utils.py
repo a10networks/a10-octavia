@@ -22,6 +22,7 @@ except ImportError:
 from oslo_config import cfg
 
 from a10_octavia.common import data_models
+from a10_octavia.common import exceptions
 from a10_octavia.common import utils
 from a10_octavia.tests.common import a10constants
 
@@ -77,6 +78,24 @@ HARDWARE_DEVICE_LIST = [
 DUPLICATE_PARTITION_HARDWARE_DEVICE_LIST = [DUP_PARTITION_HARDWARE_INFO, HARDWARE_INFO]
 RESULT_HARDWARE_DEVICE_LIST = {'project-1': VTHUNDER_1,
                                'project-2': VTHUNDER_2}
+
+INTERFACE_CONF = {"interface_num": 1,
+                  "vlan_map_list": [
+                      {"vlan_id": 11, "ve_ip": "10.20"},
+                      {"vlan_id": 12, "use_dhcp": True},
+                      {"vlan_id": 13, "ve_ip": "10.30"}]
+                  }
+INTERFACE = data_models.Interface(interface_num=1, tags=[11, 12, 13], ve_ips=[
+                                  "10.20", "dhcp", "10.30"])
+DEVICE_NETWORK_MAP = [data_models.DeviceNetworkMap(
+    device_id='device_1', ethernet_interfaces=[INTERFACE])]
+HARDWARE_VLAN_INFO = {
+    "interface_vlan_map": {
+        "device_1": {
+            "ethernet_interfaces": [INTERFACE_CONF]
+        }
+    }
+}
 
 
 class FakeProject(object):
@@ -176,13 +195,13 @@ class TestUtils(unittest.TestCase):
 
     def test_check_ip_in_subnet_range_valid(self):
         self.assertEqual(utils.check_ip_in_subnet_range('10.10.10.1', '10.10.10.1',
-                         '255.255.255.255'), True)
+                                                        '255.255.255.255'), True)
         self.assertEqual(utils.check_ip_in_subnet_range('10.10.10.1', '10.10.11.0',
-                         '255.255.255.0'), False)
+                                                        '255.255.255.0'), False)
         self.assertEqual(utils.check_ip_in_subnet_range('10.10.10.1', '10.10.0.0',
-                         '255.255.0.0'), True)
+                                                        '255.255.0.0'), True)
         self.assertEqual(utils.check_ip_in_subnet_range('10.11.10.2', '10.10.0.0',
-                         '255.255.0.0'), False)
+                                                        '255.255.0.0'), False)
 
     def test_check_ip_in_subnet_range_invalid(self):
         self.assertRaises(Exception, utils.check_ip_in_subnet_range, '1010.10.10.2',
@@ -202,3 +221,39 @@ class TestUtils(unittest.TestCase):
 
     def test_merge_host_and_network_ip_invalid(self):
         self.assertRaises(Exception, utils.merge_host_and_network_ip, '10.10.10.0/42', '99')
+
+    def test_validate_interface_vlan_map(self):
+        self.assertEqual(utils.validate_interface_vlan_map(HARDWARE_VLAN_INFO), DEVICE_NETWORK_MAP)
+
+    def test_convert_interface_to_data_model_with_valid_config(self):
+        self.assertEqual(utils.convert_interface_to_data_model(INTERFACE_CONF), INTERFACE)
+
+    def test_convert_interface_to_data_model_with_invalid_config(self):
+        missing_iface_num_in_iface_obj = {}
+        self.assertRaises(exceptions.MissingInterfaceNumConfigError,
+                          utils.convert_interface_to_data_model, missing_iface_num_in_iface_obj)
+        missing_vlan_id_in_iface_obj = {"interface_num": 1,
+                                        "vlan_map_list": [{}]}
+        self.assertRaises(exceptions.MissingVlanIDConfigError,
+                          utils.convert_interface_to_data_model, missing_vlan_id_in_iface_obj)
+        missing_ve_ip_in_iface_obj = {"interface_num": 1,
+                                      "vlan_map_list": [
+                                          {"vlan_id": 11}]}
+        self.assertRaises(exceptions.VirtEthMissingConfigError,
+                          utils.convert_interface_to_data_model, missing_ve_ip_in_iface_obj)
+        ve_ips_collision_in_iface_obj = {"interface_num": 1,
+                                         "vlan_map_list": [
+                                             {"vlan_id": 11, "use_dhcp": True, "ve_ip": "10.30"}]}
+        self.assertRaises(exceptions.VirtEthCollisionConfigError,
+                          utils.convert_interface_to_data_model, ve_ips_collision_in_iface_obj)
+        missing_ve_ip_in_iface_obj = {"interface_num": 1,
+                                      "vlan_map_list": [
+                                          {"vlan_id": 11, "use_dhcp": False}]}
+        self.assertRaises(exceptions.VirtEthMissingConfigError,
+                          utils.convert_interface_to_data_model, missing_ve_ip_in_iface_obj)
+        duplicate_vlan_ids_in_iface_obj = {"interface_num": 1,
+                                           "vlan_map_list": [
+                                               {"vlan_id": 11, "ve_ip": "10.20"},
+                                               {"vlan_id": 11, "use_dhcp": True}]}
+        self.assertRaises(exceptions.DuplicateVlanTagsConfigError,
+                          utils.convert_interface_to_data_model, duplicate_vlan_ids_in_iface_obj)
