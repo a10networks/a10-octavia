@@ -40,7 +40,9 @@ class BaseDatabaseTask(task.Task):
     def __init__(self, **kwargs):
         self.repos = repo.Repositories()
         self.vthunder_repo = a10_repo.VThunderRepository()
+        self.vrid_repo = a10_repo.VRIDRepository()
         self.amphora_repo = repo.AmphoraRepository()
+        self.member_repo = a10_repo.MemberRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -122,7 +124,7 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
         vthunder = self.vthunder_repo.get_vthunder_from_lb(
             db_apis.get_session(), loadbalancer_id)
         if vthunder is None:
-            raise
+            return None
         if (vthunder.undercloud and vthunder.hierarchical_multitenancy and
                 CONF.a10_global.use_parent_partition):
             parent_project_id = utils.get_parent_project(vthunder.project_id)
@@ -305,3 +307,48 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
             updated_at=datetime.utcnow())
         LOG.info("Successfully created vthunder entry in database.")
         return vthunder
+
+
+class GetVRIDForProjectMember(BaseDatabaseTask):
+
+    def execute(self, member):
+        project_id = member.project_id
+        vrid = self.vrid_repo.get_vrid_from_project_id(
+            db_apis.get_session(), project_id=project_id)
+        return vrid
+
+
+class UpdateVRIDForProjectMember(BaseDatabaseTask):
+
+    def execute(self, member, vrid, port):
+        if port:
+            if vrid:
+                self.vrid_repo.update(
+                    db_apis.get_session(),
+                    vrid.id,
+                    vrid_floating_ip=port.fixed_ips[0].ip_address,
+                    vrid_port_id=port.id)
+            else:
+                self.vrid_repo.create(db_apis.get_session(),
+                                      project_id=member.project_id,
+                                      vrid_floating_ip=port.fixed_ips[0].ip_address,
+                                      vrid_port_id=port.id)
+
+
+class CountMembersInProject(BaseDatabaseTask):
+    def execute(self, member):
+        try:
+            return self.member_repo.get_member_count(
+                db_apis.get_session(),
+                project_id=member.project_id)
+        except Exception as e:
+            LOG.exception("Failed to get count of members in given project: %s", str(e))
+
+
+class DeleteVRIDEntry(BaseDatabaseTask):
+    def execute(self, vrid, delete_vrid):
+        if vrid and delete_vrid:
+            try:
+                self.vrid_repo.delete(db_apis.get_session(), id=vrid.id)
+            except Exception as e:
+                LOG.exception("Failed to delete VRID entry from vrid table: %s", str(e))

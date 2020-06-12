@@ -203,9 +203,106 @@ devices = [
              ]
 ```
 
+### 3c. Configuring High Availability for VThunders
+
+<pre>
+[a10_controller_worker]
+amp_secgroup_list = &lt;security_group_to_apply&gt;
+amp_boot_network_list = &lt;netword_id_to_boot_amphorae_in_admin_project&gt;
+amp_ssh_key_name = &lt;ssh_key_for_amphorae&gt;
+network_driver = a10_octavia_neutron_driver
+workers = 2
+amp_active_retries = 100
+amp_active_wait_sec = 2
+<b>loadbalancer_topology = ACTIVE_STANDBY</b>
+</pre>
+
+To enable HA deployment, when using vThunders, the `loadbalancer_topology` setting must be set to `ACTIVE_STANDBY`. In this deployment mode, two vThunders are created per tenant. The configurations will be synced between the vThunders.
+
+### 3d. Configuring High Availability for hardware devices
+
+It is expected for an operator to configure two hardware devices in a VRRPA set and an aVCS cluster. The IP address provided in the `[hardware_thunder]` configuration group must be the floating IP of the aVCS cluster. As the operator will configure VRRPA and aVCS out of band, it is not possible for openstack to verify that the provided IP address is for an aVCS cluster or a single device. For this reason, the `loadbalancer_topology` configuration setting is ignored by hardware devices.
+
+<pre>
+[a10_controller_worker]
+network_driver = a10_octavia_neutron_driver
+loadbalancer_topology = ACTIVE_STANDBY
+
+[hardware_thunder]
+devices = [
+                    {
+                     "project_id":"&lt;project_id&gt;",
+                     "ip_address":"10.0.0.4",
+                     "username":"&lt;username&gt;",
+                     "password":"&lt;password&gt;",
+                     "device_name":"&lt;device_name&gt;"
+                     },
+                     {
+                     "project_id":"&lt;another_project_id&gt;",
+                     "ip_address":"10.0.0.5",
+                     "username":"&lt;username&gt;",
+                     "password":"&lt;password&gt;",
+                     "device_name":"&lt;device_name&gt;",
+                     "partition_name" : "&lt;partition_name&gt;"
+                     }
+             ]
+</pre>
+
+
+To support VRRPA floating IP config for hardware devices, `vrid_floating_ip` setting can be included along with above config at global or local level.
+The valid values for `vrid_floating_ip` can be set as `dhcp`, partial IP octets such as '45', '.45', '0.0.45' or a full IPv4 address.
+
+##### How the VRID floating IP is allocated ?
+
+**Case 1: DHCP **
+
+In this case, when a member is created, the VRID floating IP is allocated from the available ip range in the subnet it was created in. Please note, should a member be added to the pool from a different subnet, a VRID floating IP will be allocated from that subnet even if one has already been allocated from another subnet.
+
+**Case 2: Static IP **
+
+In this case, when a member is created, the VRID floating IP is allocated using the provided static IP. If a partial IP be provided, an attempt will be made to join the partial IP with the member's subnet. Should the provided static IP be out of range of the member's subnet, then an error will be thrown.
+
+
+#### 3da. For setting VRRPA floating IP in a10-octavia.conf at global level
+
+<pre>
+[a10_global]
+<b>vrid_floating_ip = "dhcp"</b>
+</pre>
+
+#### 3db. For setting VRRPA floating IP in a10-octavia.conf at local level
+
+For local, `vrid_floating_ip` setting can be mentioned inside the `[hardware_devices]`.
+
+<pre>
+[hardware_thunder]
+devices = [
+                    {
+                     "project_id":"&lt;project_id&gt;",
+                     "ip_address":"10.0.0.4",
+                     "username":"&lt;username&gt;",
+                     "password":"&lt;password&gt;",
+                     "device_name":"&lt;device_name&gt;"
+                     <b>"vrid_floating_ip": ".45"</b>
+                     },
+                     {
+                     "project_id":"&lt;another_project_id&gt;",
+                     "ip_address":"10.0.0.5",
+                     "username":"&lt;username&gt;",
+                     "password":"&lt;password&gt;",
+                     "device_name":"&lt;device_name&gt;",
+                     "partition_name" : "&lt;partition_name&gt;"
+                     <b>"vrid_floating_ip": "10.10.13.45"</b>
+                     }
+             ]
+</pre>
+
+Note: If the option is set at the local and global level, then the local configuration option shall be used.
+ 
 Full list of options can be found here: [Config Options Module](https://github.com/a10networks/a10-octavia/blob/master/a10_octavia/common/config_options.py)
 
 *Note: trailing "," are invalid in device config type*
+
 
 ### 4. Run database migrations
 

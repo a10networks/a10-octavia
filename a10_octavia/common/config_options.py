@@ -33,6 +33,8 @@ LOG = logging.getLogger(__name__)
 
 
 A10_GLOBAL_OPTS = [
+    cfg.StrOpt('vrid_floating_ip', default=None,
+               help=_('Enable VRID floating IP feature')),
     cfg.BoolOpt('enable_hierarchical_multitenancy', default=False,
                 help=_('Enable Hierarchical Multitenancy '
                        'for racked - hardware thunder devices.')),

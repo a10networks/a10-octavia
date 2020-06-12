@@ -32,3 +32,7 @@ class DeallocateTrunkException(base.NetworkException):
 
 class AllocateTrunkException(base.NetworkException):
     pass
+
+
+class VRIDIPNotInSubentRangeError(base.NetworkException):
+    pass
