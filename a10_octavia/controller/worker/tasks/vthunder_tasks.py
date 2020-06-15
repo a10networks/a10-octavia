@@ -442,7 +442,8 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                 LOG.error("ethernet interface %s does not exist", ifnum)
                 raise
             eth = self.axapi_client.interface.ethernet.get(ifnum)
-            if 'action' not in eth or not eth['action'] == 'disable':
+            if ('ethernet' in eth and ('action' not in eth['ethernet'] or
+                                       eth['ethernet']['action'] == 'disable')):
                 LOG.warning("ethernet interface %s not enabled, enabling it", ifnum)
                 self.axapi_client.interface.ethernet.update(ifnum, enable=True)
 
