@@ -94,10 +94,10 @@ class TestUtils(unittest.TestCase):
         self.assertRaises(cfg.ConfigFileValueError, utils.validate_ipv4, 'abc')
 
     def test_validate_partial_ipv4_valid(self):
-        self.assertEqual(utils.validate_partial_ipv4('10'), None)
-        self.assertEqual(utils.validate_partial_ipv4('.10'), None)
-        self.assertEqual(utils.validate_partial_ipv4('.5.11.10'), None)
-        self.assertEqual(utils.validate_partial_ipv4('11.5.11.10'), None)
+        self.assertEqual(utils.validate_partial_ipv4('10'), '10')
+        self.assertEqual(utils.validate_partial_ipv4('.10'), '.10')
+        self.assertEqual(utils.validate_partial_ipv4('.5.11.10'), '.5.11.10')
+        self.assertEqual(utils.validate_partial_ipv4('11.5.11.10'), '11.5.11.10')
 
     def test_validate_partial_ipv4_invalid(self):
         self.assertRaises(cfg.ConfigFileValueError, utils.validate_partial_ipv4, '777')
