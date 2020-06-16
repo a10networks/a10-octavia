@@ -199,9 +199,6 @@ devices = [
                      "password":"<password>",
                      "device_name":"<device_name>",
                      "partition_name" : "<partition_name>"
-                     "interface_vlan_map":{
-                         {"1": {"11": {"use_dhcp": True}, "12":{"use_dhcp": True}}}
-                       }
                      }
              ]
 ```
@@ -302,6 +299,56 @@ devices = [
 
 Note: If the option is set at the local and global level, then the local configuration option shall be used.
  
+=======
+#### 3bc. Configuring VLAN and Virtual Ethernet for hardware devices
+
+In the VLAN Network setup, for configuring the VLAN and Virtual Ethernet(VE) interfaces in the hardware thunder device, `network_type` setting in `[A10_GLOBAL]` configuration section should be set to "vlan" string. VLAN and VE configuration for the ethernet interfaces or trunk interfaces should be specified in `interface_vlan_map` setting in the `[hardware_thunder]` device configuration section. The `interface_vlan_map` setting is a json map. For a single device it can have key "device_1" with data or two keys "device_1" and "device_2" for aVCS cluster device.
+
+##### 3bca. Sample a10-octavia.conf for VLAN and VE settings
+
+```shell
+<pre>
+[a10_controller_worker]
+network_type = "vlan"
+
+[hardware_thunder]
+devices = [
+              {
+               "project_id":"<project_id>",
+               "ip_address":"10.0.0.4",
+               "username":"<username>",
+               "password":"<password>",
+               "device_name":"<device_name>"
+               "interface_vlan_map": {
+                   "device_1": {
+                       "ethernet_interfaces": [{
+                           "interface_num": 1,
+                           "vlan_map": [
+                               {"vlan_id": 11, "use_dhcp": "True"}
+                           ]
+                       }],
+                       "trunk_interfaces": [{
+                           "interface_num": 1,
+                           "vlan_map": [
+                               {"vlan_id": 11, "ve_ip": ".10"},
+                               {"vlan_id": 12, "ve_ip": ".10"}
+                           ]
+                       }],
+                   }
+               }
+              }
+          ]
+</pre>
+```
+
+##### 3bcb. Configuring VLAN and VE for Ethernet Interfaces
+
+With each device the ethernet interfaces settings can be specified as an array within the key "ethernet_interfaces". Each interface information contains a key "interface_num" indicating the ethernet interface number on which the "vlan_map" config will be applied. The key "vlan_map" contains an array with VLANs informations corresponding to the interface_num. The VLAN information contains "vlan_id" and the VE information. The VE information consists of either partial or complete "ve_ip" or a flag "use_dhcp" set to "True".
+
+##### 3bcc. Configuring VLAN and VE for Trunk Interfaces
+
+In order to configure VLAN and VE on trunk interfaces, the hardware thunder should have the trunk-group configurations set on the corresponding ethernet interfaces. Also system promiscuous-mode should be enabled on the hardware thunder, before applying the VLAN and VE on trunk interfaces. The "trunk_interfaces" configuration is similar to "ethernet_interfaces" configuration. Only difference being the "interface_num" within "trunk_interfaces" configuration specifies the trunk-group number on which the VLAN and VE needs to be configured.
+
 Full list of options can be found here: [Config Options Module](https://github.com/a10networks/a10-octavia/blob/master/a10_octavia/common/config_options.py)
 
 *Note: trailing "," are invalid in device config type*
