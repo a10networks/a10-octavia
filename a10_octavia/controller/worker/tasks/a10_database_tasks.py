@@ -122,7 +122,7 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
         vthunder = self.vthunder_repo.get_vthunder_from_lb(
             db_apis.get_session(), loadbalancer_id)
         if vthunder is None:
-            raise
+            return None
         if (vthunder.undercloud and vthunder.hierarchical_multitenancy and
                 CONF.a10_global.use_parent_partition):
             parent_project_id = utils.get_parent_project(vthunder.project_id)

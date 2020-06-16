@@ -34,6 +34,7 @@ from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import device_context_switch_decorator
 
 
 CONF = cfg.CONF
@@ -427,9 +428,17 @@ class TagInterfaceBaseTask(VThunderBaseTask):
             octets.insert(0, '0')
         ve_ip = '.'.join(octets)
         return a10_utils.merge_host_and_network_ip(self._subnet.cidr, ve_ip)
+    
+    @device_context_switch_decorator
+    def delete_device_vlan(self, vlan_id, subnet_id, device_id=None, default_device_id=None):
+        if self.axapi_client.vlan.exists(vlan_id):
+            LOG.debug("Delete VLAN with id %s", vlan_id)
+            self.release_ve_ip_from_neutron(vlan_id, subnet_id)
+            self.axapi_client.vlan.delete(vlan_id)
 
+    @device_context_switch_decorator
     def tag_interface(self, is_trunk, create_vlan_id, vlan_id, ifnum, ve_info,
-                      vlan_subnet_id_dict):
+                      vlan_subnet_id_dict, device_id=None, default_device_id=None):
         if vlan_id not in vlan_subnet_id_dict:
             LOG.warning("vlan_id %s not in vlan_subnet_id_dict %s", vlan_id,
                         vlan_subnet_id_dict)
@@ -442,7 +451,8 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                 LOG.error("ethernet interface %s does not exist", ifnum)
                 raise
             eth = self.axapi_client.interface.ethernet.get(ifnum)
-            if 'action' not in eth or not eth['action'] == 'disable':
+	    import rpdb; rpdb.set_trace()
+            if 'ethernet' in eth and ('action' not in eth['ethernet'] or eth['ethernet']['action'] == 'disable'):
                 LOG.warning("ethernet interface %s not enabled, enabling it", ifnum)
                 self.axapi_client.interface.ethernet.update(ifnum, enable=True)
 
@@ -477,12 +487,16 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                 for network in network_list:
                     vlan_id = network.provider_segmentation_id
                     vlan_subnet_id_dict[str(vlan_id)] = network.subnets[0]
+                default_device_id = self.axapi_client.system.action.get_vrrp_device_id()
                 for device_obj in vthunder_conf.device_network_map:
+                    device_id = device_obj.vcs_device_id
                     for eth_interface in device_obj.ethernet_interfaces:
                         ifnum = eth_interface.interface_num
                         for tag, ve_ip in zip(eth_interface.tags, eth_interface.ve_ips):
                             self.tag_interface(False, create_vlan_id, str(tag),
-                                               str(ifnum), ve_ip, vlan_subnet_id_dict)
+                                               str(ifnum), ve_ip, vlan_subnet_id_dict,
+                                               device_id=device_id,
+                                               default_device_id=default_device_id)
                     for trunk_interface in device_obj.trunk_interfaces:
                         ifnum = trunk_interface.interface_num
                         for tag, ve_ip in zip(trunk_interface.tags, trunk_interface.ve_ips):
@@ -561,30 +575,33 @@ class DeleteInterfaceTagIfNotInUseForLB(TagInterfaceBaseTask):
         try:
             if loadbalancer.project_id in CONF.hardware_thunder.devices:
                 self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
+                vthunder_conf = CONF.hardware_thunder.devices[loadbalancer.project_id]
                 if self.is_vlan_deletable():
                     vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
-                    if self.axapi_client.vlan.exists(vlan_id):
-                        LOG.debug("Delete VLAN with id %s", vlan_id)
-                        self.release_ve_ip_from_neutron(vlan_id, loadbalancer.vip.subnet_id)
-                        self.axapi_client.vlan.delete(vlan_id)
+                    default_device_id = self.axapi_client.system.action.get_vrrp_device_id()
+                    for device_obj in vthunder_conf.device_network_map:
+                        device_id = device_obj.vcs_device_id
+                        self.delete_device_vlan(vlan_id, loadbalancer.vip.subnet_id, device_id=device_id, 
+                        				default_device_id=default_device_id)
         except Exception as e:
             LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
 
 
 class DeleteInterfaceTagIfNotInUseForMember(TagInterfaceBaseTask):
-
     """Task to untag Ethernet/Trunk Interface on a vThunder device from member subnet"""
 
     @axapi_client_decorator
     def execute(self, member, vthunder):
         try:
             if member.project_id in CONF.hardware_thunder.devices:
+                vthunder_conf = CONF.hardware_thunder.devices[member.project_id]
                 self.get_subnet_and_mask(member.subnet_id)
                 if self.is_vlan_deletable():
                     vlan_id = self.get_vlan_id(member.subnet_id, False)
-                    if self.axapi_client.vlan.exists(vlan_id):
-                        LOG.info("Delete VLAN with id %s", vlan_id)
-                        self.release_ve_ip_from_neutron(vlan_id, member.subnet_id)
-                        self.axapi_client.vlan.delete(vlan_id)
+                    default_device_id = self.axapi_client.system.action.get_vrrp_device_id()
+                    for device_obj in vthunder_conf.device_network_map:
+                        device_id = device_obj.vcs_device_id
+                        self.delete_device_vlan(vlan_id, member.subnet_id, device_id=device_id,
+                                                        default_device_id=default_device_id)
         except Exception as e:
             LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
