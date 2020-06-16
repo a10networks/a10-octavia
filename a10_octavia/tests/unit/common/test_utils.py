@@ -80,7 +80,7 @@ RESULT_HARDWARE_DEVICE_LIST = {'project-1': VTHUNDER_1,
                                'project-2': VTHUNDER_2}
 
 INTERFACE_CONF = {"interface_num": 1,
-                  "vlan_map_list": [
+                  "vlan_map": [
                       {"vlan_id": 11, "ve_ip": "10.20"},
                       {"vlan_id": 12, "use_dhcp": True},
                       {"vlan_id": 13, "ve_ip": "10.30"}]
@@ -233,26 +233,26 @@ class TestUtils(unittest.TestCase):
         self.assertRaises(exceptions.MissingInterfaceNumConfigError,
                           utils.convert_interface_to_data_model, missing_iface_num_in_iface_obj)
         missing_vlan_id_in_iface_obj = {"interface_num": 1,
-                                        "vlan_map_list": [{}]}
+                                        "vlan_map": [{}]}
         self.assertRaises(exceptions.MissingVlanIDConfigError,
                           utils.convert_interface_to_data_model, missing_vlan_id_in_iface_obj)
         missing_ve_ip_in_iface_obj = {"interface_num": 1,
-                                      "vlan_map_list": [
+                                      "vlan_map": [
                                           {"vlan_id": 11}]}
         self.assertRaises(exceptions.VirtEthMissingConfigError,
                           utils.convert_interface_to_data_model, missing_ve_ip_in_iface_obj)
         ve_ips_collision_in_iface_obj = {"interface_num": 1,
-                                         "vlan_map_list": [
+                                         "vlan_map": [
                                              {"vlan_id": 11, "use_dhcp": True, "ve_ip": "10.30"}]}
         self.assertRaises(exceptions.VirtEthCollisionConfigError,
                           utils.convert_interface_to_data_model, ve_ips_collision_in_iface_obj)
         missing_ve_ip_in_iface_obj = {"interface_num": 1,
-                                      "vlan_map_list": [
+                                      "vlan_map": [
                                           {"vlan_id": 11, "use_dhcp": False}]}
         self.assertRaises(exceptions.VirtEthMissingConfigError,
                           utils.convert_interface_to_data_model, missing_ve_ip_in_iface_obj)
         duplicate_vlan_ids_in_iface_obj = {"interface_num": 1,
-                                           "vlan_map_list": [
+                                           "vlan_map": [
                                                {"vlan_id": 11, "ve_ip": "10.20"},
                                                {"vlan_id": 11, "use_dhcp": True}]}
         self.assertRaises(exceptions.DuplicateVlanTagsConfigError,
