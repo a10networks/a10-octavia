@@ -33,8 +33,17 @@ RACK_DEVICE_1 = {
     "device_name": "rack_thunder_1",
     "username": "abc",
     "password": "abc",
-    "interface_vlan_map": {"5": {"11": {"use_dhcp": "True"},
-                                 "12": {"ve_ip_address": ".10"}}}
+    "interface_vlan_map": {
+        "device_1": {
+            "ethernet_interfaces": [{
+                "interface_num": "5",
+                "vlan_map": [
+                    {"vlan_id": 11, "use_dhcp": "True"},
+                    {"vlan_id": 12, "ve_ip": ".10"}
+                ]
+            }]
+        }
+    }
 }
 
 RACK_DEVICE_2 = {
@@ -46,14 +55,16 @@ RACK_DEVICE_2 = {
     'partition_name': 'def-sample'
 }
 
-VTHUNDER_1 = data_models.VThunder(project_id="project-1", device_name="rack_thunder_1",
-                                  undercloud=True, username="abc", password="abc",
-                                  ip_address="10.0.0.1", partition_name="shared",
-                                  interface_vlan_map='{"5": {"11": {"use_dhcp": "True"},'
-                                  '"12": {"ve_ip_address": ".10"}}}')
-VTHUNDER_2 = data_models.VThunder(project_id="project-2", device_name="rack_thunder_2",
-                                  undercloud=True, username="def", password="def",
-                                  ip_address="11.0.0.1", partition_name="def-sample")
+VTHUNDER_1 = data_models.HardwareThunder(project_id="project-1", device_name="rack_thunder_1",
+                                         undercloud=True, username="abc", password="abc",
+                                         ip_address="10.0.0.1", partition_name="shared",
+                                         device_network_map='"device_1":{"ethernet_interfaces":'
+                                         '[{"interface_num": "5", "vlan_map": ['
+                                         '{"vlan_id": 11, "use_dhcp": "True"},'
+                                         '{"vlan_id": 12, "ve_ip": ".10"}]}]}}')
+VTHUNDER_2 = data_models.HardwareThunder(project_id="project-2", device_name="rack_thunder_2",
+                                         undercloud=True, username="def", password="def",
+                                         ip_address="11.0.0.1", partition_name="def-sample")
 
 RESULT_RACK_DEVICE_LIST = {'project-1': VTHUNDER_1,
                            'project-2': VTHUNDER_2}
@@ -70,23 +81,23 @@ class TestConfigTypes(base.TestCase):
         self.conf.reset()
 
     def test_rack_device_valid_devices(self):
-        self.conf.register_opts(config_options.A10_RACK_VTHUNDER_OPTS,
-                                group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([RACK_DEVICE_1, RACK_DEVICE_2])
-        self.conf.config(group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION,
+        self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
-        self.assertIn('project-1', CONF.rack_vthunder.devices)
-        self.assertIn('project-2', CONF.rack_vthunder.devices)
-        self.assertEqual('rack_thunder_1', CONF.rack_vthunder.devices['project-1'].device_name)
-        self.assertEqual('rack_thunder_2', CONF.rack_vthunder.devices['project-2'].device_name)
+        self.assertIn('project-1', CONF.hardware_thunder.devices)
+        self.assertIn('project-2', CONF.hardware_thunder.devices)
+        self.assertEqual('rack_thunder_1', CONF.hardware_thunder.devices['project-1'].device_name)
+        self.assertEqual('rack_thunder_2', CONF.hardware_thunder.devices['project-2'].device_name)
 
     def test_rack_device_valid_no_devices(self):
-        self.conf.register_opts(config_options.A10_RACK_VTHUNDER_OPTS,
-                                group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([])
-        self.conf.config(group=a10constants.A10_RACK_VTHUNDER_CONF_SECTION,
+        self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
-        self.assertEqual(CONF.rack_vthunder.devices, {})
+        self.assertEqual(CONF.hardware_thunder.devices, {})
 
     def test_rack_device_valid_invalid_array(self):
         devices_str = '[' + json.dumps(RACK_DEVICE_1)

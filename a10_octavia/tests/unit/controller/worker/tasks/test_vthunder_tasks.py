@@ -38,6 +38,7 @@ VLAN_ID = '11'
 VE_IP_VLAN_ID = '12'
 DELETE_VLAN = True
 TAG_INTERFACE = '5'
+TAG_TRUNK_INTERFACE = '1'
 ETH_DATA = {"action": "enable"}
 SUBNET_MASK = ["10.0.11.0", "255.255.255.0", "10.0.11.0/24"]
 VE_IP_SUBNET_MASK = ["10.0.12.0", "255.255.255.0", "10.0.12.0/24"]
@@ -47,8 +48,34 @@ RACK_DEVICE = {
     "device_name": "rack_vthunder",
     "username": "abc",
     "password": "abc",
-    "interface_vlan_map": {"5": {"11": {"use_dhcp": "True"},
-                                 "12": {"ve_ip_address": ".10"}}}
+    "interface_vlan_map": {
+        "device_1": {
+            "ethernet_interfaces": [{
+                "interface_num": "5",
+                "vlan_map": [
+                    {"vlan_id": 11, "use_dhcp": "True"},
+                    {"vlan_id": 12, "ve_ip": ".10"}
+                ]
+            }]
+        }
+    }
+}
+RACK_DEVICE_TRUNK_INTERFACE = {
+    "project_id": "project-rack-vthunder",
+    "ip_address": "10.0.0.1",
+    "device_name": "rack_vthunder",
+    "username": "abc",
+    "password": "abc",
+    "interface_vlan_map": {
+        "device_1": {
+            "trunk_interfaces": [{
+                "interface_num": "1",
+                "vlan_map": [
+                    {"vlan_id": 12, "ve_ip": ".10"}
+                ]
+            }]
+        }
+    }
 }
 DEL_VS_LIST = {"virtual-server-list": [{"ip-address": "10.0.1.1"}]}
 DEL_SERVER_LIST = {"server-list": [{"host": "10.0.2.1"}]}
@@ -107,14 +134,14 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._subnet.network_id = "mock-network-1"
         mock_task._network_driver = a10_octavia_neutron.A10OctaviaNeutronDriver()
 
-    def test_TagEthernetForLB_create_vlan_ve_with_dhcp(self):
+    def test_TagInterfaceForLB_create_vlan_ve_with_dhcp(self):
         self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
                                 group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([RACK_DEVICE])
         self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
         lb = self._mock_lb()
-        mock_task = task.TagEthernetForLB()
+        mock_task = task.TagInterfaceForLB()
         self._mock_tag_task(mock_task)
         self.client_mock.interface.ethernet.get.return_value = ETH_DATA
         self.client_mock.vlan.exists.return_value = False
@@ -134,14 +161,14 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         fixed_ip = port['fixed_ips'][0]
         self.assertEqual(VE_IP, fixed_ip['ip_address'])
 
-    def test_TagEthernetForLB_create_vlan_ve_with_static_ip(self):
+    def test_TagInterfaceForLB_create_ethernet_vlan_ve_with_static_ip(self):
         self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
                                 group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([RACK_DEVICE])
         self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
         lb = self._mock_lb()
-        mock_task = task.TagEthernetForLB()
+        mock_task = task.TagInterfaceForLB()
         self._mock_tag_task(mock_task)
         mock_task.get_vlan_id.return_value = VE_IP_VLAN_ID
         mock_task._subnet_ip = VE_IP_SUBNET_MASK[0]
@@ -163,9 +190,38 @@ class TestVThunderTasks(base.BaseTaskTestCase):
                                                                 ip_netmask="255.255.255.0",
                                                                 enable=True)
 
-    def test_TagEthernetForLB_revert_created_vlan(self):
+    def test_TagInterfaceForLB_create_trunk_vlan_ve_with_static_ip(self):
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
+        devices_str = json.dumps([RACK_DEVICE_TRUNK_INTERFACE])
+        self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
+                         devices=devices_str)
         lb = self._mock_lb()
-        mock_task = task.TagEthernetForLB()
+        mock_task = task.TagInterfaceForLB()
+        self._mock_tag_task(mock_task)
+        mock_task.get_vlan_id.return_value = VE_IP_VLAN_ID
+        mock_task._subnet_ip = VE_IP_SUBNET_MASK[0]
+        mock_task._subnet_mask = VE_IP_SUBNET_MASK[1]
+        mock_task._subnet.cidr = VE_IP_SUBNET_MASK[2]
+        self.client_mock.interface.ethernet.get.return_value = ETH_DATA
+        self.client_mock.vlan.exists.return_value = False
+        mock_task._network_driver.neutron_client.create_port = mock.Mock()
+        mock_task._network_driver.get_network = mock.Mock()
+        mock_task._network_driver.get_network.return_value = NETWORK_12
+        mock_task._network_driver.list_networks = mock.Mock()
+        mock_task._network_driver.list_networks.return_value = [NETWORK_12]
+        mock_task.execute(lb, VTHUNDER)
+        self.client_mock.vlan.create.assert_called_with(VE_IP_VLAN_ID,
+                                                        tagged_trunks=[TAG_TRUNK_INTERFACE],
+                                                        veth=True)
+        self.client_mock.interface.ve.update.assert_called_with(VE_IP_VLAN_ID,
+                                                                ip_address=STATIC_VE_IP,
+                                                                ip_netmask="255.255.255.0",
+                                                                enable=True)
+
+    def test_TagInterfaceForLB_revert_created_vlan(self):
+        lb = self._mock_lb()
+        mock_task = task.TagInterfaceForLB()
         self._mock_tag_task(mock_task)
         mock_task._network_driver.get_port_id_from_ip = mock.Mock()
         mock_task._network_driver.neutron_client.delete_port = mock.Mock()
@@ -174,14 +230,14 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
 
-    def test_TagEthernetForMember_create_vlan_ve_with_dhcp(self):
+    def test_TagInterfaceForMember_create_vlan_ve_with_dhcp(self):
         self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
                                 group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([RACK_DEVICE])
         self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
         member = self._mock_member()
-        mock_task = task.TagEthernetForMember()
+        mock_task = task.TagInterfaceForMember()
         self._mock_tag_task(mock_task)
         self.client_mock.interface.ethernet.get.return_value = ETH_DATA
         self.client_mock.vlan.exists.return_value = False
@@ -200,9 +256,9 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         fixed_ip = port['fixed_ips'][0]
         self.assertEqual(VE_IP, fixed_ip['ip_address'])
 
-    def test_TagEthernetForMember_revert_created_vlan(self):
+    def test_TagInterfaceForMember_revert_created_vlan(self):
         member = self._mock_member()
-        mock_task = task.TagEthernetForMember()
+        mock_task = task.TagInterfaceForMember()
         self._mock_tag_task(mock_task)
         mock_task._network_driver.get_port_id_from_ip = mock.Mock()
         mock_task._network_driver.neutron_client.delete_port = mock.Mock()
@@ -211,14 +267,14 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
 
-    def test_DeleteEthernetTagIfNotInUseForLB_execute_delete_vlan(self):
+    def test_DeleteInterfaceTagIfNotInUseForLB_execute_delete_vlan(self):
         self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
                                 group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([RACK_DEVICE])
         self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
         lb = self._mock_lb()
-        mock_task = task.DeleteEthernetTagIfNotInUseForLB()
+        mock_task = task.DeleteInterfaceTagIfNotInUseForLB()
         self._mock_tag_task(mock_task)
         mock_task.axapi_client.slb.virtual_server.get.return_value = DEL_VS_LIST
         mock_task.axapi_client.slb.server.get.return_value = DEL_SERVER_LIST
@@ -229,14 +285,14 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
 
-    def test_DeleteEthernetTagIfNotInUseForMember_execute_delete_vlan(self):
+    def test_DeleteInterfaceTagIfNotInUseForMember_execute_delete_vlan(self):
         self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
                                 group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
         devices_str = json.dumps([RACK_DEVICE])
         self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)
         member = self._mock_member()
-        mock_task = task.DeleteEthernetTagIfNotInUseForMember()
+        mock_task = task.DeleteInterfaceTagIfNotInUseForMember()
         self._mock_tag_task(mock_task)
         mock_task.axapi_client.slb.virtual_server.get.return_value = DEL_VS_LIST
         mock_task.axapi_client.slb.server.get.return_value = DEL_SERVER_LIST
