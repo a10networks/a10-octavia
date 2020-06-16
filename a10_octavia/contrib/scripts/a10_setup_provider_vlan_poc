@@ -139,10 +139,10 @@ function setup_host_ovs_bridges {
 function patch_conf_files {
     echo "[+] Patching config files"
 
-    exists=$(check_exists "/bin/cat /etc/neutron/neutron.conf" "service_plugins = router,qos")
+    exists=$(check_exists "/bin/cat /etc/neutron/neutron.conf" "service_plugins = neutron.services.l3_router.l3_router_plugin.L3RouterPlugin")
     if [[ ${exists} -eq 1 ]]; then
         echo "[=] Overwriting service_plugins in /etc/neutron/neutron.conf"
-        sed -i "s/service_plugins = router,qos/service_plugins = /" /etc/neutron/neutron.conf
+        sed -i "s/service_plugins = .*/service_plugins = /" /etc/neutron/neutron.conf
     fi
 
     exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "#type_drivers =")
@@ -163,10 +163,10 @@ function patch_conf_files {
         sed -i "s/tenant_network_types = .*/tenant_network_types = /" /etc/neutron/plugins/ml2/ml2_conf.ini
     fi
 
-    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "#network_vlan_ranges =")
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "network_vlan_ranges = public")
     if [[ ${exists} -eq 1 ]]; then
         echo "[=] Overwriting network_vlan_ranges /etc/neutron/plugins/ml2/ml2_conf.ini"
-        sed -i "s/#network_vlan_ranges =/network_vlan_ranges = provider/" /etc/neutron/plugins/ml2/ml2_conf.ini
+        sed -i "s/network_vlan_ranges = .*/network_vlan_ranges = provider/" /etc/neutron/plugins/ml2/ml2_conf.ini
     fi
 
     exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "provider:br-vlanp")
@@ -185,7 +185,7 @@ function patch_conf_files {
 function restart_services {
     echo "[=] Restarting devstack@neutron-* services"
     pushd /etc/systemd/system/
-    sudo systemctl restart devstack@neutron-*
+    sudo systemctl restart devstack@q-*
     popd
 }
 
@@ -268,10 +268,10 @@ function delete_ostack_networks {
 function unpatch_conf_files {
     echo "[-] Removing vlan patch in config files"
 
-    local exists=$(check_exists "/bin/cat /etc/neutron/neutron.conf" "service_plugins = router,qos")
+    local exists=$(check_exists "/bin/cat /etc/neutron/neutron.conf" "service_plugins = neutron.services.l3_router.l3_router_plugin.L3RouterPlugin")
     if [[ ${exists} -ne 1 ]]; then
         echo "[=] Overwriting service_plugins in /etc/neutron/neutron.conf"
-        sed -i "s/service_plugins =/service_plugins = router,qos/" /etc/neutron/neutron.conf
+        sed -i "s/service_plugins =/service_plugins = neutron.services.l3_router.l3_router_plugin.L3RouterPlugin/" /etc/neutron/neutron.conf
     fi
 
     exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "type_drivers = flat,vlan")
@@ -295,7 +295,7 @@ function unpatch_conf_files {
     exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "network_vlan_ranges = provider")
     if [[ ${exists} -eq 1 ]]; then
         echo "[=] Overwriting network_vlan_ranges /etc/neutron/plugins/ml2/ml2_conf.ini"
-        sed -i "s/network_vlan_ranges = provider/#network_vlan_ranges =/" /etc/neutron/plugins/ml2/ml2_conf.ini
+        sed -i "s/network_vlan_ranges = provider/network_vlan_ranges = public/" /etc/neutron/plugins/ml2/ml2_conf.ini
     fi
 
     exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "provider:br-vlanp")
