@@ -223,6 +223,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         lb = self._mock_lb()
         mock_task = task.TagInterfaceForLB()
         self._mock_tag_task(mock_task)
+        mock_task.axapi_client.slb.virtual_server.get.return_value = DEL_VS_LIST
+        mock_task.axapi_client.slb.server.get.return_value = DEL_SERVER_LIST
         mock_task._network_driver.get_port_id_from_ip = mock.Mock()
         mock_task._network_driver.neutron_client.delete_port = mock.Mock()
         mock_task._network_driver.get_port_id_from_ip.return_value = DEL_PORT_ID
@@ -260,6 +262,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         member = self._mock_member()
         mock_task = task.TagInterfaceForMember()
         self._mock_tag_task(mock_task)
+        mock_task.axapi_client.slb.virtual_server.get.return_value = DEL_VS_LIST
+        mock_task.axapi_client.slb.server.get.return_value = DEL_SERVER_LIST
         mock_task._network_driver.get_port_id_from_ip = mock.Mock()
         mock_task._network_driver.neutron_client.delete_port = mock.Mock()
         mock_task._network_driver.get_port_id_from_ip.return_value = DEL_PORT_ID
