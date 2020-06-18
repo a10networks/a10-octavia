@@ -497,7 +497,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                                                ve_ip, vlan_subnet_id_dict)
 
     def get_vlan_id(self, subnet_id, is_revert):
-        self._subnet = self.network_driver.get_subnet(subnet_id)
+        self.get_subnet_and_mask(subnet_id)
         network_id = self._subnet.network_id
         network = self.network_driver.get_network(network_id)
         if network.provider_network_type != 'vlan' and not is_revert:
@@ -535,10 +535,10 @@ class TagInterfaceForLB(TagInterfaceBaseTask):
     @axapi_client_decorator
     def revert(self, loadbalancer, vthunder, *args, **kwargs):
         vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, True)
-        if self.axapi_client.vlan.exists(vlan_id):
-            LOG.debug("Revert TagInterfaceForLB with VLAN id %s", vlan_id)
-            self.axapi_client.vlan.delete(vlan_id)
+        if self.is_vlan_deletable() and self.axapi_client.vlan.exists(vlan_id):
+            LOG.warning("Revert TagInterfaceForLB with VLAN id %s", vlan_id)
             self.release_ve_ip_from_neutron(vlan_id, loadbalancer.vip.subnet_id)
+            self.axapi_client.vlan.delete(vlan_id)
 
 
 class TagInterfaceForMember(TagInterfaceBaseTask):
@@ -553,10 +553,10 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
     @axapi_client_decorator
     def revert(self, member, vthunder, *args, **kwargs):
         vlan_id = self.get_vlan_id(member.subnet_id, True)
-        if self.axapi_client.vlan.exists(vlan_id):
-            LOG.debug("Revert TagInterfaceForMember with VLAN id %s", vlan_id)
-            self.axapi_client.vlan.delete(vlan_id)
+        if self.is_vlan_deletable() and self.axapi_client.vlan.exists(vlan_id):
+            LOG.warning("Revert TagInterfaceForMember with VLAN id %s", vlan_id)
             self.release_ve_ip_from_neutron(vlan_id, member.subnet_id)
+            self.axapi_client.vlan.delete(vlan_id)
 
 
 class DeleteInterfaceTagIfNotInUseForLB(TagInterfaceBaseTask):
@@ -567,13 +567,11 @@ class DeleteInterfaceTagIfNotInUseForLB(TagInterfaceBaseTask):
     def execute(self, loadbalancer, vthunder):
         try:
             if loadbalancer.project_id in CONF.hardware_thunder.devices:
-                self.get_subnet_and_mask(loadbalancer.vip.subnet_id)
-                if self.is_vlan_deletable():
-                    vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
-                    if self.axapi_client.vlan.exists(vlan_id):
-                        LOG.debug("Delete VLAN with id %s", vlan_id)
-                        self.release_ve_ip_from_neutron(vlan_id, loadbalancer.vip.subnet_id)
-                        self.axapi_client.vlan.delete(vlan_id)
+                vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
+                if self.is_vlan_deletable() and self.axapi_client.vlan.exists(vlan_id):
+                    LOG.debug("Delete VLAN with id %s", vlan_id)
+                    self.release_ve_ip_from_neutron(vlan_id, loadbalancer.vip.subnet_id)
+                    self.axapi_client.vlan.delete(vlan_id)
         except Exception as e:
             LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
 
@@ -586,12 +584,10 @@ class DeleteInterfaceTagIfNotInUseForMember(TagInterfaceBaseTask):
     def execute(self, member, vthunder):
         try:
             if member.project_id in CONF.hardware_thunder.devices:
-                self.get_subnet_and_mask(member.subnet_id)
-                if self.is_vlan_deletable():
-                    vlan_id = self.get_vlan_id(member.subnet_id, False)
-                    if self.axapi_client.vlan.exists(vlan_id):
-                        LOG.info("Delete VLAN with id %s", vlan_id)
-                        self.release_ve_ip_from_neutron(vlan_id, member.subnet_id)
-                        self.axapi_client.vlan.delete(vlan_id)
+                vlan_id = self.get_vlan_id(member.subnet_id, False)
+                if self.is_vlan_deletable() and self.axapi_client.vlan.exists(vlan_id):
+                    LOG.info("Delete VLAN with id %s", vlan_id)
+                    self.release_ve_ip_from_neutron(vlan_id, member.subnet_id)
+                    self.axapi_client.vlan.delete(vlan_id)
         except Exception as e:
             LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
