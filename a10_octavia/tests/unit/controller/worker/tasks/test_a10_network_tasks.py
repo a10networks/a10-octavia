@@ -19,10 +19,13 @@ try:
     from unittest import mock
 except ImportError:
     import mock
+from oslo_config import cfg
+from oslo_config import fixture as oslo_fixture
 
 from octavia.common import data_models as o_data_models
 from octavia.network import data_models as o_net_data_models
 
+from a10_octavia.common import config_options
 from a10_octavia.common import data_models
 from a10_octavia.common import exceptions
 from a10_octavia.controller.worker.tasks import a10_network_tasks
@@ -51,6 +54,13 @@ class TestNetworkTasks(base.BaseTaskTestCase):
             'a10_octavia.controller.worker.tasks.a10_network_tasks.BaseNetworkTask.network_driver')
         self.network_driver_mock = patcher.start()
         self.client_mock = mock.Mock()
+        self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
+        self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
+                                group=a10constants.A10_GLOBAL_OPTS)
+
+    def tearDown(self):
+        super(TestNetworkTasks, self).tearDown()
+        self.conf.reset()
 
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project', return_value=None)
     def test_HandleVRIDFloatingIP_noop_vrrpa_config_not_specified(self, mock_utils):
@@ -74,6 +84,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         mock_network_task.axapi_client = self.client_mock
         self.network_driver_mock.get_subnet.return_value = subnet
         self.network_driver_mock.create_port.return_value = port
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         vrid=VRID_VALUE)
         mock_network_task.execute(VTHUNDER, member, None)
         self.network_driver_mock.create_port.assert_called_with(
             subnet.network_id, member.subnet_id, fixed_ip=a10constants.MOCK_VRID_FLOATING_IP_1)
@@ -98,6 +110,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         mock_network_task.axapi_client = self.client_mock
         self.network_driver_mock.get_subnet.return_value = subnet
         self.network_driver_mock.create_port.return_value = port
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         vrid=VRID_VALUE)
         mock_network_task.execute(vthunder, member, None)
         self.network_driver_mock.create_port.assert_called_with(
             subnet.network_id, member.subnet_id, fixed_ip=a10constants.MOCK_VRID_FLOATING_IP_1)
@@ -118,6 +132,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         mock_network_task.axapi_client = self.client_mock
         self.network_driver_mock.get_subnet.return_value = subnet
         self.network_driver_mock.create_port.return_value = port
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         vrid=VRID_VALUE)
         mock_network_task.execute(VTHUNDER, member, None)
         self.network_driver_mock.create_port.assert_called_with(
             subnet.network_id, member.subnet_id)
@@ -140,6 +156,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         mock_network_task.axapi_client = self.client_mock
         self.network_driver_mock.get_subnet.return_value = subnet
         self.network_driver_mock.create_port.return_value = port
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         vrid=VRID_VALUE)
         mock_network_task.execute(vthunder, member, None)
         self.network_driver_mock.create_port.assert_called_with(
             subnet.network_id, member.subnet_id)
@@ -201,6 +219,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         mock_network_task.axapi_client = self.client_mock
         self.network_driver_mock.get_subnet.return_value = subnet
         self.network_driver_mock.create_port.return_value = port
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         vrid=VRID_VALUE)
         mock_network_task.execute(VTHUNDER, member, vrid)
         self.network_driver_mock.create_port.assert_called_with(
             subnet.network_id, member.subnet_id, fixed_ip=a10constants.MOCK_VRID_FLOATING_IP_2)
@@ -230,6 +250,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         mock_network_task.axapi_client = self.client_mock
         self.network_driver_mock.get_subnet.return_value = subnet
         self.network_driver_mock.create_port.return_value = port
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         vrid=VRID_VALUE)
         mock_network_task.execute(vthunder, member, vrid)
         self.network_driver_mock.create_port.assert_called_with(
             subnet.network_id, member.subnet_id, fixed_ip=a10constants.MOCK_VRID_FLOATING_IP_2)
@@ -277,6 +299,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         mock_network_task.axapi_client = self.client_mock
         self.network_driver_mock.get_subnet.return_value = subnet
         self.network_driver_mock.create_port.return_value = port
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         vrid=VRID_VALUE)
         mock_network_task.execute(VTHUNDER, member, vrid)
         self.network_driver_mock.create_port.assert_called_with(
             subnet.network_id, member.subnet_id)
@@ -304,6 +328,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         mock_network_task.axapi_client = self.client_mock
         self.network_driver_mock.get_subnet.return_value = subnet
         self.network_driver_mock.create_port.return_value = port
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         vrid=VRID_VALUE)
         mock_network_task.execute(vthunder, member, vrid)
         self.network_driver_mock.create_port.assert_called_with(
             subnet.network_id, member.subnet_id)
@@ -346,6 +372,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         mock_network_task.axapi_client = self.client_mock
         self.network_driver_mock.get_subnet.return_value = subnet
         self.network_driver_mock.create_port.return_value = port
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         vrid=VRID_VALUE)
         mock_network_task.execute(VTHUNDER, member, None)
         self.network_driver_mock.create_port.assert_called_with(
             subnet.network_id, member.subnet_id, fixed_ip=a10constants.MOCK_VRID_FULL_FLOATING_IP)
