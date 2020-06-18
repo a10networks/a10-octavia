@@ -238,13 +238,6 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                       loadbalancer.id)
             raise e
 
-    def revert(self, loadbalancer, vthunder_config, *args, **kwargs):
-        try:
-            self.vthunder_repo.delete(
-                db_apis.get_session(), loadbalancer_id=loadbalancer.id)
-        except NoResultFound:
-            LOG.error("Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
-
 
 class CreateVThunderHealthEntry(BaseDatabaseTask):
 
