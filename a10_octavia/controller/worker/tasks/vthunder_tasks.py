@@ -535,7 +535,7 @@ class TagInterfaceForLB(TagInterfaceBaseTask):
     @axapi_client_decorator
     def revert(self, loadbalancer, vthunder, *args, **kwargs):
         vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, True)
-        if self.is_vlan_deletable() and self.axapi_client.vlan.exists(vlan_id):
+        if self.axapi_client.vlan.exists(vlan_id) and self.is_vlan_deletable():
             LOG.warning("Revert TagInterfaceForLB with VLAN id %s", vlan_id)
             self.release_ve_ip_from_neutron(vlan_id, loadbalancer.vip.subnet_id)
             self.axapi_client.vlan.delete(vlan_id)
@@ -553,7 +553,7 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
     @axapi_client_decorator
     def revert(self, member, vthunder, *args, **kwargs):
         vlan_id = self.get_vlan_id(member.subnet_id, True)
-        if self.is_vlan_deletable() and self.axapi_client.vlan.exists(vlan_id):
+        if self.axapi_client.vlan.exists(vlan_id) and self.is_vlan_deletable():
             LOG.warning("Revert TagInterfaceForMember with VLAN id %s", vlan_id)
             self.release_ve_ip_from_neutron(vlan_id, member.subnet_id)
             self.axapi_client.vlan.delete(vlan_id)
@@ -568,7 +568,7 @@ class DeleteInterfaceTagIfNotInUseForLB(TagInterfaceBaseTask):
         try:
             if loadbalancer.project_id in CONF.hardware_thunder.devices:
                 vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
-                if self.is_vlan_deletable() and self.axapi_client.vlan.exists(vlan_id):
+                if self.axapi_client.vlan.exists(vlan_id) and self.is_vlan_deletable():
                     LOG.debug("Delete VLAN with id %s", vlan_id)
                     self.release_ve_ip_from_neutron(vlan_id, loadbalancer.vip.subnet_id)
                     self.axapi_client.vlan.delete(vlan_id)
@@ -585,7 +585,7 @@ class DeleteInterfaceTagIfNotInUseForMember(TagInterfaceBaseTask):
         try:
             if member.project_id in CONF.hardware_thunder.devices:
                 vlan_id = self.get_vlan_id(member.subnet_id, False)
-                if self.is_vlan_deletable() and self.axapi_client.vlan.exists(vlan_id):
+                if self.axapi_client.vlan.exists(vlan_id) and self.is_vlan_deletable():
                     LOG.info("Delete VLAN with id %s", vlan_id)
                     self.release_ve_ip_from_neutron(vlan_id, member.subnet_id)
                     self.axapi_client.vlan.delete(vlan_id)
