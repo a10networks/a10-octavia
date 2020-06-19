@@ -722,7 +722,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 LOG.exception("Failed to revert VRRP floating IP delta task: %s", str(e))
 
     def update_device_vrid_fip(self, conf_floating_ip, vthunder, vrid):
-        vrid_value = 0
+        vrid_value = CONF.a10_global.vrid
         if vrid:
             vrid_value = vrid.vrid
         if not vthunder.partition_name or vthunder.partition_name == 'shared':
