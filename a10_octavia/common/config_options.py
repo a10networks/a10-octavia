@@ -87,7 +87,7 @@ A10_LISTENER_OPTS = [
                default=None,
                max_length=127,
                help=_('Policy Template (Policy template name).')),
-    cfg.BoolOpt('autosnat', default=True,
+    cfg.BoolOpt('autosnat', default=False,
                 help=_('Enable autosnat')),
     cfg.IntOpt('conn_limit', min=1, max=64000000,
                default=64000000,
