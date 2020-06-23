@@ -162,6 +162,20 @@ def get_network_driver():
     return network_driver
 
 
+def validate_vcs_device_ids(vcs_device_ids):
+    num_devices = len(vcs_device_ids)
+    if num_devices > 2:
+        raise cfg.ConfigFileValueError('Number of vcs devices {0} is greater than maximum '
+                                       'allowed. Current maximum number of devices '
+                                       'supported is 2'.format(num_devices))
+    for device_id in vcs_device_ids:
+        if ((num_devices > 1 and not device_id) or
+            (device_id is not None and (not isinstance(device_id, int) or
+                                        (device_id < 1 or device_id > 4)))):
+            raise cfg.ConfigFileValueError('Invalid vcs_device_id: {0}, should be in '
+                                           'range 1-4'.format(device_id))
+
+
 def convert_interface_to_data_model(interface_obj):
     vlan_map_list = interface_obj.get('vlan_map')
     interface_num = interface_obj.get('interface_num')
@@ -193,8 +207,10 @@ def convert_interface_to_data_model(interface_obj):
 
 def validate_interface_vlan_map(hardware_device):
     device_network_map = []
+    vcs_device_ids = []
     for device_id, device_obj in hardware_device.get('interface_vlan_map').items():
         device_map = data_models.DeviceNetworkMap(device_obj.get('vcs_device_id'))
+        vcs_device_ids.append(device_obj.get('vcs_device_id'))
         if device_obj.get('ethernet_interfaces'):
             for eth in device_obj.get('ethernet_interfaces'):
                 device_map.ethernet_interfaces.append(convert_interface_to_data_model(eth))
@@ -202,4 +218,5 @@ def validate_interface_vlan_map(hardware_device):
             for trunk in device_obj.get('trunk_interfaces'):
                 device_map.trunk_interfaces.append(convert_interface_to_data_model(trunk))
         device_network_map.append(device_map)
+    validate_vcs_device_ids(vcs_device_ids)
     return device_network_map

@@ -202,3 +202,20 @@ class TestUtils(unittest.TestCase):
 
     def test_merge_host_and_network_ip_invalid(self):
         self.assertRaises(Exception, utils.merge_host_and_network_ip, '10.10.10.0/42', '99')
+
+    def test_validate_vcs_device_ids_valid(self):
+        self.assertEqual(utils.validate_vcs_device_ids([1, 2]), None)
+        self.assertEqual(utils.validate_vcs_device_ids([4, 1]), None)
+        self.assertEqual(utils.validate_vcs_device_ids([1]), None)
+        self.assertEqual(utils.validate_vcs_device_ids([4]), None)
+        self.assertEqual(utils.validate_vcs_device_ids([None]), None)
+
+    def test_validate_vcs_device_ids_invalid(self):
+        self.assertRaises(Exception, utils.validate_vcs_device_ids, [5])
+        self.assertRaises(Exception, utils.validate_vcs_device_ids, [0])
+        self.assertRaises(Exception, utils.validate_vcs_device_ids, [1, 5])
+        self.assertRaises(Exception, utils.validate_vcs_device_ids, [0, 2])
+        self.assertRaises(Exception, utils.validate_vcs_device_ids, [1, None])
+        self.assertRaises(Exception, utils.validate_vcs_device_ids, [None, 2])
+        self.assertRaises(Exception, utils.validate_vcs_device_ids, [1, 2, 3])
+        self.assertRaises(Exception, utils.validate_vcs_device_ids, ["hello", 1])
