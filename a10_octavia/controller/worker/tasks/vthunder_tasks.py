@@ -13,6 +13,7 @@
 #    under the License.
 
 
+import acos_client
 from acos_client import errors as acos_errors
 try:
     import http.client as http_client
@@ -34,6 +35,7 @@ from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import device_context_switch_decorator
 
 
 CONF = cfg.CONF
@@ -383,8 +385,9 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         self._subnet_ip = None
         self._subnet_mask = None
 
-    def reserve_ve_ip_with_neutron(self, vlan_id, subnet_id):
-        ve_ip = self._get_ve_ip(vlan_id)
+    def reserve_ve_ip_with_neutron(self, vlan_id, subnet_id, device_id=None, default_device_id=None,
+                                   project_id=None):
+        ve_ip = self._get_ve_ip(vlan_id, device_id, default_device_id, project_id)
         if ve_ip is None:
             return None
 
@@ -396,23 +399,36 @@ class TagInterfaceBaseTask(VThunderBaseTask):
 
         self.network_driver.create_port(self._subnet.network_id, fixed_ip=ve_ip)
 
-    def release_ve_ip_from_neutron(self, vlan_id, subnet_id):
-        ve_ip = self._get_ve_ip(vlan_id)
+    def release_ve_ip_from_neutron(self, vlan_id, subnet_id, device_id=None, default_device_id=None,
+                                   project_id=None):
+        ve_ip = self._get_ve_ip(vlan_id, device_id, default_device_id, project_id)
         port_id = self.network_driver.get_port_id_from_ip(ve_ip)
         if ve_ip and port_id:
             self.network_driver.delete_port(port_id)
 
-    def _get_ve_ip(self, vlan_id):
-        try:
-            resp = self.axapi_client.interface.ve.get_oper(vlan_id)
-            ve = resp.get('ve')
-            if ve and ve.get('oper') and ve['oper'].get('ipv4_list'):
-                ipv4_list = ve['oper']['ipv4_list']
-                if ipv4_list:
-                    return ipv4_list[0]['addr']
-        except Exception as e:
-            LOG.exception("Failed to get ve ip from vThunder: %s", str(e))
-        return None
+    def _get_ve_ip(self, vlan_id, device_id=None, default_device_id=None, project_id=None):
+        if default_device_id != device_id and project_id:
+            vthunder_conf = CONF.hardware_thunder.devices[project_id] 
+            api_ver = acos_client.AXAPI_21 if vthunder_conf.axapi_version == 21 else acos_client.AXAPI_30
+            axapi_client = acos_client.Client(vthunder_conf.standby_ip_address, api_ver,
+                                              vthunder_conf.username, vthunder_conf.password,
+                                              timeout=30)
+            close_axapi_client = True
+        else:
+            axapi_client = self.axapi_client
+            close_axapi_client = False
+          
+            try:
+                resp = axapi_client.interface.ve.get_oper(vlan_id)
+                if close_axapi_client:
+                    axapi_client.session.close()
+                ve = resp.get('ve')
+                if ve and ve.get('oper') and ve['oper'].get('ipv4_list'):
+                    ipv4_list = ve['oper']['ipv4_list']
+                    if ipv4_list:
+                        return ipv4_list[0]['addr']
+            except Exception as e:
+                LOG.exception("Failed to get ve ip from vThunder: %s", str(e))
 
     def get_subnet_and_mask(self, subnet_id):
         self._subnet = self.network_driver.get_subnet(subnet_id)
@@ -428,8 +444,17 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         ve_ip = '.'.join(octets)
         return a10_utils.merge_host_and_network_ip(self._subnet.cidr, ve_ip)
 
+    @device_context_switch_decorator
+    def delete_device_vlan(self, vlan_id, subnet_id, device_id=None, default_device_id=None, project_id=None):
+        if self.axapi_client.vlan.exists(vlan_id):
+            LOG.debug("Delete VLAN with id %s", vlan_id)
+            self.release_ve_ip_from_neutron(vlan_id, subnet_id, device_id, default_device_id, project_id)
+            self.axapi_client.vlan.delete(vlan_id)
+
+    @device_context_switch_decorator
     def tag_interface(self, is_trunk, create_vlan_id, vlan_id, ifnum, ve_info,
-                      vlan_subnet_id_dict):
+                      vlan_subnet_id_dict, device_id=None, default_device_id=None,
+                      project_id=None):
         if vlan_id not in vlan_subnet_id_dict:
             LOG.warning("vlan_id %s not in vlan_subnet_id_dict %s", vlan_id,
                         vlan_subnet_id_dict)
@@ -459,7 +484,8 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                 self.axapi_client.vlan.create(vlan_id, tagged_eths=[ifnum], veth=True)
                 LOG.debug("Tagged trunk interface %s with VLAN with id %s", ifnum, vlan_id)
         else:
-            self.release_ve_ip_from_neutron(vlan_id, vlan_subnet_id_dict[vlan_id])
+            self.release_ve_ip_from_neutron(vlan_id, vlan_subnet_id_dict[vlan_id],
+                                            device_id, default_device_id,project_id)
 
         if ve_info == 'dhcp':
             self.axapi_client.interface.ve.update(vlan_id, dhcp=True, enable=True)
@@ -467,7 +493,8 @@ class TagInterfaceBaseTask(VThunderBaseTask):
             patched_ip = self._get_patched_ve_ip(ve_info)
             self.axapi_client.interface.ve.update(vlan_id, ip_address=patched_ip,
                                                   ip_netmask=self._subnet_mask, enable=True)
-        self.reserve_ve_ip_with_neutron(vlan_id, vlan_subnet_id_dict[vlan_id])
+        self.reserve_ve_ip_with_neutron(vlan_id, vlan_subnet_id_dict[vlan_id],
+                                        device_id, default_device_id, project_id)
 
     def tag_interfaces(self, project_id, create_vlan_id):
         if project_id in CONF.hardware_thunder.devices:
@@ -478,7 +505,9 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                 for network in network_list:
                     vlan_id = network.provider_segmentation_id
                     vlan_subnet_id_dict[str(vlan_id)] = network.subnets[0]
+                default_device_id = self.axapi_client.system.action.get_vrrp_device_id()
                 for device_obj in vthunder_conf.device_network_map:
+                    device_id = device_obj.vcs_device_id
                     for eth_interface in device_obj.ethernet_interfaces:
                         ifnum = str(eth_interface.interface_num)
                         assert len(eth_interface.tags) == len(eth_interface.ve_ips)
@@ -486,7 +515,10 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                             tag = str(eth_interface.tags[i])
                             ve_ip = eth_interface.ve_ips[i]
                             self.tag_interface(False, create_vlan_id, tag, ifnum,
-                                               ve_ip, vlan_subnet_id_dict)
+                                               ve_ip, vlan_subnet_id_dict,
+                                               device_id=device_id,
+                                               default_device_id=default_device_id,
+                                               project_id=project_id)
                     for trunk_interface in device_obj.trunk_interfaces:
                         ifnum = str(trunk_interface.interface_num)
                         assert len(trunk_interface.tags) == len(trunk_interface.ve_ips)
@@ -494,7 +526,10 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                             tag = str(trunk_interface.tags[i])
                             ve_ip = trunk_interface.ve_ips[i]
                             self.tag_interface(True, create_vlan_id, tag, ifnum,
-                                               ve_ip, vlan_subnet_id_dict)
+                                               ve_ip, vlan_subnet_id_dict,
+                                               device_id=device_id,
+                                               default_device_id=default_device_id,
+                                               project_id=project_id)
 
     def get_vlan_id(self, subnet_id, is_revert):
         self.get_subnet_and_mask(subnet_id)

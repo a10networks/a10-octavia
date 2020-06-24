@@ -165,8 +165,9 @@ class Thunder(BaseDataModel):
 
 
 class HardwareThunder(Thunder):
-    def __init__(self, device_network_map=None, **kwargs):
+    def __init__(self, standby_ip_address=None, device_network_map=None, **kwargs):
         Thunder.__init__(self, **kwargs)
+        self.standby_ip_address = standby_ip_address
         self.device_network_map = device_network_map or []
 
 
@@ -209,6 +210,6 @@ class Interface(BaseDataModel):
 class DeviceNetworkMap(BaseDataModel):
 
     def __init__(self, device_id=None, ethernet_interfaces=None, trunk_interfaces=None):
-        self.device_id = device_id
+        self.vcs_device_id = vcs_device_id
         self.ethernet_interfaces = ethernet_interfaces or []
         self.trunk_interfaces = trunk_interfaces or []
