@@ -217,7 +217,7 @@ def convert_interface_to_data_model(interface_obj):
 def validate_interface_vlan_map(hardware_device):
     device_network_map = []
     for device_id, device_obj in hardware_device.get('interface_vlan_map').items():
-        device_map = data_models.DeviceNetworkMap(device_id)
+        device_map = data_models.DeviceNetworkMap(device_obj.get('vcs_device_id'))
         if device_obj.get('ethernet_interfaces'):
             for eth in device_obj.get('ethernet_interfaces'):
                 device_map.ethernet_interfaces.append(convert_interface_to_data_model(eth))
