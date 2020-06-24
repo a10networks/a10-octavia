@@ -209,7 +209,7 @@ class Interface(BaseDataModel):
 
 class DeviceNetworkMap(BaseDataModel):
 
-    def __init__(self, device_id=None, ethernet_interfaces=None, trunk_interfaces=None):
+    def __init__(self, vcs_device_id=None, ethernet_interfaces=None, trunk_interfaces=None):
         self.vcs_device_id = vcs_device_id
         self.ethernet_interfaces = ethernet_interfaces or []
         self.trunk_interfaces = trunk_interfaces or []
