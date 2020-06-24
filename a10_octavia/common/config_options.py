@@ -40,7 +40,7 @@ A10_GLOBAL_OPTS = [
                 help=_('Use parent project partition on Thunder device '
                        'in hierarchical project architecture.')),
     cfg.IntOpt('vrid', default=0,
-                help=_('VRID value')),
+               help=_('VRID value')),
     cfg.StrOpt('vrid_floating_ip', default=None,
                help=_('Enable VRID floating IP feature')),
 ]
