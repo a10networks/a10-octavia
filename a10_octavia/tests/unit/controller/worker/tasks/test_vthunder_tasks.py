@@ -306,3 +306,15 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.execute(member, VTHUNDER)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
+
+    def test_WriteMemory_execute_save_shared_mem(self):
+        pass
+
+    def test_WriteMemory_execute_save_specific_partition_mem(self):
+        pass
+
+    def test_WriteMemory_execute_fail_partition_does_not_exist(self):
+        pass
+
+   def test_WriteMemroy_execute_save_mem_ha_deployment(self):
+       pass
