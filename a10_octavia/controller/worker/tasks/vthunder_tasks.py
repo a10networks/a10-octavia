@@ -626,3 +626,22 @@ class DeleteInterfaceTagIfNotInUseForMember(TagInterfaceBaseTask):
                     self.axapi_client.vlan.delete(vlan_id)
         except Exception as e:
             LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
+
+
+class WriteMemory(task.Task):
+
+    """Task to write memory of the Thunder device"""
+
+
+    @device_context_switch_decorator
+    def write_device_mem(self, partition_name, device_id=None, default_device_id=None):
+        self.axap_client.v3.acion.write_memory(partition=partition_name)
+
+    @axapi_client_decorator
+    def execute(self, vthunder):
+        default_device_id = self.axapi_client.system.action.get_vrrp_device_id()
+        if vthunder_conf.device_network_map:
+            for device_obj in vthunder_conf.device_network_map:
+                self.write_device_mem(vthunder.partition_name, device_obj.vcs_device_id, default_device_id)
+        else:
+            self.write_device_mem(vthunder.partition_name)
