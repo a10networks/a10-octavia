@@ -429,7 +429,10 @@ class TagInterfaceBaseTask(VThunderBaseTask):
     def _get_ve_ip(self, vlan_id, device_id=None, default_device_id=None, project_id=None):
         if default_device_id != device_id and project_id:
             vthunder_conf = CONF.hardware_thunder.devices[project_id]
-            api_ver = acos_client.AXAPI_21 if vthunder_conf.axapi_version == 21 else acos_client.AXAPI_30
+            if vthunder_conf.axapi_version == 21:
+                api_ver = acos_client.AXAPI_21
+            else:
+                api_ver = acos_client.AXAPI_30
             axapi_client = acos_client.Client(vthunder_conf.standby_ip_address, api_ver,
                                               vthunder_conf.username, vthunder_conf.password,
                                               timeout=30)
@@ -438,17 +441,17 @@ class TagInterfaceBaseTask(VThunderBaseTask):
             axapi_client = self.axapi_client
             close_axapi_client = False
 
-            try:
-                resp = axapi_client.interface.ve.get_oper(vlan_id)
-                if close_axapi_client:
-                    axapi_client.session.close()
-                ve = resp.get('ve')
-                if ve and ve.get('oper') and ve['oper'].get('ipv4_list'):
-                    ipv4_list = ve['oper']['ipv4_list']
-                    if ipv4_list:
-                        return ipv4_list[0]['addr']
-            except Exception as e:
-                LOG.exception("Failed to get ve ip from vThunder: %s", str(e))
+        try:
+            resp = axapi_client.interface.ve.get_oper(vlan_id)
+            if close_axapi_client:
+                axapi_client.session.close()
+            ve = resp.get('ve')
+            if ve and ve.get('oper') and ve['oper'].get('ipv4_list'):
+                ipv4_list = ve['oper']['ipv4_list']
+                if ipv4_list:
+                    return ipv4_list[0]['addr']
+        except Exception as e:
+            LOG.exception("Failed to get ve ip from vThunder: %s", str(e))
 
     def get_subnet_and_mask(self, subnet_id):
         self._subnet = self.network_driver.get_subnet(subnet_id)
@@ -660,12 +663,16 @@ class DeleteInterfaceTagIfNotInUseForLB(TagInterfaceBaseTask):
     def execute(self, loadbalancer, vthunder):
         try:
             if loadbalancer.project_id in CONF.hardware_thunder.devices:
+                vthunder_conf = CONF.hardware_thunder.devices[loadbalancer.project_id]
                 vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
-                if self.axapi_client.vlan.exists(vlan_id) and self.is_vlan_deletable():
-                    LOG.debug("Delete VLAN with id %s", vlan_id)
-                    self.release_ve_ip_from_neutron(
-                        vlan_id, loadbalancer.vip.subnet_id)
-                    self.axapi_client.vlan.delete(vlan_id)
+                if self.is_vlan_deletable():
+                    default_device_id = self.axapi_client.system.action.get_vrrp_device_id()
+                    for device_obj in vthunder_conf.device_network_map:
+                        device_id = device_obj.vcs_device_id
+                        self.delete_device_vlan(vlan_id, loadbalancer.vip.subnet_id,
+                                                device_id=device_id,
+                                                default_device_id=default_device_id,
+                                                project_id=loadbalancer.project_id)
         except Exception as e:
             LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
 
@@ -679,9 +686,15 @@ class DeleteInterfaceTagIfNotInUseForMember(TagInterfaceBaseTask):
         try:
             if member.project_id in CONF.hardware_thunder.devices:
                 vlan_id = self.get_vlan_id(member.subnet_id, False)
-                if self.axapi_client.vlan.exists(vlan_id) and self.is_vlan_deletable():
-                    LOG.info("Delete VLAN with id %s", vlan_id)
-                    self.release_ve_ip_from_neutron(vlan_id, member.subnet_id)
-                    self.axapi_client.vlan.delete(vlan_id)
+                vthunder_conf = CONF.hardware_thunder.devices[member.project_id]
+                if self.is_vlan_deletable():
+                    default_device_id = self.axapi_client.system.action.get_vrrp_device_id()
+                    for device_obj in vthunder_conf.device_network_map:
+                        device_id = device_obj.vcs_device_id
+                        self.delete_device_vlan(vlan_id, member.subnet_id,
+                                                device_id=device_id,
+                                                default_device_id=default_device_id,
+                                                project_id=member.project_id)
+
         except Exception as e:
             LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
