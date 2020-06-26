@@ -408,7 +408,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
 
     def _get_ve_ip(self, vlan_id, device_id=None, default_device_id=None, project_id=None):
         if default_device_id != device_id and project_id:
-            vthunder_conf = CONF.hardware_thunder.devices[project_id] 
+            vthunder_conf = CONF.hardware_thunder.devices[project_id]
             api_ver = acos_client.AXAPI_21 if vthunder_conf.axapi_version == 21 else acos_client.AXAPI_30
             axapi_client = acos_client.Client(vthunder_conf.standby_ip_address, api_ver,
                                               vthunder_conf.username, vthunder_conf.password,
@@ -417,7 +417,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         else:
             axapi_client = self.axapi_client
             close_axapi_client = False
-          
+
             try:
                 resp = axapi_client.interface.ve.get_oper(vlan_id)
                 if close_axapi_client:
@@ -448,7 +448,8 @@ class TagInterfaceBaseTask(VThunderBaseTask):
     def delete_device_vlan(self, vlan_id, subnet_id, device_id=None, default_device_id=None, project_id=None):
         if self.axapi_client.vlan.exists(vlan_id):
             LOG.debug("Delete VLAN with id %s", vlan_id)
-            self.release_ve_ip_from_neutron(vlan_id, subnet_id, device_id, default_device_id, project_id)
+            self.release_ve_ip_from_neutron(
+                vlan_id, subnet_id, device_id, default_device_id, project_id)
             self.axapi_client.vlan.delete(vlan_id)
 
     @device_context_switch_decorator
@@ -485,7 +486,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                 LOG.debug("Tagged trunk interface %s with VLAN with id %s", ifnum, vlan_id)
         else:
             self.release_ve_ip_from_neutron(vlan_id, vlan_subnet_id_dict[vlan_id],
-                                            device_id, default_device_id,project_id)
+                                            device_id, default_device_id, project_id)
 
         if ve_info == 'dhcp':
             self.axapi_client.interface.ve.update(vlan_id, dhcp=True, enable=True)
