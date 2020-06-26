@@ -74,8 +74,7 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
                         http_client.BadStatusLine, req_exceptions.ReadTimeout):
                     attemptid = 21 - attempts
                     time.sleep(20)
-                    LOG.debug("VThunder connection attempt - " +
-                              str(attemptid))
+                    LOG.debug("VThunder connection attempt - " + str(attemptid))
                     pass
             if attempts < 0:
                 LOG.error("Failed to connect vThunder in expected amount of boot time: %s",
@@ -139,11 +138,9 @@ class EnableInterface(VThunderBaseTask):
     def execute(self, vthunder):
         try:
             self.axapi_client.system.action.setInterface(1)
-            LOG.debug(
-                "Configured the mgmt interface for vThunder: %s", vthunder.id)
+            LOG.debug("Configured the mgmt interface for vThunder: %s", vthunder.id)
         except Exception as e:
-            LOG.exception(
-                "Failed to configure  mgmt interface vThunder: %s", str(e))
+            LOG.exception("Failed to configure  mgmt interface vThunder: %s", str(e))
             raise
 
 
@@ -168,14 +165,12 @@ class EnableInterfaceForMembers(VThunderBaseTask):
                         self.axapi_client.system.action.setInterface(
                             target_interface - 1)
                         configured_interface = True
-                        LOG.debug(
-                            "Configured the new interface required for member.")
+                        LOG.debug("Configured the new interface required for member.")
                     except (req_exceptions.ConnectionError, acos_errors.ACOSException,
                             http_client.BadStatusLine, req_exceptions.ReadTimeout):
                         attempts = attempts - 1
             else:
-                LOG.debug(
-                    "Configuration of new interface is not required for member.")
+                LOG.debug("Configuration of new interface is not required for member.")
         except Exception as e:
             LOG.exception("Failed to configure vthunder interface: %s", str(e))
             raise
@@ -189,11 +184,9 @@ class ConfigureVRRPMaster(VThunderBaseTask):
     def execute(self, vthunder):
         try:
             self.axapi_client.system.action.configureVRRP(1, 1)
-            LOG.debug(
-                "Successfully configured VRRP for vThunder: %s", vthunder.id)
+            LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
         except Exception as e:
-            LOG.exception(
-                "Failed to configure master vThunder VRRP: %s", str(e))
+            LOG.exception("Failed to configure master vThunder VRRP: %s", str(e))
             raise
 
 
@@ -205,11 +198,9 @@ class ConfigureVRRPBackup(VThunderBaseTask):
     def execute(self, vthunder):
         try:
             self.axapi_client.system.action.configureVRRP(2, 1)
-            LOG.debug(
-                "Successfully configured VRRP for vThunder: %s", vthunder.id)
+            LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
         except Exception as e:
-            LOG.exception(
-                "Failed to configure backup vThunder VRRP: %s", str(e))
+            LOG.exception("Failed to configure backup vThunder VRRP: %s", str(e))
             raise
 
 
@@ -266,8 +257,7 @@ class ConfigureaVCSMaster(VThunderBaseTask):
                            floating_ip, floating_ip_mask)
             LOG.debug("Configured the master vThunder for aVCS: %s", vthunder.id)
         except Exception as e:
-            LOG.exception(
-                "Failed to configure master vThunder aVCS: %s", str(e))
+            LOG.exception("Failed to configure master vThunder aVCS: %s", str(e))
             raise
 
 
@@ -286,14 +276,12 @@ class ConfigureaVCSBackup(VThunderBaseTask):
                     configure_avcs(self.axapi_client, device_id, device_priority,
                                    floating_ip, floating_ip_mask)
                     attempts = 0
-                    LOG.debug(
-                        "Configured the backup vThunder for aVCS: %s", vthunder.id)
+                    LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
                 except (req_exceptions.ConnectionError, acos_errors.ACOSException,
                         http_client.BadStatusLine, req_exceptions.ReadTimeout):
                     attempts = attempts - 1
         except Exception as e:
-            LOG.exception(
-                "Failed to configure backup vThunder aVCS: %s", str(e))
+            LOG.exception("Failed to configure backup vThunder aVCS: %s", str(e))
             raise
 
 
@@ -338,11 +326,9 @@ class CreateHealthMonitorOnVThunder(VThunderBaseTask):
             try:
                 self.axapi_client.slb.server.create(
                     name, ip_address, health_check=health_check)
-                LOG.debug(
-                    "Server created successfully. Enabled health check for health monitor.")
+                LOG.debug("Server created successfully. Enabled health check for health monitor.")
             except Exception as e:
-                LOG.exception(
-                    "Failed to create health monitor server: %s", str(e))
+                LOG.exception("Failed to create health monitor server: %s", str(e))
 
 
 class CheckVRRPStatus(VThunderBaseTask):
@@ -471,19 +457,19 @@ class TagInterfaceBaseTask(VThunderBaseTask):
     @device_context_switch_decorator
     def check_ve_ip_exists(self, vlan_id, config_ve_ip):
         if self.axapi_client.vlan.exists(vlan_id):
-            if self.axapi_client.interface.ve.exists(vlan_id):
+            try:
                 ve = self.axapi_client.interface.ve.get(vlan_id)
-                if config_ve_ip == 'dhcp':
-                    if ve.get('ve').get('ip') and ve.get('ve').get('ip').get('dhcp'):
+            except Exception:
+                return False
+            ve_ip = ve['ve'].get('ip') if ve['ve'].get('ip') else None
+            if config_ve_ip == 'dhcp':
+                if ve_ip and ve_ip.get('dhcp'):
+                    return True
+            else:
+                if ve_ip and ve_ip.get('address-list'):
+                    existing_ve_ip = ve_ip.get('address-list')[0].get('ipv4-address')
+                    if self._get_patched_ve_ip(config_ve_ip) == existing_ve_ip:
                         return True
-                    return False
-                else:
-                    if ve.get('ve').get('ip') and ve.get('ve').get('ip').get('address-list'):
-                        existing_ve_ip = ve.get('ve').get('ip').get(
-                            'address-list')[0].get('ipv4-address')
-                        if self._get_patched_ve_ip(config_ve_ip) == existing_ve_ip:
-                            return True
-                    return False
             return False
 
     @device_context_switch_decorator
@@ -513,8 +499,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
             eth = self.axapi_client.interface.ethernet.get(ifnum)
             if ('ethernet' in eth and ('action' not in eth['ethernet'] or
                                        eth['ethernet']['action'] == 'disable')):
-                LOG.warning(
-                    "ethernet interface %s not enabled, enabling it", ifnum)
+                LOG.warning("ethernet interface %s not enabled, enabling it", ifnum)
                 self.axapi_client.interface.ethernet.update(ifnum, enable=True)
 
         vlan_exists = self.axapi_client.vlan.exists(vlan_id)
@@ -523,15 +508,11 @@ class TagInterfaceBaseTask(VThunderBaseTask):
 
         if not vlan_exists:
             if is_trunk:
-                self.axapi_client.vlan.create(
-                    vlan_id, tagged_trunks=[ifnum], veth=True)
-                LOG.debug(
-                    "Tagged ethernet interface %s with VLAN with id %s", ifnum, vlan_id)
+                self.axapi_client.vlan.create(vlan_id, tagged_trunks=[ifnum], veth=True)
+                LOG.debug("Tagged ethernet interface %s with VLAN with id %s", ifnum, vlan_id)
             else:
-                self.axapi_client.vlan.create(
-                    vlan_id, tagged_eths=[ifnum], veth=True)
-                LOG.debug(
-                    "Tagged trunk interface %s with VLAN with id %s", ifnum, vlan_id)
+                self.axapi_client.vlan.create(vlan_id, tagged_eths=[ifnum], veth=True)
+                LOG.debug("Tagged trunk interface %s with VLAN with id %s", ifnum, vlan_id)
         else:
             self.release_ve_ip_from_neutron(vlan_id, vlan_subnet_id_dict[vlan_id],
                                             device_id, default_device_id, project_id)
@@ -542,8 +523,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
 
         if ve_info == 'dhcp':
             if not ve_ip_exist:
-                self.axapi_client.interface.ve.create(
-                    vlan_id, dhcp=True, enable=True)
+                self.axapi_client.interface.ve.create(vlan_id, dhcp=True, enable=True)
         else:
             patched_ip = self._get_patched_ve_ip(ve_info)
             if not ve_ip_exist:
@@ -649,8 +629,7 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
     def revert(self, member, vthunder, *args, **kwargs):
         vlan_id = self.get_vlan_id(member.subnet_id, True)
         if self.axapi_client.vlan.exists(vlan_id) and self.is_vlan_deletable():
-            LOG.warning(
-                "Revert TagInterfaceForMember with VLAN id %s", vlan_id)
+            LOG.warning("Revert TagInterfaceForMember with VLAN id %s", vlan_id)
             self.release_ve_ip_from_neutron(vlan_id, member.subnet_id)
             self.axapi_client.vlan.delete(vlan_id)
 
