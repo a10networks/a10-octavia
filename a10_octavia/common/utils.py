@@ -191,7 +191,7 @@ def convert_interface_to_data_model(interface_obj):
     interface_dm = data_models.Interface()
     if not interface_num:
         raise exceptions.MissingInterfaceNumConfigError()
-    if not isinstance(interface_num, int):
+    if not type(interface_num) == int:
         raise exceptions.InvalidInterfaceNumberConfigError(interface_num)
     if not vlan_map_list:
         LOG.warning("Empty vlan map provided in configuration file")
@@ -199,12 +199,12 @@ def convert_interface_to_data_model(interface_obj):
         vlan_id = vlan_map.get('vlan_id')
         if not vlan_id:
             raise exceptions.MissingVlanIDConfigError(interface_num)
-        if not isinstance(vlan_id, int):
+        if not type(vlan_id) == int:
             raise exceptions.InvalidVlanIdConfigError(vlan_id)
         if vlan_id in interface_dm.tags:
             raise exceptions.DuplicateVlanTagsConfigError(interface_num, vlan_id)
         if vlan_map.get('use_dhcp'):
-            if not isinstance(vlan_map.get('use_dhcp'), bool):
+            if not type(vlan_map.get('use_dhcp')) == bool:
                 raise exceptions.InvalidUseDhcpConfigError(vlan_map.get('use_dhcp'))
             if vlan_map.get('ve_ip'):
                 raise exceptions.VirtEthCollisionConfigError(interface_num, vlan_id)
