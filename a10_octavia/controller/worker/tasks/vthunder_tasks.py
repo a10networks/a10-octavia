@@ -401,8 +401,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                         self._subnet_mask, subnet_id)
             return None
 
-        self.network_driver.create_port(
-            self._subnet.network_id, fixed_ip=ve_ip)
+        self.network_driver.create_port(self._subnet.network_id, fixed_ip=ve_ip)
 
     def release_ve_ip_from_neutron(self, vlan_id, subnet_id, device_id=None, default_device_id=None,
                                    project_id=None):
@@ -520,13 +519,10 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         ve_ip_exist = self.check_ve_ip_exists(vlan_id, ve_info)
         if not ve_ip_exist:
             self.axapi_client.interface.ve.delete(vlan_id)
-
-        if ve_info == 'dhcp':
-            if not ve_ip_exist:
+            if ve_info == 'dhcp':
                 self.axapi_client.interface.ve.create(vlan_id, dhcp=True, enable=True)
-        else:
-            patched_ip = self._get_patched_ve_ip(ve_info)
-            if not ve_ip_exist:
+            else:
+                patched_ip = self._get_patched_ve_ip(ve_info)
                 self.axapi_client.interface.ve.create(vlan_id, ip_address=patched_ip,
                                                       ip_netmask=self._subnet_mask, enable=True)
 
@@ -642,14 +638,13 @@ class DeleteInterfaceTagIfNotInUseForLB(TagInterfaceBaseTask):
     def execute(self, loadbalancer, vthunder):
         try:
             if loadbalancer.project_id in CONF.hardware_thunder.devices:
-                vthunder_conf = CONF.hardware_thunder.devices[loadbalancer.project_id]
                 vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
                 if self.is_vlan_deletable():
+                    vthunder_conf = CONF.hardware_thunder.devices[loadbalancer.project_id]
                     default_device_id = self.axapi_client.system.action.get_vrrp_device_id()
                     for device_obj in vthunder_conf.device_network_map:
-                        device_id = device_obj.vcs_device_id
                         self.delete_device_vlan(vlan_id, loadbalancer.vip.subnet_id,
-                                                device_id=device_id,
+                                                device_id=device_obj.vcs_device_id,
                                                 default_device_id=default_device_id,
                                                 project_id=loadbalancer.project_id)
         except Exception as e:
@@ -665,13 +660,12 @@ class DeleteInterfaceTagIfNotInUseForMember(TagInterfaceBaseTask):
         try:
             if member.project_id in CONF.hardware_thunder.devices:
                 vlan_id = self.get_vlan_id(member.subnet_id, False)
-                vthunder_conf = CONF.hardware_thunder.devices[member.project_id]
                 if self.is_vlan_deletable():
+                    vthunder_conf = CONF.hardware_thunder.devices[member.project_id]
                     default_device_id = self.axapi_client.system.action.get_vrrp_device_id()
                     for device_obj in vthunder_conf.device_network_map:
-                        device_id = device_obj.vcs_device_id
                         self.delete_device_vlan(vlan_id, member.subnet_id,
-                                                device_id=device_id,
+                                                device_id=device_obj.vcs_device_id,
                                                 default_device_id=default_device_id,
                                                 project_id=member.project_id)
 
