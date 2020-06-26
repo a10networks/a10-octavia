@@ -91,10 +91,11 @@ INTERFACE_CONF = {"interface_num": 1,
 INTERFACE = data_models.Interface(interface_num=1, tags=[11, 12, 13], ve_ips=[
                                   "10.20", "dhcp", "10.30"])
 DEVICE_NETWORK_MAP = [data_models.DeviceNetworkMap(
-    device_id='device_1', ethernet_interfaces=[INTERFACE])]
+    vcs_device_id=1, ethernet_interfaces=[INTERFACE])]
 HARDWARE_VLAN_INFO = {
     "interface_vlan_map": {
         "device_1": {
+            "vcs_device_id": 1,
             "ethernet_interfaces": [INTERFACE_CONF]
         }
     }
