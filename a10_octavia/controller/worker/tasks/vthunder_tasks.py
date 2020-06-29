@@ -497,6 +497,24 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         return a10_utils.merge_host_and_network_ip(self._subnet.cidr, ve_ip)
 
     @device_context_switch_decorator
+    def check_ve_ip_exists(self, vlan_id, config_ve_ip):
+        if self.axapi_client.vlan.exists(vlan_id):
+            try:
+                ve = self.axapi_client.interface.ve.get(vlan_id)
+            except Exception:
+                return False
+            ve_ip = ve['ve'].get('ip') if ve['ve'].get('ip') else None
+            if config_ve_ip == 'dhcp':
+                if ve_ip and ve_ip.get('dhcp'):
+                    return True
+            else:
+                if ve_ip and ve_ip.get('address-list'):
+                    existing_ve_ip = ve_ip.get('address-list')[0].get('ipv4-address')
+                    if self._get_patched_ve_ip(config_ve_ip) == existing_ve_ip:
+                        return True
+            return False
+
+    @device_context_switch_decorator
     def delete_device_vlan(self, vlan_id, subnet_id, vthunder, device_id=None,
                            master_device_id=None):
         if self.axapi_client.vlan.exists(vlan_id):
@@ -538,23 +556,28 @@ class TagInterfaceBaseTask(VThunderBaseTask):
             self.release_ve_ip_from_neutron(vlan_id, vlan_subnet_id_dict[vlan_id], vthunder,
                                             device_id)
 
-        if ve_info == 'dhcp':
-            self.axapi_client.interface.ve.update(vlan_id, dhcp=True, enable=True)
-        else:
-            patched_ip = self._get_patched_ve_ip(ve_info)
-            self.axapi_client.interface.ve.update(vlan_id, ip_address=patched_ip,
-                                                  ip_netmask=self._subnet_mask, enable=True)
+        ve_ip_exist = self.check_ve_ip_exists(vlan_id, ve_info)
+        if not ve_ip_exist:
+            self.axapi_client.interface.ve.delete(vlan_id)
+            if ve_info == 'dhcp':
+                self.axapi_client.interface.ve.create(vlan_id, dhcp=True, enable=True)
+            else:
+                patched_ip = self._get_patched_ve_ip(ve_info)
+                self.axapi_client.interface.ve.create(vlan_id, ip_address=patched_ip,
+                                                      ip_netmask=self._subnet_mask, enable=True)
         self.reserve_ve_ip_with_neutron(vlan_id, vlan_subnet_id_dict[vlan_id], vthunder,
                                         device_id)
 
     @device_context_switch_decorator
     def tag_device_interfaces(self, create_vlan_id, vlan_subnet_id_dict, device_obj,
                               vthunder, device_id=None, master_device_id=None):
+        all_vlan_ids = []
         for eth_interface in device_obj.ethernet_interfaces:
             ifnum = str(eth_interface.interface_num)
             assert len(eth_interface.tags) == len(eth_interface.ve_ips)
             for i in range(len(eth_interface.tags)):
                 tag = str(eth_interface.tags[i])
+                all_vlan_ids.append(tag)
                 ve_ip = eth_interface.ve_ips[i]
                 self.tag_interface(False, create_vlan_id, tag, ifnum, ve_ip,
                                    vlan_subnet_id_dict, vthunder, device_id=device_id)
@@ -563,9 +586,13 @@ class TagInterfaceBaseTask(VThunderBaseTask):
             assert len(trunk_interface.tags) == len(trunk_interface.ve_ips)
             for i in range(len(trunk_interface.tags)):
                 tag = str(trunk_interface.tags[i])
+                all_vlan_ids.append(tag)
                 ve_ip = trunk_interface.ve_ips[i]
                 self.tag_interface(True, create_vlan_id, tag, ifnum, ve_ip,
                                    vlan_subnet_id_dict, vthunder, device_id=device_id)
+        if str(create_vlan_id) not in all_vlan_ids:
+            LOG.warning('Settings for vlan id %s is not present in `a10-octavia.conf`',
+                        str(create_vlan_id))
 
     def tag_interfaces(self, vthunder, create_vlan_id):
         if vthunder.device_network_map:
@@ -585,7 +612,8 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         network_id = self._subnet.network_id
         network = self.network_driver.get_network(network_id)
         if network.provider_network_type != 'vlan' and not is_revert:
-            raise
+            LOG.warning('provider_network_type not set to vlan for openstack network: %s',
+                        network_id)
         return network.provider_segmentation_id
 
     def is_vlan_deletable(self):

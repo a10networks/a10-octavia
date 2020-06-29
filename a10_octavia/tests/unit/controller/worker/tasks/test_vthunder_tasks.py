@@ -227,7 +227,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.vlan.create.assert_called_with(VE_IP_VLAN_ID,
                                                         tagged_eths=[TAG_INTERFACE],
                                                         veth=True)
-        self.client_mock.interface.ve.update.assert_called_with(VE_IP_VLAN_ID,
+        self.client_mock.interface.ve.create.assert_called_with(VE_IP_VLAN_ID,
                                                                 ip_address=STATIC_VE_IP,
                                                                 ip_netmask="255.255.255.0",
                                                                 enable=True)
@@ -255,7 +255,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.vlan.create.assert_called_with(VE_IP_VLAN_ID,
                                                         tagged_trunks=[TAG_TRUNK_INTERFACE],
                                                         veth=True)
-        self.client_mock.interface.ve.update.assert_called_with(VE_IP_VLAN_ID,
+        self.client_mock.interface.ve.create.assert_called_with(VE_IP_VLAN_ID,
                                                                 ip_address=STATIC_VE_IP,
                                                                 ip_netmask="255.255.255.0",
                                                                 enable=True)
