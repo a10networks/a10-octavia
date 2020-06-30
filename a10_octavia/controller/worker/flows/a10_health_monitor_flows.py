@@ -50,7 +50,8 @@ class HealthMonitorFlows(object):
             requires=constants.POOL))
         create_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-
+        create_hm_flow.add(virtual_server_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return create_hm_flow
 
     def get_delete_health_monitor_flow(self):
@@ -85,7 +86,8 @@ class HealthMonitorFlows(object):
             requires=constants.POOL))
         delete_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-
+        delete_hm_flow.add(virtual_server_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return delete_hm_flow
 
     def get_update_health_monitor_flow(self):
@@ -114,5 +116,6 @@ class HealthMonitorFlows(object):
             requires=constants.POOL))
         update_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-
+        update_hm_flow.add(virtual_server_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return update_hm_flow

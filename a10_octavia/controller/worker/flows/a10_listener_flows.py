@@ -46,6 +46,8 @@ class ListenerFlows(object):
                                  MarkLBAndListenersActiveInDB(
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENERS]))
+        create_listener_flow.add(virtual_server_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return create_listener_flow
 
     def get_create_all_listeners_flow(self):
@@ -66,6 +68,8 @@ class ListenerFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_all_listeners_flow.add(network_tasks.UpdateVIP(
             requires=constants.LOADBALANCER))
+        create_all_listener_flow.add(virtual_server_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return create_all_listeners_flow
 
     def get_delete_listener_flow(self):
@@ -89,7 +93,8 @@ class ListenerFlows(object):
             requires=constants.LISTENER))
         delete_listener_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
-
+        delete_listener_flow.add(virtual_server_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
     def get_delete_rack_listener_flow(self):
@@ -111,7 +116,8 @@ class ListenerFlows(object):
             requires=constants.LISTENER))
         delete_listener_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
-
+        delete_listener_flow.add(virtual_server_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
     def get_delete_listener_internal_flow(self, listener_name):
@@ -157,7 +163,8 @@ class ListenerFlows(object):
                                  MarkLBAndListenersActiveInDB(
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENERS]))
-
+        update_listener_flow.add(virtual_server_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return update_listener_flow
 
     def get_rack_vthunder_create_listener_flow(self, project_id):
@@ -180,4 +187,6 @@ class ListenerFlows(object):
                                  MarkLBAndListenersActiveInDB(
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENERS]))
+        create_listener_flow.add(virtual_server_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return create_listener_flow
