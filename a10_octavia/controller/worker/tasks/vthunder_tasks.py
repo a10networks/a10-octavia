@@ -750,7 +750,7 @@ class WriteMemory(VThunderBaseTask):
 
     @device_context_switch_decorator
     def write_device_mem(self, partition_name, device_id=None, default_device_id=None):
-        self.axapi_client.v3.action.write_memory(partition=partition_name)
+        self.axapi_client.system.action.write_memory(partition=partition_name)
 
     @axapi_client_decorator
     def execute(self, vthunder):

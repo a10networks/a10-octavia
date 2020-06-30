@@ -22,6 +22,7 @@ from octavia.controller.worker.tasks import model_tasks
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import l7policy_tasks
+from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 
 class L7PolicyFlows(object):
@@ -47,7 +48,7 @@ class L7PolicyFlows(object):
             requires=constants.L7POLICY))
         create_l7policy_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        create_l7policy_flow.add(virtual_server_tasks.WriteMemory(
+        create_l7policy_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return create_l7policy_flow
 
@@ -74,7 +75,7 @@ class L7PolicyFlows(object):
             requires=constants.L7POLICY))
         delete_l7policy_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        delete_l7policy_flow.add(virtual_server_tasks.WriteMemory(
+        delete_l7policy_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return delete_l7policy_flow
 
@@ -106,6 +107,6 @@ class L7PolicyFlows(object):
             requires=constants.L7POLICY))
         update_l7policy_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        update_l7policy_flow.add(virtual_server_tasks.WriteMemory(
+        update_l7policy_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return update_l7policy_flow

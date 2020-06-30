@@ -54,7 +54,7 @@ class PoolFlows(object):
             requires=constants.POOL))
         create_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        create_pool_flow.add(virtual_server_tasks.WriteMemory(
+        create_pool_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
 
         return create_pool_flow
@@ -91,7 +91,7 @@ class PoolFlows(object):
             requires=[constants.POOL, constants.POOL_CHILD_COUNT]))
         delete_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        delete_pool_flow.add(virtual_server_tasks.WriteMemory(
+        delete_pool_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
 
         return delete_pool_flow
@@ -154,7 +154,7 @@ class PoolFlows(object):
             requires=constants.POOL))
         update_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        update_pool_flow.add(virtual_server_tasks.WriteMemory(
+        update_pool_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
 
         return update_pool_flow

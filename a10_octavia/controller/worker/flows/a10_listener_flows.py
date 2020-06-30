@@ -23,6 +23,7 @@ from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.controller.worker.tasks import virtual_port_tasks
+from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 
 class ListenerFlows(object):
@@ -46,7 +47,7 @@ class ListenerFlows(object):
                                  MarkLBAndListenersActiveInDB(
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENERS]))
-        create_listener_flow.add(virtual_server_tasks.WriteMemory(
+        create_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 
@@ -68,7 +69,7 @@ class ListenerFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_all_listeners_flow.add(network_tasks.UpdateVIP(
             requires=constants.LOADBALANCER))
-        create_all_listener_flow.add(virtual_server_tasks.WriteMemory(
+        create_all_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return create_all_listeners_flow
 
@@ -93,7 +94,7 @@ class ListenerFlows(object):
             requires=constants.LISTENER))
         delete_listener_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
-        delete_listener_flow.add(virtual_server_tasks.WriteMemory(
+        delete_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
@@ -116,7 +117,7 @@ class ListenerFlows(object):
             requires=constants.LISTENER))
         delete_listener_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
-        delete_listener_flow.add(virtual_server_tasks.WriteMemory(
+        delete_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
@@ -163,7 +164,7 @@ class ListenerFlows(object):
                                  MarkLBAndListenersActiveInDB(
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENERS]))
-        update_listener_flow.add(virtual_server_tasks.WriteMemory(
+        update_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return update_listener_flow
 
@@ -187,6 +188,6 @@ class ListenerFlows(object):
                                  MarkLBAndListenersActiveInDB(
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENERS]))
-        create_listener_flow.add(virtual_server_tasks.WriteMemory(
+        create_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return create_listener_flow

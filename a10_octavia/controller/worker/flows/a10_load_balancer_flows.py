@@ -81,7 +81,7 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
             requires=(constants.LOADBALANCER,
                            a10constants.VTHUNDER)))
-        lb_create_flow.add(virtual_server_tasks.WriteMemory(
+        lb_create_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return lb_create_flow
 
@@ -208,7 +208,7 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.DecrementLoadBalancerQuota(
             requires=constants.LOADBALANCER))
-        delete_LB_flow.add(virtual_server_tasks.WriteMemory(
+        delete_LB_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return (delete_LB_flow, store)
 
@@ -299,7 +299,7 @@ class LoadBalancerFlows(object):
                           a10constants.VTHUNDER]))
         update_LB_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
-        update_LB_flow.add(virtual_server_tasks.WriteMemory(
+        update_LB_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return update_LB_flow
 
@@ -327,7 +327,7 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.STATUS))
 
-        lb_create_flow.add(virtual_server_tasks.WriteMemory(
+        lb_create_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return lb_create_flow
 
