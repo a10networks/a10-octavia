@@ -420,6 +420,9 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
                     elif 'vBlade' in member.get('state'):
                         device.state = 'vBlade'
                         vthunder.device_network_map.append(device)
+                    elif 'Unknown' in member.get('state'):
+                        LOG.warning("Not configuring VE VLAN for device id:%s state:Unknown",
+                                    str(member.get('id')))
                 if len(devices.keys()) > 0:
                     device_ids = ''
                     for key in devices:
@@ -443,6 +446,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
     def reserve_ve_ip_with_neutron(self, vlan_id, subnet_id, vthunder, device_id=None):
         ve_ip = self._get_ve_ip(vlan_id, vthunder, device_id)
         if ve_ip is None:
+            LOG.warning("Failed to reserve port from neutron for device %s", str(device_id))
             return None
 
         if not a10_utils.check_ip_in_subnet_range(ve_ip, self._subnet_ip, self._subnet_mask):
@@ -458,6 +462,8 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         port_id = self.network_driver.get_port_id_from_ip(ve_ip)
         if ve_ip and port_id:
             self.network_driver.delete_port(port_id)
+        else:
+            LOG.warning("Failed to release ve port from neutron for device %s", str(device_id))
 
     def _get_ve_ip(self, vlan_id, vthunder, device_id=None):
         master_device_id = vthunder.device_network_map[0].vcs_device_id
@@ -480,7 +486,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                 if ipv4_list:
                     return ipv4_list[0]['addr']
         except Exception as e:
-            LOG.exception("Failed to get ve ip from vThunder: %s", str(e))
+            LOG.warning("Failed to get ve ip from device id %s: %s", str(device_id), str(e))
 
     def get_subnet_and_mask(self, subnet_id):
         self._subnet = self.network_driver.get_subnet(subnet_id)
@@ -603,9 +609,16 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                 vlan_subnet_id_dict[str(vlan_id)] = network.subnets[0]
             master_device_id = vthunder.device_network_map[0].vcs_device_id
             for device_obj in vthunder.device_network_map:
-                self.tag_device_interfaces(create_vlan_id, vlan_subnet_id_dict, device_obj,
-                                           vthunder, device_id=device_obj.vcs_device_id,
-                                           master_device_id=master_device_id)
+                try:
+                    self.tag_device_interfaces(create_vlan_id, vlan_subnet_id_dict, device_obj,
+                                               vthunder, device_id=device_obj.vcs_device_id,
+                                               master_device_id=master_device_id)
+                except Exception as e:
+                    if master_device_id != device_obj.vcs_device_id:
+                        LOG.warning("Failed to tag interfaces of device id %s: %s",
+                                    str(device_obj.vcs_device_id), str(e))
+                    else:
+                        raise e
 
     def get_vlan_id(self, subnet_id, is_revert):
         self.get_subnet_and_mask(subnet_id)
@@ -646,7 +659,7 @@ class TagInterfaceForLB(TagInterfaceBaseTask):
             self.tag_interfaces(vthunder, vlan_id)
         except Exception as e:
             LOG.exception("Failed to TagInterfaceForLB: %s", str(e))
-            raise
+            raise e
 
     @axapi_client_decorator
     def revert(self, loadbalancer, vthunder, *args, **kwargs):
@@ -675,7 +688,7 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
             self.tag_interfaces(vthunder, vlan_id)
         except Exception as e:
             LOG.exception("Failed to TagInterfaceForMember: %s", str(e))
-            raise
+            raise e
 
     @axapi_client_decorator
     def revert(self, member, vthunder, *args, **kwargs):
