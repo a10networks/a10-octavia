@@ -13,6 +13,7 @@
 #    under the License.
 
 
+import copy
 import imp
 import json
 try:
@@ -50,6 +51,7 @@ RACK_DEVICE = {
     "password": "abc",
     "interface_vlan_map": {
         "device_1": {
+            "vcs_device_id": 1,
             "ethernet_interfaces": [{
                 "interface_num": "5",
                 "vlan_map": [
@@ -68,6 +70,7 @@ RACK_DEVICE_TRUNK_INTERFACE = {
     "password": "abc",
     "interface_vlan_map": {
         "device_1": {
+            "vcs_device_id": 1,
             "trunk_interfaces": [{
                 "interface_num": "1",
                 "vlan_map": [
@@ -308,13 +311,58 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
 
     def test_WriteMemory_execute_save_shared_mem(self):
-        pass
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
+        mock_task = task.WriteMemory()
+        mock_task.axapi_client = self.client_mock
+        mock_task.execute(VTHUNDER)
+        self.client_mock.v3.action.write_memory.assert_called()
 
-    def test_WriteMemory_execute_save_specific_partition_mem(self):
-        pass
+    def test_WriteMemory_execute_save_shared_mem(self):
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
+        thunder = copy.deepcopy(VTHUNDER) 
+        thunder.partition_name = "testPartition"
+        mock_task = task.WriteMemory()
+        mock_task.axapi_client = self.client_mock
+        mock_task.execute(thunder)
+        self.client_mock.v3.action.write_memory.assert_called_with(partition="testPartition")
 
-    def test_WriteMemory_execute_fail_partition_does_not_exist(self):
-        pass
+    def test_WriteMemroy_execute_save_mem_hardware_deployment(self):
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
+        devices_str = json.dumps([RACK_DEVICE])
+        self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
+                         devices=devices_str)
+        mock_task = task.WriteMemory()
+        mock_task.write_device_mem = mock.Mock()
+        mock_task.axapi_client = self.client_mock
+        thunder = copy.deepcopy(VTHUNDER)
+        thunder.project_id = "project-rack-vthunder"
 
-   def test_WriteMemroy_execute_save_mem_ha_deployment(self):
-       pass
+        mock_task.execute(thunder)
+        self.client_mock.system.action.get_vrrp_device_id.assert_not_called()
+        mock_task.write_device_mem.assert_called()
+
+    def test_WriteMemroy_execute_save_mem_hardware_deployment_ha(self):
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
+        ha_rack = copy.copy(RACK_DEVICE)
+        ha_rack['interface_vlan_map']['device_2'] = RACK_DEVICE_TRUNK_INTERFACE['interface_vlan_map']['device_1']
+        ha_rack['interface_vlan_map']['device_2']['vcs_device_id'] = 2
+        devices_str = json.dumps([ha_rack])
+        self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
+                         devices=devices_str)
+
+        mock_task = task.WriteMemory()
+        mock_task.write_device_mem = mock.Mock()
+        mock_task.axapi_client = self.client_mock
+        mock_task.axapi_client.system.action.get_vrrp_device_id.return_value = 1
+        thunder = copy.deepcopy(VTHUNDER)
+        thunder.project_id = "project-rack-vthunder"
+        thunder.partition_name = "shared"
+        mock_task.execute(thunder)
+
+        self.client_mock.system.action.get_vrrp_device_id.assert_called()
+        write_mem_calls = [mock.call("shared", 1, 1), mock.call("shared", 2, 1)]
+        mock_task.write_device_mem.assert_has_calls(write_mem_calls, any_order=True)
