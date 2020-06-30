@@ -82,8 +82,7 @@ class ListenersParent(object):
                                 "HTTPS or TERMINATED_HTTPS listener.")
                     no_dest_nat = False
 
-                name = loadbalancer.id + "_" + str(listener.protocol_port)
-                set_method(loadbalancer.id, name,
+                set_method(loadbalancer.id, listener.id,
                            listener.protocol,
                            listener.protocol_port,
                            listener.default_pool_id,
