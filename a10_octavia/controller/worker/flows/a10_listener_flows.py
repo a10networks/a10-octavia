@@ -69,7 +69,7 @@ class ListenerFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_all_listeners_flow.add(network_tasks.UpdateVIP(
             requires=constants.LOADBALANCER))
-        create_all_listener_flow.add(vthunder_tasks.WriteMemory(
+        create_all_listeners_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return create_all_listeners_flow
 

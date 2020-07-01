@@ -316,8 +316,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.execute(VTHUNDER)
         self.client_mock.system.action.write_memory.assert_called()
 
-    def test_WriteMemory_execute_save_shared_mem(self):
-        thunder = copy.deepcopy(VTHUNDER) 
+    def test_WriteMemory_execute_save_specific_partition_mem(self):
+        thunder = copy.deepcopy(VTHUNDER)
         thunder.partition_name = "testPartition"
         mock_task = task.WriteMemory()
         mock_task.axapi_client = self.client_mock

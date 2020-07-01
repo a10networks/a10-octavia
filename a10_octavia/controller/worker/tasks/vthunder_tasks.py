@@ -417,7 +417,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         else:
             axapi_client = self.axapi_client
             close_axapi_client = False
-          
+
             try:
                 resp = axapi_client.interface.ve.get_oper(vlan_id)
                 if close_axapi_client:
