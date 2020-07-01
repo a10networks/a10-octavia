@@ -421,8 +421,6 @@ class VThunderFlows(object):
         amp_for_lb_flow.add(vthunder_tasks.HandleACOSPartitionChange(
             name=sf_name + '-' + a10constants.CHANGE_PARTITION,
             requires=a10constants.VTHUNDER))
-        amp_for_lb_flow.add(vthunder_tasks.WriteMemory(
-            requires=a10constants.VTHUNDER)
         return amp_for_lb_flow
 
     def _is_vrrp_configured(self, history):

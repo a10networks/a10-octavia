@@ -360,6 +360,7 @@ class HandleACOSPartitionChange(VThunderBaseTask):
             axapi_client = a10_utils.get_axapi_client(vthunder)
             if not axapi_client.system.partition.exists(vthunder.partition_name):
                 axapi_client.system.partition.create(vthunder.partition_name)
+                axapi_client.system.action.write_memory()
                 LOG.info("Partition %s created", vthunder.partition_name)
         except acos_errors.Exists:
             pass
