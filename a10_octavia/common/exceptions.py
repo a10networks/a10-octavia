@@ -81,3 +81,27 @@ class VirtEthMissingConfigError(cfg.ConfigFileValueError):
                'Missing `use_dhcp` and `ve_ip` in config. ' +
                'Please provide either.').format(vlan_id, interface_num)
         super(VirtEthMissingConfigError, self).__init__(msg=msg)
+
+
+class VcsDevicesNumberExceedsConfigError(cfg.ConfigFileValueError):
+
+    def __init__(self, num_devices):
+        msg = ('Number of vcs devices {0} exceeds the maximum allowed value 2. ' +
+               'Please reduce the devices in cluster.').format(num_devices)
+        super(VcsDevicesNumberExceedsConfigError, self).__init__(msg=msg)
+
+
+class InvalidVcsDeviceIdConfigError(cfg.ConfigFileValueError):
+
+    def __init__(self, vcs_device_id):
+        msg = ('Invalid `vcs_device_id` {0}, it should be in the range 1-2. ' +
+               'Please provide the proper `vcs_device_id`.').format(vcs_device_id)
+        super(InvalidVcsDeviceIdConfigError, self).__init__(msg=msg)
+
+
+class MissingMgmtIpConfigError(cfg.ConfigFileValueError):
+
+    def __init__(self, vcs_device_id):
+        msg = ('Missing `mgmt_ip_address` for vcs device with id {0}. ' +
+               'Please provide management IP address').format(vcs_device_id)
+        super(MissingMgmtIpConfigError, self).__init__(msg=msg)

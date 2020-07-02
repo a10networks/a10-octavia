@@ -185,6 +185,23 @@ def get_vrid_floating_ip_for_project(project_id):
         return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp
 
 
+def validate_vcs_device_info(device_network_map):
+    num_devices = len(device_network_map)
+    if num_devices > 2:
+        raise exceptions.VcsDevicesNumberExceedsConfigError(num_devices)
+    for device_obj in device_network_map:
+        device_id = device_obj.vcs_device_id
+        if ((num_devices > 1 and not device_id) or
+            (device_id is not None and (not isinstance(device_id, int) or
+                                        (device_id < 1 or device_id > 2)))):
+            raise exceptions.InvalidVcsDeviceIdConfigError(device_id)
+        if num_devices > 1:
+            if not device_obj.mgmt_ip_address:
+                raise exceptions.MissingMgmtIpConfigError(device_id)
+            else:
+                validate_ipv4(device_obj.mgmt_ip_address)
+
+
 def convert_interface_to_data_model(interface_obj):
     vlan_map_list = interface_obj.get('vlan_map')
     interface_num = interface_obj.get('interface_num')
@@ -224,5 +241,8 @@ def validate_interface_vlan_map(hardware_device):
         if device_obj.get('trunk_interfaces'):
             for trunk in device_obj.get('trunk_interfaces'):
                 device_map.trunk_interfaces.append(convert_interface_to_data_model(trunk))
+        if device_obj.get('mgmt_ip_address'):
+            device_map.mgmt_ip_address = device_obj.get('mgmt_ip_address')
         device_network_map.append(device_map)
+    validate_vcs_device_info(device_network_map)
     return device_network_map
