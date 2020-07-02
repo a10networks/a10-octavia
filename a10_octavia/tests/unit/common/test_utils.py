@@ -340,3 +340,57 @@ class TestUtils(base.BaseTaskTestCase):
                                                {"vlan_id": 11, "use_dhcp": True}]}
         self.assertRaises(exceptions.DuplicateVlanTagsConfigError,
                           utils.convert_interface_to_data_model, duplicate_vlan_ids_in_iface_obj)
+
+    def test_validate_vcs_device_info_valid(self):
+        interface = utils.convert_interface_to_data_model(INTERFACE_CONF)
+        device1_network_map = data_models.DeviceNetworkMap(vcs_device_id=1,
+                                                           ethernet_interfaces=[interface])
+        device2_network_map = data_models.DeviceNetworkMap(vcs_device_id=2,
+                                                           mgmt_ip_address="10.0.0.2",
+                                                           ethernet_interfaces=[interface])
+        device_network_map = []
+        self.assertEqual(utils.validate_vcs_device_info(device_network_map), None)
+        device_network_map = [device1_network_map]
+        self.assertEqual(utils.validate_vcs_device_info(device_network_map), None)
+        device1_network_map.mgmt_ip_address = "10.0.0.1"
+        self.assertEqual(utils.validate_vcs_device_info(device_network_map), None)
+        device_network_map = [device1_network_map, device2_network_map]
+        self.assertEqual(utils.validate_vcs_device_info(device_network_map), None)
+
+    def test_validate_vcs_device_info_invalid(self):
+        interface = utils.convert_interface_to_data_model(INTERFACE_CONF)
+        device1_network_map = data_models.DeviceNetworkMap(mgmt_ip_address="10.0.0.1",
+                                                           ethernet_interfaces=[interface])
+        device2_network_map = data_models.DeviceNetworkMap(mgmt_ip_address="10.0.0.2",
+                                                           ethernet_interfaces=[interface])
+        device1_network_map.vcs_device_id = 3
+        device_network_map = [device1_network_map]
+        self.assertRaises(exceptions.InvalidVcsDeviceIdConfigError,
+                          utils.validate_vcs_device_info, device_network_map)
+        device1_network_map.vcs_device_id = 0
+        device_network_map = [device1_network_map]
+        self.assertRaises(exceptions.InvalidVcsDeviceIdConfigError,
+                          utils.validate_vcs_device_info, device_network_map)
+        device1_network_map.vcs_device_id = 1
+        device2_network_map.vcs_device_id = 3
+        device_network_map = [device1_network_map, device2_network_map]
+        self.assertRaises(exceptions.InvalidVcsDeviceIdConfigError,
+                          utils.validate_vcs_device_info, device_network_map)
+        device1_network_map.vcs_device_id = 0
+        device2_network_map.vcs_device_id = 2
+        device_network_map = [device1_network_map, device2_network_map]
+        self.assertRaises(exceptions.InvalidVcsDeviceIdConfigError,
+                          utils.validate_vcs_device_info, device_network_map)
+        device1_network_map.vcs_device_id = 1
+        device2_network_map.vcs_device_id = None
+        device_network_map = [device1_network_map, device2_network_map]
+        self.assertRaises(exceptions.InvalidVcsDeviceIdConfigError,
+                          utils.validate_vcs_device_info, device_network_map)
+        device_network_map = [device1_network_map, device2_network_map, device2_network_map]
+        self.assertRaises(exceptions.VcsDevicesNumberExceedsConfigError,
+                          utils.validate_vcs_device_info, device_network_map)
+        device2_network_map.vcs_device_id = 2
+        device2_network_map.mgmt_ip_address = None
+        device_network_map = [device1_network_map, device2_network_map]
+        self.assertRaises(exceptions.MissingMgmtIpConfigError,
+                          utils.validate_vcs_device_info, device_network_map)
