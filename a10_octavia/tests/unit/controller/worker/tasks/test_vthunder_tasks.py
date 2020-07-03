@@ -45,14 +45,14 @@ ETH_DATA = {"action": "enable"}
 SUBNET_MASK = ["10.0.11.0", "255.255.255.0", "10.0.11.0/24"]
 VE_IP_SUBNET_MASK = ["10.0.12.0", "255.255.255.0", "10.0.12.0/24"]
 ETHERNET_INTERFACE = {
-    "interface_num": "5",
+    "interface_num": 5,
     "vlan_map": [
         {"vlan_id": 11, "use_dhcp": "True"},
         {"vlan_id": 12, "ve_ip": ".10"}
     ]
 }
 TRUNK_INTERFACE = {
-    "interface_num": "1",
+    "interface_num": 1,
     "vlan_map": [
         {"vlan_id": 12, "ve_ip": ".10"}
     ]
@@ -387,6 +387,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
     def test_SetupDeviceNetworkMap_execute_vcs_master_vblade(self):
         self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
                                 group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION)
+
         devices_str = json.dumps([RACK_DEVICE_VCS])
         self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=devices_str)

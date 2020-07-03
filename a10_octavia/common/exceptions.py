@@ -102,8 +102,8 @@ class InvalidVlanIdConfigError(cfg.ConfigFileValueError):
 class InvalidUseDhcpConfigError(cfg.ConfigFileValueError):
 
     def __init__(self, use_dhcp):
-        msg = ('Invalid value given for setting `use_dhcp` as \"{0}\". ' +
-               'Please provide only boolean(True/False) values only.').format(use_dhcp)
+        msg = ('Invalid value given for setting `use_dhcp` as {0}. ' +
+               'Please provide either "True" or "False" only.').format(use_dhcp)
         super(InvalidUseDhcpConfigError, self).__init__(msg=msg)
 
 
