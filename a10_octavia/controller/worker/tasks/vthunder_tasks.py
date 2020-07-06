@@ -400,9 +400,8 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
             except Exception as e:
                 LOG.exception("Failed to get vcs summary oper: %s", str(e))
                 raise
+
             if resp and 'vcs-summary' in resp and 'oper' in resp['vcs-summary']:
-                vthunder_conf = CONF.hardware_thunder.devices[vthunder.project_id]
-                device_network_map = vthunder_conf.device_network_map
                 oper = resp['vcs-summary']['oper']
                 if oper.get('vcs-enabled') != 'Yes':
                     if len(device_network_map) == 1:
