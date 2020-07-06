@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from neutronclient.common import exceptions as neutron_client_exceptions
 from oslo_config import cfg
 from oslo_log import log as logging
 from stevedore import driver as stevedore_driver
@@ -135,7 +134,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
     def create_port(self, network_id, subnet_id=None, fixed_ip=None):
         new_port = None
         if not subnet_id:
-            subnet_id = self.get_network(network_id).subnets[0]
+            subnet_id = self.neutron_client.get_network(network_id).subnets[0]
         try:
             port = {'port': {'name': 'octavia-port-' + network_id,
                              'network_id': network_id,
@@ -158,41 +157,3 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         except Exception:
             message = "Error deleting port: {0}".format(port_id)
             LOG.exception(message)
-
-    def get_port_id_from_ip(self, ip):
-        try:
-            ports = self.neutron_client.list_ports(device_owner=OCTAVIA_OWNER)
-            if not ports or not ports.get('ports'):
-                return None
-            for port in ports['ports']:
-                if port.get('fixed_ips'):
-                    fixed_ips = port['fixed_ips']
-                    for ipaddr in fixed_ips:
-                        if ipaddr.get('ip_address') == ip:
-                            return port['id']
-        except (neutron_client_exceptions.NotFound,
-                neutron_client_exceptions.PortNotFoundClient):
-            pass
-        except Exception:
-            message = _('Error listing ports, ip {} ').format(ip)
-            LOG.exception(message)
-            pass
-        return None
-
-    def list_networks(self):
-        network_list = self.neutron_client.list_networks()
-        network_list_datamodel = []
-
-        for network in network_list.get('networks'):
-            network_list_datamodel.append(n_data_models.Network(
-                id=network.get('id'),
-                name=network.get('name'),
-                subnets=network.get('subnets'),
-                project_id=network.get('project_id'),
-                admin_state_up=network.get('admin_state_up'),
-                mtu=network.get('mtu'),
-                provider_network_type=network.get('provider:network_type'),
-                provider_physical_network=network.get('provider:physical_network'),
-                provider_segmentation_id=network.get('provider:segmentation_id'),
-                router_external=network.get('router:external')))
-        return network_list_datamodel

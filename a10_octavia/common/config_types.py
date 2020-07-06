@@ -17,7 +17,7 @@
 """
 
 
-import ast
+import json
 import six
 
 from oslo_config import cfg
@@ -70,11 +70,15 @@ class ListOfObjects(List):
                 raise ValueError('Value should start with "["')
             if not value.endswith(']'):
                 raise ValueError('Value should end with "]"')
-        try:
-            value_list = ast.literal_eval(value)
-        except Exception as e:
-            raise e
+            value = value[1:-1]
+        # Warning - param device_name should not contain spaces
+        value = value.replace(" ", "").replace("\n", "")
+        if value:
+            value = value.split('},{')
         final_list = []
-        for item in value_list:
-            final_list.append(item)
+        for item in value:
+            item = '{' + item.lstrip('{').rstrip('}') + '}'
+            item = item.replace("\'", "\"")
+            single_dict = json.loads(item)
+            final_list.append(single_dict)
         return utils.convert_to_hardware_thunder_conf(final_list)

@@ -26,7 +26,6 @@ from octavia.common import constants
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 
-from a10_octavia.common import a10constants
 from a10_octavia.common import utils
 from a10_octavia.db import repositories as a10_repo
 
@@ -44,8 +43,6 @@ class BaseDatabaseTask(task.Task):
         self.vrid_repo = a10_repo.VRIDRepository()
         self.amphora_repo = repo.AmphoraRepository()
         self.member_repo = a10_repo.MemberRepository()
-        self.loadbalancer_repo = repo.LoadBalancerRepository()
-        self.vip_repo = repo.VipRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -243,6 +240,13 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                       loadbalancer.id)
             raise e
 
+    def revert(self, loadbalancer, vthunder_config, *args, **kwargs):
+        try:
+            self.vthunder_repo.delete(
+                db_apis.get_session(), loadbalancer_id=loadbalancer.id)
+        except NoResultFound:
+            LOG.error("Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
+
 
 class CreateVThunderHealthEntry(BaseDatabaseTask):
 
@@ -348,54 +352,3 @@ class DeleteVRIDEntry(BaseDatabaseTask):
                 self.vrid_repo.delete(db_apis.get_session(), id=vrid.id)
             except Exception as e:
                 LOG.exception("Failed to delete VRID entry from vrid table: %s", str(e))
-
-
-class CheckVLANCanBeDeletedParent(object):
-
-    """ Checks all vip and member subnet_ids for project ID"""
-
-    def is_vlan_deletable(self, project_id, subnet_id, is_vip):
-        if project_id not in CONF.rack_vthunder.devices:
-            return False
-
-        subnet_usage_count = 0
-
-        lbs = db_apis.get_session().query(self.loadbalancer_repo.model_class).filter(
-            self.loadbalancer_repo.model_class.project_id == project_id).all()
-        for lb in lbs:
-            vips = db_apis.get_session().query(self.vip_repo.model_class).filter(
-                self.vip_repo.model_class.load_balancer_id == lb.id).all()
-            for vip in vips:
-                if vip.subnet_id == subnet_id:
-                    subnet_usage_count += 1
-
-        members = db_apis.get_session().query(self.member_repo.model_class).filter(
-            self.member_repo.model_class.project_id == project_id).all()
-        for member in members:
-            if member.subnet_id == subnet_id:
-                subnet_usage_count += 1
-
-        if is_vip and subnet_usage_count == 1:
-            return True
-        elif subnet_usage_count == 0:
-            return True
-
-        return False
-
-
-class CheckVipVLANCanBeDeleted(CheckVLANCanBeDeletedParent, BaseDatabaseTask):
-
-    default_provides = a10constants.DELETE_VLAN
-
-    def execute(self, loadbalancer):
-        return self.is_vlan_deletable(loadbalancer.project_id,
-                                      loadbalancer.vip.subnet_id,
-                                      True)
-
-
-class CheckMemberVLANCanBeDeleted(CheckVLANCanBeDeletedParent, BaseDatabaseTask):
-
-    default_provides = a10constants.DELETE_VLAN
-
-    def execute(self, member):
-        return self.is_vlan_deletable(member.project_id, member.subnet_id, False)

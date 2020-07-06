@@ -179,10 +179,6 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
-        if CONF.a10_global.network_type == 'vlan':
-            delete_LB_flow.add(vthunder_tasks.DeleteInterfaceTagIfNotInUseForLB(
-                requires=[constants.LOADBALANCER,
-                          a10constants.VTHUNDER]))
 
         # delete_LB_flow.add(listeners_delete)
         # delete_LB_flow.add(network_tasks.UnplugVIP(
@@ -285,10 +281,6 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
-        if CONF.a10_global.network_type == 'vlan':
-            update_LB_flow.add(vthunder_tasks.TagInterfaceForLB(
-                requires=[constants.LOADBALANCER,
-                          a10constants.VTHUNDER]))
         update_LB_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
         return update_LB_flow
@@ -333,10 +325,6 @@ class LoadBalancerFlows(object):
 
         post_create_lb_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
-        if CONF.a10_global.network_type == 'vlan':
-            post_create_lb_flow.add(vthunder_tasks.TagInterfaceForLB(
-                requires=[constants.LOADBALANCER,
-                          a10constants.VTHUNDER]))
         if mark_active:
             post_create_lb_flow.add(database_tasks.MarkLBActiveInDB(
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,

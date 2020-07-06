@@ -15,11 +15,8 @@
 import json
 import logging
 
-from oslo_config import cfg
-
 from a10_octavia.common.data_models import Certificate
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

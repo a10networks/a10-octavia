@@ -43,8 +43,3 @@ MOCK_PARENT_PROJECT_ID = 'parent_project_id_with_length_32'
 MOCK_CHILD_PART = 'child_part'
 MOCK_CHILD_PROJECT_ID = '_child_project_id_with_length_32'
 MOCK_PROJECT_ID = 'mock-project-id'
-
-A10_GLOBAL_CONF_SECTION = 'a10_global'
-A10_HARDWARE_THUNDER_CONF_SECTION = 'hardware_thunder'
-LISTENER_CONF_SECTION = 'listener'
-SERVICE_GROUP_CONF_SECTION = 'service_group'
