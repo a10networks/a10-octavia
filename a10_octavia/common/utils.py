@@ -30,6 +30,7 @@ from stevedore import driver as stevedore_driver
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
+from a10_octavia.common import exceptions
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -51,6 +52,7 @@ def validate_partial_ipv4(address):
     if not netaddr.valid_ipv4('.'.join(octets), netaddr.core.INET_PTON):
         raise cfg.ConfigFileValueError('Invalid partial IPAddress value given'
                                        ' in configuration: {0}'.format(address))
+    return address
 
 
 def validate_partition(hardware_device):
@@ -98,7 +100,10 @@ def convert_to_hardware_thunder_conf(hardware_list):
                                            hardware_device['project_id'] +
                                            ' in [hardware_thunder] section')
         hardware_device['undercloud'] = True
-        vthunder_conf = data_models.VThunder(**hardware_device)
+        if hardware_device.get('interface_vlan_map'):
+            hardware_device['device_network_map'] = validate_interface_vlan_map(hardware_device)
+            del hardware_device['interface_vlan_map']
+        vthunder_conf = data_models.HardwareThunder(**hardware_device)
         hardware_dict[hardware_device['project_id']] = vthunder_conf
 
     duplicates_list = check_duplicate_entries(hardware_dict)
@@ -178,3 +183,46 @@ def get_vrid_floating_ip_for_project(project_id):
     if device_info:
         vrid_fp = device_info.vrid_floating_ip
         return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp
+
+
+def convert_interface_to_data_model(interface_obj):
+    vlan_map_list = interface_obj.get('vlan_map')
+    interface_num = interface_obj.get('interface_num')
+    interface_dm = data_models.Interface()
+    if not interface_num:
+        raise exceptions.MissingInterfaceNumConfigError()
+    if not vlan_map_list:
+        LOG.warning("Empty vlan map provided in configuration file")
+    for vlan_map in vlan_map_list:
+        vlan_id = vlan_map.get('vlan_id')
+        if not vlan_id:
+            raise exceptions.MissingVlanIDConfigError(interface_num)
+        if vlan_id in interface_dm.tags:
+            raise exceptions.DuplicateVlanTagsConfigError(interface_num, vlan_id)
+        if vlan_map.get('use_dhcp'):
+            if vlan_map.get('ve_ip'):
+                raise exceptions.VirtEthCollisionConfigError(interface_num, vlan_id)
+            else:
+                interface_dm.ve_ips.append('dhcp')
+        else:
+            if not vlan_map.get('ve_ip'):
+                raise exceptions.VirtEthMissingConfigError(interface_num, vlan_id)
+            interface_dm.ve_ips.append(validate_partial_ipv4(vlan_map.get('ve_ip')))
+        interface_dm.tags.append(vlan_id)
+    interface_dm.interface_num = interface_num
+
+    return interface_dm
+
+
+def validate_interface_vlan_map(hardware_device):
+    device_network_map = []
+    for device_id, device_obj in hardware_device.get('interface_vlan_map').items():
+        device_map = data_models.DeviceNetworkMap(device_obj.get('vcs_device_id'))
+        if device_obj.get('ethernet_interfaces'):
+            for eth in device_obj.get('ethernet_interfaces'):
+                device_map.ethernet_interfaces.append(convert_interface_to_data_model(eth))
+        if device_obj.get('trunk_interfaces'):
+            for trunk in device_obj.get('trunk_interfaces'):
+                device_map.trunk_interfaces.append(convert_interface_to_data_model(trunk))
+        device_network_map.append(device_map)
+    return device_network_map
