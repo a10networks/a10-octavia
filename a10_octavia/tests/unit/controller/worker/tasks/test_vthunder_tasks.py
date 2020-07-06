@@ -13,6 +13,7 @@
 #    under the License.
 
 
+import copy
 import imp
 import json
 try:
@@ -417,3 +418,19 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.assertEqual(vthunder.device_network_map[0].vcs_device_id, 2)
         self.assertEqual(vthunder.device_network_map[0].state, "Master")
         self.assertEqual(vthunder.device_network_map[0].mgmt_ip_address, DEVICE2_MGMT_IP)
+
+    def test_WriteMemory_execute_save_shared_mem(self):
+        mock_task = task.WriteMemory()
+        mock_task.axapi_client = self.client_mock
+        mock_task.execute(VTHUNDER)
+        self.client_mock.system.action.write_memory.assert_called_with(partition='shared')
+
+    def test_WriteMemory_execute_save_specific_partition_mem(self):
+        thunder = copy.deepcopy(VTHUNDER)
+        thunder.partition_name = "testPartition"
+        mock_task = task.WriteMemory()
+        mock_task.axapi_client = self.client_mock
+        mock_task.execute(thunder)
+        self.client_mock.system.action.write_memory.assert_called_with(
+            partition='specified',
+            specified_partition='testPartition')
