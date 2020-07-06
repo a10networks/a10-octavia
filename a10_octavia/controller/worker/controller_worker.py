@@ -553,6 +553,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = pool.load_balancer
         listeners = pool.listeners
 
+        if pool.health_monitor:
+            self.delete_health_monitor(pool.health_monitor.id)
+
         delete_pool_tf = self._taskflow_load(
             self._pool_flows.get_delete_pool_flow(),
             store={constants.POOL: pool, constants.LISTENERS: listeners,
