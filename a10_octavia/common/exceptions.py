@@ -83,6 +83,30 @@ class VirtEthMissingConfigError(cfg.ConfigFileValueError):
         super(VirtEthMissingConfigError, self).__init__(msg=msg)
 
 
+class InvalidInterfaceNumberConfigError(cfg.ConfigFileValueError):
+
+    def __init__(self, interface_num):
+        msg = ('Invalid value given for setting `interface_num` as \"{0}\". ' +
+               'Please provide Integer values only.').format(interface_num)
+        super(InvalidInterfaceNumberConfigError, self).__init__(msg=msg)
+
+
+class InvalidVlanIdConfigError(cfg.ConfigFileValueError):
+
+    def __init__(self, vlan_id):
+        msg = ('Invalid value given for setting `vlan_id` as \"{0}\". ' +
+               'Please provide Integer values only.').format(vlan_id)
+        super(InvalidVlanIdConfigError, self).__init__(msg=msg)
+
+
+class InvalidUseDhcpConfigError(cfg.ConfigFileValueError):
+
+    def __init__(self, use_dhcp):
+        msg = ('Invalid value given for setting `use_dhcp` as {0}. ' +
+               'Please provide either "True" or "False" only.').format(use_dhcp)
+        super(InvalidUseDhcpConfigError, self).__init__(msg=msg)
+
+
 class VcsDevicesNumberExceedsConfigError(cfg.ConfigFileValueError):
 
     def __init__(self, num_devices):
