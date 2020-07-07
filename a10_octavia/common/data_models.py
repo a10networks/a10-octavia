@@ -139,7 +139,7 @@ class Thunder(BaseDataModel):
                  topology="STANDALONE", role="MASTER", last_udp_update=None, status="ACTIVE",
                  created_at=datetime.utcnow(), updated_at=datetime.utcnow(), partition_name=None,
                  hierarchical_multitenancy=None, vrid_floating_ip=None,
-                 interface_vlan_map=None):
+                 device_network_map=None):
         self.id = id
         self.vthunder_id = vthunder_id
         self.amphora_id = amphora_id
@@ -161,14 +161,12 @@ class Thunder(BaseDataModel):
         self.partition_name = partition_name
         self.hierarchical_multitenancy = hierarchical_multitenancy
         self.vrid_floating_ip = vrid_floating_ip
-        self.interface_vlan_map = interface_vlan_map
+        self.device_network_map = device_network_map or []
 
 
 class HardwareThunder(Thunder):
-    def __init__(self, standby_ip_address=None, device_network_map=None, **kwargs):
+    def __init__(self, **kwargs):
         Thunder.__init__(self, **kwargs)
-        self.standby_ip_address = standby_ip_address
-        self.device_network_map = device_network_map or []
 
 
 class VThunder(Thunder):
@@ -209,7 +207,10 @@ class Interface(BaseDataModel):
 
 class DeviceNetworkMap(BaseDataModel):
 
-    def __init__(self, vcs_device_id=None, ethernet_interfaces=None, trunk_interfaces=None):
+    def __init__(self, vcs_device_id=None, mgmt_ip_address=None, ethernet_interfaces=None,
+                 trunk_interfaces=None):
         self.vcs_device_id = vcs_device_id
+        self.mgmt_ip_address = mgmt_ip_address
         self.ethernet_interfaces = ethernet_interfaces or []
         self.trunk_interfaces = trunk_interfaces or []
+        self.state = 'Unknown'

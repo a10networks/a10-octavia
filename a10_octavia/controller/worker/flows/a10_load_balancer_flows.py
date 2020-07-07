@@ -81,7 +81,8 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
             requires=(constants.LOADBALANCER,
                            a10constants.VTHUNDER)))
-
+        lb_create_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return lb_create_flow
 
     def _create_single_topology(self):
@@ -173,6 +174,9 @@ class LoadBalancerFlows(object):
             name="set load balancer status PENDING_DELETE",
             requires=a10constants.VTHUNDER,
             inject={"status": constants.PENDING_DELETE}))
+        delete_LB_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.VTHUNDER))
         delete_LB_flow.add(compute_tasks.NovaServerGroupDelete(
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
@@ -204,7 +208,8 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.DecrementLoadBalancerQuota(
             requires=constants.LOADBALANCER))
-
+        delete_LB_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return (delete_LB_flow, store)
 
     def get_new_lb_networking_subflow(self, topology):
@@ -277,6 +282,9 @@ class LoadBalancerFlows(object):
             name="set load balancer status PENDING_UPDATE",
             requires=a10constants.VTHUNDER,
             inject={"status": constants.PENDING_UPDATE}))
+        update_LB_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.VTHUNDER))
         update_LB_flow.add(network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.UPDATE_DICT)))
         # update_LB_flow.add(amphora_driver_tasks.ListenersUpdate(
@@ -291,6 +299,8 @@ class LoadBalancerFlows(object):
                           a10constants.VTHUNDER]))
         update_LB_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
+        update_LB_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return update_LB_flow
 
     def get_create_rack_vthunder_load_balancer_flow(self, vthunder_conf, topology, listeners=None):
@@ -317,6 +327,8 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.STATUS))
 
+        lb_create_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return lb_create_flow
 
     def get_post_lb_rack_vthunder_association_flow(self, prefix, topology,
@@ -325,6 +337,9 @@ class LoadBalancerFlows(object):
 
         sf_name = prefix + '-' + constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
         post_create_lb_flow = linear_flow.Flow(sf_name)
+        post_create_lb_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.VTHUNDER))
         post_create_lb_flow.add(
             database_tasks.ReloadLoadBalancer(
                 name=sf_name + '-' + constants.RELOAD_LB_AFTER_AMP_ASSOC,

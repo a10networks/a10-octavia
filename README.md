@@ -87,7 +87,7 @@ Recommended vThunder flavor settings:
 
 ```shell
 $ openstack image create --disk-format qcow2 --container-format bare --public --file vThunder414.qcow2 vThunder.qcow2
-$ openstack flavor create --vcpu 8 --ram 8196 --disk 30 vThunder_flavor
+$ openstack flavor create --vcpu 8 --ram 8192 --disk 30 vThunder_flavor
 ```
 
 Note down the `image ID` and `flavor ID` of created resources.
@@ -302,7 +302,7 @@ Note: If the option is set at the local and global level, then the local configu
 =======
 #### 3bc. Configuring VLAN and Virtual Ethernet for hardware devices
 
-In the VLAN Network setup, for configuring the VLAN and Virtual Ethernet(VE) interfaces in the hardware thunder device, `network_type` setting in `[A10_GLOBAL]` configuration section should be set to "vlan" string. VLAN and VE configuration for the ethernet interfaces or trunk interfaces should be specified in `interface_vlan_map` setting in the `[hardware_thunder]` device configuration section. The `interface_vlan_map` setting is a json map. For a single device it can have key "device_1" with data or two keys "device_1" and "device_2" for aVCS cluster device.
+In the VLAN Network setup, for configuring the VLAN and Virtual Ethernet(VE) interfaces in the hardware thunder device, `network_type` setting in `[A10_GLOBAL]` configuration section should be set to "vlan" string. VLAN and VE configuration for the ethernet interfaces or trunk interfaces should be specified in `interface_vlan_map` setting in the `[hardware_thunder]` device configuration section. The `interface_vlan_map` setting is a json map. For a single device it can have key "device_1" with data or two keys "device_1" and "device_2" for aVCS cluster device. While configuring aVCS cluster, floating IP must be provided in `ip_address` field and respective management IP for both devices in `mgmt_ip_address` fields. The `vcs_device_id` value must be provided as either 1 or 2 based on current aVCS cluster status.
 
 ##### 3bca. Sample a10-octavia.conf for VLAN and VE settings
 
@@ -315,12 +315,14 @@ network_type = "vlan"
 devices = [
               {
                "project_id":"<project_id>",
-               "ip_address":"10.0.0.4",
+               "ip_address":<device IP / aVCS cluster floating IP>,
                "username":"<username>",
                "password":"<password>",
                "device_name":"<device_name>"
                "interface_vlan_map": {
                    "device_1": {
+                       "vcs_device_id": 1,
+                       "mgmt_ip_address": "10.0.0.74",
                        "ethernet_interfaces": [{
                            "interface_num": 1,
                            "vlan_map": [

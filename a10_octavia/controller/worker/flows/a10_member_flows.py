@@ -97,7 +97,8 @@ class MemberFlows(object):
                                MarkLBAndListenersActiveInDB(
                                    requires=(constants.LOADBALANCER,
                                              constants.LISTENERS)))
-
+        create_member_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return create_member_flow
 
     def get_delete_member_flow(self):
@@ -125,6 +126,9 @@ class MemberFlows(object):
         delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        delete_member_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.VTHUNDER))
         delete_member_flow.add(server_tasks.MemberDelete(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
         delete_member_flow.add(database_tasks.DecrementMemberQuota(
@@ -147,7 +151,8 @@ class MemberFlows(object):
             provides=a10constants.DELETE_VRID))
         delete_member_flow.add(a10_database_tasks.DeleteVRIDEntry(
             requires=[a10constants.VRID, a10constants.DELETE_VRID]))
-
+        delete_member_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return delete_member_flow
 
     def get_update_member_flow(self):
@@ -165,6 +170,9 @@ class MemberFlows(object):
             requires=constants.MEMBER))
         update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        update_member_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
+            requires=a10constants.VTHUNDER,
             provides=a10constants.VTHUNDER))
         # Handle VRID settings
         update_member_flow.add(a10_database_tasks.GetVRIDForProjectMember(
@@ -191,7 +199,8 @@ class MemberFlows(object):
                                MarkLBAndListenersActiveInDB(
                                    requires=[constants.LOADBALANCER,
                                              constants.LISTENERS]))
-
+        update_member_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return update_member_flow
 
     def get_batch_update_members_flow(self, old_members, new_members,
@@ -280,7 +289,8 @@ class MemberFlows(object):
             database_tasks.MarkLBAndListenersActiveInDB(
                 requires=(constants.LOADBALANCER,
                           constants.LISTENERS)))
-
+        batch_update_members_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return batch_update_members_flow
 
     def get_rack_vthunder_create_member_flow(self):
@@ -298,6 +308,9 @@ class MemberFlows(object):
             requires=constants.MEMBER))
         create_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        create_member_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
+            requires=a10constants.VTHUNDER,
             provides=a10constants.VTHUNDER))
         create_member_flow.add(a10_database_tasks.GetVRIDForProjectMember(
             requires=constants.MEMBER,
@@ -321,4 +334,6 @@ class MemberFlows(object):
                                MarkLBAndListenersActiveInDB(
                                    requires=(constants.LOADBALANCER,
                                              constants.LISTENERS)))
+        create_member_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return create_member_flow

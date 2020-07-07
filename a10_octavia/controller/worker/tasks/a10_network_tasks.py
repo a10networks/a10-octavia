@@ -24,10 +24,10 @@ from octavia.controller.worker import task_utils
 from octavia.network import base
 from octavia.network import data_models as n_data_models
 
+from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
-from a10_octavia.common import a10constants
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -747,6 +747,7 @@ class DeleteMemberVRIDPort(BaseNetworkTask):
             except Exception as e:
                 LOG.exception("Failed to delete vrid port : %s", str(e))
         return False
+
 
 class GetSubnetVLANIDParent(object):
     """Get the Subnet VLAN_ID"""
