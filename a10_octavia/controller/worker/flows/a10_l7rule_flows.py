@@ -22,6 +22,7 @@ from octavia.controller.worker.tasks import model_tasks
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import l7rule_tasks
+from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 
 class L7RuleFlows(object):
@@ -48,7 +49,8 @@ class L7RuleFlows(object):
             requires=constants.L7POLICY))
         create_l7rule_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-
+        create_l7rule_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return create_l7rule_flow
 
     def get_delete_l7rule_flow(self):
@@ -74,7 +76,8 @@ class L7RuleFlows(object):
             requires=constants.L7POLICY))
         delete_l7rule_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-
+        delete_l7rule_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return delete_l7rule_flow
 
     def get_update_l7rule_flow(self):
@@ -106,5 +109,6 @@ class L7RuleFlows(object):
             requires=constants.L7POLICY))
         update_l7rule_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-
+        update_l7rule_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         return update_l7rule_flow

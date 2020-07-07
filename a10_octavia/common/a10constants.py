@@ -48,6 +48,14 @@ PORT = 'port'
 MEMBER_COUNT = 'member_count'
 DELETE_VRID = 'delete_vrid'
 
+SUBNET_ID = "subnet_id"
+VLAN_ID = "vlan_id"
+TAG_INTERFACE = "tag_interface"
+VE_INTERFACE = "ve_interface"
+DELETE_VLAN = "delete_vlan"
+VLAN = "vlan"
+FLAT = "flat"
+SUPPORTED_NETWORK_TYPE = [FLAT, VLAN]
 # Taskflow flow and task names
 
 BACKUP_AMPHORA_PLUG = 'backup-amphora-plug'
