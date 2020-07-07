@@ -59,3 +59,16 @@ def axapi_client_decorator(func):
         return result
 
     return wrapper
+
+
+def device_context_switch_decorator(func):
+    def wrapper(self, *args, **kwargs):
+        master_device_id = kwargs.get('master_device_id')
+        device_id = kwargs.get('device_id')
+        if master_device_id and device_id and device_id != master_device_id:
+            self.axapi_client.device_context.switch(device_id, None)
+        result = func(self, *args, **kwargs)
+        if master_device_id and device_id and device_id != master_device_id:
+            self.axapi_client.device_context.switch(master_device_id, None)
+        return result
+    return wrapper
