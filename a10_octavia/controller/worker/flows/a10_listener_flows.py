@@ -29,10 +29,8 @@ from a10_octavia.controller.worker.tasks import vthunder_tasks
 class ListenerFlows(object):
 
     def get_create_listener_flow(self):
-        """Create a flow to create a listener
+        """Flow to create a listener"""
 
-        :returns: The flow for creating a listener
-        """
         create_listener_flow = linear_flow.Flow(constants.CREATE_LISTENER_FLOW)
         create_listener_flow.add(lifecycle_tasks.ListenersToErrorOnRevertTask(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
@@ -51,33 +49,9 @@ class ListenerFlows(object):
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 
-    def get_create_all_listeners_flow(self):
-        """Create a flow to create all listeners
-
-        :returns: The flow for creating all listeners
-        """
-        create_all_listeners_flow = linear_flow.Flow(
-            constants.CREATE_LISTENERS_FLOW)
-        create_all_listeners_flow.add(
-            database_tasks.GetListenersFromLoadbalancer(
-                requires=constants.LOADBALANCER,
-                provides=constants.LISTENERS))
-        create_all_listeners_flow.add(database_tasks.ReloadLoadBalancer(
-            requires=constants.LOADBALANCER_ID,
-            provides=constants.LOADBALANCER))
-        create_all_listeners_flow.add(virtual_port_tasks.ListenersUpdate(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        create_all_listeners_flow.add(network_tasks.UpdateVIP(
-            requires=constants.LOADBALANCER))
-        create_all_listeners_flow.add(vthunder_tasks.WriteMemory(
-            requires=a10constants.VTHUNDER))
-        return create_all_listeners_flow
-
     def get_delete_listener_flow(self):
-        """Create a flow to delete a listener
+        """Flow to delete a listener"""
 
-        :returns: The flow for deleting a listener
-        """
         delete_listener_flow = linear_flow.Flow(constants.DELETE_LISTENER_FLOW)
         delete_listener_flow.add(lifecycle_tasks.ListenerToErrorOnRevertTask(
             requires=constants.LISTENER))
@@ -99,10 +73,8 @@ class ListenerFlows(object):
         return delete_listener_flow
 
     def get_delete_rack_listener_flow(self):
-        """Create a flow to delete a rack listener
+        """Flow to delete a rack listener """
 
-        :returns: The flow for deleting a rack listener
-        """
         delete_listener_flow = linear_flow.Flow(constants.DELETE_LISTENER_FLOW)
         delete_listener_flow.add(lifecycle_tasks.ListenerToErrorOnRevertTask(
             requires=constants.LISTENER))
@@ -121,34 +93,9 @@ class ListenerFlows(object):
             requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
-    def get_delete_listener_internal_flow(self, listener_name):
-        """Create a flow to delete a listener and l7policies internally
-
-           (will skip deletion on the amp and marking LB active)
-
-        :returns: The flow for deleting a listener
-        """
-        delete_listener_flow = linear_flow.Flow(constants.DELETE_LISTENER_FLOW)
-        # Should cascade delete all L7 policies
-        delete_listener_flow.add(a10_network_tasks.UpdateVIPForDelete(
-            name='delete_update_vip_' + listener_name,
-            requires=constants.LOADBALANCER))
-        delete_listener_flow.add(database_tasks.DeleteListenerInDB(
-            name='delete_listener_in_db_' + listener_name,
-            requires=constants.LISTENER,
-            rebind={constants.LISTENER: listener_name}))
-        delete_listener_flow.add(database_tasks.DecrementListenerQuota(
-            name='decrement_listener_quota_' + listener_name,
-            requires=constants.LISTENER,
-            rebind={constants.LISTENER: listener_name}))
-
-        return delete_listener_flow
-
     def get_update_listener_flow(self):
-        """Create a flow to update a listener
+        """Flow to update a listener"""
 
-        :returns: The flow for updating a listener
-        """
         update_listener_flow = linear_flow.Flow(constants.UPDATE_LISTENER_FLOW)
         update_listener_flow.add(lifecycle_tasks.ListenersToErrorOnRevertTask(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
@@ -169,10 +116,8 @@ class ListenerFlows(object):
         return update_listener_flow
 
     def get_rack_vthunder_create_listener_flow(self, project_id):
-        """Create a flow to create a rack listener
+        """Create a flow to create a rack listener"""
 
-        :returns: The flow for creating a rack listener
-        """
         create_listener_flow = linear_flow.Flow(constants.CREATE_LISTENER_FLOW)
         create_listener_flow.add(lifecycle_tasks.ListenersToErrorOnRevertTask(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
@@ -181,9 +126,6 @@ class ListenerFlows(object):
             provides=a10constants.VTHUNDER))
         create_listener_flow.add(virtual_port_tasks.ListenersCreate(
             requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
-        if project_id is None:
-            create_listener_flow.add(network_tasks.UpdateVIP(
-                requires=constants.LOADBALANCER))
         create_listener_flow.add(database_tasks.
                                  MarkLBAndListenersActiveInDB(
                                      requires=[constants.LOADBALANCER,

@@ -21,6 +21,7 @@ from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
+from a10_octavia.common.exceptions import GenericFlowException 
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -95,10 +96,12 @@ class ListenersParent(object):
                            conn_limit=conn_limit,
                            virtual_port_templates=virtual_port_templates,
                            **template_args)
-                LOG.info("Listener created successfully.")
+                raise GenericFlowException(msg=msg)
+                LOG.debug("Listener created/updated successfully: %s", listener.id)
         except Exception as e:
-            LOG.error(str(e))
-            LOG.info("Error occurred")
+            msg = str(e)
+            LOG.exception("Failed to create/update the listeners: %s", msg)
+            raise GenericFlowException(msg=msg) 
 
     def cert_handler(self, loadbalancer, listener):
         """Function to handle TLS certs"""
@@ -157,15 +160,6 @@ class ListenersCreate(ListenersParent, task.Task):
     def execute(self, loadbalancer, listeners, vthunder):
         self.set(self.axapi_client.slb.virtual_server.vport.create, loadbalancer, listeners)
 
-    def revert(self, loadbalancer, *args, **kwargs):
-        """ Handle failed listeners updates """
-        LOG.warning("Reverting listeners updates.")
-
-        for listener in loadbalancer.listeners:
-            self.task_utils.mark_listener_prov_status_error(listener.id)
-
-        return None
-
 
 class ListenersUpdate(ListenersParent, task.Task):
 
@@ -174,15 +168,6 @@ class ListenersUpdate(ListenersParent, task.Task):
     @axapi_client_decorator
     def execute(self, loadbalancer, listeners, vthunder):
         self.set(self.axapi_client.slb.virtual_server.vport.update, loadbalancer, listeners)
-
-    def revert(self, loadbalancer, *args, **kwargs):
-        """ Handle failed listeners updates """
-        LOG.warning("Reverting listeners updates.")
-
-        for listener in loadbalancer.listeners:
-            self.task_utils.mark_listener_prov_status_error(listener.id)
-
-        return None
 
 
 class ListenerDelete(ListenersParent, task.Task):
@@ -200,10 +185,6 @@ class ListenerDelete(ListenersParent, task.Task):
                 listener.protocol_port)
             LOG.debug("Listener deleted successfully: %s", name)
         except Exception as e:
-            LOG.warning("Failed to delete the listener: %s", str(e))
-
-    def revert(self, listener, *args, **kwargs):
-        """ Handle a failed listener delete """
-        LOG.warning("Reverting listener delete.")
-
-        self.task_utils.mark_listener_prov_status_error(listener.id)
+            msg = str(e)
+            LOG.exception("Failed to delete the listener: %s", msg)
+            raise GenericFlowException(msg=msg)
