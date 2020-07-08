@@ -55,7 +55,7 @@ class HealthMonitorFlows(object):
             requires=a10constants.VTHUNDER))
         return create_hm_flow
 
-    def get_delete_health_monitor_flow(self):
+    def get_delete_health_monitor_flow(self, decrement_quota=True):
         """Create a flow to delete a health monitor
 
         :returns: The flow for deleting a health monitor
@@ -77,8 +77,9 @@ class HealthMonitorFlows(object):
             requires=[constants.HEALTH_MON, a10constants.VTHUNDER]))
         delete_hm_flow.add(database_tasks.DeleteHealthMonitorInDB(
             requires=constants.HEALTH_MON))
-        delete_hm_flow.add(database_tasks.DecrementHealthMonitorQuota(
-            requires=constants.HEALTH_MON))
+        if decrement_quota:
+            delete_hm_flow.add(database_tasks.DecrementHealthMonitorQuota(
+                requires=constants.HEALTH_MON))
         delete_hm_flow.add(
             database_tasks.UpdatePoolMembersOperatingStatusInDB(
                 requires=constants.POOL,

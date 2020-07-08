@@ -119,7 +119,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                log=LOG):
             create_hm_tf.run()
 
-    def delete_health_monitor(self, health_monitor_id):
+    def delete_health_monitor(self, health_monitor_id, decrement_quota=True):
         """Deletes a health monitor.
 
         :param pool_id: ID of the pool to delete its health monitor
@@ -134,7 +134,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = pool.load_balancer
 
         delete_hm_tf = self._taskflow_load(
-            self._health_monitor_flows.get_delete_health_monitor_flow(),
+            self._health_monitor_flows.get_delete_health_monitor_flow(decrement_quota),
             store={constants.HEALTH_MON: health_mon,
                    constants.POOL: pool,
                    constants.LISTENERS: listeners,
@@ -439,7 +439,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                log=LOG):
             create_member_tf.run()
 
-    def delete_member(self, member_id):
+    def delete_member(self, member_id, decrement_quota=True):
         """Deletes a pool member.
 
         :param member_id: ID of the member to delete
@@ -453,7 +453,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = pool.load_balancer
 
         delete_member_tf = self._taskflow_load(
-            self._member_flows.get_delete_member_flow(),
+            self._member_flows.get_delete_member_flow(decrement_quota),
             store={constants.MEMBER: member, constants.LISTENERS: listeners,
                    constants.LOADBALANCER: load_balancer, constants.POOL: pool}
         )
@@ -552,10 +552,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         load_balancer = pool.load_balancer
         listeners = pool.listeners
+        if pool.health_monitor:
+            self.delete_health_monitor(pool.health_monitor.id, decrement_quota=False)
 
         if pool.members:
             for member in pool.members:
-                self.delete_member(member.id)
+                self.delete_member(member.id, decrement_quota=False)
 
         delete_pool_tf = self._taskflow_load(
             self._pool_flows.get_delete_pool_flow(),

@@ -101,7 +101,7 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER))
         return create_member_flow
 
-    def get_delete_member_flow(self):
+    def get_delete_member_flow(self, decrement_quota=True):
         """Create a flow to delete a member
 
         :returns: The flow for deleting a member
@@ -131,8 +131,9 @@ class MemberFlows(object):
             provides=a10constants.VTHUNDER))
         delete_member_flow.add(server_tasks.MemberDelete(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
-        delete_member_flow.add(database_tasks.DecrementMemberQuota(
-            requires=constants.MEMBER))
+        if decrement_quota:
+            delete_member_flow.add(database_tasks.DecrementMemberQuota(
+                requires=constants.MEMBER))
         if CONF.a10_global.network_type == 'vlan':
             delete_member_flow.add(vthunder_tasks.DeleteInterfaceTagIfNotInUseForMember(
                 requires=[constants.MEMBER,
