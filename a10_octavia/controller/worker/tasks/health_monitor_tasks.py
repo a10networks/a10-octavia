@@ -19,6 +19,7 @@ from taskflow import task
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
+from a10_octavia.common.exceptions import GenericFlowException
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -51,8 +52,9 @@ class CreateAndAssociateHealthMonitor(task.Task):
                                             expect_code=expect_code, axapi_args=args)
             LOG.debug("Health Monitor created successfully: %s", health_mon.id)
         except Exception as e:
-            LOG.exception("Failed to create Health Monitor: %s", str(e))
-            raise
+            msg = str(e)
+            LOG.exception("Failed to create Health Monitor: %s", msg)
+            raise GenericFlowException(msg)
 
         try:
             self.axapi_client.slb.service_group.update(health_mon.pool_id,
@@ -61,8 +63,9 @@ class CreateAndAssociateHealthMonitor(task.Task):
             LOG.debug("Health Monitor %s is associated to pool %s successfully.",
                       health_mon.id, health_mon.pool_id)
         except Exception as e:
-            LOG.exception("Failed to associate pool to Health Monitor: %s", str(e))
-            raise
+            msg = str(e)
+            LOG.exception("Failed to associate pool to Health Monitor: %s", msg)
+            raise GenericFlowException(msg)
 
 
 class DeleteHealthMonitor(task.Task):
