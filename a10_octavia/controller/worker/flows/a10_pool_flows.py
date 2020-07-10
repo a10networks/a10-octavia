@@ -21,6 +21,8 @@ from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import model_tasks
 
 from a10_octavia.common import a10constants
+from a10_octavia.controller.worker.flows import a10_health_monitor_flows
+from a10_octavia.controller.worker.flows import a10_member_flows
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import persist_tasks
 from a10_octavia.controller.worker.tasks import service_group_tasks
@@ -29,6 +31,10 @@ from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 
 class PoolFlows(object):
+
+    def __init__(self):
+        self.hm_flow = a10_health_monitor_flows.HealthMonitorFlows()
+        self.member_flow = a10_member_flows.MemberFlows()
 
     def get_create_pool_flow(self):
         """Create a flow to create a pool
@@ -60,7 +66,7 @@ class PoolFlows(object):
 
         return create_pool_flow
 
-    def get_delete_pool_flow(self):
+    def get_delete_pool_flow(self, members, health_mon, store):
         """Create a flow to delete a pool
 
         :returns: The flow for deleting a pool
@@ -84,6 +90,9 @@ class PoolFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS, a10constants.VTHUNDER]))
         delete_pool_flow.add(persist_tasks.DeleteSessionPersistence(
             requires=[a10constants.VTHUNDER, constants.POOL]))
+        # Delete pool children
+        delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon))
+        delete_pool_flow.add(self._get_delete_member_vthunder_subflow(members, store))
         delete_pool_flow.add(service_group_tasks.PoolDelete(
             requires=[constants.POOL, a10constants.VTHUNDER]))
         delete_pool_flow.add(database_tasks.DeletePoolInDB(
@@ -96,6 +105,26 @@ class PoolFlows(object):
             requires=a10constants.VTHUNDER))
 
         return delete_pool_flow
+
+    def _get_delete_health_monitor_vthunder_subflow(self, health_mon):
+        delete_hm_vthunder_subflow = linear_flow.Flow('hm_delete_subflow_with_pool')
+        if health_mon:
+            delete_hm_vthunder_subflow.add(
+                self.hm_flow.get_delete_health_monitor_vthunder_subflow())
+        return delete_hm_vthunder_subflow
+
+    def _get_delete_member_vthunder_subflow(self, members, store):
+        delete_member_vthunder_subflow = linear_flow.Flow('members_delete_subflow_with_pool')
+        member_store = {}
+        for member in members:
+            member_store[member.id] = member
+            delete_member_vthunder_subflow.add(
+                self.member_flow.get_delete_member_vthunder_internal_subflow(member.id))
+        if members:
+            delete_member_vthunder_subflow.add(
+                self.member_flow.get_delete_member_vrid_internal_subflow(members[-1].id))
+        store.update(member_store)
+        return delete_member_vthunder_subflow
 
     def get_delete_pool_flow_internal(self, name):
         """Create a flow to delete a pool, etc.
