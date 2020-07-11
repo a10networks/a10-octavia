@@ -200,15 +200,15 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                          listener.project_id),
                                                      store={constants.LOADBALANCER:
                                                             load_balancer,
-                                                            constants.LISTENERS:
-                                                                [listener]})
+                                                            constants.LISTENER:
+                                                                listener})
         else:
             create_listener_tf = self._taskflow_load(self._listener_flows.
                                                      get_create_listener_flow(),
                                                      store={constants.LOADBALANCER:
                                                             load_balancer,
-                                                            constants.LISTENERS:
-                                                                [listener]})
+                                                            constants.LISTENER:
+                                                                listener})
 
         with tf_logging.DynamicLoggingListener(create_listener_tf,
                                                log=LOG):
@@ -268,9 +268,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                         constants.LOADBALANCER:
                                                             load_balancer,
                                                         constants.UPDATE_DICT:
-                                                            listener_updates,
-                                                        constants.LISTENERS:
-                                                            [listener]})
+                                                            listener_updates
+                                                        })
         with tf_logging.DynamicLoggingListener(update_listener_tf, log=LOG):
             update_listener_tf.run()
 

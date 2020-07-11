@@ -21,7 +21,7 @@ from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
-from a10_octavia.common.exceptions import GenericFlowException 
+from a10_octavia.common.exceptions import GenericFlowException
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 class ListenersParent(object):
 
-    def set(self, set_method, loadbalancer, listeners):
+    def set(self, set_method, loadbalancer, listener, ssl_template=None):
         ipinip = CONF.listener.ipinip
         no_dest_nat = CONF.listener.no_dest_nat
         autosnat = CONF.listener.autosnat
@@ -43,131 +43,80 @@ class ListenersParent(object):
 
         template_args = {}
         try:
-            for listener in listeners:
-                if listener.connection_limit != -1:
-                    conn_limit = listener.connection_limit
-                if conn_limit < 1 or conn_limit > 64000000:
-                    LOG.warning('The specified member server connection limit '
-                                '(configuration setting: conn-limit) is out of '
-                                'bounds with value {0}. Please set to between '
-                                '1-64000000. Defaulting to 64000000'.format(conn_limit))
-                listener.load_balancer = loadbalancer
-                status = self.axapi_client.slb.UP
-                if not listener.enabled:
-                    status = self.axapi_client.slb.DOWN
-                c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
+            if listener.connection_limit != -1:
+                conn_limit = listener.connection_limit
+            if conn_limit < 1 or conn_limit > 64000000:
+                LOG.warning('The specified member server connection limit '
+                            '(configuration setting: conn-limit) is out of '
+                            'bounds with value {0}. Please set to between '
+                            '1-64000000. Defaulting to 64000000'.format(conn_limit))
+            listener.load_balancer = loadbalancer
+            status = self.axapi_client.slb.UP
+            if not listener.enabled:
+                status = self.axapi_client.slb.DOWN
+            c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
 
-                listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
-                                                                             listener.protocol)
-                if listener.protocol == 'HTTPS':
-                    template_args["template_client_ssl"] = self.cert_handler(
-                        loadbalancer, listener)
+            listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
+                                                                         listener.protocol)
+            if listener.protocol == 'HTTPS':
+                template_args["template_client_ssl"] = ssl_template
 
-                if listener.protocol in a10constants.HTTP_TYPE:
-                    # TODO(hthompson6) work around for issue in acos client
-                    listener.protocol = listener.protocol.lower()
-                    virtual_port_template = CONF.listener.template_http
-                    virtual_port_templates['template-http'] = virtual_port_template
-                else:
-                    virtual_port_template = CONF.listener.template_tcp
-                    virtual_port_templates['template-tcp'] = virtual_port_template
+            if listener.protocol in a10constants.HTTP_TYPE:
+                # TODO(hthompson6) work around for issue in acos client
+                listener.protocol = listener.protocol.lower()
+                virtual_port_template = CONF.listener.template_http
+                virtual_port_templates['template-http'] = virtual_port_template
+            else:
+                virtual_port_template = CONF.listener.template_tcp
+                virtual_port_templates['template-tcp'] = virtual_port_template
 
-                virtual_port_template = CONF.listener.template_policy
-                virtual_port_templates['template-policy'] = virtual_port_template
+            virtual_port_template = CONF.listener.template_policy
+            virtual_port_templates['template-policy'] = virtual_port_template
 
-                # Add all config filters here
-                if no_dest_nat and (
-                        listener.protocol.lower()
-                        not in a10constants.NO_DEST_NAT_SUPPORTED_PROTOCOL):
-                    LOG.warning("'no_dest_nat' is not allowed for HTTP," +
-                                "HTTPS or TERMINATED_HTTPS listener.")
-                    no_dest_nat = False
+            # Add all config filters here
+            if no_dest_nat and (
+                    listener.protocol.lower()
+                    not in a10constants.NO_DEST_NAT_SUPPORTED_PROTOCOL):
+                LOG.warning("'no_dest_nat' is not allowed for HTTP," +
+                            "HTTPS or TERMINATED_HTTPS listener.")
+                no_dest_nat = False
 
-                set_method(loadbalancer.id, listener.id,
-                           listener.protocol,
-                           listener.protocol_port,
-                           listener.default_pool_id,
-                           s_pers_name=s_pers, c_pers_name=c_pers,
-                           status=status, no_dest_nat=no_dest_nat,
-                           autosnat=autosnat, ipinip=ipinip,
-                           # TODO(hthompson6) resolve in acos client
-                           # ha_conn_mirror=ha_conn_mirror,
-                           use_rcv_hop=use_rcv_hop,
-                           conn_limit=conn_limit,
-                           virtual_port_templates=virtual_port_templates,
-                           **template_args)
-                raise GenericFlowException(msg=msg)
-                LOG.debug("Listener created/updated successfully: %s", listener.id)
+            set_method(loadbalancer.id, listener.id,
+                       listener.protocol,
+                       listener.protocol_port,
+                       listener.default_pool_id,
+                       s_pers_name=s_pers, c_pers_name=c_pers,
+                       status=status, no_dest_nat=no_dest_nat,
+                       autosnat=autosnat, ipinip=ipinip,
+                       # TODO(hthompson6) resolve in acos client
+                       # ha_conn_mirror=ha_conn_mirror,
+                       use_rcv_hop=use_rcv_hop,
+                       conn_limit=conn_limit,
+                       virtual_port_templates=virtual_port_templates,
+                       **template_args)
+            LOG.debug("Listener created/updated successfully: %s", listener.id)
         except Exception as e:
             msg = str(e)
-            LOG.exception("Failed to create/update the listeners: %s", msg)
-            raise GenericFlowException(msg=msg) 
-
-    def cert_handler(self, loadbalancer, listener):
-        """Function to handle TLS certs"""
-        cert_data = dict()
-        bauth = BarbicanACLAuth()
-        barbican_client = bauth.get_barbican_client(loadbalancer.project_id)
-        container = barbican_client.containers.get(container_ref=listener.tls_certificate_id)
-
-        cert_data["cert_content"] = container.certificate.payload
-        cert_data["key_content"] = container.private_key.payload
-        cert_data["key_pass"] = container.private_key_passphrase
-        cert_data["template_name"] = listener.id
-        cert_data["cert_filename"] = container.certificate.name
-        cert_data["key_filename"] = container.private_key.name
-
-        try:
-            self.axapi_client.file.ssl_cert.create(file=cert_data["cert_filename"],
-                                                   cert=cert_data["cert_content"],
-                                                   size=len(cert_data["cert_content"]),
-                                                   action="import", certificate_type="pem")
-        except acos_errors.Exists:
-            self.axapi_client.file.ssl_cert.update(file=cert_data["cert_filename"],
-                                                   cert=cert_data["cert_content"],
-                                                   size=len(cert_data["cert_content"]),
-                                                   action="import", certificate_type="pem")
-        try:
-            self.axapi_client.file.ssl_key.create(file=cert_data["key_filename"],
-                                                  cert=cert_data["key_content"],
-                                                  size=len(cert_data["key_content"]),
-                                                  action="import")
-        except acos_errors.Exists:
-            self.axapi_client.file.ssl_key.update(file=cert_data["key_filename"],
-                                                  cert=cert_data["key_content"],
-                                                  size=len(cert_data["key_content"]),
-                                                  action="import")
-        # create template
-        try:
-            self.axapi_client.slb.template.client_ssl.create(cert_data["template_name"],
-                                                             cert=cert_data["cert_filename"],
-                                                             key=cert_data["key_filename"],
-                                                             passphrase=cert_data["key_pass"])
-        except acos_errors.Exists:
-            self.axapi_client.slb.template.client_ssl.update(cert_data["template_name"],
-                                                             cert=cert_data["cert_filename"],
-                                                             key=cert_data["key_filename"],
-                                                             passphrase=cert_data["key_pass"])
-
-        return cert_data["template_name"]
+            LOG.exception("Failed to create/update the listener: %s", msg)
+            raise GenericFlowException(msg=msg)
 
 
-class ListenersCreate(ListenersParent, task.Task):
+class ListenerCreate(ListenersParent, task.Task):
 
     """Task to create listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listeners, vthunder):
-        self.set(self.axapi_client.slb.virtual_server.vport.create, loadbalancer, listeners)
+    def execute(self, loadbalancer, listener, vthunder):
+        self.set(self.axapi_client.slb.virtual_server.vport.create, loadbalancer, listener)
 
 
-class ListenersUpdate(ListenersParent, task.Task):
+class ListenerUpdate(ListenersParent, task.Task):
 
     """Task to update listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listeners, vthunder):
-        self.set(self.axapi_client.slb.virtual_server.vport.update, loadbalancer, listeners)
+    def execute(self, loadbalancer, listener, vthunder):
+        self.set(self.axapi_client.slb.virtual_server.vport.update, loadbalancer, listener)
 
 
 class ListenerDelete(ListenersParent, task.Task):
