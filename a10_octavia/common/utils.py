@@ -28,7 +28,6 @@ from keystoneclient.v3 import client as keystone_client
 from octavia.common import keystone
 from stevedore import driver as stevedore_driver
 
-from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
 from a10_octavia.common import exceptions
 
@@ -56,8 +55,8 @@ def validate_partial_ipv4(address):
 
 
 def validate_partition(hardware_device):
-    partition_name = hardware_device.get('partition_name')
-    elif len(partition_name) > 14:
+    partition_name = hardware_device.get('partition_name', '')
+    if len(partition_name) > 14:
         raise ValueError("Supplied partition value '%s' exceeds maximum length 14" %
                          (partition_name))
     return hardware_device

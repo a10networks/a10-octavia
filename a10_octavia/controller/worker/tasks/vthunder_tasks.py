@@ -388,6 +388,7 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
     @axapi_client_decorator
     def execute(self, vthunder):
         if vthunder and vthunder.project_id in CONF.hardware_thunder.devices:
+            vthunder.device_network_map = []
             vthunder_conf = CONF.hardware_thunder.devices[vthunder.project_id]
             device_network_map = vthunder_conf.device_network_map
 
@@ -756,9 +757,10 @@ class WriteMemory(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        if vthunder and vthunder.partition_name != "shared":
-            self.axapi_client.system.action.write_memory(
-                partition="specified",
-                specified_partition=vthunder.partition_name)
-        else:
-            self.axapi_client.system.action.write_memory(partition="shared")
+        if vthunder:
+            if vthunder.partition_name != "shared":
+                self.axapi_client.system.action.write_memory(
+                    partition="specified",
+                    specified_partition=vthunder.partition_name)
+            else:
+                self.axapi_client.system.action.write_memory(partition="shared")
