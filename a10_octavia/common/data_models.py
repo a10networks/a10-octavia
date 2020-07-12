@@ -137,7 +137,7 @@ class Thunder(BaseDataModel):
                  password=None, axapi_version=None, undercloud=None,
                  loadbalancer_id=None, project_id=None, compute_id=None,
                  topology="STANDALONE", role="MASTER", last_udp_update=None, status="ACTIVE",
-                 created_at=datetime.utcnow(), updated_at=datetime.utcnow(), partition_name=None,
+                 created_at=datetime.utcnow(), updated_at=datetime.utcnow(), partition_name="shared",
                  hierarchical_multitenancy=None, vrid_floating_ip=None,
                  device_network_map=None):
         self.id = id
