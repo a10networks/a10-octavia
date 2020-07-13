@@ -107,14 +107,16 @@ class PoolFlows(object):
         return delete_pool_flow
 
     def _get_delete_health_monitor_vthunder_subflow(self, health_mon):
-        delete_hm_vthunder_subflow = linear_flow.Flow('hm_delete_subflow_with_pool')
+        delete_hm_vthunder_subflow = linear_flow.Flow(
+            a10constants.DELETE_HEALTH_MONITOR_SUBFLOW_WITH_POOL_DELETE_FLOW)
         if health_mon:
             delete_hm_vthunder_subflow.add(
                 self.hm_flow.get_delete_health_monitor_vthunder_subflow())
         return delete_hm_vthunder_subflow
 
     def _get_delete_member_vthunder_subflow(self, members, store):
-        delete_member_vthunder_subflow = linear_flow.Flow('members_delete_subflow_with_pool')
+        delete_member_vthunder_subflow = linear_flow.Flow(
+            a10constants.DELETE_MEMBERS_SUBFLOW_WITH_POOL_DELETE_FLOW)
         member_store = {}
         for member in members:
             member_store[member.id] = member

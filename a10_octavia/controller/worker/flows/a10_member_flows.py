@@ -155,7 +155,7 @@ class MemberFlows(object):
 
     def get_delete_member_vthunder_internal_subflow(self, member_id):
         delete_member_thunder_subflow = linear_flow.Flow(
-            a10constants.DELETE_MEMBER_VTHUNDER_SUBFLOW)
+            a10constants.DELETE_MEMBER_VTHUNDER_INTERNAL_SUBFLOW)
         delete_member_thunder_subflow.add(vthunder_tasks.SetupDeviceNetworkMap(
             name='setup_device_network_map_' + member_id,
             requires=a10constants.VTHUNDER,
@@ -187,7 +187,7 @@ class MemberFlows(object):
 
     def get_delete_member_vrid_internal_subflow(self, member_id):
         delete_member_vrid_subflow = linear_flow.Flow(
-            a10constants.DELETE_MEMBER_VRID_SUBFLOW)
+            a10constants.DELETE_MEMBER_VRID_INTERNAL_SUBFLOW)
         delete_member_vrid_subflow.add(a10_database_tasks.GetVRIDForProjectMember(
             name='get_vrid_for_project_member_' + member_id,
             requires=constants.MEMBER,
