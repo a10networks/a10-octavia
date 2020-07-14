@@ -102,7 +102,7 @@ class ListenerFlows(object):
 
         update_listener_flow = linear_flow.Flow(constants.UPDATE_LISTENER_FLOW)
         update_listener_flow.add(lifecycle_tasks.ListenerToErrorOnRevertTask(
-            requires=[constants.LOADBALANCER, constants.LISTENER]))
+            requires=[constants.LISTENER]))
         update_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -133,7 +133,7 @@ class ListenerFlows(object):
 
         create_listener_flow = linear_flow.Flow(constants.CREATE_LISTENER_FLOW)
         create_listener_flow.add(lifecycle_tasks.ListenerToErrorOnRevertTask(
-            requires=[constants.LOADBALANCER, constants.LISTENER]))
+            requires=[constants.LISTENER]))
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -141,9 +141,9 @@ class ListenerFlows(object):
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         create_listener_flow.add(a10_database_tasks.
-                                 MarkLBAndListenersActiveInDB(
+                                 MarkLBAndListenerActiveInDB(
                                      requires=[constants.LOADBALANCER,
-                                               constants.LISTENERS]))
+                                               constants.LISTENER]))
         create_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return create_listener_flow

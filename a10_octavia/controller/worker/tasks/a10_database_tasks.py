@@ -46,6 +46,7 @@ class BaseDatabaseTask(task.Task):
         self.member_repo = a10_repo.MemberRepository()
         self.loadbalancer_repo = repo.LoadBalancerRepository()
         self.vip_repo = repo.VipRepository()
+        self.listener_repo = repo.ListenerRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -402,16 +403,10 @@ class CheckMemberVLANCanBeDeleted(CheckVLANCanBeDeletedParent, BaseDatabaseTask)
 
 
 class MarkLBAndListenerActiveInDB(BaseDatabaseTask):
-    """Mark the load balancer and specified listener active in the DB.
-    Since sqlalchemy will likely retry by itself always revert if it fails
-    """
+    """Mark the load balancer and specified listener active in the DB"""
 
     def execute(self, loadbalancer, listener):
-        """Mark the load balancer and listener as active in DB.
-        :param loadbalancer: Load balancer object to be updated
-        :param listener: Listener object to be updated
-        :returns: None
-        """
+        """Mark the load balancer and listener as active in DB"""
 
         self.loadbalancer_repo.update(db_apis.get_session(),
                                       loadbalancer.id,
@@ -420,11 +415,7 @@ class MarkLBAndListenerActiveInDB(BaseDatabaseTask):
             db_apis.get_session(), listener.id)
 
     def revert(self, loadbalancer, listener, *args, **kwargs):
-        """Mark the load balancer and listener as broken.
-        :param loadbalancer: Load balancer object that failed to update
-        :param listener: Listener object that failed to update
-        :returns: None
-        """
+        """Mark the load balancer and listener in error state"""
         try:
             self.loadbalancer_repo.update(db_apis.get_session(),
                                           id=loadbalancer.id,

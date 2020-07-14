@@ -180,12 +180,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             update_hm_tf.run()
 
     def create_listener(self, listener_id):
-        """Creates a listener.
+        """Function to create listener for A10 provider"""
 
-        :param listener_id: ID of the listener to create
-        :returns: None
-        :raises NoResultFound: Unable to find the object
-        """
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
         if not listener:
@@ -215,12 +211,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             create_listener_tf.run()
 
     def delete_listener(self, listener_id):
-        """Deletes a listener.
-
-        :param listener_id: ID of the listener to delete
-        :returns: None
-        :raises ListenerNotFound: The referenced listener was not found
-        """
+        """Function to delete a listener for A10 provider"""
 
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
@@ -240,13 +231,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             delete_listener_tf.run()
 
     def update_listener(self, listener_id, listener_updates):
-        """Updates a listener.
+        """Function to Update a listener for A10 provider"""
 
-        :param listener_id: ID of the listener to update
-        :param listener_updates: Dict containing updated listener attributes
-        :returns: None
-        :raises ListenerNotFound: The referenced listener was not found
-        """
         listener = None
         try:
             listener = self._get_db_obj_until_pending_update(
@@ -526,6 +512,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             raise db_exceptions.NoResultFound
 
         listeners = pool.listeners
+        default_listener = pool.listeners[0]
         load_balancer = pool.load_balancer
 
         create_pool_tf = self._taskflow_load(self._pool_flows.
@@ -533,6 +520,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                              store={constants.POOL: pool,
                                                     constants.LISTENERS:
                                                         listeners,
+                                                    constants.LISTENER: default_listener,
                                                     constants.LOADBALANCER:
                                                         load_balancer})
         with tf_logging.DynamicLoggingListener(create_pool_tf,
@@ -551,6 +539,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         load_balancer = pool.load_balancer
         listeners = pool.listeners
+        default_listener = pool.listeners[0]
 
         if pool.members:
             for member in pool.members:
@@ -559,6 +548,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         delete_pool_tf = self._taskflow_load(
             self._pool_flows.get_delete_pool_flow(),
             store={constants.POOL: pool, constants.LISTENERS: listeners,
+                   constants.LISTENER: default_listener,
                    constants.LOADBALANCER: load_balancer})
         with tf_logging.DynamicLoggingListener(delete_pool_tf,
                                                log=LOG):
@@ -586,6 +576,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             pool = e.last_attempt.result()
 
         listeners = pool.listeners
+        default_listener = pool.listeners[0]
         load_balancer = pool.load_balancer
 
         update_pool_tf = self._taskflow_load(self._pool_flows.
@@ -593,8 +584,10 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                              store={constants.POOL: pool,
                                                     constants.LISTENERS:
                                                         listeners,
+                                                    constants.LISTENER: default_listener,
                                                     constants.LOADBALANCER:
                                                         load_balancer,
+
                                                     constants.UPDATE_DICT:
                                                         pool_updates})
         with tf_logging.DynamicLoggingListener(update_pool_tf,

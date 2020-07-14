@@ -58,8 +58,9 @@ class ListenersParent(object):
 
             listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
                                                                          listener.protocol)
-            if listener.protocol == 'HTTPS':
-                template_args["template_client_ssl"] = ssl_template
+            # Adding TERMINATED_HTTPS SSL cert, created in previous task
+            if listener.protocol == 'HTTPS' and listener.tls_certificate_id:
+                template_args["template_client_ssl"] = listener.id
 
             if listener.protocol in a10constants.HTTP_TYPE:
                 # TODO(hthompson6) work around for issue in acos client
@@ -108,6 +109,15 @@ class ListenerCreate(ListenersParent, task.Task):
     @axapi_client_decorator
     def execute(self, loadbalancer, listener, vthunder):
         self.set(self.axapi_client.slb.virtual_server.vport.create, loadbalancer, listener)
+
+    @axapi_client_decorator
+    def revert(self, loadbalancer, listener, vthunder, *args, **kwargs):
+        try:
+            self.axapi_client.slb.virtual_server.vport.delete(
+                loadbalancer.id, name, listener.protocol,
+                listener.protocol_port)
+        except Exception as e:
+            LOG.warning("Failed to revert create listener task: %s", str(e))
 
 
 class ListenerUpdate(ListenersParent, task.Task):

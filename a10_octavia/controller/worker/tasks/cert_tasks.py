@@ -25,14 +25,16 @@ LOG = logging.getLogger(__name__)
 
 
 class GetSSLCertData(task.Task):
-    """ Task to get barbican certificate data """
+    """Task to get SSL certificate data from Barbican"""
 
     def execute(self, loadbalancer, listener):
         cert_data = None
-        if listener.protocol == 'HTTPS' and listener.tls_certificate_id:
+        if listener.protocol == 'TERMINATED_HTTPS' and listener.tls_certificate_id:
             try:
                 barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
                 cert_data = utils.get_cert_data(barbican_client, listener)
+                # Monkey patching template name as listener ID
+                cert_data.template_name = listener.id
             except Exception as e:
                 LOG.exception("Failed to create SSL certificate: %s", str(e))
                 raise e
@@ -98,7 +100,7 @@ class SSLKeyCreate(task.Task):
                 self.axapi_client.file.ssl_key.delete(file=cert_data.key_filename)
                 LOG.debug("Reverted SSLKeyCreate: %s", cert_data.key_filename)
             except Exception:
-                pass
+                LOG.warning("Failed to revert SSL key create task.")
 
 
 class ClientSSLTemplateCreate(task.Task):
@@ -117,7 +119,6 @@ class ClientSSLTemplateCreate(task.Task):
                                                                      cert=cert_data.cert_filename,
                                                                      key=cert_data.key_filename,
                                                                      passphrase=cert_data.key_pass)
-                return cert_data["template_name"]
             except Exception as e:
                 LOG.exception("Failed to create client SSL template: %s", str(e))
                 raise e
@@ -129,7 +130,7 @@ class ClientSSLTemplateCreate(task.Task):
                 self.axapi_client.slb.template.client_ssl.delete(name=cert_data.template_name)
                 LOG.debug("Reverted ClientSSLTemplateCreate: %s", cert_data.template_name)
             except Exception:
-                pass
+                LOG.warning("Failed to revert SSL template create task.")
 
 
 class SSLCertUpdate(task.Task):
@@ -147,7 +148,6 @@ class SSLCertUpdate(task.Task):
                     LOG.debug("SSL certificate updated successfully: %s", cert_data.cert_filename)
             except Exception as e:
                 LOG.warning("Failed to update SSL Certificate: %s", str(e))
-            return cert_data
 
 
 class SSLKeyUpdate(task.Task):
@@ -194,7 +194,6 @@ class SSLCertDelete(task.Task):
                     LOG.debug("SSL certificate deleted successfully: %s", cert_data.cert_filename)
             except Exception as e:
                 LOG.warning("Failed to delete SSL Certificate: %s", str(e))
-            return cert_data
 
 
 class SSLKeyDelete(task.Task):

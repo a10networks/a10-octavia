@@ -55,22 +55,26 @@ class TestCertHandlerTasks(BaseTaskTestCase):
         self.listener = copy.deepcopy(LISTENER)
         self.client_mock = mock.Mock()
 
-    # SSL Cert
     @patch.object(BarbicanACLAuth, 'get_barbican_client')
     @mock.patch('a10_octavia.controller.worker.tasks.utils.get_cert_data', return_value=CERT_DATA)
-    def test_ssl_cert_barbican_exception(self, barbican_class, cert_data):
+    def test_GetSSLCertData_success(self, barbican_class, cert_data):
+        mock_ssl_cert = cert_tasks.GetSSLCertData()
+        out = mock_ssl_cert.execute(LB, LISTENER)
+        self.assertEquals(out, CERT_DATA)
+       
+    @patch.object(BarbicanACLAuth, 'get_barbican_client')   
+    def test_GetSSLCertData_barbican_exception(self, barbican_class):
         mock_ssl_cert = cert_tasks.SSLCertCreate()
         mock_ssl_cert.axapi_client = self.client_mock
         barbican_class.side_effect = Exception
-        self.assertRaises(Exception, lambda: mock_ssl_cert.execute(LB, self.listener, VTHUNDER))
+        self.assertRaises(Exception, lambda: mock_ssl_cert.execute(LB, LISTENER))
         self.client_mock.file.ssl_cert.exists.assert_not_called()
 
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_cert_data', return_value=CERT_DATA)
-    def test_ssl_cert_create_update(self, barbican_class, cert_data):
+    # SSL Cert
+    def test_ssl_cert_create_update(self):
         mock_ssl_cert = cert_tasks.SSLCertCreate()
         mock_ssl_cert.axapi_client = self.client_mock
-        mock_ssl_cert.execute(LB, self.listener, VTHUNDER)
+        mock_ssl_cert.execute(CERT_DATA, VTHUNDER)
         self.client_mock.file.ssl_cert.exists.assert_called_with(
             file=a10_test_constants.MOCK_CERT_FILENAME)
         self.client_mock.file.ssl_cert.update.assert_called_with(
@@ -81,13 +85,11 @@ class TestCertHandlerTasks(BaseTaskTestCase):
             certificate_type=a10_test_constants.MOCK_CERT_TYPE)
         self.client_mock.file.ssl_cert.create.assert_not_called()
 
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_cert_data', return_value=CERT_DATA)
-    def test_ssl_cert_create_new(self, barbican_class, cert_data):
+    def test_ssl_cert_create_new(self):
         mock_ssl_cert = cert_tasks.SSLCertCreate()
         mock_ssl_cert.axapi_client = self.client_mock
         self.client_mock.file.ssl_cert.exists.return_value = False
-        mock_ssl_cert.execute(LB, self.listener, VTHUNDER)
+        mock_ssl_cert.execute(CERT_DATA, VTHUNDER)
         self.client_mock.file.ssl_cert.create.assert_called_with(
             file=a10_test_constants.MOCK_CERT_FILENAME,
             cert=a10_test_constants.MOCK_CERT_CONTENT,
@@ -96,21 +98,17 @@ class TestCertHandlerTasks(BaseTaskTestCase):
             certificate_type=a10_test_constants.MOCK_CERT_TYPE)
         self.client_mock.file.ssl_cert.update.assert_not_called()
 
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_cert_data', return_value=CERT_DATA)
-    def test_ssl_cert_create_revert(self, barbican_class, cert_data):
+    def test_ssl_cert_create_revert(self):
         mock_ssl_cert = cert_tasks.SSLCertCreate()
         mock_ssl_cert.axapi_client = self.client_mock
-        mock_ssl_cert.revert(LB, self.listener, VTHUNDER)
+        mock_ssl_cert.revert(CERT_DATA, VTHUNDER)
         self.client_mock.file.ssl_cert.delete.assert_called_with(
             file=a10_test_constants.MOCK_CERT_FILENAME)
 
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_cert_data', return_value=CERT_DATA)
-    def test_ssl_cert_update(self, barbican_class, cert_data):
+    def test_ssl_cert_update(self):
         mock_ssl_cert = cert_tasks.SSLCertUpdate()
         mock_ssl_cert.axapi_client = self.client_mock
-        mock_ssl_cert.execute(LB, self.listener, VTHUNDER)
+        mock_ssl_cert.execute(CERT_DATA, VTHUNDER)
         self.client_mock.file.ssl_cert.exists.assert_called_with(
             file=a10_test_constants.MOCK_CERT_FILENAME)
         self.client_mock.file.ssl_cert.update.assert_called_with(
@@ -120,29 +118,17 @@ class TestCertHandlerTasks(BaseTaskTestCase):
             action=a10_test_constants.MOCK_CERT_ACTION,
             certificate_type=a10_test_constants.MOCK_CERT_TYPE)
 
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_cert_data', return_value=CERT_DATA)
-    def test_ssl_cert_delete(self, barbican_class, cert_data):
+    def test_ssl_cert_delete(self):
         mock_ssl_cert = cert_tasks.SSLCertDelete()
         mock_ssl_cert.axapi_client = self.client_mock
-        mock_ssl_cert.execute(LB, self.listener, VTHUNDER)
+        mock_ssl_cert.execute(CERT_DATA, VTHUNDER)
         self.client_mock.file.ssl_cert.exists.assert_called_with(
             file=a10_test_constants.MOCK_CERT_FILENAME)
         self.client_mock.file.ssl_cert.delete.assert_called_with(
             file=a10_test_constants.MOCK_CERT_FILENAME)
 
     # SSL Key
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_cert_data', return_value=CERT_DATA)
-    def test_ssl_key_barbican_exception(self, barbican_class, cert_data):
-        mock_ssl_key = cert_tasks.SSLKeyCreate()
-        mock_ssl_key.axapi_client = self.client_mock
-        barbican_class.side_effect = Exception
-        self.assertRaises(Exception, lambda: mock_ssl_key.execute(LB, self.listener, VTHUNDER))
-        self.client_mock.file.ssl_key.exists.assert_not_called()
-
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    def test_ssl_key_create_update(self, barbican_class):
+    def test_ssl_key_create_update(self):
         mock_ssl_key = cert_tasks.SSLKeyCreate()
         mock_ssl_key.axapi_client = self.client_mock
         mock_ssl_key.execute(CERT_DATA, VTHUNDER)
@@ -155,8 +141,7 @@ class TestCertHandlerTasks(BaseTaskTestCase):
             action=a10_test_constants.MOCK_CERT_ACTION)
         self.client_mock.file.ssl_key.create.assert_not_called()
 
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    def test_ssl_key_create_new(self, barbican_class):
+    def test_ssl_key_create_new(self):
         mock_ssl_key = cert_tasks.SSLKeyCreate()
         mock_ssl_key.axapi_client = self.client_mock
         self.client_mock.file.ssl_key.exists.return_value = False
@@ -168,16 +153,14 @@ class TestCertHandlerTasks(BaseTaskTestCase):
             action=a10_test_constants.MOCK_CERT_ACTION)
         self.client_mock.file.ssl_key.update.assert_not_called()
 
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    def test_ssl_key_create_revert(self, barbican_class):
+    def test_ssl_key_create_revert(self):
         mock_ssl_key = cert_tasks.SSLKeyCreate()
         mock_ssl_key.axapi_client = self.client_mock
         mock_ssl_key.revert(CERT_DATA, VTHUNDER)
         self.client_mock.file.ssl_key.delete.assert_called_with(
             file=a10_test_constants.MOCK_KEY_FILENAME)
 
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    def test_ssl_key_update(self, barbican_class):
+    def test_ssl_key_update(self):
         mock_ssl_key = cert_tasks.SSLKeyUpdate()
         mock_ssl_key.axapi_client = self.client_mock
         mock_ssl_key.execute(CERT_DATA, VTHUNDER)
@@ -189,8 +172,7 @@ class TestCertHandlerTasks(BaseTaskTestCase):
             size=len(a10_test_constants.MOCK_KEY_CONTENT),
             action=a10_test_constants.MOCK_CERT_ACTION)
 
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    def test_ssl_key_delete(self, barbican_class):
+    def test_ssl_key_delete(self):
         mock_ssl_key = cert_tasks.SSLKeyDelete()
         mock_ssl_key.axapi_client = self.client_mock
         mock_ssl_key.execute(CERT_DATA, VTHUNDER)
@@ -198,18 +180,7 @@ class TestCertHandlerTasks(BaseTaskTestCase):
             file=a10_test_constants.MOCK_KEY_FILENAME)
 
     # Client Template
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_cert_data', return_value=CERT_DATA)
-    def test_client_ssl_template_barbican_exception(self, barbican_class, cert_data):
-        mock_client_ssl_template = cert_tasks.ClientSSLTemplateCreate()
-        mock_client_ssl_template.axapi_client = self.client_mock
-        barbican_class.side_effect = Exception
-        self.assertRaises(Exception, lambda: mock_client_ssl_template.execute(
-            LB, self.listener, VTHUNDER))
-        self.client_mock.slb.template.client_ssl.exists.assert_not_called()
-
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    def test_client_ssl_template_create_update(self, barbican_class):
+    def test_client_ssl_template_create_update(self):
         mock_client_ssl_template = cert_tasks.ClientSSLTemplateCreate()
         mock_client_ssl_template.axapi_client = self.client_mock
         mock_client_ssl_template.execute(CERT_DATA, VTHUNDER)
@@ -222,8 +193,7 @@ class TestCertHandlerTasks(BaseTaskTestCase):
             passphrase=a10_test_constants.MOCK_KEY_PASS)
         self.client_mock.slb.template.client_ssl.create.assert_not_called()
 
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    def test_client_ssl_template_create_new(self, barbican_class):
+    def test_client_ssl_template_create_new(self):
         mock_client_ssl_template = cert_tasks.ClientSSLTemplateCreate()
         mock_client_ssl_template.axapi_client = self.client_mock
         self.client_mock.slb.template.client_ssl.exists.return_value = False
@@ -235,16 +205,14 @@ class TestCertHandlerTasks(BaseTaskTestCase):
             passphrase=a10_test_constants.MOCK_KEY_PASS)
         self.client_mock.slb.template.client_ssl.update.assert_not_called()
 
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    def test_client_ssl_template_create_revert(self, barbican_class):
+    def test_client_ssl_template_create_revert(self):
         mock_client_ssl_template = cert_tasks.ClientSSLTemplateCreate()
         mock_client_ssl_template.axapi_client = self.client_mock
         mock_client_ssl_template.revert(CERT_DATA, VTHUNDER)
         self.client_mock.slb.template.client_ssl.delete.assert_called_with(
             name=a10_test_constants.MOCK_TEMPLATE_NAME)
 
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    def test_client_ssl_template_update(self, barbican_class):
+    def test_client_ssl_template_update(self):
         mock_client_ssl_template = cert_tasks.ClientSSLTemplateUpdate()
         mock_client_ssl_template.axapi_client = self.client_mock
         mock_client_ssl_template.execute(CERT_DATA, VTHUNDER)
@@ -256,8 +224,7 @@ class TestCertHandlerTasks(BaseTaskTestCase):
             key=a10_test_constants.MOCK_KEY_FILENAME,
             passphrase=a10_test_constants.MOCK_KEY_PASS)
 
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')
-    def test_client_ssl_template_delete(self, barbican_class):
+    def test_client_ssl_template_delete(self):
         mock_client_ssl_template = cert_tasks.ClientSSLTemplateDelete()
         mock_client_ssl_template.axapi_client = self.client_mock
         mock_client_ssl_template.execute(CERT_DATA, VTHUNDER)
