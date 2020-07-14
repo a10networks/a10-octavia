@@ -35,7 +35,8 @@ from a10_octavia.tests.unit.base import BaseTaskTestCase
 
 LB = o_data_models.LoadBalancer(id=a10_test_constants.MOCK_LOAD_BALANCER_ID,
                                 project_id=t_constants.MOCK_PROJECT_ID)
-LISTENER = o_data_models.Listener(protocol='TERMINATED_HTTPS', protocol_port=2222,
+LISTENER = o_data_models.Listener(id=a10_test_constants.MOCK_LISTENER_ID,
+                                  protocol='TERMINATED_HTTPS', protocol_port=2222,
                                   load_balancer=LB, tls_certificate_id='certificate-id-1')
 VTHUNDER = VThunder()
 
@@ -60,9 +61,9 @@ class TestCertHandlerTasks(BaseTaskTestCase):
     def test_GetSSLCertData_success(self, barbican_class, cert_data):
         mock_ssl_cert = cert_tasks.GetSSLCertData()
         out = mock_ssl_cert.execute(LB, LISTENER)
-        self.assertEquals(out, CERT_DATA)
-       
-    @patch.object(BarbicanACLAuth, 'get_barbican_client')   
+        self.assertEqual(out, CERT_DATA)
+
+    @patch.object(BarbicanACLAuth, 'get_barbican_client')
     def test_GetSSLCertData_barbican_exception(self, barbican_class):
         mock_ssl_cert = cert_tasks.SSLCertCreate()
         mock_ssl_cert.axapi_client = self.client_mock
@@ -185,9 +186,9 @@ class TestCertHandlerTasks(BaseTaskTestCase):
         mock_client_ssl_template.axapi_client = self.client_mock
         mock_client_ssl_template.execute(CERT_DATA, VTHUNDER)
         self.client_mock.slb.template.client_ssl.exists.assert_called_with(
-            name=a10_test_constants.MOCK_TEMPLATE_NAME)
+            name=a10_test_constants.MOCK_LISTENER_ID)
         self.client_mock.slb.template.client_ssl.update.assert_called_with(
-            name=a10_test_constants.MOCK_TEMPLATE_NAME,
+            name=a10_test_constants.MOCK_LISTENER_ID,
             cert=a10_test_constants.MOCK_CERT_FILENAME,
             key=a10_test_constants.MOCK_KEY_FILENAME,
             passphrase=a10_test_constants.MOCK_KEY_PASS)
@@ -199,7 +200,7 @@ class TestCertHandlerTasks(BaseTaskTestCase):
         self.client_mock.slb.template.client_ssl.exists.return_value = False
         mock_client_ssl_template.execute(CERT_DATA, VTHUNDER)
         self.client_mock.slb.template.client_ssl.create.assert_called_with(
-            name=a10_test_constants.MOCK_TEMPLATE_NAME,
+            name=a10_test_constants.MOCK_LISTENER_ID,
             cert=a10_test_constants.MOCK_CERT_FILENAME,
             key=a10_test_constants.MOCK_KEY_FILENAME,
             passphrase=a10_test_constants.MOCK_KEY_PASS)
@@ -210,16 +211,16 @@ class TestCertHandlerTasks(BaseTaskTestCase):
         mock_client_ssl_template.axapi_client = self.client_mock
         mock_client_ssl_template.revert(CERT_DATA, VTHUNDER)
         self.client_mock.slb.template.client_ssl.delete.assert_called_with(
-            name=a10_test_constants.MOCK_TEMPLATE_NAME)
+            name=a10_test_constants.MOCK_LISTENER_ID)
 
     def test_client_ssl_template_update(self):
         mock_client_ssl_template = cert_tasks.ClientSSLTemplateUpdate()
         mock_client_ssl_template.axapi_client = self.client_mock
         mock_client_ssl_template.execute(CERT_DATA, VTHUNDER)
         self.client_mock.slb.template.client_ssl.exists.assert_called_with(
-            name=a10_test_constants.MOCK_TEMPLATE_NAME)
+            name=a10_test_constants.MOCK_LISTENER_ID)
         self.client_mock.slb.template.client_ssl.update.assert_called_with(
-            name=a10_test_constants.MOCK_TEMPLATE_NAME,
+            name=a10_test_constants.MOCK_LISTENER_ID,
             cert=a10_test_constants.MOCK_CERT_FILENAME,
             key=a10_test_constants.MOCK_KEY_FILENAME,
             passphrase=a10_test_constants.MOCK_KEY_PASS)
@@ -229,4 +230,4 @@ class TestCertHandlerTasks(BaseTaskTestCase):
         mock_client_ssl_template.axapi_client = self.client_mock
         mock_client_ssl_template.execute(CERT_DATA, VTHUNDER)
         self.client_mock.slb.template.client_ssl.delete.assert_called_with(
-            name=a10_test_constants.MOCK_TEMPLATE_NAME)
+            name=a10_test_constants.MOCK_LISTENER_ID)

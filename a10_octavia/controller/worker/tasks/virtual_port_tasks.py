@@ -16,12 +16,9 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from taskflow import task
 
-import acos_client.errors as acos_errors
-from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
-
 from a10_octavia.common import a10constants
+from a10_octavia.common import exceptions
 from a10_octavia.common import openstack_mappings
-from a10_octavia.common.exceptions import GenericFlowException
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -99,7 +96,7 @@ class ListenersParent(object):
         except Exception as e:
             msg = str(e)
             LOG.exception("Failed to create/update the listener: %s", msg)
-            raise GenericFlowException(msg=msg)
+            raise exceptions.GenericFlowException(msg=msg)
 
 
 class ListenerCreate(ListenersParent, task.Task):
@@ -112,6 +109,9 @@ class ListenerCreate(ListenersParent, task.Task):
 
     @axapi_client_decorator
     def revert(self, loadbalancer, listener, vthunder, *args, **kwargs):
+        name = loadbalancer.id + "_" + str(listener.protocol_port)
+        listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
+                                                                     listener.protocol)
         try:
             self.axapi_client.slb.virtual_server.vport.delete(
                 loadbalancer.id, name, listener.protocol,
@@ -146,4 +146,4 @@ class ListenerDelete(ListenersParent, task.Task):
         except Exception as e:
             msg = str(e)
             LOG.exception("Failed to delete the listener: %s", msg)
-            raise GenericFlowException(msg=msg)
+            raise exceptions.GenericFlowException(msg=msg)
