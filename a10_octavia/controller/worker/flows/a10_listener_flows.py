@@ -21,8 +21,8 @@ from octavia.controller.worker.tasks import network_tasks
 
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
-from a10_octavia.controller.worker.tasks import cert_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
+from a10_octavia.controller.worker.tasks import cert_tasks
 from a10_octavia.controller.worker.tasks import virtual_port_tasks
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 
