@@ -43,7 +43,6 @@ SP_OBJ_DICT = {
 HTTP_TYPE = ['HTTP', 'HTTPS']
 PERS_TYPE = ['cookie_persistence', 'src_ip_persistence']
 NO_DEST_NAT_SUPPORTED_PROTOCOL = ['tcp', 'udp']
-SHARED_PARTITION = 'shared'
 PORT = 'port'
 MEMBER_COUNT = 'member_count'
 DELETE_VRID = 'delete_vrid'

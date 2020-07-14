@@ -419,10 +419,15 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.assertEqual(vthunder.device_network_map[0].state, "Master")
         self.assertEqual(vthunder.device_network_map[0].mgmt_ip_address, DEVICE2_MGMT_IP)
 
+    def test_SetupDeviceNetworkMap_execute_delete_flow_after_error_no_fail(self):
+        ret_val = task.SetupDeviceNetworkMap().execute(vthunder=None)
+        self.assertIsNone(ret_val)
+
     def test_WriteMemory_execute_save_shared_mem(self):
+        mock_thunder = copy.deepcopy(VTHUNDER)
         mock_task = task.WriteMemory()
         mock_task.axapi_client = self.client_mock
-        mock_task.execute(VTHUNDER)
+        mock_task.execute(mock_thunder)
         self.client_mock.system.action.write_memory.assert_called_with(partition='shared')
 
     def test_WriteMemory_execute_save_specific_partition_mem(self):
@@ -434,3 +439,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.write_memory.assert_called_with(
             partition='specified',
             specified_partition='testPartition')
+
+    def test_WriteMemory_execute_delete_flow_after_error_no_fail(self):
+        ret_val = task.WriteMemory().execute(vthunder=None)
+        self.assertIsNone(ret_val)
