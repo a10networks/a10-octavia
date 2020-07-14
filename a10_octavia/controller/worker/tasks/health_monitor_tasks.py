@@ -87,27 +87,27 @@ class DeleteHealthMonitor(task.Task):
             LOG.debug("Health Monitor %s is dissociated from pool %s successfully.",
                       health_mon.id, health_mon.pool_id)
         except Exception as e:
-            msg=str(e)
+            msg = str(e)
             LOG.exception("Failed to dissociate Health Monitor from pool: %s", msg)
             raise GenericFlowException(msg)
         try:
             self.axapi_client.slb.hm.delete(health_mon.id[0:5])
             LOG.debug("Health Monitor deleted successfully: %s", health_mon.id)
         except Exception as e:
-            msg=str(e)
+            msg = str(e)
             LOG.exception("Failed to delete health monitor: %s", msg)
             raise GenericFlowException(msg)
-    
+
     @axapi_client_decorator
     def revert(self, health_mon, vthunder, *args, **kwargs):
         try:
             self.axapi_client.slb.service_group.update(health_mon.pool_id,
                                                        health_monitor=health_mon.id[:5],
                                                        health_check_disable=0)
-            
+
         except Exception as e:
             LOG.exception("Failed to revert delete Health Monitor operation: %s", str(e))
-            
+
 
 class UpdateHealthMonitor(task.Task):
     """Task to update Health Monitor"""
