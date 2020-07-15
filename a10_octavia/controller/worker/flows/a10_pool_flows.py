@@ -128,37 +128,6 @@ class PoolFlows(object):
         store.update(member_store)
         return delete_member_vthunder_subflow
 
-    def get_delete_pool_flow_internal(self, name):
-        """Create a flow to delete a pool, etc.
-
-        :returns: The flow for deleting a pool
-        """
-        delete_pool_flow = linear_flow.Flow(constants.DELETE_POOL_FLOW)
-        # health monitor should cascade
-        # members should cascade
-        delete_pool_flow.add(database_tasks.MarkPoolPendingDeleteInDB(
-            name='mark_pool_pending_delete_in_db_' + name,
-            requires=constants.POOL,
-            rebind={constants.POOL: name}))
-        delete_pool_flow.add(database_tasks.CountPoolChildrenForQuota(
-            name='count_pool_children_for_quota_' + name,
-            requires=constants.POOL,
-            provides=constants.POOL_CHILD_COUNT,
-            rebind={constants.POOL: name}))
-        delete_pool_flow.add(model_tasks.DeleteModelObject(
-            name='delete_model_object_' + name,
-            rebind={constants.OBJECT: name}))
-        delete_pool_flow.add(database_tasks.DeletePoolInDB(
-            name='delete_pool_in_db_' + name,
-            requires=constants.POOL,
-            rebind={constants.POOL: name}))
-        delete_pool_flow.add(database_tasks.DecrementPoolQuota(
-            name='decrement_pool_quota_' + name,
-            requires=[constants.POOL, constants.POOL_CHILD_COUNT],
-            rebind={constants.POOL: name}))
-
-        return delete_pool_flow
-
     def get_update_pool_flow(self):
         """Create a flow to update a pool
 
