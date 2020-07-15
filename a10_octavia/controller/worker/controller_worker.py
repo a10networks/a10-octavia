@@ -56,7 +56,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._lb_repo = repo.LoadBalancerRepository()
         self._listener_repo = repo.ListenerRepository()
         self._pool_repo = repo.PoolRepository()
-        self._member_repo = repo.MemberRepository()
+        self._member_repo = a10repo.MemberRepository()
         self._health_mon_repo = repo.HealthMonitorRepository()
         self._l7policy_repo = repo.L7PolicyRepository()
         self._l7rule_repo = repo.L7RuleRepository()
@@ -553,14 +553,21 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = pool.load_balancer
         listeners = pool.listeners
 
-        if pool.members:
-            for member in pool.members:
-                self.delete_member(member.id)
+        members = pool.members
+        health_monitor = pool.health_monitor
+        mem_count = self._member_repo.get_member_count(
+            db_apis.get_session(),
+            project_id=pool.project_id)
+        mem_count = mem_count - len(members) + 1
+        store = {constants.POOL: pool, constants.LISTENERS: listeners,
+                 constants.LOADBALANCER: load_balancer,
+                 constants.HEALTH_MON: health_monitor,
+                 a10constants.MEMBER_COUNT: mem_count}
 
         delete_pool_tf = self._taskflow_load(
-            self._pool_flows.get_delete_pool_flow(),
-            store={constants.POOL: pool, constants.LISTENERS: listeners,
-                   constants.LOADBALANCER: load_balancer})
+            self._pool_flows.get_delete_pool_flow(
+                members, health_monitor, store),
+            store=store)
         with tf_logging.DynamicLoggingListener(delete_pool_tf,
                                                log=LOG):
             delete_pool_tf.run()
