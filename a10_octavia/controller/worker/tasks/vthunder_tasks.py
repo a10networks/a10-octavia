@@ -705,12 +705,12 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
 
     @axapi_client_decorator
     def revert(self, member, vthunder, *args, **kwargs):
-         if not member.subnet_id:
-            LOG.warning("Subnet id argument was not specified during "
-                        "issuance of create command/API call for member %s. "
-                        "Skipping TagInterfaceForMember task", member.id)
-            return
-         try:
+        if not member.subnet_id:
+           LOG.warning("Subnet id argument was not specified during "
+                       "issuance of create command/API call for member %s. "
+                       "Skipping TagInterfaceForMember task", member.id)
+           return
+        try:
             if vthunder.device_network_map:
                 vlan_id = self.get_vlan_id(member.subnet_id, False)
                 if self.is_vlan_deletable():
@@ -749,12 +749,12 @@ class DeleteInterfaceTagIfNotInUseForMember(TagInterfaceBaseTask):
 
     @axapi_client_decorator
     def execute(self, member, vthunder):
-         if not member.subnet_id:
-            LOG.warning("Subnet id argument was not specified during "
-                        "issuance of create command/API call for member %s. "
-                        "Skipping DeleteInterfaceTagIfNotInUseForMember task", member.id)
-            return
-         try:
+        if not member.subnet_id:
+           LOG.warning("Subnet id argument was not specified during "
+                       "issuance of create command/API call for member %s. "
+                       "Skipping DeleteInterfaceTagIfNotInUseForMember task", member.id)
+           return
+        try:
             if vthunder.device_network_map:
                 vlan_id = self.get_vlan_id(member.subnet_id, False)
                 if self.is_vlan_deletable():

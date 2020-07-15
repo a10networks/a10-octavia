@@ -16,6 +16,7 @@
 import copy
 import imp
 import json
+import logging
 try:
     from unittest import mock
 except ImportError:
@@ -337,6 +338,15 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.revert(member, VTHUNDER)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
+
+    def test_TagInterfaceForMember_log_warning_no_subnet_id(self):
+        member = self._mock_member()
+        member.subnet_id = None
+        log_message = """Subnet id argument was not specified during 
+                      issuance of create command/API call for member %s. 
+                      Skipping TagInterfaceForMember task"""
+        mock_task = task.TagInterfaceForMember()
+
 
     def test_DeleteInterfaceTagIfNotInUseForLB_execute_delete_vlan(self):
         intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
