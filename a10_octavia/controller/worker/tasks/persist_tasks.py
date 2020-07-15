@@ -15,6 +15,7 @@
 import logging
 
 import acos_client.errors as acos_errors
+from requests.exceptions import ConnectionError
 from taskflow import task
 
 from a10_octavia.common.a10constants import PERS_TYPE
@@ -51,10 +52,9 @@ class HandleSessionPersistenceDelta(task.Task):
                     sp_template.create(pool.id)
             except acos_errors.Exists:
                 pass
-            except Exception:
-                LOG.exception(
-                    "Failed to create session persistence for pool: %s", pool.id)
-                raise
+            except (acos_errors.ACOSException, ConnectionError) as e:
+                LOG.exception("Failed to create session persistence for pool: %s", pool.id)
+                raise e
 
     @axapi_client_decorator
     def revert(self, vthunder, pool, *args, **kwargs):
@@ -78,6 +78,6 @@ class DeleteSessionPersistence(task.Task):
                     sp_template.delete(pool.id)
                 except acos_errors.NotFound:
                     pass
-                except Exception as e:
-                    LOG.warning(
-                        "Failed to delete session persistence: %s", str(e))
+                except (acos_errors.ACOSException, ConnectionError) as e:
+                    LOG.warning("Failed to delete session persistence: %s", str(e))
+                    raise e
