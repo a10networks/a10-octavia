@@ -183,7 +183,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
         device1_network_map = a10_data_models.DeviceNetworkMap(vcs_device_id=1,
                                                                ethernet_interfaces=[intf])
-        VTHUNDER.device_network_map = [device1_network_map]
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.device_network_map = [device1_network_map]
         lb = self._mock_lb()
         mock_task = task.TagInterfaceForLB()
         self._mock_tag_task(mock_task)
@@ -195,7 +196,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_network.return_value = NETWORK_11
         mock_task._network_driver.list_networks = mock.Mock()
         mock_task._network_driver.list_networks.return_value = [NETWORK_11]
-        mock_task.execute(lb, VTHUNDER)
+        mock_task.execute(lb, mock_thunder)
         self.client_mock.vlan.create.assert_called_with(VLAN_ID,
                                                         tagged_eths=[TAG_INTERFACE],
                                                         veth=True)
@@ -209,7 +210,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
         device1_network_map = a10_data_models.DeviceNetworkMap(vcs_device_id=1,
                                                                ethernet_interfaces=[intf])
-        VTHUNDER.device_network_map = [device1_network_map]
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.device_network_map = [device1_network_map]
         lb = self._mock_lb()
         mock_task = task.TagInterfaceForLB()
         self._mock_tag_task(mock_task)
@@ -224,7 +226,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_network.return_value = NETWORK_12
         mock_task._network_driver.list_networks = mock.Mock()
         mock_task._network_driver.list_networks.return_value = [NETWORK_12]
-        mock_task.execute(lb, VTHUNDER)
+        mock_task.execute(lb, mock_thunder)
         self.client_mock.vlan.create.assert_called_with(VE_IP_VLAN_ID,
                                                         tagged_eths=[TAG_INTERFACE],
                                                         veth=True)
@@ -237,7 +239,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         intf = a10_utils.convert_interface_to_data_model(TRUNK_INTERFACE)
         device1_network_map = a10_data_models.DeviceNetworkMap(vcs_device_id=1,
                                                                trunk_interfaces=[intf])
-        VTHUNDER.device_network_map = [device1_network_map]
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.device_network_map = [device1_network_map]
         lb = self._mock_lb()
         mock_task = task.TagInterfaceForLB()
         self._mock_tag_task(mock_task)
@@ -252,7 +255,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_network.return_value = NETWORK_12
         mock_task._network_driver.list_networks = mock.Mock()
         mock_task._network_driver.list_networks.return_value = [NETWORK_12]
-        mock_task.execute(lb, VTHUNDER)
+        mock_task.execute(lb, mock_thunder)
         self.client_mock.vlan.create.assert_called_with(VE_IP_VLAN_ID,
                                                         tagged_trunks=[TAG_TRUNK_INTERFACE],
                                                         veth=True)
@@ -265,15 +268,21 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
         device1_network_map = a10_data_models.DeviceNetworkMap(vcs_device_id=1,
                                                                ethernet_interfaces=[intf])
-        VTHUNDER.device_network_map = [device1_network_map]
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.device_network_map = [device1_network_map]
         lb = self._mock_lb()
         mock_task = task.TagInterfaceForLB()
         self._mock_tag_task(mock_task)
         self.client_mock.interface.ethernet.get.return_value = ETH_DATA
         self.client_mock.vlan.exists.side_effect = Exception
-        self.assertRaises(Exception, lambda: mock_task.execute(lb, VTHUNDER))
+        self.assertRaises(Exception, lambda: mock_task.execute(lb, mock_thunder))
 
     def test_TagInterfaceForLB_revert_created_vlan(self):
+        intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
+        device1_network_map = a10_data_models.DeviceNetworkMap(vcs_device_id=1,
+                                                               ethernet_interfaces=[intf])
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.device_network_map = [device1_network_map]
         lb = self._mock_lb()
         mock_task = task.TagInterfaceForLB()
         self._mock_tag_task(mock_task)
@@ -282,7 +291,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_port_id_from_ip = mock.Mock()
         mock_task._network_driver.neutron_client.delete_port = mock.Mock()
         mock_task._network_driver.get_port_id_from_ip.return_value = DEL_PORT_ID
-        mock_task.revert(lb, VTHUNDER)
+        mock_task.revert(lb, mock_thunder)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
 
@@ -290,7 +299,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
         device1_network_map = a10_data_models.DeviceNetworkMap(vcs_device_id=1,
                                                                ethernet_interfaces=[intf])
-        VTHUNDER.device_network_map = [device1_network_map]
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.device_network_map = [device1_network_map]
         member = self._mock_member()
         mock_task = task.TagInterfaceForMember()
         self._mock_tag_task(mock_task)
@@ -301,7 +311,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_network.return_value = NETWORK_11
         mock_task._network_driver.list_networks = mock.Mock()
         mock_task._network_driver.list_networks.return_value = [NETWORK_11]
-        mock_task.execute(member, VTHUNDER)
+        mock_task.execute(member, mock_thunder)
         self.client_mock.vlan.create.assert_called_with(VLAN_ID,
                                                         tagged_eths=[TAG_INTERFACE],
                                                         veth=True)
@@ -315,7 +325,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
         device1_network_map = a10_data_models.DeviceNetworkMap(vcs_device_id=1,
                                                                ethernet_interfaces=[intf])
-        VTHUNDER.device_network_map = [device1_network_map]
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.device_network_map = [device1_network_map]
         member = self._mock_member()
         mock_task = task.TagInterfaceForMember()
         self._mock_tag_task(mock_task)
@@ -323,9 +334,14 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.vlan.exists.return_value = False
         mock_task._network_driver.neutron_client.create_port = mock.Mock()
         mock_task._network_driver.neutron_client.create_port.side_effect = Exception
-        self.assertRaises(Exception, lambda: mock_task.execute(member, VTHUNDER))
+        self.assertRaises(Exception, lambda: mock_task.execute(member, mock_thunder))
 
     def test_TagInterfaceForMember_revert_created_vlan(self):
+        intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
+        device1_network_map = a10_data_models.DeviceNetworkMap(vcs_device_id=1,
+                                                               ethernet_interfaces=[intf])
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.device_network_map = [device1_network_map]
         member = self._mock_member()
         mock_task = task.TagInterfaceForMember()
         self._mock_tag_task(mock_task)
@@ -334,7 +350,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_port_id_from_ip = mock.Mock()
         mock_task._network_driver.neutron_client.delete_port = mock.Mock()
         mock_task._network_driver.get_port_id_from_ip.return_value = DEL_PORT_ID
-        mock_task.revert(member, VTHUNDER)
+        mock_task.revert(member, mock_thunder)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
 
@@ -342,7 +358,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
         device1_network_map = a10_data_models.DeviceNetworkMap(vcs_device_id=1,
                                                                ethernet_interfaces=[intf])
-        VTHUNDER.device_network_map = [device1_network_map]
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.device_network_map = [device1_network_map]
         lb = self._mock_lb()
         mock_task = task.DeleteInterfaceTagIfNotInUseForLB()
         self._mock_tag_task(mock_task)
@@ -351,7 +368,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_port_id_from_ip = mock.Mock()
         mock_task._network_driver.neutron_client.delete_port = mock.Mock()
         mock_task._network_driver.get_port_id_from_ip.return_value = DEL_PORT_ID
-        mock_task.execute(lb, VTHUNDER)
+        mock_task.execute(lb, mock_thunder)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
 
@@ -359,7 +376,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
         device1_network_map = a10_data_models.DeviceNetworkMap(vcs_device_id=1,
                                                                ethernet_interfaces=[intf])
-        VTHUNDER.device_network_map = [device1_network_map]
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.device_network_map = [device1_network_map]
         member = self._mock_member()
         mock_task = task.DeleteInterfaceTagIfNotInUseForMember()
         self._mock_tag_task(mock_task)
@@ -368,7 +386,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_port_id_from_ip = mock.Mock()
         mock_task._network_driver.neutron_client.delete_port = mock.Mock()
         mock_task._network_driver.get_port_id_from_ip.return_value = DEL_PORT_ID
-        mock_task.execute(member, VTHUNDER)
+        mock_task.execute(member, mock_thunder)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
 
@@ -381,9 +399,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task = task.SetupDeviceNetworkMap()
         self._mock_tag_task(mock_task)
         mock_task.axapi_client.system.action.get_vcs_summary_oper.return_value = VCS_DISABLED
-        vthunder = mock_task.execute(VTHUNDER)
-        self.assertEqual(len(vthunder.device_network_map), 1)
-        self.assertEqual(vthunder.device_network_map[0].vcs_device_id, 1)
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        thunder = mock_task.execute(mock_thunder)
+        self.assertEqual(len(thunder.device_network_map), 1)
+        self.assertEqual(thunder.device_network_map[0].vcs_device_id, 1)
 
     def test_SetupDeviceNetworkMap_execute_vcs_master_vblade(self):
         self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
@@ -395,14 +414,15 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task = task.SetupDeviceNetworkMap()
         self._mock_tag_task(mock_task)
         mock_task.axapi_client.system.action.get_vcs_summary_oper.return_value = VCS_MASTER_VBLADE
-        vthunder = mock_task.execute(VTHUNDER)
-        self.assertEqual(len(vthunder.device_network_map), 2)
-        self.assertEqual(vthunder.device_network_map[0].vcs_device_id, 1)
-        self.assertEqual(vthunder.device_network_map[0].state, "Master")
-        self.assertEqual(vthunder.device_network_map[0].mgmt_ip_address, DEVICE1_MGMT_IP)
-        self.assertEqual(vthunder.device_network_map[1].vcs_device_id, 2)
-        self.assertEqual(vthunder.device_network_map[1].state, "vBlade")
-        self.assertEqual(vthunder.device_network_map[1].mgmt_ip_address, DEVICE2_MGMT_IP)
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        thunder = mock_task.execute(mock_thunder)
+        self.assertEqual(len(thunder.device_network_map), 2)
+        self.assertEqual(thunder.device_network_map[0].vcs_device_id, 1)
+        self.assertEqual(thunder.device_network_map[0].state, "Master")
+        self.assertEqual(thunder.device_network_map[0].mgmt_ip_address, DEVICE1_MGMT_IP)
+        self.assertEqual(thunder.device_network_map[1].vcs_device_id, 2)
+        self.assertEqual(thunder.device_network_map[1].state, "vBlade")
+        self.assertEqual(thunder.device_network_map[1].mgmt_ip_address, DEVICE2_MGMT_IP)
 
     def test_SetupDeviceNetworkMap_execute_vcs_device1_failed(self):
         self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
@@ -413,16 +433,22 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task = task.SetupDeviceNetworkMap()
         self._mock_tag_task(mock_task)
         mock_task.axapi_client.system.action.get_vcs_summary_oper.return_value = VCS_DEVICE1_FAILED
-        vthunder = mock_task.execute(VTHUNDER)
-        self.assertEqual(len(vthunder.device_network_map), 1)
-        self.assertEqual(vthunder.device_network_map[0].vcs_device_id, 2)
-        self.assertEqual(vthunder.device_network_map[0].state, "Master")
-        self.assertEqual(vthunder.device_network_map[0].mgmt_ip_address, DEVICE2_MGMT_IP)
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        thunder = mock_task.execute(mock_thunder)
+        self.assertEqual(len(thunder.device_network_map), 1)
+        self.assertEqual(thunder.device_network_map[0].vcs_device_id, 2)
+        self.assertEqual(thunder.device_network_map[0].state, "Master")
+        self.assertEqual(thunder.device_network_map[0].mgmt_ip_address, DEVICE2_MGMT_IP)
+
+    def test_SetupDeviceNetworkMap_execute_delete_flow_after_error_no_fail(self):
+        ret_val = task.SetupDeviceNetworkMap().execute(vthunder=None)
+        self.assertIsNone(ret_val)
 
     def test_WriteMemory_execute_save_shared_mem(self):
+        mock_thunder = copy.deepcopy(VTHUNDER)
         mock_task = task.WriteMemory()
         mock_task.axapi_client = self.client_mock
-        mock_task.execute(VTHUNDER)
+        mock_task.execute(mock_thunder)
         self.client_mock.system.action.write_memory.assert_called_with(partition='shared')
 
     def test_WriteMemory_execute_save_specific_partition_mem(self):
@@ -434,3 +460,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.write_memory.assert_called_with(
             partition='specified',
             specified_partition='testPartition')
+
+    def test_WriteMemory_execute_delete_flow_after_error_no_fail(self):
+        ret_val = task.WriteMemory().execute(vthunder=None)
+        self.assertIsNone(ret_val)
