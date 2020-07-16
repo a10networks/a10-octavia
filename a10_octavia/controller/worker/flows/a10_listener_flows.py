@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
@@ -38,7 +39,7 @@ class ListenerFlows(object):
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_listener_flow.add(self.get_ssl_certificate_create_flow())
+        create_listener_flow.add(self.handle_ssl_cert_flow(flow_type='create'))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         create_listener_flow.add(a10_network_tasks.UpdateVIP(
@@ -51,6 +52,24 @@ class ListenerFlows(object):
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 
+    def handle_ssl_cert_flow(self, flow_type='create'):
+        if flow_type== 'create':
+            configure_ssl = self.get_ssl_certificate_create_flow()
+        elif flow_type == 'update':
+            configure_ssl = self.get_ssl_certificate_update_flow()
+        else:
+            configure_ssl = self.get_ssl_certificate_delete_flow()
+            
+        configure_ssl_flow  = graph_flow.Flow(a10constants.LISTENER_TYPE_DECIDER_FLOW)
+        check_ssl = cert_tasks.CheckListnerType(requires=constants.LISTENER)
+        configure_ssl_flow.add(check_ssl, configure_ssl)
+        configure_ssl_flow.link(check_ssl, configure_ssl,
+            decider=self._check_ssl_data, decider_depth='flow')
+        return configure_ssl_flow
+
+    def _check_ssl_data(self, history):
+        return list(history.values())[0]
+
     def get_delete_listener_flow(self):
         """Flow to delete a listener"""
 
@@ -60,7 +79,7 @@ class ListenerFlows(object):
         delete_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_listener_flow.add(self.get_ssl_certificate_delete_flow())
+        delete_listener_flow.add(self.handle_ssl_cert_flow(flow_type='delete'))
         delete_listener_flow.add(virtual_port_tasks.ListenerDelete(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         delete_listener_flow.add(network_tasks.UpdateVIPForDelete(
@@ -84,7 +103,7 @@ class ListenerFlows(object):
         delete_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_listener_flow.add(self.get_ssl_certificate_delete_flow())
+        delete_listener_flow.add(self.handle_ssl_cert_flow(flow_type='delete'))
         delete_listener_flow.add(virtual_port_tasks.ListenerDelete(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         delete_listener_flow.add(database_tasks.DeleteListenerInDB(
@@ -106,16 +125,7 @@ class ListenerFlows(object):
         update_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        # SSL Cert task
-        update_listener_flow.add(cert_tasks.GetSSLCertData(
-            requires=[constants.LOADBALANCER, constants.LISTENER],
-            provides=a10constants.CERT_DATA))
-        update_listener_flow.add(cert_tasks.SSLCertUpdate(
-            requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
-        update_listener_flow.add(cert_tasks.SSLKeyUpdate(
-            requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
-        update_listener_flow.add(cert_tasks.ClientSSLTemplateUpdate(
-            requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
+        update_listener_flow.add(self.handle_ssl_cert_flow(flow_type='update'))
         update_listener_flow.add(virtual_port_tasks.ListenerUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         update_listener_flow.add(database_tasks.UpdateListenerInDB(
@@ -137,7 +147,7 @@ class ListenerFlows(object):
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_listener_flow.add(self.get_ssl_certificate_create_flow())
+        create_listener_flow.add(self.handle_ssl_cert_flow(flow_type='create'))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         create_listener_flow.add(a10_database_tasks.
@@ -175,3 +185,17 @@ class ListenerFlows(object):
         delete_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateDelete(
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         return delete_ssl_cert_flow
+
+    def get_ssl_certificate_update_flow(self):
+        update_ssl_cert_flow = linear_flow.Flow(
+            a10constants.DELETE_SSL_CERT_FLOW)
+        update_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
+            requires=[constants.LOADBALANCER, constants.LISTENER],
+            provides=a10constants.CERT_DATA))
+        update_ssl_cert_flow.add(cert_tasks.SSLCertUpdate(
+            requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
+        update_ssl_cert_flow.add(cert_tasks.SSLKeyUpdate(
+            requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
+        update_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateUpdate(
+            requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
+        return update_ssl_cert_flow
