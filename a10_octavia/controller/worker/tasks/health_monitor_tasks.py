@@ -42,7 +42,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
         args = utils.meta(health_mon, 'hm', {})
 
         try:
-            self.axapi_client.slb.hm.create(health_mon.id[0:5],
+            self.axapi_client.slb.hm.create(health_mon.id,
                                             openstack_mappings.hm_type(self.axapi_client,
                                                                        health_mon.type),
                                             health_mon.delay, health_mon.timeout,
@@ -56,7 +56,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
 
         try:
             self.axapi_client.slb.service_group.update(health_mon.pool_id,
-                                                       health_monitor=health_mon.id[0:5],
+                                                       health_monitor=health_mon.id,
                                                        health_check_disable=0)
             LOG.debug("Health Monitor %s is associated to pool %s successfully.",
                       health_mon.id, health_mon.pool_id)
@@ -79,7 +79,7 @@ class DeleteHealthMonitor(task.Task):
         except Exception as e:
             LOG.warning("Failed to dissociate Health Monitor from pool: %s", str(e))
         try:
-            self.axapi_client.slb.hm.delete(health_mon.id[0:5])
+            self.axapi_client.slb.hm.delete(health_mon.id)
             LOG.debug("Health Monitor deleted successfully: %s", health_mon.id)
         except Exception as e:
             LOG.warning("Failed to delete health monitor: %s", str(e))
@@ -103,7 +103,7 @@ class UpdateHealthMonitor(task.Task):
         args = utils.meta(health_mon, 'hm', {})
         try:
             self.axapi_client.slb.hm.update(
-                health_mon.id[0:5],
+                health_mon.id,
                 openstack_mappings.hm_type(self.axapi_client, health_mon.type),
                 health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
                 method=method, url=url, expect_code=expect_code,
