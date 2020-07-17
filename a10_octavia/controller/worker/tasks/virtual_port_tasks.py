@@ -175,15 +175,6 @@ class ListenersUpdate(ListenersParent, task.Task):
     def execute(self, loadbalancer, listeners, vthunder):
         self.set(self.axapi_client.slb.virtual_server.vport.update, loadbalancer, listeners)
 
-    def revert(self, loadbalancer, *args, **kwargs):
-        """ Handle failed listeners updates """
-        LOG.warning("Reverting listeners updates.")
-
-        for listener in loadbalancer.listeners:
-            self.task_utils.mark_listener_prov_status_error(listener.id)
-
-        return None
-
 
 class ListenerDelete(ListenersParent, task.Task):
 
