@@ -12,30 +12,28 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import imp
 try:
     from unittest import mock
 except ImportError:
     import mock
 
-from octavia.common import constants as o_constants
 from octavia.common import data_models as o_data_models
 
 from a10_octavia.common.data_models import VThunder
-import a10_octavia.controller.worker.tasks.health_monitor_tasks as task
+from a10_octavia.controller.worker.tasks import health_monitor_tasks as task
 from a10_octavia.controller.worker.tasks import utils
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 
 VTHUNDER = VThunder()
 HM = o_data_models.HealthMonitor(id=a10constants.MOCK_HM_ID,
-                                 type=o_constants.HEALTH_MONITOR_TCP,
-                                 delay=o_constants.DELAY,
-                                 timeout=o_constants.TIMEOUT,
-                                 rise_threshold=o_constants.RISE_THRESHOLD,
-                                 http_method=o_constants.HTTP_METHOD,
-                                 url_path=o_constants.URL_PATH,
-                                 expected_codes=o_constants.EXPECTED_CODES)
+                                 type='TCP',
+                                 delay=7,
+                                 timeout=3,
+                                 rise_threshold=8,
+                                 http_method='GET')
 ARGS = utils.meta(HM, 'hm', {})
 LISTENERS = [o_data_models.Listener(id=a10constants.MOCK_LISTENER_ID, protocol_port=mock.ANY)]
 
@@ -64,12 +62,13 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
     def test_health_monitor_update_task(self):
         mock_hm = task.UpdateHealthMonitor()
         mock_hm.axapi_client = self.client_mock
-        UPDATE_DICT = {'HM.delay': '10'}
-        mock_hm.execute(LISTENERS, HM, VTHUNDER, UPDATE_DICT)
+        update_dict = {'delay': '10'}
+        hm = copy.deepcopy(HM)
+        mock_hm.execute(LISTENERS, hm, VTHUNDER, update_dict)
         self.client_mock.slb.hm.update.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
-                                                          HM.delay, HM.timeout,
-                                                          HM.rise_threshold, method=None,
+                                                          hm.delay, hm.timeout,
+                                                          hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
                                                           expect_code=None, axapi_args=ARGS)
 

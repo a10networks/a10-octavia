@@ -92,7 +92,7 @@ class UpdateHealthMonitor(task.Task):
     def execute(self, listeners, health_mon, vthunder, update_dict):
         """ Execute update health monitor """
         # TODO(hthompson6) Length of name of healthmonitor for older vThunder devices
-        health_mon.__dict__.update(update_dict)
+        health_mon.update(update_dict)
         method = None
         url = None
         expect_code = None
