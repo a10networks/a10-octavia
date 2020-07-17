@@ -24,7 +24,7 @@ from a10_octavia.controller.worker.tasks import utils
 LOG = logging.getLogger(__name__)
 
 
-class CheckListnerType(task.Task):
+class CheckListenerType(task.Task):
     """Task to check if listener type is TERMINATED_HTTPS"""
 
     def execute(self, listener):

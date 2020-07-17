@@ -53,18 +53,19 @@ class ListenerFlows(object):
         return create_listener_flow
 
     def handle_ssl_cert_flow(self, flow_type='create'):
-        if flow_type== 'create':
+        if flow_type == 'create':
             configure_ssl = self.get_ssl_certificate_create_flow()
         elif flow_type == 'update':
             configure_ssl = self.get_ssl_certificate_update_flow()
         else:
             configure_ssl = self.get_ssl_certificate_delete_flow()
-            
-        configure_ssl_flow  = graph_flow.Flow(a10constants.LISTENER_TYPE_DECIDER_FLOW)
-        check_ssl = cert_tasks.CheckListnerType(requires=constants.LISTENER)
+
+        configure_ssl_flow = graph_flow.Flow(
+            a10constants.LISTENER_TYPE_DECIDER_FLOW)
+        check_ssl = cert_tasks.CheckListenerType(requires=constants.LISTENER)
         configure_ssl_flow.add(check_ssl, configure_ssl)
         configure_ssl_flow.link(check_ssl, configure_ssl,
-            decider=self._check_ssl_data, decider_depth='flow')
+                                decider=self._check_ssl_data, decider_depth='flow')
         return configure_ssl_flow
 
     def _check_ssl_data(self, history):

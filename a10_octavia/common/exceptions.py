@@ -129,9 +129,3 @@ class MissingMgmtIpConfigError(cfg.ConfigFileValueError):
         msg = ('Missing `mgmt_ip_address` for vcs device with id {0}. ' +
                'Please provide management IP address').format(vcs_device_id)
         super(MissingMgmtIpConfigError, self).__init__(msg=msg)
-
-
-class GenericFlowException(exceptions.OctaviaException):
-
-    def __init__(self, msg):
-        super(GenericFlowException, self).__init__(msg=msg)
