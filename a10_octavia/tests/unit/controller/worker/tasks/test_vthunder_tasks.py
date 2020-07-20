@@ -354,6 +354,48 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
         mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
 
+    def test_TagInterfaceForMember_execute_log_warning_no_subnet_id(self):
+        member = self._mock_member()
+        member.id = "1234"
+        member.subnet_id = None
+        task_path = "a10_octavia.controller.worker.tasks.vthunder_tasks"
+        log_message = str("Subnet id argument was not specified during "
+                          "issuance of create command/API call for member %s. "
+                          "Skipping TagInterfaceForMember task")
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message % member.id)]
+        mock_task = task.TagInterfaceForMember()
+        with self.assertLogs(task_path, level='WARN') as cm:
+            mock_task.execute(member, VTHUNDER)
+            self.assertEqual(expected_log, cm.output)
+
+    def test_TagInterfaceForMember_revert_log_warning_no_subnet_id(self):
+        member = self._mock_member()
+        member.id = "1234"
+        member.subnet_id = None
+        task_path = "a10_octavia.controller.worker.tasks.vthunder_tasks"
+        log_message = str("Subnet id argument was not specified during "
+                          "issuance of create command/API call for member %s. "
+                          "Skipping TagInterfaceForMember task")
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message % member.id)]
+        mock_task = task.TagInterfaceForMember()
+        with self.assertLogs(task_path, level='WARN') as cm:
+            mock_task.revert(member, VTHUNDER)
+            self.assertEqual(expected_log, cm.output)
+
+    def test_DeleteInterfaceTagIfNotInUseForMember_execute_log_warning_no_subnet_id(self):
+        member = self._mock_member()
+        member.id = "1234"
+        member.subnet_id = None
+        task_path = "a10_octavia.controller.worker.tasks.vthunder_tasks"
+        log_message = str("Subnet id argument was not specified during "
+                          "issuance of create command/API call for member %s. "
+                          "Skipping DeleteInterfaceTagIfNotInUseForMember task")
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message % member.id)]
+        mock_task = task.DeleteInterfaceTagIfNotInUseForMember()
+        with self.assertLogs(task_path, level='WARN') as cm:
+            mock_task.execute(member, VTHUNDER)
+            self.assertEqual(expected_log, cm.output)
+
     def test_DeleteInterfaceTagIfNotInUseForLB_execute_delete_vlan(self):
         intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
         device1_network_map = a10_data_models.DeviceNetworkMap(vcs_device_id=1,

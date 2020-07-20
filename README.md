@@ -463,7 +463,7 @@ $ journalctl -af --unit a10-house-keeper.service
 ### 2. Clone the repo from your fork
 
 ```shell
-$ git clone https://git@github.com:<username>/a10-octavia.git
+$ git clone git@github.com:<username>/a10-octavia.git
 ```
 
 ### 3. Run octavia install script 
