@@ -63,7 +63,10 @@ class CreateAndAssociateHealthMonitor(task.Task):
             LOG.debug("Health Monitor %s is associated to pool %s successfully.",
                       health_mon.id, health_mon.pool_id)
         except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception("Failed to associate pool %s to Health Monitor: %s", health_mon.pool_id, health_mon.id)
+            LOG.exception(
+                "Failed to associate pool %s to Health Monitor: %s",
+                health_mon.pool_id,
+                health_mon.id)
             raise e
 
     @axapi_client_decorator
@@ -73,7 +76,10 @@ class CreateAndAssociateHealthMonitor(task.Task):
         except ConnectionError:
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip)
         except Exception as e:
-            LOG.warning("Failed to revert creation of health monitor: %s due to %s", health_mon.id, str(e))
+            LOG.warning(
+                "Failed to revert creation of health monitor: %s due to %s",
+                health_mon.id,
+                str(e))
 
 
 class DeleteHealthMonitor(task.Task):
@@ -88,7 +94,10 @@ class DeleteHealthMonitor(task.Task):
             LOG.debug("Health Monitor %s is dissociated from pool %s successfully.",
                       health_mon.id, health_mon.pool_id)
         except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception("Failed to dissociate pool %s from health monitor: %s", health_mon.pool_id, health_mon.id)
+            LOG.exception(
+                "Failed to dissociate pool %s from health monitor: %s",
+                health_mon.pool_id,
+                health_mon.id)
             raise e
 
         try:
