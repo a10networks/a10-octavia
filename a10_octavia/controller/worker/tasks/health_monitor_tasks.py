@@ -52,6 +52,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
                                             port=listeners[0].protocol_port, url=url,
                                             expect_code=expect_code, axapi_args=args)
             LOG.debug("Successfully created health monitor: %s", health_mon.id)
+
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to create health monitor: %s", health_mon.id)
             raise e
