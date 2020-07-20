@@ -51,7 +51,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
                                             health_mon.rise_threshold, method=method,
                                             port=listeners[0].protocol_port, url=url,
                                             expect_code=expect_code, axapi_args=args)
-            LOG.debug("Health Monitor created successfully: %s", health_mon.id)
+            LOG.debug("Successfully created health monitor: %s", health_mon.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to create health monitor: %s", health_mon.id)
             raise e
@@ -60,13 +60,12 @@ class CreateAndAssociateHealthMonitor(task.Task):
             self.axapi_client.slb.service_group.update(health_mon.pool_id,
                                                        health_monitor=health_mon.id,
                                                        health_check_disable=0)
-            LOG.debug("Health Monitor %s is associated to pool %s successfully.",
+            LOG.debug("Successfully associated health monitor %s to pool %s",
                       health_mon.id, health_mon.pool_id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception(
-                "Failed to associate pool %s to Health Monitor: %s",
-                health_mon.pool_id,
-                health_mon.id)
+                "Failed to associate health monitor %s to pool %s",
+                health_mon.id, health_mon.pool_id)
             raise e
 
     @axapi_client_decorator
@@ -74,12 +73,11 @@ class CreateAndAssociateHealthMonitor(task.Task):
         try:
             self.axapi_client.slb.hm.delete(health_mon.id[:5])
         except ConnectionError:
-            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip)
+            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
             LOG.warning(
                 "Failed to revert creation of health monitor: %s due to %s",
-                health_mon.id,
-                str(e))
+                health_mon.id, str(e))
 
 
 class DeleteHealthMonitor(task.Task):
@@ -91,18 +89,17 @@ class DeleteHealthMonitor(task.Task):
             self.axapi_client.slb.service_group.update(health_mon.pool_id,
                                                        health_monitor="",
                                                        health_check_disable=True)
-            LOG.debug("Health Monitor %s is dissociated from pool %s successfully.",
+            LOG.debug("Successfully dissociate health monitor %s from pool %s",
                       health_mon.id, health_mon.pool_id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception(
-                "Failed to dissociate pool %s from health monitor: %s",
-                health_mon.pool_id,
-                health_mon.id)
+                "Failed to dissociate health monitor %s from pool %s",
+                health_mon.pool_id, health_mon.id)
             raise e
 
         try:
             self.axapi_client.slb.hm.delete(health_mon.id)
-            LOG.debug("Health Monitor deleted successfully: %s", health_mon.id)
+            LOG.debug("Successfully deleted health monitor: %s", health_mon.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to delete health monitor: %s", health_mon.id)
             raise e
@@ -131,7 +128,7 @@ class UpdateHealthMonitor(task.Task):
                 health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
                 method=method, url=url, expect_code=expect_code,
                 port=listeners[0].protocol_port, axapi_args=args)
-            LOG.debug("Health Monitor updated successfully: %s", health_mon.id)
+            LOG.debug("Successfully updated health monitor: %s", health_mon.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception("Failed to update Health Monitor: %s", health_mon.id)
+            LOG.exception("Failed to update health monitor: %s", health_mon.id)
             raise e
