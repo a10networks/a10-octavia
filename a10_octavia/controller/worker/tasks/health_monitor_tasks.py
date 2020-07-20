@@ -13,15 +13,15 @@
 #    under the License.
 
 
+from acos_client import errors as acos_errors
 from oslo_config import cfg
 from oslo_log import log as logging
 from taskflow import task
 
 from a10_octavia.common import a10constants
-from a10_octavia.common.exceptions import GenericFlowException
 from a10_octavia.common import openstack_mappings
-from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -51,10 +51,9 @@ class CreateAndAssociateHealthMonitor(task.Task):
                                             port=listeners[0].protocol_port, url=url,
                                             expect_code=expect_code, axapi_args=args)
             LOG.debug("Health Monitor created successfully: %s", health_mon.id)
-        except Exception as e:
-            msg = str(e)
-            LOG.exception("Failed to create Health Monitor: %s", msg)
-            raise GenericFlowException(msg)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to create health monitor: %s", health_mon.id)
+            raise e
 
         try:
             self.axapi_client.slb.service_group.update(health_mon.pool_id,
@@ -62,17 +61,18 @@ class CreateAndAssociateHealthMonitor(task.Task):
                                                        health_check_disable=0)
             LOG.debug("Health Monitor %s is associated to pool %s successfully.",
                       health_mon.id, health_mon.pool_id)
-        except Exception as e:
-            msg = str(e)
-            LOG.exception("Failed to associate pool to Health Monitor: %s", msg)
-            raise GenericFlowException(msg)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to associate pool %s to Health Monitor: %s", health_mon.pool_id, health_mon.id)
+            raise e
 
     @axapi_client_decorator
     def revert(self, listeners, health_mon, vthunder, *args, **kwargs):
         try:
             self.axapi_client.slb.hm.delete(health_mon.id[:5])
+        except ConnectionError:
+            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip)
         except Exception as e:
-            LOG.exception("Failed to delete health monitor: %s", str(e))
+            LOG.warning("Failed to revert creation of health monitor: %s due to %s", health_mon.id, str(e))
 
 
 class DeleteHealthMonitor(task.Task):
@@ -86,27 +86,16 @@ class DeleteHealthMonitor(task.Task):
                                                        health_check_disable=True)
             LOG.debug("Health Monitor %s is dissociated from pool %s successfully.",
                       health_mon.id, health_mon.pool_id)
-        except Exception as e:
-            msg = str(e)
-            LOG.exception("Failed to dissociate Health Monitor from pool: %s", msg)
-            raise GenericFlowException(msg)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to dissociate pool %s from health monitor: %s", health_mon.pool_id, health_mon.id)
+            raise e
+
         try:
             self.axapi_client.slb.hm.delete(health_mon.id[0:5])
             LOG.debug("Health Monitor deleted successfully: %s", health_mon.id)
-        except Exception as e:
-            msg = str(e)
-            LOG.exception("Failed to delete health monitor: %s", msg)
-            raise GenericFlowException(msg)
-
-    @axapi_client_decorator
-    def revert(self, health_mon, vthunder, *args, **kwargs):
-        try:
-            self.axapi_client.slb.service_group.update(health_mon.pool_id,
-                                                       health_monitor=health_mon.id[:5],
-                                                       health_check_disable=0)
-
-        except Exception as e:
-            LOG.exception("Failed to revert delete Health Monitor operation: %s", str(e))
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to delete health monitor: %s", health_mon.id)
+            raise e
 
 
 class UpdateHealthMonitor(task.Task):
@@ -133,5 +122,6 @@ class UpdateHealthMonitor(task.Task):
                 method=method, url=url, expect_code=expect_code,
                 port=listeners[0].protocol_port, axapi_args=args)
             LOG.debug("Health Monitor updated successfully: %s", health_mon.id)
-        except Exception as e:
-            LOG.exception("Failed to update Health Monitor: %s", str(e))
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to update Health Monitor: %s", health_mon.id)
+            raise e
