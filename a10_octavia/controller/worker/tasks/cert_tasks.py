@@ -80,7 +80,7 @@ class SSLCertCreate(task.Task):
         try:
             LOG.warning("Reverting creation of SSL certificate: %s", cert_data.cert_filename)
             self.axapi_client.file.ssl_cert.delete(private_key=cert_data.key_filename,
-                cert_name=cert_data.cert_filename)
+                                                   cert_name=cert_data.cert_filename)
         except ConnectionError:
             LOG.exception(
                 "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
@@ -215,9 +215,9 @@ class SSLCertDelete(task.Task):
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
-            if self.axapi_client.file.ssl_cert.exists(cert_data.cert_filename):
+            if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
                 self.axapi_client.file.ssl_cert.delete(private_key=cert_data.key_filename,
-                cert_name=cert_data.cert_filename)
+                                                       cert_name=cert_data.cert_filename)
                 LOG.debug("Successfully deleted SSL certificate: %s", cert_data.cert_filename)
         except acos_errors.Exists as e:
             LOG.warning("Failed to delete SSL cert as its being used in another place")
@@ -233,7 +233,7 @@ class SSLKeyDelete(task.Task):
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
-            if self.axapi_client.file.ssl_key.exists(cert_data.key_filename):
+            if self.axapi_client.file.ssl_key.exists(file=cert_data.key_filename):
                 self.axapi_client.file.ssl_key.delete(private_key=cert_data.key_filename)
                 LOG.debug("Successfully deleted SSL key: %s", cert_data.key_filename)
         except acos_errors.Exists as e:

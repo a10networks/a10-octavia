@@ -104,7 +104,8 @@ class TestCertHandlerTasks(BaseTaskTestCase):
         mock_ssl_cert.axapi_client = self.client_mock
         mock_ssl_cert.revert(CERT_DATA, VTHUNDER)
         self.client_mock.file.ssl_cert.delete.assert_called_with(
-            file=a10_test_constants.MOCK_CERT_FILENAME)
+            private_key=a10_test_constants.MOCK_KEY_FILENAME,
+            cert_name=a10_test_constants.MOCK_CERT_FILENAME)
 
     def test_ssl_cert_update(self):
         mock_ssl_cert = cert_tasks.SSLCertUpdate()
@@ -126,7 +127,8 @@ class TestCertHandlerTasks(BaseTaskTestCase):
         self.client_mock.file.ssl_cert.exists.assert_called_with(
             file=a10_test_constants.MOCK_CERT_FILENAME)
         self.client_mock.file.ssl_cert.delete.assert_called_with(
-            file=a10_test_constants.MOCK_CERT_FILENAME)
+            private_key=a10_test_constants.MOCK_KEY_FILENAME,
+            cert_name=a10_test_constants.MOCK_CERT_FILENAME)
 
     # SSL Key
     def test_ssl_key_create_update(self):
@@ -159,7 +161,7 @@ class TestCertHandlerTasks(BaseTaskTestCase):
         mock_ssl_key.axapi_client = self.client_mock
         mock_ssl_key.revert(CERT_DATA, VTHUNDER)
         self.client_mock.file.ssl_key.delete.assert_called_with(
-            file=a10_test_constants.MOCK_KEY_FILENAME)
+            private_key=a10_test_constants.MOCK_KEY_FILENAME)
 
     def test_ssl_key_update(self):
         mock_ssl_key = cert_tasks.SSLKeyUpdate()
@@ -178,7 +180,7 @@ class TestCertHandlerTasks(BaseTaskTestCase):
         mock_ssl_key.axapi_client = self.client_mock
         mock_ssl_key.execute(CERT_DATA, VTHUNDER)
         self.client_mock.file.ssl_key.delete.assert_called_with(
-            file=a10_test_constants.MOCK_KEY_FILENAME)
+            private_key=a10_test_constants.MOCK_KEY_FILENAME)
 
     # Client Template
     def test_client_ssl_template_create_update(self):
