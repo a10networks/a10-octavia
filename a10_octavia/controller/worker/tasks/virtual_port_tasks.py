@@ -19,7 +19,6 @@ from requests.exceptions import ConnectionError
 from taskflow import task
 
 from a10_octavia.common import a10constants
-from a10_octavia.common import exceptions
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
@@ -124,8 +123,8 @@ class ListenerCreate(ListenersParent, task.Task):
             LOG.exception(
                 "Failed to connect A10 Thunder device: %s", vthunder.ip)
         except Exception as e:
-            LOG.warning("Failed to revert creation of listener: %s due to %s",
-                        listener.id,  str(e))
+            LOG.exception("Failed to revert creation of listener: %s due to %s",
+                          listener.id, str(e))
 
 
 class ListenerUpdate(ListenersParent, task.Task):

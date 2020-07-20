@@ -539,7 +539,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         load_balancer = pool.load_balancer
         listeners = pool.listeners
-        default_listener = pool.listeners[0]
 
         members = pool.members
         health_monitor = pool.health_monitor
