@@ -121,7 +121,7 @@ class ListenerCreate(ListenersParent, task.Task):
                 listener.protocol_port)
         except ConnectionError:
             LOG.exception(
-                "Failed to connect A10 Thunder device: %s", vthunder.ip)
+                "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
             LOG.exception("Failed to revert creation of listener: %s due to %s",
                           listener.id, str(e))

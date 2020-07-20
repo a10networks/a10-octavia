@@ -79,10 +79,11 @@ class SSLCertCreate(task.Task):
     def revert(self, cert_data, vthunder, *args, **kwargs):
         try:
             LOG.warning("Reverting creation of SSL certificate: %s", cert_data.cert_filename)
-            self.axapi_client.file.ssl_cert.delete(file=cert_data.cert_filename)
+            self.axapi_client.file.ssl_cert.delete(private_key=cert_data.key_filename,
+                cert_name=cert_data.cert_filename)
         except ConnectionError:
             LOG.exception(
-                "Failed to connect A10 Thunder device: %s", vthunder.ip)
+                "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
             LOG.exception("Failed to revert creation of SSL certificate: %s due to %s",
                           cert_data.cert_filename, str(e))
@@ -113,10 +114,10 @@ class SSLKeyCreate(task.Task):
     def revert(self, cert_data, vthunder, *args, **kwargs):
         try:
             LOG.warning("Reverting creation of SSL key: %s", cert_data.key_filename)
-            self.axapi_client.file.ssl_key.delete(file=cert_data.key_filename)
+            self.axapi_client.file.ssl_key.delete(private_key=cert_data.key_filename)
         except ConnectionError:
             LOG.exception(
-                "Failed to connect A10 Thunder device: %s", vthunder.ip)
+                "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
             LOG.exception("Failed to revert creation of SSL key: %s due to %s",
                           cert_data.key_filename, str(e))
@@ -150,7 +151,7 @@ class ClientSSLTemplateCreate(task.Task):
             self.axapi_client.slb.template.client_ssl.delete(name=cert_data.template_name)
         except ConnectionError:
             LOG.exception(
-                "Failed to connect A10 Thunder device: %s", vthunder.ip)
+                "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
             LOG.exception("Failed to revert creation of SSL template: %s due to %s",
                           cert_data.template_name, str(e))
@@ -214,9 +215,13 @@ class SSLCertDelete(task.Task):
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
-            if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
-                self.axapi_client.file.ssl_cert.delete(file=cert_data.cert_filename)
+            if self.axapi_client.file.ssl_cert.exists(cert_data.cert_filename):
+                self.axapi_client.file.ssl_cert.delete(private_key=cert_data.key_filename,
+                cert_name=cert_data.cert_filename)
                 LOG.debug("Successfully deleted SSL certificate: %s", cert_data.cert_filename)
+        except acos_errors.Exists as e:
+            LOG.warning("Failed to delete SSL cert as its being used in another place")
+            LOG.exception(str(e))
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to delete SSL certificate: %s", cert_data.cert_filename)
             raise e
@@ -228,9 +233,12 @@ class SSLKeyDelete(task.Task):
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
-            if self.axapi_client.file.ssl_key.exists(file=cert_data.key_filename):
-                self.axapi_client.file.ssl_key.delete(file=cert_data.key_filename)
+            if self.axapi_client.file.ssl_key.exists(cert_data.key_filename):
+                self.axapi_client.file.ssl_key.delete(private_key=cert_data.key_filename)
                 LOG.debug("Successfully deleted SSL key: %s", cert_data.key_filename)
+        except acos_errors.Exists as e:
+            LOG.warning("Failed to delete SSL cert as its being used in another place")
+            LOG.exception(str(e))
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to delete SSL key: %s", cert_data.key_filename)
             raise e

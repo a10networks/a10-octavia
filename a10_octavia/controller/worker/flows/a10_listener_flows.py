@@ -179,11 +179,11 @@ class ListenerFlows(object):
         delete_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
             requires=[constants.LOADBALANCER, constants.LISTENER],
             provides=a10constants.CERT_DATA))
+        delete_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateDelete(
+            requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         delete_ssl_cert_flow.add(cert_tasks.SSLCertDelete(
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         delete_ssl_cert_flow.add(cert_tasks.SSLKeyDelete(
-            requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
-        delete_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateDelete(
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         return delete_ssl_cert_flow
 
