@@ -173,6 +173,7 @@ class SSLCertUpdate(task.Task):
             LOG.exception("Failed to update SSL certificate: %s", cert_data.cert_filename)
             raise e
 
+
 class SSLKeyUpdate(task.Task):
     """Task to update an SSL Key"""
 
