@@ -16,6 +16,7 @@
 from acos_client import errors as acos_errors
 from oslo_config import cfg
 from oslo_log import log as logging
+from requests.exceptions import ConnectionError
 from taskflow import task
 
 from a10_octavia.common import a10constants
