@@ -76,7 +76,6 @@ class PoolDelete(task.Task):
     @axapi_client_decorator
     def execute(self, pool, vthunder):
         try:
-            raise ConnectionError
             self.axapi_client.slb.service_group.delete(pool.id)
             LOG.debug("Successfully deleted pool: %s", pool.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
