@@ -90,7 +90,7 @@ class DeleteHealthMonitor(task.Task):
             self.axapi_client.slb.service_group.update(health_mon.pool_id,
                                                        health_monitor="",
                                                        health_check_disable=True)
-            LOG.debug("Successfully dissociate health monitor %s from pool %s",
+            LOG.debug("Successfully dissociated health monitor %s from pool %s",
                       health_mon.id, health_mon.pool_id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception(
