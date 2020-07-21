@@ -60,14 +60,14 @@ class CreateVirtualServerTask(LoadBalancerParent, task.Task):
     @axapi_client_decorator
     def revert(self, loadbalancer, vthunder, *args, **kwargs):
         try:
-            LOG.warning("Reverting creation of load balancer: %s", listener.id)
+            LOG.warning("Reverting creation of load balancer: %s", loadbalancer.id)
             self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
         except ConnectionError:
             LOG.exception(
                 "Failed to connect A10 Thunder device: %s", vthunder.ip)
         except Exception as e:
             LOG.exception("Failed to revert creation of load balancer: %s due to %s",
-                          loadbalancer.id,  str(e))
+                          loadbalancer.id, str(e))
 
 
 class DeleteVirtualServerTask(task.Task):
