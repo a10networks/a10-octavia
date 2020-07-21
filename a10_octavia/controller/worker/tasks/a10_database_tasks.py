@@ -46,6 +46,7 @@ class BaseDatabaseTask(task.Task):
         self.member_repo = a10_repo.MemberRepository()
         self.loadbalancer_repo = repo.LoadBalancerRepository()
         self.vip_repo = repo.VipRepository()
+        self.listener_repo = repo.ListenerRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -399,3 +400,35 @@ class CheckMemberVLANCanBeDeleted(CheckVLANCanBeDeletedParent, BaseDatabaseTask)
 
     def execute(self, member):
         return self.is_vlan_deletable(member.project_id, member.subnet_id, False)
+
+
+class MarkLBAndListenerActiveInDB(BaseDatabaseTask):
+    """Mark the load balancer and specified listener active in the DB"""
+
+    def execute(self, loadbalancer, listener):
+        """Mark the load balancer and listener as active in DB"""
+
+        self.loadbalancer_repo.update(db_apis.get_session(),
+                                      loadbalancer.id,
+                                      provisioning_status=constants.ACTIVE)
+        self.listener_repo.prov_status_active_if_not_error(
+            db_apis.get_session(), listener.id)
+
+    def revert(self, loadbalancer, listener, *args, **kwargs):
+        """Mark the load balancer and listener in error state"""
+        try:
+            self.loadbalancer_repo.update(db_apis.get_session(),
+                                          id=loadbalancer.id,
+                                          provisioning_status=constants.ERROR)
+        except Exception as e:
+            LOG.error("Failed to update load balancer %(lb) "
+                      "provisioning status to ERROR due to: "
+                      "%(except)s", {'lb': loadbalancer.id, 'except': e})
+        try:
+            self.listener_repo.update(db_apis.get_session(),
+                                      id=listener.id,
+                                      provisioning_status=constants.ERROR)
+        except Exception as e:
+            LOG.error("Failed to update listener %(list) "
+                      "provisioning status to ERROR due to: "
+                      "%(except)s", {'list': listener.id, 'except': e})

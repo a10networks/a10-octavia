@@ -56,7 +56,7 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
     def test_create_http_virtual_port_use_rcv_hop(self):
         listener = self._mock_listener('HTTP', 1000)
 
-        listener_task = task.ListenersCreate()
+        listener_task = task.ListenerCreate()
         listener_task.axapi_client = self.client_mock
         self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
                          use_rcv_hop_for_resp=True)
@@ -64,7 +64,7 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
                         return_value=listener.protocol):
-            listener_task.execute(LB, [listener], VTHUNDER)
+            listener_task.execute(LB, listener, VTHUNDER)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
         self.assertIn('use_rcv_hop', kwargs)
@@ -73,7 +73,7 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
     def test_update_http_virtual_port_use_rcv_hop(self):
         listener = self._mock_listener('HTTP', 1000)
 
-        listener_task = task.ListenersUpdate()
+        listener_task = task.ListenerUpdate()
         listener_task.axapi_client = self.client_mock
         self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
                          use_rcv_hop_for_resp=False)
@@ -81,7 +81,7 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
                         return_value=listener.protocol):
-            listener_task.execute(LB, [listener], VTHUNDER)
+            listener_task.execute(LB, listener, VTHUNDER)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.update.call_args
         self.assertIn('use_rcv_hop', kwargs)
