@@ -117,7 +117,6 @@ class VThunderFlows(object):
 
         return amp_for_lb_flow
 
-    # Check necessity 
     def _get_post_map_lb_subflow(self, prefix, role):
         """Set amphora type after mapped to lb."""
 

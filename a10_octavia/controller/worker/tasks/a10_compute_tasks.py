@@ -62,9 +62,9 @@ class ComputeCreate(BaseComputeTask):
                       compute_id, amphora_id)
             return compute_id
 
-        except Exception:
+        except Exception as e:
             LOG.error("Compute create for amphora id: %s failed",
-                          amphora_id)
+                      amphora_id)
             raise e
 
     def revert(self, result, amphora_id, *args, **kwargs):
