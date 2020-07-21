@@ -330,6 +330,7 @@ class UpdateVRIDForProjectMember(BaseDatabaseTask):
                                       project_id=member.project_id,
                                       vrid_floating_ip=port.fixed_ips[0].ip_address,
                                       vrid_port_id=port.id)
+           
 
 
 class CountMembersInProject(BaseDatabaseTask):
@@ -340,6 +341,7 @@ class CountMembersInProject(BaseDatabaseTask):
                 project_id=member.project_id)
         except Exception as e:
             LOG.exception("Failed to get count of members in given project: %s", str(e))
+            raise e
 
 
 class DeleteVRIDEntry(BaseDatabaseTask):
@@ -349,6 +351,7 @@ class DeleteVRIDEntry(BaseDatabaseTask):
                 self.vrid_repo.delete(db_apis.get_session(), id=vrid.id)
             except Exception as e:
                 LOG.exception("Failed to delete VRID entry from vrid table: %s", str(e))
+                raise e
 
 
 class CheckVLANCanBeDeletedParent(object):

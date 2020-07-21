@@ -293,8 +293,9 @@ class HandleNetworkDeltas(BaseNetworkTask):
                                                        nic.network_id)
                 except base.NetworkNotFound:
                     LOG.debug("Network %d not found ", nic.network_id)
-                except Exception:
-                    LOG.exception("Unable to unplug network")
+                except Exception as e:
+                    LOG.exception("Unable to unplug network due to: %s", str(e))
+                    raise e
         return added_ports
 
     def revert(self, result, deltas, *args, **kwargs):
@@ -746,6 +747,7 @@ class DeleteMemberVRIDPort(BaseNetworkTask):
                 return True
             except Exception as e:
                 LOG.exception("Failed to delete vrid port : %s", str(e))
+                raise e
         return False
 
 
