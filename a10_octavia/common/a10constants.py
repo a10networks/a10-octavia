@@ -55,6 +55,8 @@ DELETE_VLAN = "delete_vlan"
 VLAN = "vlan"
 FLAT = "flat"
 SUPPORTED_NETWORK_TYPE = [FLAT, VLAN]
+SSL_TEMPLATE = "ssl_template"
+
 # Taskflow flow and task names
 
 BACKUP_AMPHORA_PLUG = 'backup-amphora-plug'
@@ -86,6 +88,9 @@ UPDATE_VIP_AFTER_ALLOCATION = 'update-vip-after-allocation'
 CREATE_VTHUNDER_ENTRY = 'create-vthunder-entry'
 VTHUNDER_BY_LB = 'vthunder-by-loadbalancer'
 CHANGE_PARTITION = 'change-partition'
+CREATE_SSL_CERT_FLOW = 'create-ssl-cert-flow'
+DELETE_SSL_CERT_FLOW = 'delete-ssl-cert-flow'
+LISTENER_TYPE_DECIDER_FLOW = 'listener_type_decider_flow'
 DELETE_MEMBER_VTHUNDER_SUBFLOW = 'delete-member-vthunder-subflow'
 DELETE_MEMBER_VTHUNDER_INTERNAL_SUBFLOW = 'delete-member-vthunder-internal-subflow'
 DELETE_MEMBER_VRID_SUBFLOW = 'delete-member-vrid-subflow'
