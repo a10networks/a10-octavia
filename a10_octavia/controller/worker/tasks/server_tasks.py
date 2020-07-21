@@ -14,7 +14,10 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from requests.exceptions import ConnectionError
 from taskflow import task
+
+import acos_client.errors as acos_errors
 
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
@@ -44,32 +47,32 @@ class MemberCreate(task.Task):
             self.axapi_client.slb.server.create(member.id, member.ip_address, status=status,
                                                 server_templates=server_temp,
                                                 axapi_args=server_args)
-            LOG.debug("Member created successfully: %s", member.id)
-        except Exception as e:
-            LOG.exception("Failed to create member: %s", str(e))
-            raise
+            LOG.debug("Successfully created member: %s", member.id)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to create member: %s", member.id)
+            raise e
 
         try:
             self.axapi_client.slb.service_group.member.create(
                 pool.id, member.id, member.protocol_port)
-            LOG.debug("Member %s associated to pool %s successfully",
+            LOG.debug("Successfully associated member %s to pool %s",
                       member.id, pool.id)
-        except Exception as e:
-            LOG.exception("Failed to associate member to pool: %s", str(e))
-            raise
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to associate member %s to pool %s",
+                          member.id, pool.id)
+            raise e
 
     @axapi_client_decorator
     def revert(self, member, vthunder, pool, *args, **kwargs):
         try:
-            self.axapi_client.slb.service_group.member.delete(
-                pool.id, member.id, member.protocol_port)
-        except Exception as e:
-            LOG.exception("Failed to revert create pool: %s", str(e))
-
-        try:
+            LOG.warning("Reverting creation of member: %s for pool: %s",
+                        member.id, pool.id)
             self.axapi_client.slb.server.delete(member.id)
+        except ConnectionError:
+            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
-            LOG.exception("Failed to revert create member: %s", str(e))
+            LOG.exception("Failed to revert creation of member %s for pool %s due to %s",
+                          member.id, pool.id, str(e))
 
 
 class MemberDelete(task.Task):
@@ -80,13 +83,17 @@ class MemberDelete(task.Task):
         try:
             self.axapi_client.slb.service_group.member.delete(
                 pool.id, member.id, member.protocol_port)
-            LOG.debug(
-                "Member %s is dissociated from pool %s successfully.", member.id, pool.id)
+            LOG.debug("Successfully dissociated member %s from pool %s", member.id, pool.id)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to dissociate member %s from pool %s",
+                          member.id, pool.id)
+            raise e
+        try:
             self.axapi_client.slb.server.delete(member.id)
-            LOG.debug("Member %s is deleted successfully.", member.id)
-        except Exception as e:
-            LOG.warning("Failed to delete member: %s", str(e))
-
+            LOG.debug("Successfully deleted member %s from pool %s", member.id, pool.id)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to delete member: %s", member.id)
+            raise e
 
 class MemberUpdate(task.Task):
     """Task to update member"""
@@ -108,7 +115,7 @@ class MemberUpdate(task.Task):
             self.axapi_client.slb.server.update(member.id, member.ip_address, status=status,
                                                 server_templates=server_temp,
                                                 axapi_args=server_args)
-            LOG.debug("Member updated successfully: %s", member.id)
-        except Exception as e:
-            LOG.exception("Failed to update member: %s", str(e))
-            raise
+            LOG.debug("Successfully updated member: %s", member.id)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to update member: %s", member.id)
+            raise e

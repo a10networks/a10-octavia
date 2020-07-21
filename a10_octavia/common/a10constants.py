@@ -99,3 +99,4 @@ DELETE_HEALTH_MONITOR_VTHUNDER_SUBFLOW = 'delete-hm-vthunder-subflow'
 DELETE_HEALTH_MONITOR_SUBFLOW_WITH_POOL_DELETE_FLOW = 'delete-health-monitor-subflow'\
     '-with-pool-delete-flow'
 DELETE_MEMBERS_SUBFLOW_WITH_POOL_DELETE_FLOW = 'delete-members-subflow-with-pool-delete-flow'
+HANDLE_VRID_MEMBER_SUBFLOW = 'handle-vrid-member-subflow'
