@@ -94,3 +94,5 @@ DELETE_HEALTH_MONITOR_VTHUNDER_SUBFLOW = 'delete-hm-vthunder-subflow'
 DELETE_HEALTH_MONITOR_SUBFLOW_WITH_POOL_DELETE_FLOW = 'delete-health-monitor-subflow'\
     '-with-pool-delete-flow'
 DELETE_MEMBERS_SUBFLOW_WITH_POOL_DELETE_FLOW = 'delete-members-subflow-with-pool-delete-flow'
+SPARE_VTHUNDER_CREATE = 'spare-vthunder-create'
+LB_TO_VTHUNDER_SUBFLOW = 'lb-to-vthunder-subflow'

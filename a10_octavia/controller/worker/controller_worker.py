@@ -280,12 +280,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def create_load_balancer(self, load_balancer_id):
-        """Creates a load balancer by allocating Amphorae.
+        """Function to create load balancer for A10 provider"""
 
-        :param load_balancer_id: ID of the load balancer to create
-        :returns: None
-        :raises NoResultFound: Unable to find the object
-        """
         lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
         if not lb:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
@@ -302,8 +298,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             constants.TOPOLOGY: topology
         }
         if lb.project_id in CONF.hardware_thunder.devices:
-            LOG.info('A10ControllerWorker.create_load_balancer fetched project_id : %s'
-                     'from config file for Rack Vthunder' % (lb.project_id))
             create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
                 vthunder_conf=CONF.hardware_thunder.devices[lb.project_id],
                 topology=topology, listeners=lb.listeners)
@@ -319,12 +313,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             create_lb_tf.run()
 
     def delete_load_balancer(self, load_balancer_id, cascade=False):
-        """Deletes a load balancer by de-allocating Amphorae.
+        """Function to delete load balancer for A10 provider"""
 
-        :param load_balancer_id: ID of the load balancer to delete
-        :returns: None
-        :raises LBNotFound: The referenced load balancer was not found
-        """
         lb = self._lb_repo.get(db_apis.get_session(),
                                id=load_balancer_id)
         vthunder = self._vthunder_repo.get_vthunder_from_lb(db_apis.get_session(),
@@ -343,28 +333,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                log=LOG):
             delete_lb_tf.run()
 
-        # IMP: Jacobs code
-        # No exception even when acos fails...
-        # try:
-        #    r = self.c.slb.virtual_server.delete(load_balancer_id)
-        #    status = { 'loadbalancers': [{"id": load_balancer_id,
-        #               "provisioning_status": constants.DELETED}]}
-        # except Exception as e:
-        #    r = str(e)
-        #    status = { 'loadbalancers': [{"id": load_balancer_id,
-        #               "provisioning_status": consts.ERROR }]}
-        # LOG.info("vThunder response: %s" % (r))
-        # LOG.info("Updating db with this status: %s" % (status))
-        # self._octavia_driver_db.update_loadbalancer_status(status)
-
     def update_load_balancer(self, load_balancer_id, load_balancer_updates):
-        """Updates a load balancer.
-
-        :param load_balancer_id: ID of the load balancer to update
-        :param load_balancer_updates: Dict containing updated load balancer
-        :returns: None
-        :raises LBNotFound: The referenced load balancer was not found
-        """
+        """Function to update load balancer for A10 provider"""
 
         lb = None
         try:
