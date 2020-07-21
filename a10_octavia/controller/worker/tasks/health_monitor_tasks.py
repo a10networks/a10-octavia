@@ -72,7 +72,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
     @axapi_client_decorator
     def revert(self, listeners, health_mon, vthunder, *args, **kwargs):
         try:
-            self.axapi_client.slb.hm.delete(health_mon.id[:5])
+            self.axapi_client.slb.hm.delete(health_mon.id)
         except ConnectionError:
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
