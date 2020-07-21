@@ -13,7 +13,9 @@
 #    under the License.
 
 
-import logging
+import acos_client.errors as acos_errors
+from oslo_log import log as logging
+from requests.exceptions import ConnectionError
 from taskflow import task
 
 from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
@@ -24,12 +26,37 @@ from a10_octavia.controller.worker.tasks import utils
 LOG = logging.getLogger(__name__)
 
 
+class CheckListenerType(task.Task):
+    """Task to check if listener type is TERMINATED_HTTPS"""
+
+    def execute(self, listener):
+        if listener.protocol == 'TERMINATED_HTTPS' and listener.tls_certificate_id:
+            return True
+        else:
+            return False
+
+
+class GetSSLCertData(task.Task):
+    """Task to get SSL certificate data from Barbican"""
+
+    def execute(self, loadbalancer, listener):
+        cert_data = None
+        try:
+            barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
+            cert_data = utils.get_cert_data(barbican_client, listener)
+            cert_data.template_name = listener.id
+            LOG.debug("Successfully received barbican data for listener: %s", listener.id)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to get barbican data for listener: %s", listener.id)
+            raise e
+        return cert_data
+
+
 class SSLCertCreate(task.Task):
     """Task to create an SSL certificate"""
+
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder, certificate_type="pem"):
-        barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
-        cert_data = utils.get_cert_data(barbican_client, listener)
+    def execute(self, cert_data, vthunder, certificate_type="pem"):
         try:
             if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
                 self.axapi_client.file.ssl_cert.update(file=cert_data.cert_filename,
@@ -43,24 +70,28 @@ class SSLCertCreate(task.Task):
                                                        size=len(cert_data.cert_content),
                                                        action="import",
                                                        certificate_type=certificate_type)
-        except Exception as e:
-            LOG.exception("Failed to create SSL certificate: %s", str(e))
+            LOG.debug("Successfully created SSL certificate: %s", cert_data.cert_filename)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to create SSL certificate: %s", cert_data.cert_filename)
             raise e
-        return cert_data
 
     @axapi_client_decorator
-    def revert(self, loadbalancer, listener, vthunder, *args, **kwargs):
-        barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
-        cert_data = utils.get_cert_data(barbican_client, listener)
+    def revert(self, cert_data, vthunder, *args, **kwargs):
         try:
-            self.axapi_client.file.ssl_cert.delete(file=cert_data.cert_filename)
-            LOG.debug("Reverted SSLCertCreate: %s", cert_data.cert_filename)
-        except Exception:
-            pass
+            LOG.warning("Reverting creation of SSL certificate: %s", cert_data.cert_filename)
+            self.axapi_client.file.ssl_cert.delete(private_key=cert_data.key_filename,
+                                                   cert_name=cert_data.cert_filename)
+        except ConnectionError:
+            LOG.exception(
+                "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
+        except Exception as e:
+            LOG.exception("Failed to revert creation of SSL certificate: %s due to %s",
+                          cert_data.cert_filename, str(e))
 
 
 class SSLKeyCreate(task.Task):
     """Task to create an SSL Key"""
+
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
@@ -74,21 +105,27 @@ class SSLKeyCreate(task.Task):
                                                       cert=cert_data.key_content,
                                                       size=len(cert_data.key_content),
                                                       action="import")
-        except Exception as e:
-            LOG.exception("Failed to create SSL key: %s", str(e))
+            LOG.debug("Successfully created SSL key: %s", cert_data.key_filename)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to create SSL key: %s", cert_data.key_filename)
             raise e
 
     @axapi_client_decorator
     def revert(self, cert_data, vthunder, *args, **kwargs):
         try:
-            self.axapi_client.file.ssl_key.delete(file=cert_data.key_filename)
-            LOG.debug("Reverted SSLKeyCreate: %s", cert_data.key_filename)
-        except Exception:
-            pass
+            LOG.warning("Reverting creation of SSL key: %s", cert_data.key_filename)
+            self.axapi_client.file.ssl_key.delete(private_key=cert_data.key_filename)
+        except ConnectionError:
+            LOG.exception(
+                "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
+        except Exception as e:
+            LOG.exception("Failed to revert creation of SSL key: %s due to %s",
+                          cert_data.key_filename, str(e))
 
 
 class ClientSSLTemplateCreate(task.Task):
     """Task to create a client ssl template for a listener"""
+
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
@@ -102,25 +139,29 @@ class ClientSSLTemplateCreate(task.Task):
                                                                  cert=cert_data.cert_filename,
                                                                  key=cert_data.key_filename,
                                                                  passphrase=cert_data.key_pass)
-        except Exception as e:
-            LOG.exception("Failed to create client SSL template: %s", str(e))
+            LOG.debug("Successfully created SSL template: %s", cert_data.template_name)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to create SSL template: %s", cert_data.template_name)
             raise e
 
     @axapi_client_decorator
     def revert(self, cert_data, vthunder, *args, **kwargs):
         try:
+            LOG.warning("Reverting creation of SSL template: %s", cert_data.template_name)
             self.axapi_client.slb.template.client_ssl.delete(name=cert_data.template_name)
-            LOG.debug("Reverted ClientSSLTemplateCreate: %s", cert_data.template_name)
-        except Exception:
-            pass
+        except ConnectionError:
+            LOG.exception(
+                "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
+        except Exception as e:
+            LOG.exception("Failed to revert creation of SSL template: %s due to %s",
+                          cert_data.template_name, str(e))
 
 
 class SSLCertUpdate(task.Task):
     """Task to update an SSL certificate"""
+
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder, action="import", certificate_type="pem"):
-        barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
-        cert_data = utils.get_cert_data(barbican_client, listener)
+    def execute(self, cert_data, vthunder, action="import", certificate_type="pem"):
         try:
             if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
                 self.axapi_client.file.ssl_cert.update(file=cert_data.cert_filename,
@@ -128,14 +169,15 @@ class SSLCertUpdate(task.Task):
                                                        size=len(cert_data.cert_content),
                                                        action=action,
                                                        certificate_type=certificate_type)
-                LOG.debug("SSL certificate updated successfully: %s", cert_data.cert_filename)
-        except Exception as e:
-            LOG.warning("Failed to update SSL Certificate: %s", str(e))
-        return cert_data
+                LOG.debug("Successfully updated SSL certificate: %s", cert_data.cert_filename)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to update SSL certificate: %s", cert_data.cert_filename)
+            raise e
 
 
 class SSLKeyUpdate(task.Task):
     """Task to update an SSL Key"""
+
     @axapi_client_decorator
     def execute(self, cert_data, vthunder, action="import"):
         try:
@@ -144,13 +186,15 @@ class SSLKeyUpdate(task.Task):
                                                       cert=cert_data.key_content,
                                                       size=len(cert_data.key_content),
                                                       action=action)
-                LOG.debug("SSL Key updated successfully: %s", cert_data.key_filename)
-        except Exception as e:
-            LOG.warning("Failed to update SSL Key: %s", str(e))
+                LOG.debug("Successfully updated SSL key: %s", cert_data.key_filename)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to update SSL key: %s", cert_data.key_filename)
+            raise e
 
 
 class ClientSSLTemplateUpdate(task.Task):
-    """Task to update a client ssl template for a listener"""
+    """Task to update a client ssl template"""
+
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
@@ -159,47 +203,56 @@ class ClientSSLTemplateUpdate(task.Task):
                                                                  cert=cert_data.cert_filename,
                                                                  key=cert_data.key_filename,
                                                                  passphrase=cert_data.key_pass)
-                LOG.debug("Client SSL Template updated successfully: %s",
-                          cert_data.template_name)
-        except Exception as e:
-            LOG.warning("Failed to update Client SSL Template: %s", str(e))
+                LOG.debug("Successfully updated SSL template: %s", cert_data.template_name)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to update SSL template: %s", cert_data.template_name)
+            raise e
 
 
 class SSLCertDelete(task.Task):
     """Task to delete an SSL certificate"""
+
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder):
-        barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
-        cert_data = utils.get_cert_data(barbican_client, listener)
+    def execute(self, cert_data, vthunder):
         try:
             if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
-                self.axapi_client.file.ssl_cert.delete(file=cert_data.cert_filename)
-                LOG.debug("SSL certificate deleted successfully: %s", cert_data.cert_filename)
-        except Exception as e:
-            LOG.warning("Failed to delete SSL Certificate: %s", str(e))
-        return cert_data
+                self.axapi_client.file.ssl_cert.delete(private_key=cert_data.key_filename,
+                                                       cert_name=cert_data.cert_filename)
+                LOG.debug("Successfully deleted SSL certificate: %s", cert_data.cert_filename)
+        except acos_errors.Exists as e:
+            LOG.warning("Failed to delete SSL cert as its being used in another place")
+            LOG.exception(str(e))
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to delete SSL certificate: %s", cert_data.cert_filename)
+            raise e
 
 
 class SSLKeyDelete(task.Task):
     """Task to delete an SSL Key"""
+
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
             if self.axapi_client.file.ssl_key.exists(file=cert_data.key_filename):
-                self.axapi_client.file.ssl_key.delete(file=cert_data.key_filename)
-                LOG.debug("SSL Key deleted successfully: %s", cert_data.key_filename)
-        except Exception as e:
-            LOG.warning("Failed to delete SSL Key: %s", str(e))
+                self.axapi_client.file.ssl_key.delete(private_key=cert_data.key_filename)
+                LOG.debug("Successfully deleted SSL key: %s", cert_data.key_filename)
+        except acos_errors.Exists as e:
+            LOG.warning("Failed to delete SSL cert as its being used in another place")
+            LOG.exception(str(e))
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to delete SSL key: %s", cert_data.key_filename)
+            raise e
 
 
 class ClientSSLTemplateDelete(task.Task):
     """Task to delete a client ssl template for a listener"""
+
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
         try:
             if self.axapi_client.slb.template.client_ssl.exists(name=cert_data.template_name):
                 self.axapi_client.slb.template.client_ssl.delete(name=cert_data.template_name)
-                LOG.debug("Client SSL Template deleted successfully: %s",
-                          cert_data.template_name)
-        except Exception as e:
-            LOG.warning("Failed to delete Client SSL Template: %s", str(e))
+                LOG.debug("Successfully deleted SSL template: %s", cert_data.template_name)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to delete SSL template: %s", cert_data.template_name)
+            raise e
