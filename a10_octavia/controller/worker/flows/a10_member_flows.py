@@ -15,14 +15,11 @@
 
 from oslo_config import cfg
 from taskflow.patterns import linear_flow
-from taskflow.patterns import unordered_flow
 
 from octavia.common import constants
-from octavia.controller.worker.tasks import amphora_driver_tasks
 from octavia.controller.worker.tasks import database_tasks
 from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import model_tasks
-from octavia.controller.worker.tasks import network_tasks
 
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
@@ -102,9 +99,10 @@ class MemberFlows(object):
         return create_member_flow
 
     def get_delete_member_flow(self):
-        """Flow to delete a member from VThunder
+        """Flow to delete a member on VThunder
 
-        :returns: The flow for deleting a member"""
+        :returns: The flow for deleting a member
+        """
         delete_member_flow = linear_flow.Flow(constants.DELETE_MEMBER_FLOW)
         delete_member_flow.add(lifecycle_tasks.MemberToErrorOnRevertTask(
             requires=[constants.MEMBER,

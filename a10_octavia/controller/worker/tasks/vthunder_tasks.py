@@ -81,7 +81,7 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
                           vthunder.id)
                 raise req_exceptions.ConnectionError
 
-        except driver_except.TimeOutException:
+        except driver_except.TimeOutException as e:
             LOG.exception("Amphora compute instance failed to become reachable. "
                           "This either means the compute driver failed to fully "
                           "boot the instance inside the timeout interval or the "
@@ -106,8 +106,9 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
             LOG.debug("Successfully rebooted vThunder: %s", vthunder.id)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to save configuration and reboot on vThunder for amphora id: %s",
-                          amphora_id)
+                          vthunder.amphora_id)
             raise e
+
 
 class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
 

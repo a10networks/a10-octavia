@@ -330,7 +330,6 @@ class UpdateVRIDForProjectMember(BaseDatabaseTask):
                                       project_id=member.project_id,
                                       vrid_floating_ip=port.fixed_ips[0].ip_address,
                                       vrid_port_id=port.id)
-           
 
 
 class CountMembersInProject(BaseDatabaseTask):
