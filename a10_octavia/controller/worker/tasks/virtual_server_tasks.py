@@ -15,7 +15,7 @@
 import acos_client.errors as acos_errors
 from oslo_config import cfg
 from oslo_log import log as logging
-from requests.exceptions import ConnectionError
+from requests import exceptions
 from taskflow import task
 
 
@@ -53,7 +53,7 @@ class CreateVirtualServerTask(LoadBalancerParent, task.Task):
         try:
             self.set(self.axapi_client.slb.virtual_server.create, loadbalancer)
             LOG.debug("Successfully created load balancer: %s", loadbalancer.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to created load balancer: %s", loadbalancer.id)
             raise e
 
@@ -62,7 +62,7 @@ class CreateVirtualServerTask(LoadBalancerParent, task.Task):
         try:
             LOG.warning("Reverting creation of load balancer: %s", loadbalancer.id)
             self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
-        except ConnectionError:
+        except exceptions.ConnectionError:
             LOG.exception(
                 "Failed to connect A10 Thunder device: %s", vthunder.ip)
         except Exception as e:
@@ -78,7 +78,7 @@ class DeleteVirtualServerTask(task.Task):
         try:
             self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
             LOG.debug("Successfully deleted load balancer: %s", loadbalancer.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to delete load balancer: %s", loadbalancer.id)
             raise e
 
@@ -91,6 +91,6 @@ class UpdateVirtualServerTask(LoadBalancerParent, task.Task):
         try:
             self.set(self.axapi_client.slb.virtual_server.update, loadbalancer)
             LOG.debug("Successfully updated load balancer: %s", loadbalancer.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update load balancer: %s", loadbalancer.id)
             raise e
