@@ -333,6 +333,7 @@ class CheckVRRPStatus(VThunderBaseTask):
         except Exception as e:
             LOG.exception("Failed to get VRRP status for vThunder %s due to: %s",
                           vthunder.ip_address, str(e))
+            raise e
 
 
 class ConfirmVRRPStatus(VThunderBaseTask):
