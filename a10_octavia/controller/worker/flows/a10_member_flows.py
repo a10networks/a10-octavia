@@ -117,7 +117,8 @@ class MemberFlows(object):
         delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_member_flow.add(self.get_delete_member_vthunder_subflow())
+        delete_member_flow.add(server_tasks.MemberDelete(
+            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
         delete_member_flow.add(database_tasks.DeleteMemberInDB(
             requires=constants.MEMBER))
         delete_member_flow.add(database_tasks.DecrementMemberQuota(
@@ -158,7 +159,12 @@ class MemberFlows(object):
         delete_member_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
             requires=a10constants.VTHUNDER,
             provides=a10constants.VTHUNDER))
-        delete_member_flow.add(self.get_delete_member_vthunder_subflow())
+        delete_member_flow.add(server_tasks.MemberDelete(
+            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
+        if CONF.a10_global.network_type == 'vlan':
+            delete_member_flow.add(vthunder_tasks.DeleteInterfaceTagIfNotInUseForMember(
+                requires=[constants.MEMBER, a10constants.VTHUNDER]))
+        # Handle VRID setting
         delete_member_flow.add(self.get_delete_member_vrid_subflow())
         delete_member_flow.add(database_tasks.DeleteMemberInDB(
             requires=constants.MEMBER))
@@ -173,16 +179,6 @@ class MemberFlows(object):
         delete_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return delete_member_flow
-
-    def get_delete_member_vthunder_subflow(self):
-        delete_member_vthunder_subflow = linear_flow.Flow(
-            a10constants.DELETE_MEMBER_VTHUNDER_SUBFLOW)
-        delete_member_vthunder_subflow.add(server_tasks.MemberDelete(
-            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
-        if CONF.a10_global.network_type == 'vlan':
-            delete_member_vthunder_subflow.add(vthunder_tasks.DeleteInterfaceTagIfNotInUseForMember(
-                requires=[constants.MEMBER, a10constants.VTHUNDER]))
-        return delete_member_vthunder_subflow
 
     def get_delete_member_vthunder_internal_subflow(self, member_id):
         delete_member_thunder_subflow = linear_flow.Flow(
