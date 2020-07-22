@@ -320,16 +320,32 @@ class UpdateVRIDForProjectMember(BaseDatabaseTask):
     def execute(self, member, vrid, port):
         if port:
             if vrid:
-                self.vrid_repo.update(
-                    db_apis.get_session(),
-                    vrid.id,
-                    vrid_floating_ip=port.fixed_ips[0].ip_address,
-                    vrid_port_id=port.id)
+                try:
+                    self.vrid_repo.update(
+                        db_apis.get_session(),
+                        vrid.id,
+                        vrid_floating_ip=port.fixed_ips[0].ip_address,
+                        vrid_port_id=port.id)
+                    LOG.debug("Successfully updated DB vrid %s entry for member %s",
+                              vrid.id, member.id)
+                except Exception as e:
+                    LOG.error("Failed to update vrid %(vrid)s "
+                              "due to: %(except)s",
+                              {'vrid': vrid.id, 'except': e})
+                    raise e
             else:
-                self.vrid_repo.create(db_apis.get_session(),
-                                      project_id=member.project_id,
-                                      vrid_floating_ip=port.fixed_ips[0].ip_address,
-                                      vrid_port_id=port.id)
+                try:
+                    self.vrid_repo.create(db_apis.get_session(),
+                                          project_id=member.project_id,
+                                          vrid_floating_ip=port.fixed_ips[0].ip_address,
+                                          vrid_port_id=port.id)
+                    LOG.debug("Successfully created DB entry for vrid with id %s for member %s",
+                              vrid.id, member.id)
+                except Exception as e:
+                    LOG.error("Failed to update vrid %(vrid)s "
+                              "due to: %(except)s",
+                              {'vrid': vrid.id, 'except': e})
+                    raise e
 
 
 class CountMembersInProject(BaseDatabaseTask):
