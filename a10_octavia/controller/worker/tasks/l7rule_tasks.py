@@ -12,8 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import acos_client.errors as acos_errors
 from oslo_config import cfg
 from oslo_log import log as logging
+from requests import exceptions
 from taskflow import task
 
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
@@ -26,7 +28,7 @@ LOG = logging.getLogger(__name__)
 
 class L7RuleParent(object):
 
-    def _create_aflex_policy(filename, script, size):
+    def _create_aflex_policy(self, filename, script, size):
         try:
             self.axapi_client.slb.aflex_policy.create(
                 file=filename, script=script, size=size, action="import")
@@ -35,11 +37,12 @@ class L7RuleParent(object):
             LOG.exception("Failed to create aFlex policy: %s", filename)
             raise e
 
-    def _get_existing_aflex(listener):
+    def _get_existing_aflex(self, listener):
         try:
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port)
+            return get_listener
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to get existing aFlex for listener: %s", listener.id)
             raise e
@@ -66,7 +69,6 @@ class L7RuleParent(object):
 
         kargs["aflex-scripts"] = aflex_scripts
 
-        
         self.axapi_client.slb.virtual_server.vport.update(
             listener.load_balancer_id, listener.name,
             listener.protocol, listener.protocol_port,
