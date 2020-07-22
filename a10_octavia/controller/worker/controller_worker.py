@@ -512,7 +512,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             raise db_exceptions.NoResultFound
 
         listeners = pool.listeners
-        default_listener = pool.listeners[0]
+        default_listener = None
+        if listeners:
+            default_listener = pool.listeners[0]
         load_balancer = pool.load_balancer
 
         create_pool_tf = self._taskflow_load(self._pool_flows.
@@ -539,7 +541,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         load_balancer = pool.load_balancer
         listeners = pool.listeners
-
+        default_listener = None
+        if listeners:
+            default_listener = pool.listeners[0]
         members = pool.members
         health_monitor = pool.health_monitor
         mem_count = self._member_repo.get_member_count(
@@ -547,6 +551,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             project_id=pool.project_id)
         mem_count = mem_count - len(members) + 1
         store = {constants.POOL: pool, constants.LISTENERS: listeners,
+                 constants.LISTENER: default_listener,
                  constants.LOADBALANCER: load_balancer,
                  constants.HEALTH_MON: health_monitor,
                  a10constants.MEMBER_COUNT: mem_count}
@@ -581,7 +586,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             pool = e.last_attempt.result()
 
         listeners = pool.listeners
-        default_listener = pool.listeners[0]
+        default_listener = None
+        if listeners:
+            default_listener = pool.listeners[0]
         load_balancer = pool.load_balancer
 
         update_pool_tf = self._taskflow_load(self._pool_flows.
