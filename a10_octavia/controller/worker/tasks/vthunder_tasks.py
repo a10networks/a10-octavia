@@ -399,7 +399,7 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
                 resp = self.axapi_client.system.action.get_vcs_summary_oper()
             except Exception as e:
                 LOG.exception("Failed to get vcs summary oper: %s", str(e))
-                raise
+                raise e
 
             if resp and 'vcs-summary' in resp and 'oper' in resp['vcs-summary']:
                 oper = resp['vcs-summary']['oper']
@@ -697,8 +697,11 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
         try:
             vlan_id = self.get_vlan_id(member.subnet_id, False)
             self.tag_interfaces(vthunder, vlan_id)
+            LOG.debug("Successfully tagged interface with VLAN id %s for member %s",
+                      str(vlan_id), member.id)
         except Exception as e:
-            LOG.exception("Failed to TagInterfaceForMember: %s", str(e))
+            LOG.exception("Failed to tag interface with VLAN id %s for member %s",
+                          str(vlan_id), member.id)
             raise e
 
     @axapi_client_decorator
@@ -712,14 +715,14 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
             if vthunder.device_network_map:
                 vlan_id = self.get_vlan_id(member.subnet_id, False)
                 if self.is_vlan_deletable():
-                    LOG.warning("Revert TagInterfaceForMember with VLAN id %s", vlan_id)
+                    LOG.warning("Reverting tag interface for member with VLAN id %s", vlan_id)
                     master_device_id = vthunder.device_network_map[0].vcs_device_id
                     for device_obj in vthunder.device_network_map:
                         self.delete_device_vlan(vlan_id, member.subnet_id, vthunder,
                                                 device_id=device_obj.vcs_device_id,
                                                 master_device_id=master_device_id)
         except Exception as e:
-            LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
+            LOG.exception("Failed to delete VLAN %s due to %s", str(vlan_id), str(e))
 
 
 class DeleteInterfaceTagIfNotInUseForLB(TagInterfaceBaseTask):
@@ -763,6 +766,7 @@ class DeleteInterfaceTagIfNotInUseForMember(TagInterfaceBaseTask):
                                                 master_device_id=master_device_id)
         except Exception as e:
             LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
+            raise e
 
 
 class WriteMemory(VThunderBaseTask):
