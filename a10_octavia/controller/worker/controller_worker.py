@@ -698,12 +698,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def create_l7rule(self, l7rule_id):
-        """Creates an L7 Rule.
+        """Function to create L7 Rule"""
 
-        :param l7rule_id: ID of the l7rule to create
-        :returns: None
-        :raises NoResultFound: Unable to find the object
-        """
         l7rule = self._l7rule_repo.get(db_apis.get_session(),
                                        id=l7rule_id)
         if not l7rule:
@@ -726,11 +722,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             create_l7rule_tf.run()
 
     def delete_l7rule(self, l7rule_id):
-        """Deletes an L7 rule.
-        :param l7rule_id: ID of the l7rule to delete
-        :returns: None
-        :raises L7RuleNotFound: The referenced l7rule was not found
-        """
+        """Function to delete L7 Rule"""
+
         l7rule = self._l7rule_repo.get(db_apis.get_session(),
                                        id=l7rule_id)
         l7policy = l7rule.l7policy
@@ -748,13 +741,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             delete_l7rule_tf.run()
 
     def update_l7rule(self, l7rule_id, l7rule_updates):
-        """Updates an L7 rule.
+        """Function to update L7 Rule"""
 
-        :param l7rule_id: ID of the l7rule to update
-        :param l7rule_updates: Dict containing updated l7rule attributes
-        :returns: None
-        :raises L7RuleNotFound: The referenced l7rule was not found
-        """
         l7rule = None
         try:
             l7rule = self._get_db_obj_until_pending_update(

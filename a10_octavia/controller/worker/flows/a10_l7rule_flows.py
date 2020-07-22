@@ -28,9 +28,8 @@ from a10_octavia.controller.worker.tasks import vthunder_tasks
 class L7RuleFlows(object):
 
     def get_create_l7rule_flow(self):
-        """Create a flow to create an L7 rule
-        :returns: The flow for creating an L7 rule
-        """
+        """Create a flow to create an L7 rule"""
+
         create_l7rule_flow = linear_flow.Flow(constants.CREATE_L7RULE_FLOW)
         create_l7rule_flow.add(lifecycle_tasks.L7RuleToErrorOnRevertTask(
             requires=[constants.L7RULE,
@@ -54,9 +53,8 @@ class L7RuleFlows(object):
         return create_l7rule_flow
 
     def get_delete_l7rule_flow(self):
-        """Create a flow to delete an L7 rule
-        :returns: The flow for deleting an L7 rule
-        """
+        """Create a flow to delete an L7 rule"""
+
         delete_l7rule_flow = linear_flow.Flow(constants.DELETE_L7RULE_FLOW)
         delete_l7rule_flow.add(lifecycle_tasks.L7RuleToErrorOnRevertTask(
             requires=[constants.L7RULE,
@@ -81,9 +79,8 @@ class L7RuleFlows(object):
         return delete_l7rule_flow
 
     def get_update_l7rule_flow(self):
-        """Create a flow to update an L7 rule
-        :returns: The flow for updating an L7 rule
-        """
+        """Create a flow to update an L7 rule"""
+
         update_l7rule_flow = linear_flow.Flow(constants.UPDATE_L7RULE_FLOW)
         update_l7rule_flow.add(lifecycle_tasks.L7RuleToErrorOnRevertTask(
             requires=[constants.L7RULE,

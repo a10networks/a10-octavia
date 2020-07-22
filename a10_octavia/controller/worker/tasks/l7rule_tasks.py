@@ -26,6 +26,24 @@ LOG = logging.getLogger(__name__)
 
 class L7RuleParent(object):
 
+    def _create_aflex_policy(filename, script, size):
+        try:
+            self.axapi_client.slb.aflex_policy.create(
+                file=filename, script=script, size=size, action="import")
+            LOG.debug("Successfully created aFlex policy: %s", filename)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to create aFlex policy: %s", filename)
+            raise e
+
+    def _get_existing_aflex(listener):
+        try:
+            get_listener = self.axapi_client.slb.virtual_server.vport.get(
+                listener.load_balancer_id, listener.name,
+                listener.protocol, listener.protocol_port)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to get existing aFlex for listener: %s", listener.id)
+            raise e
+
     def set(self, l7rule, listeners):
         l7policy = l7rule.l7policy
         filename = l7policy.id
@@ -35,22 +53,9 @@ class L7RuleParent(object):
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         kargs = {}
-        get_listener = None
-        try:
-            self.axapi_client.slb.aflex_policy.create(
-                file=filename, script=script, size=size, action="import")
-            LOG.debug("aFlex policy created successfully.")
-        except Exception as e:
-            LOG.exception("Failed to create/update l7rule: %s", str(e))
-            raise
 
-        try:
-            get_listener = self.axapi_client.slb.virtual_server.vport.get(
-                listener.load_balancer_id, listener.name,
-                listener.protocol, listener.protocol_port)
-        except Exception as e:
-            LOG.exception("Failed to get listener for l7rule: %s", str(e))
-            raise
+        self._create_aflex_policy(filename, script, size)
+        get_listener = self._get_existing_aflex(listener)
 
         aflex_scripts = []
         if 'aflex-scripts' in get_listener['port']:
@@ -58,18 +63,15 @@ class L7RuleParent(object):
             aflex_scripts.append({"aflex": filename})
         else:
             aflex_scripts = [{"aflex": filename}]
+
         kargs["aflex-scripts"] = aflex_scripts
 
-        try:
-            self.axapi_client.slb.virtual_server.vport.update(
-                listener.load_balancer_id, listener.name,
-                listener.protocol, listener.protocol_port,
-                listener.default_pool_id, s_pers,
-                c_pers, 1, **kargs)
-            LOG.debug("Listener updated successfully: %s", listener.id)
-        except Exception as e:
-            LOG.exception("Failed to create/update l7rule: %s", str(e))
-            raise
+        
+        self.axapi_client.slb.virtual_server.vport.update(
+            listener.load_balancer_id, listener.name,
+            listener.protocol, listener.protocol_port,
+            listener.default_pool_id, s_pers,
+            c_pers, 1, **kargs)
 
 
 class CreateL7Rule(L7RuleParent, task.Task):
@@ -77,7 +79,12 @@ class CreateL7Rule(L7RuleParent, task.Task):
 
     @axapi_client_decorator
     def execute(self, l7rule, listeners, vthunder):
-        self.set(l7rule, listeners)
+        try:
+            self.set(l7rule, listeners)
+            LOG.debug("Successfully created L7 Rule: %s", l7rule.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to create L7 Rule: %s", l7rule.id)
+            raise e
 
 
 class UpdateL7Rule(L7RuleParent, task.Task):
@@ -85,11 +92,16 @@ class UpdateL7Rule(L7RuleParent, task.Task):
 
     @axapi_client_decorator
     def execute(self, l7rule, listeners, vthunder, update_dict):
-        l7rule.__dict__.update(update_dict)
-        self.set(l7rule, listeners)
+        try:
+            l7rule.update(update_dict)
+            self.set(l7rule, listeners)
+            LOG.debug("Successfully updated L7 Rule: %s", l7rule.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to update L7 Rule: %s", l7rule.id)
+            raise e
 
 
-class DeleteL7Rule(task.Task):
+class DeleteL7Rule(L7RuleParent, task.Task):
     """Task to delete a L7rule and disassociate from provided pool"""
 
     @axapi_client_decorator
@@ -111,21 +123,9 @@ class DeleteL7Rule(task.Task):
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         kargs = {}
-        try:
-            self.axapi_client.slb.aflex_policy.create(
-                file=filename, script=script, size=size, action="import")
-            LOG.debug("aFlex policy deleted successfully.")
-        except Exception as e:
-            LOG.warning("Failed to delete l7rule: %s", str(e))
-            raise
 
-        try:
-            get_listener = self.axapi_client.slb.virtual_server.vport.get(
-                listener.load_balancer_id, listener.name,
-                listener.protocol, listener.protocol_port)
-        except Exception as e:
-            LOG.warning("Failed to delete l7rule: %s", str(e))
-            raise
+        self._create_aflex_policy(filename, script, size)
+        get_listener = self._get_existing_aflex(listener)
 
         aflex_scripts = []
         if 'aflex-scripts' in get_listener['port']:
@@ -140,7 +140,7 @@ class DeleteL7Rule(task.Task):
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port, listener.default_pool_id,
                 s_pers, c_pers, 1, **kargs)
-            LOG.debug("Listener updated successfully: %s", listener.id)
-        except Exception as e:
-            LOG.warning("Failed to delete l7rule: %s", str(e))
-            raise
+            LOG.debug("Successfully deleted L7rule: %s", l7rule.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to delete L7 rule: %s", l7rule.id)
+            raise e
