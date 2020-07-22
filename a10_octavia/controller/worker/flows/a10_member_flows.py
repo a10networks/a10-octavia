@@ -102,7 +102,40 @@ class MemberFlows(object):
         return create_member_flow
 
     def get_delete_member_flow(self):
-        """Create a flow to delete a member
+        """Flow to delete a member from VThunder
+
+        :returns: The flow for deleting a member"""
+        delete_member_flow = linear_flow.Flow(constants.DELETE_MEMBER_FLOW)
+        delete_member_flow.add(lifecycle_tasks.MemberToErrorOnRevertTask(
+            requires=[constants.MEMBER,
+                      constants.LISTENERS,
+                      constants.LOADBALANCER,
+                      constants.POOL]))
+        delete_member_flow.add(database_tasks.MarkMemberPendingDeleteInDB(
+            requires=constants.MEMBER))
+        delete_member_flow.add(model_tasks.
+                               DeleteModelObject(rebind={constants.OBJECT:
+                                                         constants.MEMBER}))
+        delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        delete_member_flow.add(self.get_delete_member_vthunder_subflow())
+        delete_member_flow.add(database_tasks.DeleteMemberInDB(
+            requires=constants.MEMBER))
+        delete_member_flow.add(database_tasks.DecrementMemberQuota(
+            requires=constants.MEMBER))
+        delete_member_flow.add(database_tasks.MarkPoolActiveInDB(
+            requires=constants.POOL))
+        delete_member_flow.add(database_tasks.
+                               MarkLBAndListenersActiveInDB(
+                                   requires=[constants.LOADBALANCER,
+                                             constants.LISTENERS]))
+        delete_member_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        return delete_member_flow
+
+    def get_rack_vthunder_delete_member_flow(self):
+        """Flow to delete a member in Thunder devices
 
         :returns: The flow for deleting a member
         """
@@ -128,6 +161,7 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER,
             provides=a10constants.VTHUNDER))
         delete_member_flow.add(self.get_delete_member_vthunder_subflow())
+        delete_member_flow.add(self.get_delete_member_vrid_subflow())
         delete_member_flow.add(database_tasks.DeleteMemberInDB(
             requires=constants.MEMBER))
         delete_member_flow.add(database_tasks.DecrementMemberQuota(
@@ -138,7 +172,6 @@ class MemberFlows(object):
                                MarkLBAndListenersActiveInDB(
                                    requires=[constants.LOADBALANCER,
                                              constants.LISTENERS]))
-        delete_member_flow.add(self.get_delete_member_vrid_subflow())
         delete_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return delete_member_flow
@@ -216,7 +249,39 @@ class MemberFlows(object):
         return handle_vrid_for_member_subflow
 
     def get_update_member_flow(self):
-        """Create a flow to update a member
+        """Flow to update a member
+
+        :returns: The flow for updating a member
+        """
+        update_member_flow = linear_flow.Flow(constants.UPDATE_MEMBER_FLOW)
+        update_member_flow.add(lifecycle_tasks.MemberToErrorOnRevertTask(
+            requires=[constants.MEMBER,
+                      constants.LISTENERS,
+                      constants.LOADBALANCER,
+                      constants.POOL]))
+        update_member_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
+            requires=constants.MEMBER))
+        update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        update_member_flow.add(server_tasks.MemberUpdate(
+            requires=(constants.MEMBER, a10constants.VTHUNDER)))
+        update_member_flow.add(database_tasks.UpdateMemberInDB(
+            requires=[constants.MEMBER, constants.UPDATE_DICT]))
+        update_member_flow.add(database_tasks.MarkMemberActiveInDB(
+            requires=constants.MEMBER))
+        update_member_flow.add(database_tasks.MarkPoolActiveInDB(
+            requires=constants.POOL))
+        update_member_flow.add(database_tasks.
+                               MarkLBAndListenersActiveInDB(
+                                   requires=[constants.LOADBALANCER,
+                                             constants.LISTENERS]))
+        update_member_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        return update_member_flow
+
+    def get_rack_vthunder_update_member_flow(self):
+        """Flow to update a member in Thunder devices
 
         :returns: The flow for updating a member
         """

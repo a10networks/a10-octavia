@@ -437,11 +437,18 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = pool.listeners
         load_balancer = pool.load_balancer
 
-        delete_member_tf = self._taskflow_load(
-            self._member_flows.get_delete_member_flow(),
-            store={constants.MEMBER: member, constants.LISTENERS: listeners,
-                   constants.LOADBALANCER: load_balancer, constants.POOL: pool}
-        )
+        if member.project_id in CONF.hardware_thunder.devices:
+            delete_member_tf = self._taskflow_load(
+                self._member_flows.get_rack_vthunder_delete_member_flow(),
+                store={constants.MEMBER: member, constants.LISTENERS: listeners,
+                       constants.LOADBALANCER: load_balancer, constants.POOL: pool}
+            )
+        else:
+            delete_member_tf = self._taskflow_load(
+                self._member_flows.get_delete_member_flow(),
+                store={constants.MEMBER: member, constants.LISTENERS: listeners,
+                       constants.LOADBALANCER: load_balancer, constants.POOL: pool}
+            )
         with tf_logging.DynamicLoggingListener(delete_member_tf,
                                                log=LOG):
             delete_member_tf.run()
@@ -477,17 +484,28 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = pool.listeners
         load_balancer = pool.load_balancer
 
-        update_member_tf = self._taskflow_load(self._member_flows.
-                                               get_update_member_flow(),
-                                               store={constants.MEMBER: member,
-                                                      constants.LISTENERS:
+        if member.project_id in CONF.hardware_thunder.devices:
+            update_member_tf = self._taskflow_load(self._member_flows.
+                                                   get_rack_vthunder_update_member_flow(),
+                                                   store={constants.MEMBER: member,
+                                                          constants.LISTENERS:
+                                                              listeners,
+                                                          constants.LOADBALANCER:
+                                                              load_balancer,
+                                                          constants.POOL: pool,
+                                                          constants.UPDATE_DICT: member_updates})
+        else:
+            update_member_tf = self._taskflow_load(self._member_flows.get_update_member_flow(),
+                                                   store={constants.MEMBER: member,
+                                                          constants.LISTENERS:
                                                           listeners,
-                                                      constants.LOADBALANCER:
+                                                          constants.LOADBALANCER:
                                                           load_balancer,
-                                                      constants.POOL:
+                                                          constants.POOL:
                                                           pool,
-                                                      constants.UPDATE_DICT:
+                                                          constants.UPDATE_DICT:
                                                           member_updates})
+
         with tf_logging.DynamicLoggingListener(update_member_tf,
                                                log=LOG):
             update_member_tf.run()

@@ -14,7 +14,7 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from requests.exceptions import ConnectionError
+from requests import exceptions
 from taskflow import task
 
 import acos_client.errors as acos_errors
@@ -48,7 +48,7 @@ class MemberCreate(task.Task):
                                                 server_templates=server_temp,
                                                 axapi_args=server_args)
             LOG.debug("Successfully created member: %s", member.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to create member: %s", member.id)
             raise e
 
@@ -57,7 +57,7 @@ class MemberCreate(task.Task):
                 pool.id, member.id, member.protocol_port)
             LOG.debug("Successfully associated member %s to pool %s",
                       member.id, pool.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to associate member %s to pool %s",
                           member.id, pool.id)
             raise e
@@ -68,7 +68,7 @@ class MemberCreate(task.Task):
             LOG.warning("Reverting creation of member: %s for pool: %s",
                         member.id, pool.id)
             self.axapi_client.slb.server.delete(member.id)
-        except ConnectionError:
+        except exceptions.ConnectionError:
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
             LOG.exception("Failed to revert creation of member %s for pool %s due to %s",
@@ -84,16 +84,17 @@ class MemberDelete(task.Task):
             self.axapi_client.slb.service_group.member.delete(
                 pool.id, member.id, member.protocol_port)
             LOG.debug("Successfully dissociated member %s from pool %s", member.id, pool.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to dissociate member %s from pool %s",
                           member.id, pool.id)
             raise e
         try:
             self.axapi_client.slb.server.delete(member.id)
             LOG.debug("Successfully deleted member %s from pool %s", member.id, pool.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to delete member: %s", member.id)
             raise e
+
 
 class MemberUpdate(task.Task):
     """Task to update member"""
@@ -116,6 +117,6 @@ class MemberUpdate(task.Task):
                                                 server_templates=server_temp,
                                                 axapi_args=server_args)
             LOG.debug("Successfully updated member: %s", member.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update member: %s", member.id)
             raise e

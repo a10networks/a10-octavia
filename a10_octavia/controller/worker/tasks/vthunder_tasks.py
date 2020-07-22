@@ -88,7 +88,7 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
                           "instance is not reachable via the lb-mgmt-net.")
             self.amphora_repo.update(db_apis.get_session(), amphora.id,
                                      status=constants.ERROR)
-            raise
+            raise e
 
 
 class AmphoraePostVIPPlug(VThunderBaseTask):
@@ -103,11 +103,11 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
             self.axapi_client.system.action.reboot()
             LOG.debug("Waiting for 30 seconds to trigger vThunder reboot.")
             time.sleep(30)
-            LOG.debug("vThunder rebooted successfully: %s", vthunder.id)
-        except Exception as e:
-            LOG.exception("Failed to reboot vthunder device: %s", str(e))
-            raise
-
+            LOG.debug("Successfully rebooted vThunder: %s", vthunder.id)
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+            LOG.exception("Failed to save configuration and reboot on vThunder for amphora id: %s",
+                          amphora_id)
+            raise e
 
 class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
 
@@ -122,12 +122,12 @@ class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
                 self.axapi_client.system.action.write_memory()
                 self.axapi_client.system.action.reboot()
                 time.sleep(30)
-                LOG.debug("vThunder rebooted successfully: %s", vthunder.id)
+                LOG.debug("Successfully rebooted vThunder: %s", vthunder.id)
             else:
                 LOG.debug("vThunder reboot is not required for member addition.")
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to reboot vthunder device: %s", str(e))
-            raise
+            raise e
 
 
 class EnableInterface(VThunderBaseTask):
@@ -140,8 +140,8 @@ class EnableInterface(VThunderBaseTask):
             self.axapi_client.system.action.setInterface(1)
             LOG.debug("Configured the mgmt interface for vThunder: %s", vthunder.id)
         except Exception as e:
-            LOG.exception("Failed to configure  mgmt interface vThunder: %s", str(e))
-            raise
+            LOG.exception("Failed to configure mgmt interface vThunder: %s", str(e))
+            raise e
 
 
 class EnableInterfaceForMembers(VThunderBaseTask):
@@ -172,7 +172,7 @@ class EnableInterfaceForMembers(VThunderBaseTask):
                 LOG.debug("Configuration of new interface is not required for member.")
         except Exception as e:
             LOG.exception("Failed to configure vthunder interface: %s", str(e))
-            raise
+            raise e
 
 
 class ConfigureVRRPMaster(VThunderBaseTask):
@@ -186,7 +186,7 @@ class ConfigureVRRPMaster(VThunderBaseTask):
             LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
         except Exception as e:
             LOG.exception("Failed to configure master vThunder VRRP: %s", str(e))
-            raise
+            raise e
 
 
 class ConfigureVRRPBackup(VThunderBaseTask):
@@ -200,7 +200,7 @@ class ConfigureVRRPBackup(VThunderBaseTask):
             LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
         except Exception as e:
             LOG.exception("Failed to configure backup vThunder VRRP: %s", str(e))
-            raise
+            raise e
 
 
 class ConfigureVRID(VThunderBaseTask):
@@ -214,7 +214,7 @@ class ConfigureVRID(VThunderBaseTask):
             LOG.debug("Configured the master vThunder for VRID")
         except Exception as e:
             LOG.exception("Failed to configure VRID on vthunder: %s", str(e))
-            raise
+            raise e
 
 
 class ConfigureVRRPSync(VThunderBaseTask):
@@ -233,7 +233,7 @@ class ConfigureVRRPSync(VThunderBaseTask):
             LOG.debug("Sync up for vThunder master")
         except Exception as e:
             LOG.exception("Failed VRRP sync: %s", str(e))
-            raise
+            raise e
 
 
 def configure_avcs(axapi_client, device_id, device_priority, floating_ip, floating_ip_mask):
@@ -257,7 +257,7 @@ class ConfigureaVCSMaster(VThunderBaseTask):
             LOG.debug("Configured the master vThunder for aVCS: %s", vthunder.id)
         except Exception as e:
             LOG.exception("Failed to configure master vThunder aVCS: %s", str(e))
-            raise
+            raise e
 
 
 class ConfigureaVCSBackup(VThunderBaseTask):
