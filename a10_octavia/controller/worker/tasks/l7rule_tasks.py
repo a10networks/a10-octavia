@@ -37,7 +37,7 @@ class L7RuleParent(object):
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         kargs = {}
-        listener_protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
+        listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
                                                                      listener.protocol)
         try:
             self.axapi_client.slb.aflex_policy.create(
@@ -50,7 +50,7 @@ class L7RuleParent(object):
         try:
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.name,
-                listener_protocol, listener.protocol_port)
+                listener.protocol, listener.protocol_port)
             LOG.debug("Successfully fetched listener %s for l7rule %s", listener.id, l7rule.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to get listener %s for l7rule: %s", listener.id, l7rule.id)
@@ -66,7 +66,7 @@ class L7RuleParent(object):
         try:
             self.axapi_client.slb.virtual_server.vport.update(
                 listener.load_balancer_id, listener.name,
-                listener_protocol, listener.protocol_port,
+                listener.protocol, listener.protocol_port,
                 listener.default_pool_id, s_pers,
                 c_pers, 1, **kargs)
             LOG.debug("Successfully associated l7rule %s to listener %s", l7rule.id, listener.id)
@@ -114,7 +114,7 @@ class DeleteL7Rule(task.Task):
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         kargs = {}
-        listener_protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
+        listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
                                                                      listener.protocol)
         try:
             self.axapi_client.slb.aflex_policy.create(
@@ -127,7 +127,7 @@ class DeleteL7Rule(task.Task):
         try:
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.name,
-                listener_protocol, listener.protocol_port)
+                listener.protocol, listener.protocol_port)
             LOG.debug("Successfully fetched listener %s for l7rule %s", listener.id, l7rule.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to get listener %s for l7rule: %s", listener.id, l7rule.id)
@@ -143,7 +143,7 @@ class DeleteL7Rule(task.Task):
         try:
             self.axapi_client.slb.virtual_server.vport.update(
                 listener.load_balancer_id, listener.name,
-                listener_protocol, listener.protocol_port, listener.default_pool_id,
+                listener.protocol, listener.protocol_port, listener.default_pool_id,
                 s_pers, c_pers, 1, **kargs)
             LOG.debug("Successfully dissociated l7rule %s from listener %s", l7rule.id, listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
