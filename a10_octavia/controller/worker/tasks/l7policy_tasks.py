@@ -36,7 +36,7 @@ class L7PolicyParent(object):
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         kargs = {}
-        listener_protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
+        listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
                                                                      listener.protocol)
         try:
             self.axapi_client.slb.aflex_policy.create(
@@ -49,7 +49,7 @@ class L7PolicyParent(object):
         try:
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.name,
-                listener_protocol, listener.protocol_port)
+                listener.protocol, listener.protocol_port)
             LOG.debug("Successfully fetched listener %s for l7policy %s", listener.id, l7policy.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to get listener %s for l7policy: %s", listener.id, l7policy.id)
@@ -65,7 +65,7 @@ class L7PolicyParent(object):
         try:
             self.axapi_client.slb.virtual_server.vport.update(
                 listener.load_balancer_id, listener.name,
-                listener_protocol, listener.protocol_port,
+                listener.protocol, listener.protocol_port,
                 listener.default_pool_id, s_pers,
                 c_pers, 1, **kargs)
             LOG.debug(
@@ -114,12 +114,12 @@ class DeleteL7Policy(task.Task):
         c_pers, s_pers = utils.get_sess_pers_templates(
             listener.default_pool)
         kargs = {}
-        listener_protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
+        listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
                                                                      listener.protocol)
         try:
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.name,
-                listener_protocol, listener.protocol_port)
+                listener.protocol, listener.protocol_port)
             LOG.debug("Successfully fetched listener %s for l7policy %s", listener.id, l7policy.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to get listener %s for l7policy: %s", listener.id, l7policy.id)
@@ -136,7 +136,7 @@ class DeleteL7Policy(task.Task):
         try:
             self.axapi_client.slb.virtual_server.vport.update(
                 listener.load_balancer_id, listener.name,
-                listener_protocol, listener.protocol_port,
+                listener.protocol, listener.protocol_port,
                 listener.default_pool_id,
                 s_pers, c_pers, 1, **kargs)
             LOG.debug(
