@@ -330,7 +330,7 @@ class UpdateVRIDForProjectMember(BaseDatabaseTask):
                               vrid.id, member.id)
                 except Exception as e:
                     LOG.error("Failed to update vrid %(vrid)s "
-                              "due to: %(except)s",
+                              "DB entry due to: %(except)s",
                               {'vrid': vrid.id, 'except': e})
                     raise e
             else:
@@ -339,12 +339,10 @@ class UpdateVRIDForProjectMember(BaseDatabaseTask):
                                           project_id=member.project_id,
                                           vrid_floating_ip=port.fixed_ips[0].ip_address,
                                           vrid_port_id=port.id)
-                    LOG.debug("Successfully created DB entry for vrid with id %s for member %s",
-                              vrid.id, member.id)
+                    LOG.debug("Successfully created DB entry for vrid for member %s",
+                              member.id)
                 except Exception as e:
-                    LOG.error("Failed to update vrid %(vrid)s "
-                              "due to: %(except)s",
-                              {'vrid': vrid.id, 'except': e})
+                    LOG.error("Failed to create vrid DB entry due to: %s", str(e))
                     raise e
 
 
