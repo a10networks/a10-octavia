@@ -362,19 +362,9 @@ class HandleACOSPartitionChange(VThunderBaseTask):
                 axapi_client.system.partition.create(vthunder.partition_name)
                 axapi_client.system.action.write_memory(partition="shared")
                 LOG.info("Partition %s created", vthunder.partition_name)
-        except acos_errors.Exists:
-            pass
         except Exception as e:
             LOG.exception("Failed to create parition on vThunder: %s", str(e))
-            raise
-
-    def revert(self, vthunder, *args, **kwargs):
-        try:
-            axapi_client = a10_utils.get_axapi_client(vthunder)
-            axapi_client.system.partition.delete(vthunder.partition_name)
-        except Exception as e:
-            LOG.exception("Failed to revert partition create : %s", str(e))
-            raise
+            raise e
 
 
 class SetupDeviceNetworkMap(VThunderBaseTask):
