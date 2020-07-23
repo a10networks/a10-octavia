@@ -18,9 +18,9 @@ from requests.exceptions import ConnectionError
 from taskflow import task
 
 from a10_octavia.common import openstack_mappings
-from a10_octavia.controller.worker.tasks import utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
+from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class L7PolicyParent(object):
                 l7policy.id,
                 listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception("Failed associated l7policy %s to listener %s", l7policy.id, listener.id)
+            LOG.exception("Failed to associate l7policy %s to listener %s", l7policy.id, listener.id)
             raise e
 
 
@@ -92,7 +92,7 @@ class CreateL7Policy(L7PolicyParent, task.Task):
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
             LOG.warning(
-                "Failed to revert creation of l7policy: %s due to %s",
+                "Failed to revert creation of l7policy %s due to %s",
                 l7policy.id, str(e))
 
 
@@ -145,7 +145,7 @@ class DeleteL7Policy(task.Task):
                 listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception(
-                "Failed to dissociated l7policy %s from listener %s",
+                "Failed to dissociate l7policy %s from listener %s",
                 l7policy.id,
                 listener.id)
             raise e
