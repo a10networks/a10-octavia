@@ -142,5 +142,8 @@ class DeleteL7Rule(task.Task):
                 s_pers, c_pers, 1, **kargs)
             LOG.debug("Successfully dissociated l7rule %s from listener %s", l7rule.id, listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception("Failed to dissociated l7rule %s from listener %s", l7rule.id, listener.id)
+            LOG.exception(
+                "Failed to dissociated l7rule %s from listener %s",
+                l7rule.id,
+                listener.id)
             raise e

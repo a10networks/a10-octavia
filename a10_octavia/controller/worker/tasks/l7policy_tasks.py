@@ -66,7 +66,10 @@ class L7PolicyParent(object):
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id, s_pers,
                 c_pers, 1, **kargs)
-            LOG.debug("Successfully associated l7policy %s to listener %s", l7policy.id, listener.id)
+            LOG.debug(
+                "Successfully associated l7policy %s to listener %s",
+                l7policy.id,
+                listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed associated l7policy %s to listener %s", l7policy.id, listener.id)
             raise e
@@ -80,7 +83,7 @@ class CreateL7Policy(L7PolicyParent, task.Task):
         self.set(l7policy, listeners)
 
     @axapi_client_decorator
-    def revert(self, l7policy, listeners, vthunder):
+    def revert(self, l7policy, listeners, vthunder, *args, **kwargs):
         try:
             self.axapi_client.slb.aflex_policy.delete(l7policy.id)
         except ConnectionError:
@@ -132,9 +135,15 @@ class DeleteL7Policy(task.Task):
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id,
                 s_pers, c_pers, 1, **kargs)
-            LOG.debug("Successfully dissociated l7policy %s from listener %s", l7policy.id, listener.id)
+            LOG.debug(
+                "Successfully dissociated l7policy %s from listener %s",
+                l7policy.id,
+                listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception("Failed to dissociated l7policy %s from listener %s", l7policy.id, listener.id)
+            LOG.exception(
+                "Failed to dissociated l7policy %s from listener %s",
+                l7policy.id,
+                listener.id)
             raise e
 
         try:
