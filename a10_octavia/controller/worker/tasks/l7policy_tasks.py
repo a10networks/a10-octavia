@@ -73,7 +73,10 @@ class L7PolicyParent(object):
                 l7policy.id,
                 listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception("Failed to associate l7policy %s to listener %s", l7policy.id, listener.id)
+            LOG.exception(
+                "Failed to associate l7policy %s to listener %s",
+                l7policy.id,
+                listener.id)
             raise e
 
 
