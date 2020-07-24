@@ -365,7 +365,8 @@ class HandleACOSPartitionChange(VThunderBaseTask):
 
 class SetupDeviceNetworkMap(VThunderBaseTask):
     """Task to setup device_network_map in vthunder to contain only vcs devices with known
-       states and have Master device object at index 0. """
+       states and have Master device object at index 0.
+    """
 
     default_provides = a10constants.VTHUNDER
 
