@@ -113,8 +113,6 @@ class ListenerCreate(ListenersParent, task.Task):
     @axapi_client_decorator
     def revert(self, loadbalancer, listener, vthunder, *args, **kwargs):
         LOG.warning("Reverting creation of listener: %s", listener.id)
-        listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
-                                                                     listener.protocol)
         try:
             self.axapi_client.slb.virtual_server.vport.delete(
                 loadbalancer.id, listener.id, listener.protocol,
