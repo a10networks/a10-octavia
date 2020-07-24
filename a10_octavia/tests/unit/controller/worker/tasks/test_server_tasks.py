@@ -44,7 +44,5 @@ class TestHandlerServerTasks(BaseTaskTestCase):
         mock_member = task.MemberCreate()
         mock_member.axapi_client = self.client_mock
         mock_member.revert(MEMBER, VTHUNDER, POOL)
-        self.client_mock.slb.service_group.member.delete.assert_called_with(
-            POOL.id, MEMBER.id, MEMBER.protocol_port)
         self.client_mock.slb.server.delete.assert_called_with(
             MEMBER.id)

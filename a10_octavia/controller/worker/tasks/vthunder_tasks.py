@@ -82,7 +82,7 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
                 raise req_exceptions.ConnectionError
 
         except driver_except.TimeOutException as e:
-            LOG.exception("vThunder instance failed to become reachable. "
+            LOG.exception("Amphora compute instance failed to become reachable. "
                           "This either means the compute driver failed to fully "
                           "boot the instance inside the timeout interval or the "
                           "instance is not reachable via the lb-mgmt-net.")
@@ -102,9 +102,10 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
             self.axapi_client.system.action.reboot()
             LOG.debug("Waiting for 30 seconds to trigger vThunder reboot.")
             time.sleep(30)
-            LOG.debug("vThunder rebooted successfully: %s", vthunder.id)
-        except Exception as e:
-            LOG.exception("Failed to reboot vthunder device: %s", str(e))
+            LOG.debug("Successfully rebooted vThunder: %s", vthunder.id)
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+            LOG.exception("Failed to save configuration and reboot on vThunder for amphora id: %s",
+                          vthunder.amphora_id)
             raise e
 
 
@@ -120,10 +121,10 @@ class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
                 self.axapi_client.system.action.write_memory()
                 self.axapi_client.system.action.reboot()
                 time.sleep(30)
-                LOG.debug("vThunder rebooted successfully: %s", vthunder.id)
+                LOG.debug("Successfully rebooted vThunder: %s", vthunder.id)
             else:
                 LOG.debug("vThunder reboot is not required for member addition.")
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to reboot vthunder device: %s", str(e))
             raise e
 
@@ -137,7 +138,7 @@ class EnableInterface(VThunderBaseTask):
             self.axapi_client.system.action.setInterface(1)
             LOG.debug("Configured the mgmt interface for vThunder: %s", vthunder.id)
         except Exception as e:
-            LOG.exception("Failed to configure  mgmt interface vThunder: %s", str(e))
+            LOG.exception("Failed to configure mgmt interface vThunder: %s", str(e))
             raise e
 
 
@@ -356,18 +357,9 @@ class HandleACOSPartitionChange(VThunderBaseTask):
                 axapi_client.system.partition.create(vthunder.partition_name)
                 axapi_client.system.action.write_memory(partition="shared")
                 LOG.info("Partition %s created", vthunder.partition_name)
-        except acos_errors.Exists:
-            pass
         except Exception as e:
             LOG.exception("Failed to create parition on vThunder: %s", str(e))
             raise e
-
-    def revert(self, vthunder, *args, **kwargs):
-        try:
-            axapi_client = a10_utils.get_axapi_client(vthunder)
-            axapi_client.system.partition.delete(vthunder.partition_name)
-        except Exception as e:
-            LOG.exception("Failed to revert partition create: %s", str(e))
 
 
 class SetupDeviceNetworkMap(VThunderBaseTask):
@@ -532,19 +524,21 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         self.get_subnet_and_mask(vlan_subnet_id_dict[vlan_id])
 
         if not is_trunk:
+            current_partition = self.axapi_client.current_partition
+            if current_partition != "shared":
+                self.axapi_client.system.partition.active("shared")
             if not self.axapi_client.interface.ethernet.exists(ifnum):
                 LOG.error("ethernet interface %s does not exist", ifnum)
-                raise
             eth = self.axapi_client.interface.ethernet.get(ifnum)
             if ('ethernet' in eth and ('action' not in eth['ethernet'] or
                                        eth['ethernet']['action'] == 'disable')):
                 LOG.warning("ethernet interface %s not enabled, enabling it", ifnum)
                 self.axapi_client.interface.ethernet.update(ifnum, enable=True)
+            self.axapi_client.system.partition.active(current_partition)
 
         vlan_exists = self.axapi_client.vlan.exists(vlan_id)
         if not vlan_exists and str(create_vlan_id) != vlan_id:
             return None
-
         if not vlan_exists:
             if is_trunk:
                 self.axapi_client.vlan.create(vlan_id, tagged_trunks=[ifnum], veth=True)
@@ -683,8 +677,11 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
         try:
             vlan_id = self.get_vlan_id(member.subnet_id, False)
             self.tag_interfaces(vthunder, vlan_id)
+            LOG.debug("Successfully tagged interface with VLAN id %s for member %s",
+                      str(vlan_id), member.id)
         except Exception as e:
-            LOG.exception("Failed to TagInterfaceForMember: %s", str(e))
+            LOG.exception("Failed to tag interface with VLAN id %s for member %s",
+                          str(vlan_id), member.id)
             raise e
 
     @axapi_client_decorator
@@ -698,14 +695,14 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
             if vthunder.device_network_map:
                 vlan_id = self.get_vlan_id(member.subnet_id, False)
                 if self.is_vlan_deletable():
-                    LOG.warning("Revert TagInterfaceForMember with VLAN id %s", vlan_id)
+                    LOG.warning("Reverting tag interface for member with VLAN id %s", vlan_id)
                     master_device_id = vthunder.device_network_map[0].vcs_device_id
                     for device_obj in vthunder.device_network_map:
                         self.delete_device_vlan(vlan_id, member.subnet_id, vthunder,
                                                 device_id=device_obj.vcs_device_id,
                                                 master_device_id=master_device_id)
         except Exception as e:
-            LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
+            LOG.exception("Failed to delete VLAN %s due to %s", str(vlan_id), str(e))
 
 
 class DeleteInterfaceTagIfNotInUseForLB(TagInterfaceBaseTask):

@@ -62,16 +62,14 @@ class ComputeCreate(BaseComputeTask):
                       compute_id, amphora_id)
             return compute_id
 
-        except Exception:
-            LOG.exception("Compute create for amphora id: %s failed",
-                          amphora_id)
-            raise
+        except Exception as e:
+            LOG.error("Compute create for amphora id: %s failed",
+                      amphora_id)
+            raise e
 
     def revert(self, result, amphora_id, *args, **kwargs):
-        """This method will revert the creation of the
+        """This method will revert the creation of the amphora"""
 
-        amphora. So it will just delete it in this flow
-        """
         if isinstance(result, failure.Failure):
             return
         compute_id = result
@@ -80,19 +78,17 @@ class ComputeCreate(BaseComputeTask):
                     {'amp': amphora_id, 'comp': compute_id})
         try:
             self.compute.delete(compute_id)
-        except Exception:
-            LOG.exception("Reverting compute create failed")
+        except Exception as e:
+            LOG.exception("Failed to revert creation of compute %s due to %s: ",
+                          compute_id, str(e))
 
 
 class ComputeActiveWait(BaseComputeTask):
     """Wait for the compute driver to mark the amphora active."""
 
     def execute(self, compute_id, amphora_id):
-        """Wait for the compute driver to mark the amphora active
+        """Wait for the compute driver to mark the amphora active"""
 
-        :raises: Generic exception if the amphora is not active
-        :returns: An amphora object
-        """
         for i in range(CONF.a10_controller_worker.amp_active_retries):
             amp, fault = self.compute.get_amphora(compute_id)
             if amp.status == constants.ACTIVE:
@@ -108,13 +104,7 @@ class ComputeActiveWait(BaseComputeTask):
 
 class NovaServerGroupCreate(BaseComputeTask):
     def execute(self, loadbalancer_id):
-        """Create a server group by nova client api
-
-        :param loadbalancer_id: will be used for server group's name
-        :param policy: will used for server group's policy
-        :raises: Generic exception if the server group is not created
-        :returns: server group's id
-        """
+        """Create a server group by nova client api"""
 
         name = 'octavia-lb-' + loadbalancer_id
         server_group = self.compute.create_server_group(
@@ -124,10 +114,8 @@ class NovaServerGroupCreate(BaseComputeTask):
         return server_group.id
 
     def revert(self, result, *args, **kwargs):
-        """This method will revert the creation of the
+        """This method will revert the creation of the nova server group"""
 
-        :param result: here it refers to server group id
-        """
         server_group_id = result
         LOG.warning("Reverting server group create with id: %s",
                     server_group_id)
