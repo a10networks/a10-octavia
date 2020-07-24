@@ -61,7 +61,8 @@ class DuplicateVlanTagsConfigError(cfg.ConfigFileValueError):
 class MissingInterfaceNumConfigError(cfg.ConfigFileValueError):
 
     def __init__(self):
-        msg = ('Missing `interface_num` in `interface_vlan_map` under [hardware_thunder] section.')
+        msg = (
+            'Missing `interface_num` in `interface_vlan_map` under [hardware_thunder] section.')
         super(MissingInterfaceNumConfigError, self).__init__(msg=msg)
 
 
@@ -129,3 +130,18 @@ class MissingMgmtIpConfigError(cfg.ConfigFileValueError):
         msg = ('Missing `mgmt_ip_address` for vcs device with id {0}. ' +
                'Please provide management IP address').format(vcs_device_id)
         super(MissingMgmtIpConfigError, self).__init__(msg=msg)
+
+
+class InvalidVCSDeviceCount(cfg.ConfigFileValueError):
+
+    def __init__(self, device_count):
+        msg = ('Number of devices in config is should be 1 when VCS is not enabled, ' +
+               'provided {0}').format(device_count)
+        super(InvalidVCSDeviceCount, self).__init__(msg=msg)
+
+
+class MissingVCSDeviceConfig(base.NetworkException):
+    def __init__(self, device_ids):
+        msg = ('Device ids {0} provided in config are not present in VCS' +
+               'cluster.').format(device_ids)
+        super(MissingVCSDeviceConfig, self).__init__(msg=msg)

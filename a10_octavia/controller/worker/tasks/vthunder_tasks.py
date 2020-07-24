@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 import acos_client
 from acos_client import errors as acos_errors
 try:
@@ -32,6 +31,7 @@ from octavia.common import utils
 from octavia.db import api as db_apis
 
 from a10_octavia.common import a10constants
+from a10_octavia.common import exceptions
 from a10_octavia.common import openstack_mappings
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
@@ -56,7 +56,6 @@ class VThunderBaseTask(task.Task):
 
 
 class VThunderComputeConnectivityWait(VThunderBaseTask):
-
     """Task to wait for the compute instance to be up"""
 
     def execute(self, vthunder, amphora):
@@ -92,7 +91,6 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
 
 
 class AmphoraePostVIPPlug(VThunderBaseTask):
-
     """Task to reboot and configure vThunder device"""
 
     @axapi_client_decorator
@@ -111,7 +109,6 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
 
 
 class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
-
     """Task to reboot and configure vThunder device"""
 
     @axapi_client_decorator
@@ -132,7 +129,6 @@ class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
 
 
 class EnableInterface(VThunderBaseTask):
-
     """Task to configure vThunder ports"""
 
     @axapi_client_decorator
@@ -140,13 +136,12 @@ class EnableInterface(VThunderBaseTask):
         try:
             self.axapi_client.system.action.setInterface(1)
             LOG.debug("Configured the mgmt interface for vThunder: %s", vthunder.id)
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure mgmt interface vThunder: %s", str(e))
             raise e
 
 
 class EnableInterfaceForMembers(VThunderBaseTask):
-
     """Task to enable an interface associated with a member"""
 
     @axapi_client_decorator
@@ -171,13 +166,12 @@ class EnableInterfaceForMembers(VThunderBaseTask):
                         attempts = attempts - 1
             else:
                 LOG.debug("Configuration of new interface is not required for member.")
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure vthunder interface: %s", str(e))
             raise e
 
 
 class ConfigureVRRPMaster(VThunderBaseTask):
-
     """Task to configure Master vThunder VRRP"""
 
     @axapi_client_decorator
@@ -185,27 +179,25 @@ class ConfigureVRRPMaster(VThunderBaseTask):
         try:
             self.axapi_client.system.action.configureVRRP(1, 1)
             LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure master vThunder VRRP: %s", str(e))
             raise e
 
 
 class ConfigureVRRPBackup(VThunderBaseTask):
-
-    """Task to configure Master vThunder VRRP"""
+    """Task to configure backup vThunder VRRP"""
 
     @axapi_client_decorator
     def execute(self, vthunder):
         try:
             self.axapi_client.system.action.configureVRRP(2, 1)
             LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure backup vThunder VRRP: %s", str(e))
             raise e
 
 
 class ConfigureVRID(VThunderBaseTask):
-
     """Task to configure vThunder VRID"""
 
     @axapi_client_decorator
@@ -213,13 +205,12 @@ class ConfigureVRID(VThunderBaseTask):
         try:
             self.axapi_client.system.action.configureVRID(vrid)
             LOG.debug("Configured the master vThunder for VRID")
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure VRID on vthunder: %s", str(e))
             raise e
 
 
 class ConfigureVRRPSync(VThunderBaseTask):
-
     """Task to sync vThunder VRRP"""
 
     @axapi_client_decorator
@@ -232,7 +223,7 @@ class ConfigureVRRPSync(VThunderBaseTask):
             LOG.debug("Waiting 30 seconds for config synch.")
             time.sleep(30)
             LOG.debug("Sync up for vThunder master")
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed VRRP sync: %s", str(e))
             raise e
 
@@ -245,8 +236,7 @@ def configure_avcs(axapi_client, device_id, device_priority, floating_ip, floati
 
 
 class ConfigureaVCSMaster(VThunderBaseTask):
-
-    """Task to configure aVCS"""
+    """Task to configure aVCS on master vThunder"""
 
     @axapi_client_decorator
     def execute(self, vthunder, device_id=1, device_priority=200,
@@ -256,12 +246,13 @@ class ConfigureaVCSMaster(VThunderBaseTask):
             configure_avcs(self.axapi_client, device_id, device_priority,
                            floating_ip, floating_ip_mask)
             LOG.debug("Configured the master vThunder for aVCS: %s", vthunder.id)
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure master vThunder aVCS: %s", str(e))
             raise e
 
 
 class ConfigureaVCSBackup(VThunderBaseTask):
+    """Task to configure aVCS on backup vThunder"""
 
     @axapi_client_decorator
     def execute(self, vthunder, device_id=2, device_priority=100,
@@ -280,13 +271,12 @@ class ConfigureaVCSBackup(VThunderBaseTask):
                 except (req_exceptions.ConnectionError, acos_errors.ACOSException,
                         http_client.BadStatusLine, req_exceptions.ReadTimeout):
                     attempts = attempts - 1
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure backup vThunder aVCS: %s", str(e))
-            raise
+            raise e
 
 
 class CreateHealthMonitorOnVThunder(VThunderBaseTask):
-
     """Task to create a Health Monitor and server for HM service"""
 
     @axapi_client_decorator
@@ -316,8 +306,9 @@ class CreateHealthMonitorOnVThunder(VThunderBaseTask):
                                                      interval, timeout, max_retries, method, url,
                                                      expect_code, port, ipv4)
             LOG.debug("Successfully created health monitor for vThunder %s", vthunder.id)
-        except Exception as e:
-            LOG.debug("Failed to create health monitor: %s", str(e))
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+            LOG.exception("Failed to create health monitor: %s", str(e))
+            raise e
 
         if result:
             ip_address = CONF.a10_health_manager.udp_server_ip_address
@@ -325,25 +316,29 @@ class CreateHealthMonitorOnVThunder(VThunderBaseTask):
             try:
                 self.axapi_client.slb.server.create(name, ip_address, health_check=health_check)
                 LOG.debug("Server created successfully. Enabled health check for health monitor.")
-            except Exception as e:
+            except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
                 LOG.exception("Failed to create health monitor server: %s", str(e))
+                raise e
 
 
 class CheckVRRPStatus(VThunderBaseTask):
-
     """Task to check VRRP status"""
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        vrrp_status = self.axapi_client.system.action.check_vrrp_status()
-        if vrrp_status:
-            return True
-        else:
-            return False
+        try:
+            vrrp_status = self.axapi_client.system.action.check_vrrp_status()
+            if vrrp_status:
+                return True
+            else:
+                return False
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+            LOG.exception("Failed to get VRRP status for vThunder %s due to: %s",
+                          vthunder.ip_address, str(e))
+            raise e
 
 
 class ConfirmVRRPStatus(VThunderBaseTask):
-
     """Task to confirm master and backup VRRP status"""
 
     def execute(self, master_vrrp_status, backup_vrrp_status):
@@ -363,13 +358,12 @@ class HandleACOSPartitionChange(VThunderBaseTask):
                 axapi_client.system.partition.create(vthunder.partition_name)
                 axapi_client.system.action.write_memory(partition="shared")
                 LOG.info("Partition %s created", vthunder.partition_name)
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to create parition on vThunder: %s", str(e))
             raise e
 
 
 class SetupDeviceNetworkMap(VThunderBaseTask):
-
     """Task to setup device_network_map in vthunder to contain only vcs devices with known
        states and have Master device object at index 0.
     """
@@ -388,7 +382,7 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
 
             try:
                 resp = self.axapi_client.system.action.get_vcs_summary_oper()
-            except Exception as e:
+            except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
                 LOG.exception("Failed to get vcs summary oper: %s", str(e))
                 raise e
 
@@ -400,9 +394,7 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
                         vthunder.device_network_map.append(device_network_map[0])
                         return vthunder
                     else:
-                        LOG.error('Number of devices %s provided in config is not 1, '
-                                  'when VCS is not enabled', len(device_network_map))
-                        raise
+                        raise exceptions.InvalidVCSDeviceCount(len(device_network_map))
                 devices = {}
                 for device in device_network_map:
                     devices[device.vcs_device_id] = device
@@ -425,9 +417,7 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
                     for key in devices:
                         device_ids = device_ids.join(str(key))
                         device_ids = device_ids.join(' ')
-                    LOG.error('These device ids %s provided in config are not '
-                              'present in VCS cluster', device_ids)
-                    raise
+                    raise exceptions.MissingVCSDeviceConfig(device_ids)
         return vthunder
 
 
@@ -482,7 +472,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                 ipv4_list = ve['oper']['ipv4_list']
                 if ipv4_list:
                     return ipv4_list[0]['addr']
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.warning("Failed to get ve ip from device id %s: %s", str(device_id), str(e))
 
     def get_subnet_and_mask(self, subnet_id):
@@ -612,7 +602,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                     self.tag_device_interfaces(create_vlan_id, vlan_subnet_id_dict, device_obj,
                                                vthunder, device_id=device_obj.vcs_device_id,
                                                master_device_id=master_device_id)
-                except Exception as e:
+                except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
                     if master_device_id != device_obj.vcs_device_id:
                         LOG.warning("Failed to tag interfaces of device id %s: %s",
                                     str(device_obj.vcs_device_id), str(e))
@@ -648,7 +638,6 @@ class TagInterfaceBaseTask(VThunderBaseTask):
 
 
 class TagInterfaceForLB(TagInterfaceBaseTask):
-
     """Task to tag Ethernet/Trunk Interface on a vThunder device from lb subnet"""
 
     @axapi_client_decorator
@@ -656,7 +645,7 @@ class TagInterfaceForLB(TagInterfaceBaseTask):
         try:
             vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
             self.tag_interfaces(vthunder, vlan_id)
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to TagInterfaceForLB: %s", str(e))
             raise e
 
@@ -672,12 +661,13 @@ class TagInterfaceForLB(TagInterfaceBaseTask):
                         self.delete_device_vlan(vlan_id, loadbalancer.vip.subnet_id, vthunder,
                                                 device_id=device_obj.vcs_device_id,
                                                 master_device_id=master_device_id)
+        except req_exceptions.ConnectionError:
+            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
-            LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
+            LOG.exception("Failed to revert VLAN %s delete on Thunder: %s", vlan_id, str(e))
 
 
 class TagInterfaceForMember(TagInterfaceBaseTask):
-
     """Task to tag Ethernet/Trunk Interface on a vThunder device from member subnet"""
 
     @axapi_client_decorator
@@ -692,7 +682,7 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
             self.tag_interfaces(vthunder, vlan_id)
             LOG.debug("Successfully tagged interface with VLAN id %s for member %s",
                       str(vlan_id), member.id)
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to tag interface with VLAN id %s for member %s",
                           str(vlan_id), member.id)
             raise e
@@ -714,12 +704,13 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
                         self.delete_device_vlan(vlan_id, member.subnet_id, vthunder,
                                                 device_id=device_obj.vcs_device_id,
                                                 master_device_id=master_device_id)
+        except req_exceptions.ConnectionError:
+            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
             LOG.exception("Failed to delete VLAN %s due to %s", str(vlan_id), str(e))
 
 
 class DeleteInterfaceTagIfNotInUseForLB(TagInterfaceBaseTask):
-
     """Task to untag Ethernet/Trunk Interface on a vThunder device from lb subnet"""
 
     @axapi_client_decorator
@@ -733,12 +724,12 @@ class DeleteInterfaceTagIfNotInUseForLB(TagInterfaceBaseTask):
                         self.delete_device_vlan(vlan_id, loadbalancer.vip.subnet_id, vthunder,
                                                 device_id=device_obj.vcs_device_id,
                                                 master_device_id=master_device_id)
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
+            raise e
 
 
 class DeleteInterfaceTagIfNotInUseForMember(TagInterfaceBaseTask):
-
     """Task to untag Ethernet/Trunk Interface on a vThunder device from member subnet"""
 
     @axapi_client_decorator
@@ -757,21 +748,23 @@ class DeleteInterfaceTagIfNotInUseForMember(TagInterfaceBaseTask):
                         self.delete_device_vlan(vlan_id, member.subnet_id, vthunder,
                                                 device_id=device_obj.vcs_device_id,
                                                 master_device_id=master_device_id)
-        except Exception as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
             raise e
 
 
 class WriteMemory(VThunderBaseTask):
-
     """Task to write memory of the Thunder device"""
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        if vthunder:
-            if vthunder.partition_name != "shared":
-                self.axapi_client.system.action.write_memory(
-                    partition="specified",
-                    specified_partition=vthunder.partition_name)
-            else:
-                self.axapi_client.system.action.write_memory(partition="shared")
+        try:
+            if vthunder:
+                if vthunder.partition_name != "shared":
+                    self.axapi_client.system.action.write_memory(
+                        partition="specified",
+                        specified_partition=vthunder.partition_name)
+                else:
+                    self.axapi_client.system.action.write_memory(partition="shared")
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError):
+            LOG.warning("Failed to write memory on thunder device: %s", vthunder.ip_address)
