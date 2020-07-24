@@ -320,16 +320,30 @@ class UpdateVRIDForProjectMember(BaseDatabaseTask):
     def execute(self, member, vrid, port):
         if port:
             if vrid:
-                self.vrid_repo.update(
-                    db_apis.get_session(),
-                    vrid.id,
-                    vrid_floating_ip=port.fixed_ips[0].ip_address,
-                    vrid_port_id=port.id)
+                try:
+                    self.vrid_repo.update(
+                        db_apis.get_session(),
+                        vrid.id,
+                        vrid_floating_ip=port.fixed_ips[0].ip_address,
+                        vrid_port_id=port.id)
+                    LOG.debug("Successfully updated DB vrid %s entry for member %s",
+                              vrid.id, member.id)
+                except Exception as e:
+                    LOG.error("Failed to update vrid %(vrid)s "
+                              "DB entry due to: %(except)s",
+                              {'vrid': vrid.id, 'except': e})
+                    raise e
             else:
-                self.vrid_repo.create(db_apis.get_session(),
-                                      project_id=member.project_id,
-                                      vrid_floating_ip=port.fixed_ips[0].ip_address,
-                                      vrid_port_id=port.id)
+                try:
+                    self.vrid_repo.create(db_apis.get_session(),
+                                          project_id=member.project_id,
+                                          vrid_floating_ip=port.fixed_ips[0].ip_address,
+                                          vrid_port_id=port.id)
+                    LOG.debug("Successfully created DB entry for vrid for member %s",
+                              member.id)
+                except Exception as e:
+                    LOG.error("Failed to create vrid DB entry due to: %s", str(e))
+                    raise e
 
 
 class CountMembersInProject(BaseDatabaseTask):
@@ -340,6 +354,7 @@ class CountMembersInProject(BaseDatabaseTask):
                 project_id=member.project_id)
         except Exception as e:
             LOG.exception("Failed to get count of members in given project: %s", str(e))
+            raise e
 
 
 class DeleteVRIDEntry(BaseDatabaseTask):
@@ -349,6 +364,7 @@ class DeleteVRIDEntry(BaseDatabaseTask):
                 self.vrid_repo.delete(db_apis.get_session(), id=vrid.id)
             except Exception as e:
                 LOG.exception("Failed to delete VRID entry from vrid table: %s", str(e))
+                raise e
 
 
 class CheckVLANCanBeDeletedParent(object):
