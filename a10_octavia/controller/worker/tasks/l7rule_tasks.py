@@ -14,7 +14,7 @@
 from acos_client import errors as acos_errors
 from oslo_config import cfg
 from oslo_log import log as logging
-from requests.exceptions import ConnectionError
+from requests import exceptions
 from taskflow import task
 
 from a10_octavia.common import openstack_mappings
@@ -43,7 +43,7 @@ class L7RuleParent(object):
             self.axapi_client.slb.aflex_policy.create(
                 file=filename, script=script, size=size, action="import")
             LOG.debug("Successfully created l7 rule: %s", l7rule.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to create/update l7rule: %s", l7rule.id)
             raise e
 
@@ -52,7 +52,7 @@ class L7RuleParent(object):
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port)
             LOG.debug("Successfully fetched listener %s for l7rule %s", listener.id, l7rule.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to get listener %s for l7rule: %s", listener.id, l7rule.id)
             raise e
 
@@ -70,7 +70,7 @@ class L7RuleParent(object):
                 listener.default_pool_id, s_pers,
                 c_pers, 1, **kargs)
             LOG.debug("Successfully associated l7rule %s to listener %s", l7rule.id, listener.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to associate l7rule %s to listener %s", l7rule.id, listener.id)
             raise e
 
@@ -120,7 +120,7 @@ class DeleteL7Rule(task.Task):
             self.axapi_client.slb.aflex_policy.create(
                 file=filename, script=script, size=size, action="import")
             LOG.debug("Successfully deleted l7rule: %s", l7rule.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.warning("Failed to delete l7rule: %s", str(e))
             raise e
 
@@ -129,7 +129,7 @@ class DeleteL7Rule(task.Task):
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port)
             LOG.debug("Successfully fetched listener %s for l7rule %s", listener.id, l7rule.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to get listener %s for l7rule: %s", listener.id, l7rule.id)
             raise e
 
@@ -146,7 +146,7 @@ class DeleteL7Rule(task.Task):
                 listener.protocol, listener.protocol_port, listener.default_pool_id,
                 s_pers, c_pers, 1, **kargs)
             LOG.debug("Successfully dissociated l7rule %s from listener %s", l7rule.id, listener.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception(
                 "Failed to dissociate l7rule %s from listener %s",
                 l7rule.id,

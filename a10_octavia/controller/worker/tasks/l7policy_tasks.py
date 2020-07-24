@@ -14,7 +14,7 @@
 from acos_client import errors as acos_errors
 from oslo_config import cfg
 from oslo_log import log as logging
-from requests.exceptions import ConnectionError
+from requests import exceptions
 from taskflow import task
 
 from a10_octavia.common import openstack_mappings
@@ -42,7 +42,7 @@ class L7PolicyParent(object):
             self.axapi_client.slb.aflex_policy.create(
                 file=filename, script=script, size=size, action="import")
             LOG.debug("Successfully created l7policy: %s", l7policy.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to create/update l7policy: %s", l7policy.id)
             raise e
 
@@ -51,7 +51,7 @@ class L7PolicyParent(object):
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port)
             LOG.debug("Successfully fetched listener %s for l7policy %s", listener.id, l7policy.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to get listener %s for l7policy: %s", listener.id, l7policy.id)
             raise e
 
@@ -72,7 +72,7 @@ class L7PolicyParent(object):
                 "Successfully associated l7policy %s to listener %s",
                 l7policy.id,
                 listener.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to associate l7policy %s to listener %s", l7policy.id, listener.id)
             raise e
 
@@ -88,7 +88,7 @@ class CreateL7Policy(L7PolicyParent, task.Task):
     def revert(self, l7policy, listeners, vthunder, *args, **kwargs):
         try:
             self.axapi_client.slb.aflex_policy.delete(l7policy.id)
-        except ConnectionError:
+        except exceptions.ConnectionError:
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
             LOG.warning(
@@ -121,7 +121,7 @@ class DeleteL7Policy(task.Task):
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port)
             LOG.debug("Successfully fetched listener %s for l7policy %s", listener.id, l7policy.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to get listener %s for l7policy: %s", listener.id, l7policy.id)
             raise e
 
@@ -143,7 +143,7 @@ class DeleteL7Policy(task.Task):
                 "Successfully dissociated l7policy %s from listener %s",
                 l7policy.id,
                 listener.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception(
                 "Failed to dissociate l7policy %s from listener %s",
                 l7policy.id,
@@ -153,6 +153,6 @@ class DeleteL7Policy(task.Task):
         try:
             self.axapi_client.slb.aflex_policy.delete(l7policy.id)
             LOG.debug("Successfully deleted l7policy: %s", l7policy.id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to delete l7policy: %s", l7policy.id)
             raise e
