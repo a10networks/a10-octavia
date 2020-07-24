@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 import acos_client
 from acos_client import errors as acos_errors
 try:
@@ -366,8 +365,7 @@ class HandleACOSPartitionChange(VThunderBaseTask):
 
 class SetupDeviceNetworkMap(VThunderBaseTask):
     """Task to setup device_network_map in vthunder to contain only vcs devices with known
-       states and have Master device object at index 0.
-    """
+       states and have Master device object at index 0. """
 
     default_provides = a10constants.VTHUNDER
 
@@ -662,7 +660,7 @@ class TagInterfaceForLB(TagInterfaceBaseTask):
                         self.delete_device_vlan(vlan_id, loadbalancer.vip.subnet_id, vthunder,
                                                 device_id=device_obj.vcs_device_id,
                                                 master_device_id=master_device_id)
-        except ConnectionError:
+        except req_exceptions.ConnectionError:
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
             LOG.exception("Failed to revert VLAN %s delete on Thunder: %s", vlan_id, str(e))
@@ -705,7 +703,7 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
                         self.delete_device_vlan(vlan_id, member.subnet_id, vthunder,
                                                 device_id=device_obj.vcs_device_id,
                                                 master_device_id=master_device_id)
-        except ConnectionError:
+        except req_exceptions.ConnectionError:
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
             LOG.exception("Failed to delete VLAN %s due to %s", str(vlan_id), str(e))
@@ -768,4 +766,4 @@ class WriteMemory(VThunderBaseTask):
                 else:
                     self.axapi_client.system.action.write_memory(partition="shared")
         except (acos_errors.ACOSException, req_exceptions.ConnectionError):
-            LOG.warning("Failed to write memory on thunder device: %s", str(e))
+            LOG.warning("Failed to write memory on thunder device: %s", vthunder.ip_address)
