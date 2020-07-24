@@ -12,9 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import acos_client.errors as acos_errors
 from oslo_config import cfg
 from oslo_log import log as logging
+from requests import exceptions
 from taskflow import task
+
 
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
@@ -34,18 +37,12 @@ class LoadBalancerParent(object):
         arp_disable = CONF.slb.arp_disable
         vrid = CONF.slb.default_virtual_server_vrid
 
-        try:
-            set_method(
-                loadbalancer.id,
-                loadbalancer.vip.ip_address,
-                arp_disable=arp_disable,
-                status=status, vrid=vrid,
-                axapi_body=vip_meta)
-            LOG.debug("LoadBalancer created/updated succesfully: %s",
-                      loadbalancer.id)
-        except Exception as e:
-            LOG.exception("Failed to create/update load balancer: %s", str(e))
-            raise
+        set_method(
+            loadbalancer.id,
+            loadbalancer.vip.ip_address,
+            arp_disable=arp_disable,
+            status=status, vrid=vrid,
+            axapi_body=vip_meta)
 
 
 class CreateVirtualServerTask(LoadBalancerParent, task.Task):
@@ -53,14 +50,24 @@ class CreateVirtualServerTask(LoadBalancerParent, task.Task):
 
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
-        self.set(self.axapi_client.slb.virtual_server.create, loadbalancer)
+        try:
+            self.set(self.axapi_client.slb.virtual_server.create, loadbalancer)
+            LOG.debug("Successfully created load balancer: %s", loadbalancer.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to created load balancer: %s", loadbalancer.id)
+            raise e
 
     @axapi_client_decorator
     def revert(self, loadbalancer, vthunder, *args, **kwargs):
         try:
+            LOG.warning("Reverting creation of load balancer: %s", loadbalancer.id)
             self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
+        except exceptions.ConnectionError:
+            LOG.exception(
+                "Failed to connect A10 Thunder device: %s", vthunder.ip)
         except Exception as e:
-            LOG.exception("Failed to revert create load balancer: %s", str(e))
+            LOG.exception("Failed to revert creation of load balancer: %s due to %s",
+                          loadbalancer.id, str(e))
 
 
 class DeleteVirtualServerTask(task.Task):
@@ -70,8 +77,10 @@ class DeleteVirtualServerTask(task.Task):
     def execute(self, loadbalancer, vthunder):
         try:
             self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
-        except Exception as e:
-            LOG.warning("Failed to delete load balancer: %s", str(e))
+            LOG.debug("Successfully deleted load balancer: %s", loadbalancer.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to delete load balancer: %s", loadbalancer.id)
+            raise e
 
 
 class UpdateVirtualServerTask(LoadBalancerParent, task.Task):
@@ -79,4 +88,9 @@ class UpdateVirtualServerTask(LoadBalancerParent, task.Task):
 
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
-        self.set(self.axapi_client.slb.virtual_server.update, loadbalancer)
+        try:
+            self.set(self.axapi_client.slb.virtual_server.update, loadbalancer)
+            LOG.debug("Successfully updated load balancer: %s", loadbalancer.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to update load balancer: %s", loadbalancer.id)
+            raise e
