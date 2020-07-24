@@ -544,19 +544,21 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         self.get_subnet_and_mask(vlan_subnet_id_dict[vlan_id])
 
         if not is_trunk:
+            current_partition = self.axapi_client.current_partition
+            if current_partition != "shared":
+                self.axapi_client.system.partition.active("shared")
             if not self.axapi_client.interface.ethernet.exists(ifnum):
                 LOG.error("ethernet interface %s does not exist", ifnum)
-                raise
             eth = self.axapi_client.interface.ethernet.get(ifnum)
             if ('ethernet' in eth and ('action' not in eth['ethernet'] or
                                        eth['ethernet']['action'] == 'disable')):
                 LOG.warning("ethernet interface %s not enabled, enabling it", ifnum)
                 self.axapi_client.interface.ethernet.update(ifnum, enable=True)
+            self.axapi_client.system.partition.active(current_partition)
 
         vlan_exists = self.axapi_client.vlan.exists(vlan_id)
         if not vlan_exists and str(create_vlan_id) != vlan_id:
             return None
-
         if not vlan_exists:
             if is_trunk:
                 self.axapi_client.vlan.create(vlan_id, tagged_trunks=[ifnum], veth=True)
