@@ -322,7 +322,6 @@ class CreateHealthMonitorOnVThunder(VThunderBaseTask):
                 raise e
 
 
-
 class CheckVRRPStatus(VThunderBaseTask):
     """Task to check VRRP status"""
 
@@ -653,7 +652,6 @@ class TagInterfaceForLB(TagInterfaceBaseTask):
 
     @axapi_client_decorator
     def revert(self, loadbalancer, vthunder, *args, **kwargs):
-        LOG.warning("Reverting tag interface for LB with VLAN id %s", vlan_id)
         try:
             if vthunder.device_network_map:
                 vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
@@ -727,7 +725,7 @@ class DeleteInterfaceTagIfNotInUseForLB(TagInterfaceBaseTask):
                         self.delete_device_vlan(vlan_id, loadbalancer.vip.subnet_id, vthunder,
                                                 device_id=device_obj.vcs_device_id,
                                                 master_device_id=master_device_id)
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e: 
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to delete VLAN on vThunder: %s", str(e))
             raise e
 
@@ -769,5 +767,5 @@ class WriteMemory(VThunderBaseTask):
                         specified_partition=vthunder.partition_name)
                 else:
                     self.axapi_client.system.action.write_memory(partition="shared")
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError):
             LOG.warning("Failed to write memory on thunder device: %s", str(e))
