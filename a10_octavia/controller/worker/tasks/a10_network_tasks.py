@@ -13,8 +13,10 @@
 # under the License.
 #
 
+import acos_client.errors as acos_errors
 from oslo_config import cfg
 from oslo_log import log as logging
+from requests import exceptions as req_exceptions
 import six
 from taskflow import task
 from taskflow.types import failure
@@ -293,8 +295,9 @@ class HandleNetworkDeltas(BaseNetworkTask):
                                                        nic.network_id)
                 except base.NetworkNotFound:
                     LOG.debug("Network %d not found ", nic.network_id)
-                except Exception:
-                    LOG.exception("Unable to unplug network")
+                except Exception as e:
+                    LOG.exception("Unable to unplug network due to: %s", str(e))
+                    raise e
         return added_ports
 
     def revert(self, result, deltas, *args, **kwargs):
@@ -683,8 +686,12 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(subnet.cidr)
             if conf_floating_ip.lower() == 'dhcp':
                 if not a10_utils.check_ip_in_subnet_range(device_vrid_ip, subnet_ip, subnet_mask):
-                    self.fip_port = self.network_driver.create_port(subnet.network_id,
-                                                                    member.subnet_id)
+                    try:
+                        self.fip_port = self.network_driver.create_port(subnet.network_id,
+                                                                        member.subnet_id)
+                    except Exception as e:
+                        LOG.error("Failed to create neutron port for member: %s", member.id)
+                        raise e
 
             else:
                 conf_floating_ip = a10_utils.get_patched_ip_address(conf_floating_ip, subnet.cidr)
@@ -694,17 +701,31 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                     raise exceptions.VRIDIPNotInSubentRangeError(msg)
 
                 if conf_floating_ip != device_vrid_ip:
-                    self.fip_port = self.network_driver.create_port(subnet.network_id,
-                                                                    member.subnet_id,
-                                                                    fixed_ip=conf_floating_ip)
+                    try:
+                        self.fip_port = self.network_driver.create_port(subnet.network_id,
+                                                                        member.subnet_id,
+                                                                        fixed_ip=conf_floating_ip)
+                    except Exception as e:
+                        LOG.error("Failed to create neutron port for member: %s with "
+                                  "floating IP %s", member.id, conf_floating_ip)
+                        raise e
 
             if self.fip_port:
                 self.update_device_vrid_fip(self.fip_port.fixed_ips[0].ip_address, vthunder, vrid)
 
         if vrid and vrid.vrid_port_id and (self.fip_port or not conf_floating_ip):
-            self.network_driver.delete_port(vrid.vrid_port_id)
+            try:
+                self.network_driver.delete_port(vrid.vrid_port_id)
+            except Exception as e:
+                LOG.error("Failed to delete neutron port: %s for member %s on vrid %s",
+                          vrid.vrid_port_id, member.id, str(vrid))
+                raise e
             if not conf_floating_ip:
-                self.axapi_client.vrrpa.delete(vrid.vrid)
+                try:
+                    self.axapi_client.vrrpa.delete(vrid.vrid)
+                except Exception as e:
+                    LOG.exceptions("Failed to delete vrid %s for member %s", str(vrid), member.id)
+                    raise e
 
         return self.fip_port
 
@@ -715,22 +736,32 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             return
 
         if self.fip_port:
+            LOG.warning("Reverting VRRP floating IP delta task for vrid %s on member %s",
+                        str(vrid), member.id)
             try:
                 self.network_driver.delete_port(self.fip_port.id)
                 if vrid:
                     self.axapi_client.vrrpa.update(vrid.vrid, vrid.vrid_floating_ip)
+            except req_exceptions.ConnectionError:
+                LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
             except Exception as e:
-                LOG.exception("Failed to revert VRRP floating IP delta task: %s", str(e))
+                LOG.exception("Failed to revert VRRP floating IP delta task for member: %s"
+                              " due to %s", member.id, str(e))
 
     def update_device_vrid_fip(self, conf_floating_ip, vthunder, vrid):
         vrid_value = CONF.a10_global.vrid
         if vrid:
             vrid_value = vrid.vrid
-        if not vthunder.partition_name or vthunder.partition_name == 'shared':
-            self.axapi_client.vrrpa.update(vrid_value, floating_ip=conf_floating_ip)
-        else:
-            self.axapi_client.vrrpa.update(vrid_value, floating_ip=conf_floating_ip,
-                                           is_partition=True)
+        try:
+            if not vthunder.partition_name or vthunder.partition_name == 'shared':
+                self.axapi_client.vrrpa.update(vrid_value, floating_ip=conf_floating_ip)
+            else:
+                self.axapi_client.vrrpa.update(vrid_value, floating_ip=conf_floating_ip,
+                                               is_partition=True)
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+            LOG.exception("Failed to update VRRP floating IP %s for vrid: %s",
+                          conf_floating_ip, str(vrid_value))
+            raise e
 
 
 class DeleteMemberVRIDPort(BaseNetworkTask):
@@ -746,6 +777,7 @@ class DeleteMemberVRIDPort(BaseNetworkTask):
                 return True
             except Exception as e:
                 LOG.exception("Failed to delete vrid port : %s", str(e))
+                raise e
         return False
 
 

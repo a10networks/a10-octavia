@@ -59,7 +59,6 @@ def validate_partition(hardware_device):
     if len(partition_name) > 14:
         raise ValueError("Supplied partition value '%s' exceeds maximum length 14" %
                          (partition_name))
-    return hardware_device
 
 
 def validate_params(hardware_info):
@@ -69,10 +68,7 @@ def validate_params(hardware_info):
         if all(hardware_info[x] is not None for x in ('project_id', 'ip_address',
                                                       'username', 'password', 'device_name')):
             validate_ipv4(hardware_info['ip_address'])
-            hardware_info = validate_partition(hardware_info)
-            if 'vrid_floating_ip' in hardware_info:
-                if hardware_info['vrid_floating_ip'].lower() != 'dhcp':
-                    validate_ipv4(hardware_info['vrid_floating_ip'])
+            validate_partition(hardware_info)
             return hardware_info
     raise cfg.ConfigFileValueError('Please check your configuration. The params `project_id`, '
                                    '`ip_address`, `username`, `password` and `device_name` '

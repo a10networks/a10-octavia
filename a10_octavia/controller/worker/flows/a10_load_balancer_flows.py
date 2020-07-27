@@ -50,12 +50,8 @@ class LoadBalancerFlows(object):
         self.vthunder_flows = vthunder_flows.VThunderFlows()
 
     def get_create_load_balancer_flow(self, topology, listeners=None):
-        """Creates a conditional graph flow that allocates a loadbalancer to
+        """Flow to create a load balancer"""
 
-        two spare amphorae.
-        :raises InvalidTopology: Invalid topology specified
-        :return: The graph flow for creating a loadbalancer.
-        """
         f_name = constants.CREATE_LOADBALANCER_FLOW
         lb_create_flow = linear_flow.Flow(f_name)
         lb_create_flow.add(lifecycle_tasks.LoadBalancerIDToErrorOnRevertTask(
@@ -90,17 +86,11 @@ class LoadBalancerFlows(object):
             prefix=constants.ROLE_STANDALONE,
             role=constants.ROLE_STANDALONE), )
 
-    # IMP: lets think about this later
     def _create_active_standby_topology(
             self, lf_name=constants.CREATE_LOADBALANCER_FLOW):
-        # When we boot up amphora for an active/standby topology,
-        # we should leverage the Nova anti-affinity capabilities
-        # to place the amphora on different hosts, also we need to check
-        # if anti-affinity-flag is enabled or not:
         anti_affinity = CONF.a10_nova.enable_anti_affinity
         flows = []
         if anti_affinity:
-            # we need to create a server group first
             flows.append(
                 a10_compute_tasks.NovaServerGroupCreate(
                     name=lf_name + '-' +
@@ -108,7 +98,6 @@ class LoadBalancerFlows(object):
                     requires=(constants.LOADBALANCER_ID),
                     provides=constants.SERVER_GROUP_ID))
 
-            # update server group id in lb table
             flows.append(
                 database_tasks.UpdateLBServerGroupInDB(
                     name=lf_name + '-' +
@@ -129,11 +118,7 @@ class LoadBalancerFlows(object):
 
     def get_post_lb_vthunder_association_flow(self, prefix, topology,
                                               mark_active=True):
-        """Reload the loadbalancer and create networking subflows for
-
-            created/allocated amphorae.
-        :return: Post amphorae association subflow
-        """
+        """Flow to manage networking after lb creation"""
 
         sf_name = prefix + '-' + constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
         post_create_lb_flow = linear_flow.Flow(sf_name)
@@ -159,10 +144,8 @@ class LoadBalancerFlows(object):
         return post_create_lb_flow
 
     def get_delete_load_balancer_flow(self, lb, deleteCompute):
-        """Creates a flow to delete a load balancer.
+        """Flow to delete load balancer"""
 
-        :returns: The flow for deleting a load balancer
-        """
         store = {}
         delete_LB_flow = linear_flow.Flow(constants.DELETE_LOADBALANCER_FLOW)
         delete_LB_flow.add(lifecycle_tasks.LoadBalancerToErrorOnRevertTask(
@@ -171,7 +154,6 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
-            name="set load balancer status PENDING_DELETE",
             requires=a10constants.VTHUNDER,
             inject={"status": constants.PENDING_DELETE}))
         delete_LB_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
@@ -191,8 +173,8 @@ class LoadBalancerFlows(object):
         # delete_LB_flow.add(listeners_delete)
         # delete_LB_flow.add(network_tasks.UnplugVIP(
         #    requires=constants.LOADBALANCER))
-        # delete_LB_flow.add(network_tasks.DeallocateVIP(
-        #    requires=constants.LOADBALANCER))
+        delete_LB_flow.add(network_tasks.DeallocateVIP(
+            requires=constants.LOADBALANCER))
         if deleteCompute:
             delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
                 requires=constants.LOADBALANCER))
@@ -213,10 +195,8 @@ class LoadBalancerFlows(object):
         return (delete_LB_flow, store)
 
     def get_new_lb_networking_subflow(self, topology):
-        """Create a sub-flow to setup networking.
+        """Subflow to setup networking for amphora"""
 
-        :returns: The flow to setup networking for a new amphora
-        """
         new_LB_net_subflow = linear_flow.Flow(constants.
                                               LOADBALANCER_NETWORKING_SUBFLOW)
         new_LB_net_subflow.add(a10_network_tasks.PlugVIP(
@@ -269,9 +249,8 @@ class LoadBalancerFlows(object):
         return new_LB_net_subflow
 
     def get_update_load_balancer_flow(self):
-        """Creates a flow to update a load balancer.
-        :returns: The flow for update a load balancer
-        """
+        """Flow to update load balancer."""
+
         update_LB_flow = linear_flow.Flow(constants.UPDATE_LOADBALANCER_FLOW)
         update_LB_flow.add(lifecycle_tasks.LoadBalancerToErrorOnRevertTask(
             requires=constants.LOADBALANCER))
@@ -279,7 +258,6 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
-            name="set load balancer status PENDING_UPDATE",
             requires=a10constants.VTHUNDER,
             inject={"status": constants.PENDING_UPDATE}))
         update_LB_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
@@ -304,10 +282,8 @@ class LoadBalancerFlows(object):
         return update_LB_flow
 
     def get_create_rack_vthunder_load_balancer_flow(self, vthunder_conf, topology, listeners=None):
-        """Creates a linear flow to create rack vthunder
+        """Flow to create rack load balancer"""
 
-        :return: The linear flow for creating a loadbalancer.
-        """
         f_name = constants.CREATE_LOADBALANCER_FLOW
         lb_create_flow = linear_flow.Flow(f_name)
 
@@ -333,7 +309,7 @@ class LoadBalancerFlows(object):
 
     def get_post_lb_rack_vthunder_association_flow(self, prefix, topology,
                                                    mark_active=True):
-        """Reload the loadbalancer and update loadbalancer in database."""
+        """Flow to manage networking after rack lb creation"""
 
         sf_name = prefix + '-' + constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
         post_create_lb_flow = linear_flow.Flow(sf_name)

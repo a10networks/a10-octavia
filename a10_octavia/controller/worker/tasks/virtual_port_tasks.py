@@ -36,6 +36,7 @@ class ListenersParent(object):
         autosnat = CONF.listener.autosnat
         conn_limit = CONF.listener.conn_limit
         use_rcv_hop = CONF.listener.use_rcv_hop_for_resp
+        ha_conn_mirror = CONF.listener.ha_conn_mirror
 
         virtual_port_templates = {}
         template_virtual_port = CONF.listener.template_virtual_port
@@ -67,6 +68,8 @@ class ListenersParent(object):
             listener.protocol = listener.protocol.lower()
             virtual_port_template = CONF.listener.template_http
             virtual_port_templates['template-http'] = virtual_port_template
+            ha_conn_mirror = None
+            LOG.warning("'ha_conn_mirror' is not allowed for HTTP, TERMINATED_HTTPS listener.")
         else:
             virtual_port_template = CONF.listener.template_tcp
             virtual_port_templates['template-tcp'] = virtual_port_template
@@ -90,7 +93,7 @@ class ListenersParent(object):
                    status=status, no_dest_nat=no_dest_nat,
                    autosnat=autosnat, ipinip=ipinip,
                    # TODO(hthompson6) resolve in acos client
-                   # ha_conn_mirror=ha_conn_mirror,
+                   ha_conn_mirror=ha_conn_mirror,
                    use_rcv_hop=use_rcv_hop,
                    conn_limit=conn_limit,
                    virtual_port_templates=virtual_port_templates,
@@ -113,8 +116,6 @@ class ListenerCreate(ListenersParent, task.Task):
     @axapi_client_decorator
     def revert(self, loadbalancer, listener, vthunder, *args, **kwargs):
         LOG.warning("Reverting creation of listener: %s", listener.id)
-        listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
-                                                                     listener.protocol)
         try:
             self.axapi_client.slb.virtual_server.vport.delete(
                 loadbalancer.id, listener.id, listener.protocol,
@@ -133,9 +134,10 @@ class ListenerUpdate(ListenersParent, task.Task):
     @axapi_client_decorator
     def execute(self, loadbalancer, listener, vthunder):
         try:
-            self.set(self.axapi_client.slb.virtual_server.vport.update,
-                     loadbalancer, listener)
-            LOG.debug("Successfully updated listener: %s", listener.id)
+            if listener:
+                self.set(self.axapi_client.slb.virtual_server.vport.update,
+                         loadbalancer, listener)
+                LOG.debug("Successfully updated listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update listener: %s", listener.id)
             raise e

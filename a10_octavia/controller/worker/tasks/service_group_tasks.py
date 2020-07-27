@@ -14,7 +14,10 @@
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from requests.exceptions import ConnectionError
 from taskflow import task
+
+import acos_client.errors as acos_errors
 
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
@@ -49,18 +52,22 @@ class PoolCreate(PoolParent, task.Task):
     def execute(self, pool, vthunder):
         try:
             self.set(self.axapi_client.slb.service_group.create, pool)
-            LOG.debug("Pool created successfully: %s", pool.id)
+            LOG.debug("Successfully created pool: %s", pool.id)
             return pool
-        except Exception as e:
-            LOG.exception("Failed to create pool: %s", str(e))
-            raise
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to create pool: %s", pool.id)
+            raise e
 
     @axapi_client_decorator
     def revert(self, pool, vthunder, *args, **kwargs):
+        LOG.warning("Reverting creation of pool: %s", pool.id)
         try:
             self.axapi_client.slb.service_group.delete(pool.id)
+        except ConnectionError:
+            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
-            LOG.warning("Failed to revert create pool: %s", str(e))
+            LOG.exception("Failed to revert creation of pool: %s due to: %s",
+                          pool.id, str(e))
 
 
 class PoolDelete(task.Task):
@@ -70,9 +77,10 @@ class PoolDelete(task.Task):
     def execute(self, pool, vthunder):
         try:
             self.axapi_client.slb.service_group.delete(pool.id)
-            LOG.debug("Pool deleted successfully: %s", pool.id)
-        except Exception as e:
-            LOG.warning("Failed to delete pool: %s", str(e))
+            LOG.debug("Successfully deleted pool: %s", pool.id)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to delete pool: %s", pool.id)
+            raise e
 
 
 class PoolUpdate(PoolParent, task.Task):
@@ -80,9 +88,10 @@ class PoolUpdate(PoolParent, task.Task):
 
     @axapi_client_decorator
     def execute(self, pool, vthunder, update_dict):
-        pool.__dict__.update(update_dict)
+        pool.update(update_dict)
         try:
             self.set(self.axapi_client.slb.service_group.update, pool)
-            LOG.debug("Pool updated successfully: %s", pool.id)
-        except Exception as e:
-            LOG.warning("Failed to update pool: %s", str(e))
+            LOG.debug("Successfully updated pool: %s", pool.id)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to update pool: %s", pool.id)
+            raise e
