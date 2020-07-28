@@ -19,6 +19,7 @@ from requests.exceptions import ConnectionError
 from taskflow import task
 
 from a10_octavia.common import a10constants
+from a10_octavia.common import exceptions
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
@@ -84,6 +85,9 @@ class ListenersParent(object):
             LOG.warning("'no_dest_nat' is not allowed for HTTP," +
                         "HTTPS or TERMINATED_HTTPS listener.")
             no_dest_nat = False
+
+        if autosnat and no_dest_nat:
+            raise exceptions.SNATConfigurationError()
 
         set_method(loadbalancer.id, listener.id,
                    listener.protocol,
