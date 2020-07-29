@@ -17,6 +17,9 @@ from oslo_log import log as logging
 from requests.exceptions import ConnectionError
 from taskflow import task
 
+from octavia.common import constants
+from octavia.common import exceptions
+
 import acos_client.errors as acos_errors
 
 from a10_octavia.common import openstack_mappings
@@ -36,8 +39,10 @@ class PoolParent(object):
         service_group_temp['template-server'] = CONF.service_group.template_server
         service_group_temp['template-port'] = CONF.service_group.template_port
         service_group_temp['template-policy'] = CONF.service_group.template_policy
-        protocol = openstack_mappings.service_group_protocol(self.axapi_client, pool.protocol)
-        lb_method = openstack_mappings.service_group_lb_method(self.axapi_client, pool.lb_algorithm)
+        protocol = openstack_mappings.service_group_protocol(
+            self.axapi_client, pool.protocol)
+        lb_method = openstack_mappings.service_group_lb_method(
+            self.axapi_client, pool.lb_algorithm)
         set_method(pool.id,
                    protocol=protocol,
                    lb_method=lb_method,
@@ -51,6 +56,11 @@ class PoolCreate(PoolParent, task.Task):
     @axapi_client_decorator
     def execute(self, pool, vthunder):
         try:
+            if pool.protocol == constants.PROTOCOL_PROXY:
+                raise exceptions.ProviderUnsupportedOptionError(
+                    prov="A10",
+                    user_msg="A pool with protocol PROXY is not supported by A10 provider.")
+
             self.set(self.axapi_client.slb.service_group.create, pool)
             LOG.debug("Successfully created pool: %s", pool.id)
             return pool
@@ -64,7 +74,8 @@ class PoolCreate(PoolParent, task.Task):
         try:
             self.axapi_client.slb.service_group.delete(pool.id)
         except ConnectionError:
-            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
+            LOG.exception(
+                "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
             LOG.exception("Failed to revert creation of pool: %s due to: %s",
                           pool.id, str(e))
