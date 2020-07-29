@@ -69,8 +69,9 @@ class ListenersParent(object):
             listener.protocol = listener.protocol.lower()
             virtual_port_template = CONF.listener.template_http
             virtual_port_templates['template-http'] = virtual_port_template
-            ha_conn_mirror = None
-            LOG.warning("'ha_conn_mirror' is not allowed for HTTP, TERMINATED_HTTPS listener.")
+            if ha_conn_mirror is not None:
+                ha_conn_mirror = None
+                LOG.warning("'ha_conn_mirror' is not allowed for HTTP, TERMINATED_HTTPS listener.")
         else:
             virtual_port_template = CONF.listener.template_tcp
             virtual_port_templates['template-tcp'] = virtual_port_template

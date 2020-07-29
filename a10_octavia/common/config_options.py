@@ -78,7 +78,7 @@ A10_LISTENER_OPTS = [
                 default=False,
                 help=_('Disable destination NAT')),
     cfg.BoolOpt('ha_conn_mirror',
-                default=False,
+                default=None,
                 help=_('Enable for HA Conn sync')),
     cfg.StrOpt('template_virtual_port',
                default=None,
