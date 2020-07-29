@@ -17,13 +17,13 @@ POSITIONAL ARUGMENTS:
 
 OPTIONS:
   --help                     prints this message
-  --setup-provider-vlan      sets up provider ovs bridge br-vlanp, neutron vlan config and
-                             openstack vlan networks.
+  --setup-provider-flat      sets up provider ovs bridge br-provider, neutron flat config and
+                             openstack flat networks.
                              make sure to delete all non devstack entities created by user
                              in openstack before running this command. 
-  --teardown-provider-vlan   tears down the openstack vlan networks, ovs bridge settings and
-                             removes neutron vlan config.
-                             make sure to delete all vlan entities created by user
+  --teardown-provider-flat   tears down the openstack flat networks, ovs bridge settings and
+                             removes neutron flat config.
+                             make sure to delete all flat net entities created by user
                              in openstack before running this command.
 EOF
 }
@@ -76,15 +76,15 @@ function add_tap_interface {
 
 function setup_host_networking {
     add_veth_pair veth0 veth1 10.0.0.1
-    add_veth_pair veth2 veth3 "${1}.1"
+    add_veth_pair veth2 veth3 "${1}1"
 
     add_tap_interface tap1
     add_tap_interface tap2
 
-    pvlan_dhcp_running=$(ps -ef | grep -v grep | grep setup-vlanp-dnsmasq.pid)
-    if [[ -z ${pvlan_dhcp_running} ]]; then
-        echo "[+] Starting DHCP server for management and vlan networks" 
-        sudo dnsmasq --no-hosts --pid-file=/var/run/setup-vlanp-dnsmasq.pid --dhcp-range=interface:vnet0,10.0.0.40,10.0.0.90,72h --dhcp-range=interface:vnet2,"${1}.40","${1}.90",72h --dhcp-option=19,0 --local-service --bind-dynamic --conf-file=
+    pflat_dhcp_running=$(ps -ef | grep -v grep | grep setup-flat-dnsmasq.pid)
+    if [[ -z ${pflat_dhcp_running} ]]; then
+        echo "[+] Starting DHCP server for management and flat networks" 
+        sudo dnsmasq --no-hosts --pid-file=/var/run/setup-flat-dnsmasq.pid --dhcp-range=interface:vnet0,10.0.0.40,10.0.0.90,72h --dhcp-range=interface:vnet2,"${1}40","${1}90",72h --dhcp-option=19,0 --local-service --bind-dynamic --conf-file=
     fi
 }
 
@@ -106,7 +106,6 @@ function add_port_to_bridge {
     if [[ ${exists} -ne 1 ]]; then
             echo "[+] Adding port ${port} to OVS bridge ${bridge}"
             sudo ovs-vsctl add-port ${bridge} ${port}
-        fi
     fi
 }
 
@@ -115,9 +114,9 @@ function setup_host_ovs_bridges {
     add_port_to_bridge br-mgmt veth1
 
     add_ovs_bridge br-provider
-    add_port_to_bridge br-vlanp veth3
+    add_port_to_bridge br-provider veth3
 
-    add_port_to_bridge br-vlanp tap1
+    add_port_to_bridge br-provider tap1
 }
 
 function patch_conf_files {
@@ -141,13 +140,19 @@ function patch_conf_files {
         sed -i "s/mechanism_drivers = .*/mechanism_drivers = openvswitch/" /etc/neutron/plugins/ml2/ml2_conf.ini
     fi
 
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "flat_networks = public,")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting flat_networks /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/flat_networks = .*/flat_networks = provider/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi  
+
     exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "tenant_network_types = vxlan")
     if [[ ${exists} -eq 1 ]]; then
         echo "[=] Overwriting tenant_network_types in /etc/neutron/plugins/ml2/ml2_conf.ini"
         sed -i "s/tenant_network_types = .*/tenant_network_types = /" /etc/neutron/plugins/ml2/ml2_conf.ini
     fi
 
-    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "provider:br-vlanp")
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "provider:br-provider")
     if [[ ${exists} -ne 1 ]]; then
         echo "[=] Overwriting bridge_mappings in /etc/neutron/plugins/ml2/ml2_conf.ini"
         sed -i "s/bridge_mappings = .*/bridge_mappings = public:br-ex,provider:br-provider/" /etc/neutron/plugins/ml2/ml2_conf.ini
@@ -195,7 +200,7 @@ function create_network {
     fi
 }
 
-function setup_provider_vlan {
+function setup_provider_flat {
     host_install_packages
     setup_host_networking ${1}
     setup_host_ovs_bridges
@@ -204,7 +209,7 @@ function setup_provider_vlan {
     restart_services
     sleep 2
 
-    create_network provider-flat provider-flat-subnet "${1}.0/24" start="${1}.100",end="${1}.200"
+    create_network provider-flat provider-flat-subnet "${1}0/24" start="${1}100",end="${1}200"
 }
 
 function delete_network {
@@ -237,7 +242,7 @@ function delete_ostack_networks {
 }
 
 function unpatch_conf_files {
-    echo "[-] Removing vlan patch in config files"
+    echo "[-] Removing flat patch in config files"
 
     local exists=$(check_exists "/bin/cat /etc/neutron/neutron.conf" "service_plugins = neutron.services.l3_router.l3_router_plugin.L3RouterPlugin")
     if [[ ${exists} -ne 1 ]]; then
@@ -257,13 +262,19 @@ function unpatch_conf_files {
         sed -i "s/mechanism_drivers = .*/mechanism_drivers = openvswitch,linuxbridge/" /etc/neutron/plugins/ml2/ml2_conf.ini
     fi
 
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "flat_networks = provider")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting flat_networks /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/flat_networks = provider/flat_networks = public,/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi  
+
     exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "tenant_network_types = vxlan")
     if [[ ${exists} -ne 1 ]]; then
         echo "[=] Overwriting tenant_network_types in /etc/neutron/plugins/ml2/ml2_conf.ini"
         sed -i "s/tenant_network_types =/tenant_network_types = vxlan/" /etc/neutron/plugins/ml2/ml2_conf.ini
     fi
 
-    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "provider:br-vlanp")
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "provider:br-provider")
     if [[ ${exists} -eq 1 ]]; then
         echo "[=] Overwriting bridge_mappings in /etc/neutron/plugins/ml2/ml2_conf.ini"
         sed -i "s/bridge_mappings = public:br-ex,provider:br-provider/bridge_mappings = public:br-ex/" /etc/neutron/plugins/ml2/ml2_conf.ini
@@ -271,15 +282,15 @@ function unpatch_conf_files {
 }
 
 function delete_ovs_bridges {
-    local exists=$(check_exists "sudo ovs-vsctl list-br" "br-vlanp")
+    local exists=$(check_exists "sudo ovs-vsctl list-br" "br-provider")
     if [[ ${exists} -eq 1 ]]; then
-        echo "[-] Deleting tap ports from br-vlanp"
+        echo "[-] Deleting tap ports from br-provider"
         sudo ovs-vsctl del-port br-provider tap1
 
-        echo "[-] Deleting veth ports from br-vlanp"
+        echo "[-] Deleting veth ports from br-provider"
         sudo ovs-vsctl del-port br-provider veth3
 
-        echo "[-] Deleting OVS bridge br-vlanp"
+        echo "[-] Deleting OVS bridge br-provider"
         sudo ovs-vsctl del-br br-provider
     fi
 
@@ -314,18 +325,18 @@ function delete_tap_interface {
 }
 
 function delete_host_tap_and_veth_interfaces {
-    local pvlan_dhcp_pid=$(ps -ef | grep -v grep | grep setup-vlanp-dnsmasq.pid | awk '{print $2}')
-    if [[ -n ${pvlan_dhcp_pid} ]]; then
-        echo "[-] Stoping DHCP server for management and vlan networks"
-        sudo kill -9 ${pvlan_dhcp_pid}
-        sudo rm -f /var/run/setup-vlanp-dnsmasq.pid
+    local pflat_dhcp_pid=$(ps -ef | grep -v grep | grep setup-flatp-dnsmasq.pid | awk '{print $2}')
+    if [[ -n ${pflat_dhcp_pid} ]]; then
+        echo "[-] Stoping DHCP server for management and flat networks"
+        sudo kill -9 ${pflat_dhcp_pid}
+        sudo rm -f /var/run/setup-flatp-dnsmasq.pid
     fi
 
     delete_veth_pair veth0
     delete_tap_interface tap1
 }
 
-function teardown_provider_vlan {
+function teardown_provider_flat {
     delete_ostack_networks
     unpatch_conf_files
     delete_ovs_bridges
@@ -333,8 +344,8 @@ function teardown_provider_vlan {
     restart_services
 }
 
-arg_setup_provider_vlan=false
-arg_teardown_provider_vlan=false
+arg_setup_provider_flat=false
+arg_teardown_provider_flat=false
 
 function set_args {
     if [[ $# -eq 0 ]] || [[ $# -gt 2 ]]; then
@@ -342,37 +353,35 @@ function set_args {
         usage
         exit 0
     fi
-    while [ "${1:-}" != "" ]; do
-        case "$1" in
-            "--help")
-                usage
-                exit 0
-                ;;
-            "--setup-provider-vlan")
-                arg_setup_provider_vlan=true
-                ;;
-            "--teardown-provider-vlan")
-                arg_teardown_provider_vlan=true
-                ;;
-            *)
-                usage
-                exit 0
-        esac
-        shift
-    done
+    case "$1" in
+        "--help")
+            usage
+            exit 0
+            ;;
+        "--setup-provider-flat")
+            arg_setup_provider_flat=true
+            ;;
+        "--teardown-provider-flat")
+            arg_teardown_provider_flat=true
+            ;;
+        *)
+            usage
+            exit 0
+    esac
+    shift
 }
 
 function main {
     set_args "$@"
-    if [[ $arg_setup_provider_vlan = true ]]; then
+    if [[ $arg_setup_provider_flat = true ]]; then
         net_addr=""
-        IFS='.' read -ra ADDR <<< "$1"
+        IFS='.' read -ra ADDR <<< "$2"
         for i in {0..2}; do
             net_addr+="${ADDR[$i]}."
         done
-        setup_provider_vlan ${net_addr}
+        setup_provider_flat ${net_addr}
     else
-        teardown_provider_vlan
+        teardown_provider_flat
     fi
 }
 
