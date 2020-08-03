@@ -40,7 +40,7 @@ class ListenersParent(object):
 
         virtual_port_templates = {}
         template_virtual_port = CONF.listener.template_virtual_port
-        virtual_port_templates['template-virtual-port'] = template_virtual_port
+        virtual_port_templates['template-virtual-port'] = utils.get_template_name(template_virtual_port)
 
         template_args = {}
 
@@ -67,15 +67,15 @@ class ListenersParent(object):
             # TODO(hthompson6) work around for issue in acos client
             listener.protocol = listener.protocol.lower()
             virtual_port_template = CONF.listener.template_http
-            virtual_port_templates['template-http'] = virtual_port_template
+            virtual_port_templates['template-http'] = utils.get_template_name(virtual_port_template)
             ha_conn_mirror = None
             LOG.warning("'ha_conn_mirror' is not allowed for HTTP, TERMINATED_HTTPS listener.")
         else:
             virtual_port_template = CONF.listener.template_tcp
-            virtual_port_templates['template-tcp'] = virtual_port_template
+            virtual_port_templates['template-tcp'] = utils.get_template_name(virtual_port_template)
 
         virtual_port_template = CONF.listener.template_policy
-        virtual_port_templates['template-policy'] = virtual_port_template
+        virtual_port_templates['template-policy'] = utils.get_template_name(virtual_port_template)
 
         # Add all config filters here
         if no_dest_nat and (

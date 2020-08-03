@@ -17,6 +17,7 @@ import logging
 
 from oslo_config import cfg
 
+from a10_octavia.common import a10constants
 from a10_octavia.common.data_models import Certificate
 
 CONF = cfg.CONF
@@ -59,3 +60,7 @@ def meta(lbaas_obj, key, default):
     except Exception:
         return default
     return meta_json.get(key, default)
+
+
+def get_template_name(template_str):
+    return None if template_str in a10constants.NONE_STR else template_str
