@@ -111,7 +111,8 @@ class CreateVThunderEntry(BaseDatabaseTask):
 class CheckExistingProjectPartitionEntry(BaseDatabaseTask):
     """ Check existing Thunder entry with same project id.
         If exists, ensure the existing IPAddress:Partition
-        is used to configure, otherwise Raise ConfigValueError"""
+        is used to configure, otherwise Raise ConfigValueError
+    """
 
     def execute(self, loadbalancer, vthunder_config):
         vthunder = self.vthunder_repo.get_vthunder_by_project_id(
