@@ -19,6 +19,7 @@ from requests.exceptions import ConnectionError
 from taskflow import task
 
 from a10_octavia.common import a10constants
+from a10_octavia.common import exceptions
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
@@ -67,9 +68,11 @@ class ListenersParent(object):
             # TODO(hthompson6) work around for issue in acos client
             listener.protocol = listener.protocol.lower()
             virtual_port_template = CONF.listener.template_http
+
             virtual_port_templates['template-http'] = utils.get_template_name(virtual_port_template)
-            ha_conn_mirror = None
-            LOG.warning("'ha_conn_mirror' is not allowed for HTTP, TERMINATED_HTTPS listener.")
+            if ha_conn_mirror is not None:
+                ha_conn_mirror = None
+                LOG.warning("'ha_conn_mirror' is not allowed for HTTP, TERMINATED_HTTPS listener.")
         else:
             virtual_port_template = CONF.listener.template_tcp
             virtual_port_templates['template-tcp'] = utils.get_template_name(virtual_port_template)
@@ -84,6 +87,9 @@ class ListenersParent(object):
             LOG.warning("'no_dest_nat' is not allowed for HTTP," +
                         "HTTPS or TERMINATED_HTTPS listener.")
             no_dest_nat = False
+
+        if autosnat and no_dest_nat:
+            raise exceptions.SNATConfigurationError()
 
         set_method(loadbalancer.id, listener.id,
                    listener.protocol,

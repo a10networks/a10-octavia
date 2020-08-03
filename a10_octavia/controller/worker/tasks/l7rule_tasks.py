@@ -11,11 +11,13 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
+from acos_client import errors as acos_errors
 from oslo_config import cfg
 from oslo_log import log as logging
+from requests import exceptions
 from taskflow import task
 
+from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 from a10_octavia.controller.worker.tasks import utils
@@ -35,24 +37,25 @@ class L7RuleParent(object):
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         kargs = {}
-        get_listener = None
+        listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
+                                                                     listener.protocol)
         try:
             self.axapi_client.slb.aflex_policy.create(
                 file=filename, script=script, size=size, action="import")
-            LOG.debug("aFlex policy created successfully.")
-        except Exception as e:
-            LOG.exception("Failed to create/update l7rule: %s", str(e))
-            raise
+            LOG.debug("Successfully created l7 rule: %s", l7rule.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to create/update l7rule: %s", l7rule.id)
+            raise e
 
         try:
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port)
-        except Exception as e:
-            LOG.exception("Failed to get listener for l7rule: %s", str(e))
-            raise
+            LOG.debug("Successfully fetched listener %s for l7rule %s", listener.id, l7rule.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to get listener %s for l7rule: %s", listener.id, l7rule.id)
+            raise e
 
-        aflex_scripts = []
         if 'aflex-scripts' in get_listener['port']:
             aflex_scripts = get_listener['port']['aflex-scripts']
             aflex_scripts.append({"aflex": filename})
@@ -66,10 +69,10 @@ class L7RuleParent(object):
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id, s_pers,
                 c_pers, 1, **kargs)
-            LOG.debug("Listener updated successfully: %s", listener.id)
-        except Exception as e:
-            LOG.exception("Failed to create/update l7rule: %s", str(e))
-            raise
+            LOG.debug("Successfully associated l7rule %s to listener %s", l7rule.id, listener.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to associate l7rule %s to listener %s", l7rule.id, listener.id)
+            raise e
 
 
 class CreateL7Rule(L7RuleParent, task.Task):
@@ -85,7 +88,7 @@ class UpdateL7Rule(L7RuleParent, task.Task):
 
     @axapi_client_decorator
     def execute(self, l7rule, listeners, vthunder, update_dict):
-        l7rule.__dict__.update(update_dict)
+        l7rule.update(update_dict)
         self.set(l7rule, listeners)
 
 
@@ -111,23 +114,25 @@ class DeleteL7Rule(task.Task):
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         kargs = {}
+        listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
+                                                                     listener.protocol)
         try:
             self.axapi_client.slb.aflex_policy.create(
                 file=filename, script=script, size=size, action="import")
-            LOG.debug("aFlex policy deleted successfully.")
-        except Exception as e:
+            LOG.debug("Successfully deleted l7rule: %s", l7rule.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.warning("Failed to delete l7rule: %s", str(e))
-            raise
+            raise e
 
         try:
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port)
-        except Exception as e:
-            LOG.warning("Failed to delete l7rule: %s", str(e))
-            raise
+            LOG.debug("Successfully fetched listener %s for l7rule %s", listener.id, l7rule.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to get listener %s for l7rule: %s", listener.id, l7rule.id)
+            raise e
 
-        aflex_scripts = []
         if 'aflex-scripts' in get_listener['port']:
             aflex_scripts = get_listener['port']['aflex-scripts']
             aflex_scripts.append({"aflex": filename})
@@ -140,7 +145,10 @@ class DeleteL7Rule(task.Task):
                 listener.load_balancer_id, listener.name,
                 listener.protocol, listener.protocol_port, listener.default_pool_id,
                 s_pers, c_pers, 1, **kargs)
-            LOG.debug("Listener updated successfully: %s", listener.id)
-        except Exception as e:
-            LOG.warning("Failed to delete l7rule: %s", str(e))
-            raise
+            LOG.debug("Successfully dissociated l7rule %s from listener %s", l7rule.id, listener.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception(
+                "Failed to dissociate l7rule %s from listener %s",
+                l7rule.id,
+                listener.id)
+            raise e

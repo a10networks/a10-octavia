@@ -19,6 +19,8 @@ from octavia.common import exceptions
 from octavia.i18n import _
 from octavia.network import base
 
+import acos_client.errors as acos_errors
+
 
 class NoDatabaseURL(exceptions.OctaviaException):
     message = _("Must set db connection url in configuration file.")
@@ -145,3 +147,11 @@ class MissingVCSDeviceConfig(base.NetworkException):
         msg = ('Device ids {0} provided in config are not present in VCS' +
                'cluster.').format(device_ids)
         super(MissingVCSDeviceConfig, self).__init__(msg=msg)
+
+
+class SNATConfigurationError(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('SNAT configuration does not work in DSR mode on Thunder '
+               ' `autosnat` and `no_dest_nat` both are set True under `[listener]` '
+               'section in a10-octavia.conf. ')
+        super(SNATConfigurationError, self).__init__(msg=msg)
