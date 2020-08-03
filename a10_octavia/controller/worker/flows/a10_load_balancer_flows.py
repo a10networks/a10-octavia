@@ -289,7 +289,9 @@ class LoadBalancerFlows(object):
 
         lb_create_flow.add(lifecycle_tasks.LoadBalancerIDToErrorOnRevertTask(
             requires=constants.LOADBALANCER_ID))
-
+        lb_create_flow.add(a10_database_tasks.CheckExistingProjectPartitionEntry(
+            inject={a10constants.VTHUNDER_CONFIG: vthunder_conf},
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG)))
         lb_create_flow.add(self.vthunder_flows.get_rack_vthunder_for_lb_subflow(
             vthunder_conf=vthunder_conf,
             prefix=constants.ROLE_STANDALONE,

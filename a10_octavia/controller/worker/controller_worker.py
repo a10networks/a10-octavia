@@ -283,6 +283,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             constants.TOPOLOGY: topology
         }
         if lb.project_id in CONF.hardware_thunder.devices:
+            store.update({constants.LOADBALANCER: lb})
             create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
                 vthunder_conf=CONF.hardware_thunder.devices[lb.project_id],
                 topology=topology, listeners=lb.listeners)
