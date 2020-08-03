@@ -144,10 +144,10 @@ class InvalidVCSDeviceCount(cfg.ConfigFileValueError):
 
 class IpAddressPartitionCollisionInProjectError(cfg.ConfigFileValueError):
 
-    def __init__(self, given_ip_part_config, existing_ip_part_config, project_id):
+    def __init__(self, config_ip_part, existing_ip_part, project_id):
         msg = ('Given IPAddress:Partition `{0}` in a10-octavia.conf is invalid. '
                'There is an existing IPAddress:Partition `{1}` in use for project {2}.').format(
-            given_ip_part_config, existing_ip_part_config, project_id)
+            config_ip_part, existing_ip_part, project_id)
         super(IpAddressPartitionCollisionInProjectError, self).__init__(msg=msg)
 
 

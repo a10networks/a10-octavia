@@ -75,12 +75,13 @@ class DeleteVirtualServerTask(task.Task):
 
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
-        try:
-            self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
-            LOG.debug("Successfully deleted load balancer: %s", loadbalancer.id)
-        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
-            LOG.exception("Failed to delete load balancer: %s", loadbalancer.id)
-            raise e
+        if vthunder:
+            try:
+                self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
+                LOG.debug("Successfully deleted load balancer: %s", loadbalancer.id)
+            except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+                LOG.exception("Failed to delete load balancer: %s", loadbalancer.id)
+                raise e
 
 
 class UpdateVirtualServerTask(LoadBalancerParent, task.Task):

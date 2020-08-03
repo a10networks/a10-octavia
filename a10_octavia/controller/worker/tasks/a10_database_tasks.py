@@ -114,19 +114,18 @@ class CheckExistingProjectPartitionEntry(BaseDatabaseTask):
         is used to configure, otherwise Raise ConfigValueError"""
 
     def execute(self, loadbalancer, vthunder_config):
-        project_id = loadbalancer.project_id
         vthunder = self.vthunder_repo.get_vthunder_by_project_id(
             db_apis.get_session(),
             project_id=loadbalancer.project_id)
         if vthunder is None:
             return
         existing_ip_addr_partition = '{}:{}'.format(vthunder.ip_address, vthunder.partition_name)
-        given_ip_addr_partition = '{}:{}'.format(
-            vthunder_config.ip_address, vthunder_config.partition_name)
-        if existing_ip_addr_partition != given_ip_addr_partition:
-            raise exceptions.IpAddressPartitionCollisionInProjectError(given_ip_addr_partition,
+        config_ip_addr_partition = '{}:{}'.format(vthunder_config.ip_address,
+                                                  vthunder_config.partition_name)
+        if existing_ip_addr_partition != config_ip_addr_partition:
+            raise exceptions.IpAddressPartitionCollisionInProjectError(config_ip_addr_partition,
                                                                        existing_ip_addr_partition,
-                                                                       project_id)
+                                                                       loadbalancer.project_id)
 
 
 class DeleteVThunderEntry(BaseDatabaseTask):
