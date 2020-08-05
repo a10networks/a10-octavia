@@ -155,6 +155,8 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
     def delete_port(self, port_id):
         try:
             self.neutron_client.delete_port(port_id)
+        except neutron_client_exceptions.PortNotFoundClient:
+            pass
         except Exception:
             message = "Error deleting port: {0}".format(port_id)
             LOG.exception(message)
