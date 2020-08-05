@@ -101,4 +101,3 @@ DELETE_MEMBERS_SUBFLOW_WITH_POOL_DELETE_FLOW = 'delete-members-subflow-with-pool
 HANDLE_VRID_MEMBER_SUBFLOW = 'handle-vrid-member-subflow'
 SPARE_VTHUNDER_CREATE = 'spare-vthunder-create'
 LB_TO_VTHUNDER_SUBFLOW = 'lb-to-vthunder-subflow'
-NONE_STR = ["None"]
