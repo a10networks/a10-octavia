@@ -59,7 +59,8 @@ class PoolCreate(PoolParent, task.Task):
             if pool.protocol == constants.PROTOCOL_PROXY:
                 raise exceptions.ProviderUnsupportedOptionError(
                     prov="A10",
-                    user_msg="A pool with protocol PROXY is not supported by A10 provider.")
+                    user_msg=("A pool with protocol PROXY is not supported by A10 provider."
+                              "Failed to create pool {0}").format(pool.id))
 
             self.set(self.axapi_client.slb.service_group.create, pool)
             LOG.debug("Successfully created pool: %s", pool.id)
