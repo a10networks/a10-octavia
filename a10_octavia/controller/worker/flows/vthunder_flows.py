@@ -355,10 +355,6 @@ class VThunderFlows(object):
 
         amp_for_lb_flow = linear_flow.Flow(sf_name)
 
-        amp_for_lb_flow.add(database_tasks.ReloadLoadBalancer(
-            name=sf_name + '-' + 'reload_loadbalancer',
-            requires=constants.LOADBALANCER_ID,
-            provides=constants.LOADBALANCER))
         amp_for_lb_flow.add(a10_database_tasks.CreateRackVthunderEntry(
             name=sf_name + '-' + 'create_rack_vThunder_entry_in_database',
             inject={a10constants.VTHUNDER_CONFIG: vthunder_conf},

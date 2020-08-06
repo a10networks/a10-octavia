@@ -27,6 +27,7 @@ from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 
 from a10_octavia.common import a10constants
+from a10_octavia.common import exceptions
 from a10_octavia.common import utils
 from a10_octavia.db import repositories as a10_repo
 
@@ -105,6 +106,27 @@ class CreateVThunderEntry(BaseDatabaseTask):
                 db_apis.get_session(), loadbalancer_id=loadbalancer.id)
         except NoResultFound:
             LOG.error("Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
+
+
+class CheckExistingProjectPartitionEntry(BaseDatabaseTask):
+    """ Check existing Thunder entry with same project id.
+        If exists, ensure the existing IPAddress:Partition
+        is used to configure, otherwise Raise ConfigValueError
+    """
+
+    def execute(self, loadbalancer, vthunder_config):
+        vthunder = self.vthunder_repo.get_vthunder_by_project_id(
+            db_apis.get_session(),
+            project_id=loadbalancer.project_id)
+        if vthunder is None:
+            return
+        existing_ip_addr_partition = '{}:{}'.format(vthunder.ip_address, vthunder.partition_name)
+        config_ip_addr_partition = '{}:{}'.format(vthunder_config.ip_address,
+                                                  vthunder_config.partition_name)
+        if existing_ip_addr_partition != config_ip_addr_partition:
+            raise exceptions.IpAddressPartitionCollisionInProjectError(config_ip_addr_partition,
+                                                                       existing_ip_addr_partition,
+                                                                       loadbalancer.project_id)
 
 
 class DeleteVThunderEntry(BaseDatabaseTask):
