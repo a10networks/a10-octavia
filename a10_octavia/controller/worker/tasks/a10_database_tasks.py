@@ -165,7 +165,7 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
                 parent_project_id = utils.get_parent_project(vthunder.project_id)
                 if parent_project_id:
                     vthunder.partition_name = parent_project_id[:14]
-       return vthunder
+        return vthunder
 
 
 class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):

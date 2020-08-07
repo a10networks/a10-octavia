@@ -78,10 +78,10 @@ def validate_params(hardware_info):
 def check_duplicate_entries(hardware_dict):
     hardware_count_dict = {}
     for hardware_device in hardware_dict.values():
-        if hardware_device.get('hierarchical_multitenancy') != "enable":
+        if hardware_device.hierarchical_multitenancy != "enable":
             candidate = '{}:{}'.format(hardware_device.ip_address, hardware_device.partition_name)
             hardware_count_dict[candidate] = hardware_count_dict.get(candidate, 0) + 1
-    return len([k for k, v in hardware_count_dict.items() if v > 1]) > 0
+    return [k for k, v in hardware_count_dict.items() if v > 1]
 
 
 def convert_to_hardware_thunder_conf(hardware_list):
@@ -101,10 +101,11 @@ def convert_to_hardware_thunder_conf(hardware_list):
         hardware_dict[hardware_device['project_id']] = vthunder_conf
 
         if hardware_device.get('hierarchical_multitency') != "enable":
-            if check_duplicate_entries(hardware_dict):
+            duplicates = check_duplicate_entries(hardware_dict)
+            if duplicates:
                 raise cfg.ConfigFileValueError('Duplicates found for the following '
                                                '\'ip_address:partition_name\' entries: {}'
-                                               .format(list(duplicates_list)))
+                                               .format(list(duplicates)))
     return hardware_dict
 
 
