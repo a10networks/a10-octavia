@@ -302,13 +302,13 @@ Note: If the option is set at the local and global level, then the local configu
 =======
 #### 3bc. Configuring VLAN and Virtual Ethernet for hardware devices
 
-In the VLAN Network setup, for configuring the VLAN and Virtual Ethernet(VE) interfaces in the hardware thunder device, `network_type` setting in `[A10_GLOBAL]` configuration section should be set to "vlan" string. VLAN and VE configuration for the ethernet interfaces or trunk interfaces should be specified in `interface_vlan_map` setting in the `[hardware_thunder]` device configuration section. The `interface_vlan_map` setting is a json map. For a single device it can have key "device_1" with data or two keys "device_1" and "device_2" for aVCS cluster device. While configuring aVCS cluster, floating IP must be provided in `ip_address` field and respective management IP for both devices in `mgmt_ip_address` fields. The `vcs_device_id` value must be provided as either 1 or 2 based on current aVCS cluster status.
+In the VLAN Network setup, for configuring the VLAN and Virtual Ethernet(VE) interfaces in the hardware thunder device, `network_type` setting in `[a10_global]` configuration section should be set to "vlan" string. VLAN and VE configuration for the ethernet interfaces or trunk interfaces should be specified in `interface_vlan_map` setting in the `[hardware_thunder]` device configuration section. The `interface_vlan_map` setting is a json map. For a single device it can have key "device_1" with data or two keys "device_1" and "device_2" for aVCS cluster device. While configuring aVCS cluster, floating IP must be provided in `ip_address` field and respective management IP for both devices in `mgmt_ip_address` fields. The `vcs_device_id` value must be provided as either 1 or 2 based on current aVCS cluster status.
 
 ##### 3bca. Sample a10-octavia.conf for VLAN and VE settings
 
-```shell
 <pre>
-[a10_controller_worker]
+
+[a10_global]
 network_type = "vlan"
 
 [hardware_thunder]
