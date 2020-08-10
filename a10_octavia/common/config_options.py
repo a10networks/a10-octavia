@@ -34,6 +34,9 @@ LOG = logging.getLogger(__name__)
 
 
 A10_GLOBAL_OPTS = [
+    cfg.BoolOpt('use_parent_partition', default=False,
+                help=_('Use parent project partition on Thunder device '
+                       'in hierarchical project architecture.')),
     cfg.IntOpt('vrid', default=0,
                help=_('VRID value')),
     cfg.StrOpt('vrid_floating_ip', default=None,

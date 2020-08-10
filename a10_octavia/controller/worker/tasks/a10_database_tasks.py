@@ -152,11 +152,7 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
         if vthunder is None:
             return None
         if vthunder.undercloud:
-            use_parent_part = False
-            for device in CONF.devices:
-               if device.project_id == loadbalancer.project_id:
-                   use_parent_part = device.use_parent_partition
-                   break
+            use_parent_part = CONF.a10_global.use_parent_partition
             if use_parent_part and not vthunder.hierarchical_multitenancy:
                 LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
                             "configuration will not be applied for loadbalancer: %s",
@@ -242,7 +238,7 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
     """ Create VThunder device entry in DB """
 
     def execute(self, loadbalancer, vthunder_config):
-        hierarchical_multitenancy = CONF.a10_global.enable_hierarchical_multitenancy
+        hierarchical_multitenancy = vthunder_config.hierarchical_multitenancy
         if hierarchical_multitenancy:
             partition_name = vthunder_config.project_id[:14]
         else:
