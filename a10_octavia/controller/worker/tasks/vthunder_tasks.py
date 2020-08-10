@@ -590,7 +590,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
                         str(create_vlan_id))
 
     def tag_interfaces(self, vthunder, create_vlan_id):
-        if vthunder.device_network_map:
+        if vthunder and vthunder.device_network_map:
             network_list = self.network_driver.list_networks()
             vlan_subnet_id_dict = {}
             for network in network_list:
@@ -652,7 +652,7 @@ class TagInterfaceForLB(TagInterfaceBaseTask):
     @axapi_client_decorator
     def revert(self, loadbalancer, vthunder, *args, **kwargs):
         try:
-            if vthunder.device_network_map:
+            if vthunder and vthunder.device_network_map:
                 vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
                 if self.is_vlan_deletable():
                     LOG.warning("Revert TagInterfaceForLB with VLAN id %s", vlan_id)
@@ -695,7 +695,7 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
                         "Skipping TagInterfaceForMember task", member.id)
             return
         try:
-            if vthunder.device_network_map:
+            if vthunder and vthunder.device_network_map:
                 vlan_id = self.get_vlan_id(member.subnet_id, False)
                 if self.is_vlan_deletable():
                     LOG.warning("Reverting tag interface for member with VLAN id %s", vlan_id)
@@ -716,7 +716,7 @@ class DeleteInterfaceTagIfNotInUseForLB(TagInterfaceBaseTask):
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
         try:
-            if vthunder.device_network_map:
+            if vthunder and vthunder.device_network_map:
                 vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
                 if self.is_vlan_deletable():
                     master_device_id = vthunder.device_network_map[0].vcs_device_id
@@ -740,7 +740,7 @@ class DeleteInterfaceTagIfNotInUseForMember(TagInterfaceBaseTask):
                         "Skipping DeleteInterfaceTagIfNotInUseForMember task", member.id)
             return
         try:
-            if vthunder.device_network_map:
+            if vthunder and vthunder.device_network_map:
                 vlan_id = self.get_vlan_id(member.subnet_id, False)
                 if self.is_vlan_deletable():
                     master_device_id = vthunder.device_network_map[0].vcs_device_id
