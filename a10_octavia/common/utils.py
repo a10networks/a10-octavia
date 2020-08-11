@@ -97,18 +97,20 @@ def convert_to_hardware_thunder_conf(hardware_list):
         if hardware_device.get('interface_vlan_map'):
             hardware_device['device_network_map'] = validate_interface_vlan_map(hardware_device)
             del hardware_device['interface_vlan_map']
-        vthunder_conf = data_models.HardwareThunder(**hardware_device)
-        hardware_dict[project_id] = vthunder_conf
-        if hardware_device.get('hierarchical_multitency') != "enable":
-            duplicates = check_duplicate_entries(hardware_dict)
-            if duplicates:
-                raise cfg.ConfigFileValueError('Duplicates found for the following '
-                                               '\'ip_address:partition_name\' entries: {}'
-                                               .format(list(duplicates)))
-        elif hardware_device.get('hierarchical_multitency') != "disable":
+        hierarchical_mt = hardware_device.get('hierarchical_multitency')
+        if hierarchical_mt == "enable":
+            hardware_device["partition_name"] = project_id[0:14]
+        elif hierarchical_mt != "disable" and hierarchical_mt is not None:
             raise cfg.ConfigFileValueError('Option `hierarchical_multitency` specified '
                                            'under project id {} only accepts "enable" and '
-                                           '"disable" as valid option.'.format(project_id))
+                                           '"disable"'.format(project_id))
+        vthunder_conf = data_models.HardwareThunder(**hardware_device)
+        hardware_dict[project_id] = vthunder_conf
+        duplicates = check_duplicate_entries(hardware_dict)
+        if duplicates:
+            raise cfg.ConfigFileValueError('Duplicates found for the following '
+                                           '\'ip_address:partition_name\' entries: {}'
+                                           .format(list(duplicates)))
     return hardware_dict
 
 
