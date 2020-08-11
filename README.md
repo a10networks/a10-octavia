@@ -403,6 +403,7 @@ These settings are added to the `a10-octavia.conf` file. They allow the operator
 ```shell
 [a10_global]
 network_type = vlan
+use_parent_partition = True 
 ```
 #### Loadbalancer/virtual server config example
 ```shell

@@ -239,7 +239,7 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
 
     def execute(self, loadbalancer, vthunder_config):
         hierarchical_multitenancy = vthunder_config.hierarchical_multitenancy
-        if hierarchical_multitenancy:
+        if hierarchical_multitenancy == "enable":
             partition_name = vthunder_config.project_id[:14]
         else:
             partition_name = vthunder_config.partition_name
