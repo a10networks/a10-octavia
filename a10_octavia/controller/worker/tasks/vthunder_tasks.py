@@ -352,15 +352,22 @@ class HandleACOSPartitionChange(VThunderBaseTask):
     """Task to switch to specified partition"""
 
     def execute(self, vthunder):
+        axapi_client = a10_utils.get_axapi_client(vthunder)
         try:
-            axapi_client = a10_utils.get_axapi_client(vthunder)
-            if not axapi_client.system.partition.exists(vthunder.partition_name):
+            partition = axapi_client.system.partition.get(vthunder.partition_name)
+        except acos_errors.NotFound:
+            partition = None
+
+        if partition is None:
+            try:
                 axapi_client.system.partition.create(vthunder.partition_name)
                 axapi_client.system.action.write_memory(partition="shared")
                 LOG.info("Partition %s created", vthunder.partition_name)
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
-            LOG.exception("Failed to create parition on vThunder: %s", str(e))
-            raise e
+            except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+                LOG.exception("Failed to create parition on vThunder: %s", str(e))
+                raise e
+        elif partition.get("status") == "Not-Active":
+            raise exceptions.PartitionNotActiveError(partition, vthunder.ip_address)
 
 
 class SetupDeviceNetworkMap(VThunderBaseTask):
