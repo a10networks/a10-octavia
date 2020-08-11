@@ -68,7 +68,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
         mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = True
+        mock_vthunder.hierarchical_multitenancy = 1
 
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo = mock.MagicMock()
@@ -85,7 +85,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
         mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = True
+        mock_vthunder.hierarchical_multitenancy = 1
 
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb = mock.MagicMock()
@@ -99,8 +99,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
         mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = False
-
+        mock_vthunder.hierarchical_multitenancy = 0
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb = mock.MagicMock()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = mock_vthunder
@@ -113,7 +112,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PROJECT_ID[:14]
         mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = True
+        mock_vthunder.hierarchical_multitenancy = 1 
 
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb = mock.MagicMock()
