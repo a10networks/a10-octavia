@@ -27,8 +27,11 @@ from oslo_config import fixture as oslo_fixture
 from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron import utils
 
+from acos_client import errors as acos_errors
+
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models as a10_data_models
+from a10_octavia.common import exceptions
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks import vthunder_tasks as task
 from a10_octavia.network.drivers.neutron import a10_octavia_neutron
@@ -506,3 +509,48 @@ class TestVThunderTasks(base.BaseTaskTestCase):
     def test_WriteMemory_execute_delete_flow_after_error_no_fail(self):
         ret_val = task.WriteMemory().execute(vthunder=None)
         self.assertIsNone(ret_val)
+
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.a10_utils')
+    def test_HandleACOSPartitionChange_execute_create_partition(self, mock_utils):
+        mock_client = mock.Mock()
+        mock_client.system.partition.get.side_effect = acos_errors.NotFound()
+        mock_utils.get_axapi_client.return_value = mock_client
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.partition_name = "PartitionA"
+        task.HandleACOSPartitionChange().execute(mock_thunder)
+        mock_client.system.partition.create.assert_called_with("PartitionA")
+
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.a10_utils')
+    def test_HandleACOSPartitionChange_execute_create_partition_fail(self, mock_utils):
+        mock_client = mock.Mock()
+        mock_client.system.partition.get.side_effect = acos_errors.NotFound()
+        mock_client.system.action.write_memory.side_effect = acos_errors.ACOSException()
+        mock_utils.get_axapi_client.return_value = mock_client
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.partition_name = "PartitionA"
+        expected_error = acos_errors.ACOSException
+        task_function = task.HandleACOSPartitionChange().execute
+        self.assertRaises(expected_error, task_function, mock_thunder)
+
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.a10_utils')
+    def test_HandleACOSPartitionChange_execute_partition_found_active(self, mock_utils):
+        partition = {'status': 'Active'}
+        mock_client = mock.Mock()
+        mock_client.system.partition.get.return_value = partition
+        mock_utils.get_axapi_client.return_value = mock_client
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.partition_name = "PartitionA"
+        task.HandleACOSPartitionChange().execute(mock_thunder)
+        mock_client.system.partition.create.assert_not_called()
+
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.a10_utils')
+    def test_HandleACOSPartitionChange_execute_partition_found_not_active(self, mock_utils):
+        partition = {'status': 'Not-Active'}
+        mock_client = mock.Mock()
+        mock_client.system.partition.get.return_value = partition
+        mock_utils.get_axapi_client.return_value = mock_client
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.partition_name = "PartitionA"
+        expected_error = exceptions.PartitionNotActiveError
+        task_function = task.HandleACOSPartitionChange().execute
+        self.assertRaises(expected_error, task_function, mock_thunder)

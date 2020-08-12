@@ -97,11 +97,11 @@ def convert_to_hardware_thunder_conf(hardware_list):
         if hardware_device.get('interface_vlan_map'):
             hardware_device['device_network_map'] = validate_interface_vlan_map(hardware_device)
             del hardware_device['interface_vlan_map']
-        hierarchical_mt = hardware_device.get('hierarchical_multitency')
+        hierarchical_mt = hardware_device.get('hierarchical_multitenancy')
         if hierarchical_mt == "enable":
             hardware_device["partition_name"] = project_id[0:14]
         elif hierarchical_mt != "disable" and hierarchical_mt is not None:
-            raise cfg.ConfigFileValueError('Option `hierarchical_multitency` specified '
+            raise cfg.ConfigFileValueError('Option `hierarchical_multitenancy` specified '
                                            'under project id {} only accepts "enable" and '
                                            '"disable"'.format(project_id))
         vthunder_conf = data_models.HardwareThunder(**hardware_device)
