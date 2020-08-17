@@ -402,8 +402,8 @@ These settings are added to the `a10-octavia.conf` file. They allow the operator
 #### Global section config example
 ```shell
 [a10_global]
-enable_hierarchical_multitenancy = False
-use_parent_partition = False
+network_type = vlan
+use_parent_partition = True 
 ```
 #### Loadbalancer/virtual server config example
 ```shell

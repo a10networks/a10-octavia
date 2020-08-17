@@ -151,14 +151,16 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
             db_apis.get_session(), loadbalancer_id)
         if vthunder is None:
             return None
-        if (vthunder.undercloud and vthunder.hierarchical_multitenancy and
-                CONF.a10_global.use_parent_partition):
-            parent_project_id = utils.get_parent_project(vthunder.project_id)
-            if parent_project_id:
-                vthunder.partition_name = parent_project_id[:14]
-        elif CONF.a10_global.use_parent_partition and not vthunder.hierarchical_multitenancy:
-            LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
-                        "configuration will not be applied for loadbalancer: %s", loadbalancer.id)
+        if vthunder.undercloud:
+            use_parent_part = CONF.a10_global.use_parent_partition
+            if use_parent_part and not vthunder.hierarchical_multitenancy:
+                LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
+                            "configuration will not be applied for loadbalancer: %s",
+                            loadbalancer.id)
+            elif use_parent_part and vthunder.hierarchical_multitenancy:
+                parent_project_id = utils.get_parent_project(vthunder.project_id)
+                if parent_project_id:
+                    vthunder.partition_name = parent_project_id[:14]
         return vthunder
 
 
@@ -236,12 +238,8 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
     """ Create VThunder device entry in DB """
 
     def execute(self, loadbalancer, vthunder_config):
-        hierarchical_multitenancy = CONF.a10_global.enable_hierarchical_multitenancy
-        if hierarchical_multitenancy:
-            partition_name = vthunder_config.project_id[:14]
-        else:
-            partition_name = vthunder_config.partition_name
         try:
+            hierarchical_mt = vthunder_config.hierarchical_multitenancy
             self.vthunder_repo.create(db_apis.get_session(),
                                       vthunder_id=uuidutils.generate_uuid(),
                                       device_name=vthunder_config.device_name,
@@ -258,8 +256,8 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                                       last_udp_update=datetime.utcnow(),
                                       created_at=datetime.utcnow(),
                                       updated_at=datetime.utcnow(),
-                                      partition_name=partition_name,
-                                      hierarchical_multitenancy=hierarchical_multitenancy)
+                                      partition_name=vthunder_config.partition_name,
+                                      hierarchical_multitenancy=hierarchical_mt)
             LOG.info("Successfully created vthunder entry in database.")
         except Exception as e:
             LOG.error('Failed to create vThunder entry in db for load balancer: %s.',

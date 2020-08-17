@@ -164,3 +164,11 @@ class SNATConfigurationError(acos_errors.ACOSException):
                ' `autosnat` and `no_dest_nat` both are set True under `[listener]` '
                'section in a10-octavia.conf. ')
         super(SNATConfigurationError, self).__init__(msg=msg)
+
+
+class PartitionNotActiveError(acos_errors.ACOSException):
+    """ Occurs when the partition has been unloaded, but not deleted """
+
+    def __init__(self, partition_name, device_ip):
+        msg = 'Partition {0} on device {1} is set to Not-Active'
+        super(PartitionNotActiveError, self).__init__(msg=msg)
