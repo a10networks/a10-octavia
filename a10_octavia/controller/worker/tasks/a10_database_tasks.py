@@ -105,7 +105,8 @@ class CreateVThunderEntry(BaseDatabaseTask):
             self.vthunder_repo.delete(
                 db_apis.get_session(), loadbalancer_id=loadbalancer.id)
         except NoResultFound:
-            LOG.error("Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
+            LOG.error(
+                "Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
 
 
 class CheckExistingProjectPartitionEntry(BaseDatabaseTask):
@@ -120,7 +121,8 @@ class CheckExistingProjectPartitionEntry(BaseDatabaseTask):
             project_id=loadbalancer.project_id)
         if vthunder is None:
             return
-        existing_ip_addr_partition = '{}:{}'.format(vthunder.ip_address, vthunder.partition_name)
+        existing_ip_addr_partition = '{}:{}'.format(
+            vthunder.ip_address, vthunder.partition_name)
         config_ip_addr_partition = '{}:{}'.format(vthunder_config.ip_address,
                                                   vthunder_config.partition_name)
         if existing_ip_addr_partition != config_ip_addr_partition:
@@ -158,7 +160,8 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
                             "configuration will not be applied for loadbalancer: %s",
                             loadbalancer.id)
             elif use_parent_part and vthunder.hierarchical_multitenancy:
-                parent_project_id = utils.get_parent_project(vthunder.project_id)
+                parent_project_id = utils.get_parent_project(
+                    vthunder.project_id)
                 if parent_project_id:
                     vthunder.partition_name = parent_project_id[:14]
         return vthunder
@@ -224,7 +227,8 @@ class MapLoadbalancerToAmphora(BaseDatabaseTask):
 
         if vthunder is None:
             # Check for spare vthunder
-            vthunder = self.vthunder_repo.get_spare_vthunder(db_apis.get_session())
+            vthunder = self.vthunder_repo.get_spare_vthunder(
+                db_apis.get_session())
             if vthunder is None:
                 LOG.debug("No Amphora available for load balancer with id %s",
                           loadbalancer.id)
@@ -338,6 +342,7 @@ class GetVRIDForProjectMember(BaseDatabaseTask):
 class UpdateVRIDForProjectMember(BaseDatabaseTask):
 
     def execute(self, member, vrid, port):
+        vrid_value = CONF.a10_global.vrid
         if port:
             if vrid:
                 try:
@@ -345,7 +350,8 @@ class UpdateVRIDForProjectMember(BaseDatabaseTask):
                         db_apis.get_session(),
                         vrid.id,
                         vrid_floating_ip=port.fixed_ips[0].ip_address,
-                        vrid_port_id=port.id)
+                        vrid_port_id=port.id,
+                        vrid=vrid_value)
                     LOG.debug("Successfully updated DB vrid %s entry for member %s",
                               vrid.id, member.id)
                 except Exception as e:
@@ -358,11 +364,26 @@ class UpdateVRIDForProjectMember(BaseDatabaseTask):
                     self.vrid_repo.create(db_apis.get_session(),
                                           project_id=member.project_id,
                                           vrid_floating_ip=port.fixed_ips[0].ip_address,
-                                          vrid_port_id=port.id)
+                                          vrid_port_id=port.id,
+                                          vrid=vrid_value)
                     LOG.debug("Successfully created DB entry for vrid for member %s",
                               member.id)
                 except Exception as e:
                     LOG.error("Failed to create vrid DB entry due to: %s", str(e))
+                    raise e
+        else:
+            conf_floating_ip = utils.get_vrid_floating_ip_for_project(
+                member.project_id)
+            if vrid and not conf_floating_ip:
+                try:
+                    self.vrid_repo.delete(
+                        db_apis.get_session(), id=vrid.id)
+                    LOG.debug("Successfully deleted DB vrid %s entry for member %s",
+                              vrid.id, member.id)
+                except Exception as e:
+                    LOG.error("Failed to delete vrid %(vrid)s "
+                              "DB entry due to: %(except)s",
+                              {'vrid': vrid.id, 'except': e})
                     raise e
 
 
@@ -373,7 +394,8 @@ class CountMembersInProject(BaseDatabaseTask):
                 db_apis.get_session(),
                 project_id=member.project_id)
         except Exception as e:
-            LOG.exception("Failed to get count of members in given project: %s", str(e))
+            LOG.exception(
+                "Failed to get count of members in given project: %s", str(e))
             raise e
 
 
@@ -383,7 +405,8 @@ class DeleteVRIDEntry(BaseDatabaseTask):
             try:
                 self.vrid_repo.delete(db_apis.get_session(), id=vrid.id)
             except Exception as e:
-                LOG.exception("Failed to delete VRID entry from vrid table: %s", str(e))
+                LOG.exception(
+                    "Failed to delete VRID entry from vrid table: %s", str(e))
                 raise e
 
 
