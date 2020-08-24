@@ -142,13 +142,22 @@ class InvalidVCSDeviceCount(cfg.ConfigFileValueError):
         super(InvalidVCSDeviceCount, self).__init__(msg=msg)
 
 
-class IpAddressPartitionCollisionInProjectError(cfg.ConfigFileValueError):
+class ThunderInUseByExistingProjectError(cfg.ConfigFileValueError):
 
     def __init__(self, config_ip_part, existing_ip_part, project_id):
         msg = ('Given IPAddress:Partition `{0}` in a10-octavia.conf is invalid. '
-               'There is an existing IPAddress:Partition `{1}` in use for project {2}.').format(
+               'The project `{2}` is using IPAddress:Partition `{1}` already.').format(
             config_ip_part, existing_ip_part, project_id)
-        super(IpAddressPartitionCollisionInProjectError, self).__init__(msg=msg)
+        super(ThunderInUseByExistingProjectError, self).__init__(msg=msg)
+
+
+class ProjectInUseByExistingThunderError(cfg.ConfigFileValueError):
+
+    def __init__(self, config_ip_part, existing_project_id, project_id):
+        msg = ('Given project_id `{2}` in a10-octavia.conf is invalid. '
+               'The given IPAddress:Partition `{0}` is getting used for project {1} '
+               'already.').format(config_ip_part, existing_project_id, project_id)
+        super(ProjectInUseByExistingThunderError, self).__init__(msg=msg)
 
 
 class MissingVCSDeviceConfig(base.NetworkException):

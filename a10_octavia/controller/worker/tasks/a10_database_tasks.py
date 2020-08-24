@@ -108,25 +108,60 @@ class CreateVThunderEntry(BaseDatabaseTask):
             LOG.error("Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
 
 
-class CheckExistingProjectPartitionEntry(BaseDatabaseTask):
+class CheckExistingProjectToThunderMappedEntries(BaseDatabaseTask):
     """ Check existing Thunder entry with same project id.
         If exists, ensure the existing IPAddress:Partition
         is used to configure, otherwise Raise ConfigValueError
     """
 
     def execute(self, loadbalancer, vthunder_config):
-        vthunder = self.vthunder_repo.get_vthunder_by_project_id(
+        vthunder_ids = self.vthunder_repo.get_vthunders_by_project_id(
             db_apis.get_session(),
             project_id=loadbalancer.project_id)
-        if vthunder is None:
-            return
-        existing_ip_addr_partition = '{}:{}'.format(vthunder.ip_address, vthunder.partition_name)
-        config_ip_addr_partition = '{}:{}'.format(vthunder_config.ip_address,
-                                                  vthunder_config.partition_name)
-        if existing_ip_addr_partition != config_ip_addr_partition:
-            raise exceptions.IpAddressPartitionCollisionInProjectError(config_ip_addr_partition,
-                                                                       existing_ip_addr_partition,
-                                                                       loadbalancer.project_id)
+
+        for vthunder_id in vthunder_ids:
+            vthunder = self.vthunder_repo.get(
+                db_apis.get_session(),
+                id=vthunder_id)
+            if vthunder is None:
+                return
+            existing_ip_addr_partition = '{}:{}'.format(vthunder.ip_address,
+                                                        vthunder.partition_name)
+            config_ip_addr_partition = '{}:{}'.format(vthunder_config.ip_address,
+                                                      vthunder_config.partition_name)
+            if existing_ip_addr_partition != config_ip_addr_partition:
+                raise exceptions.ThunderInUseByExistingProjectError(config_ip_addr_partition,
+                                                                    existing_ip_addr_partition,
+                                                                    loadbalancer.project_id)
+
+
+class CheckExistingThunderToProjectMappedEntries(BaseDatabaseTask):
+    """ Check for all existing Thunder entries to ensure
+        all belong to different projects, otherwise
+        raise ConfigValueError
+    """
+
+    def execute(self, loadbalancer, vthunder_config):
+        vthunder_ids = self.vthunder_repo.get_vthunders_by_ip_address(
+            db_apis.get_session(),
+            ip_address=vthunder_config.ip_address)
+
+        for vthunder_id in vthunder_ids:
+            vthunder = self.vthunder_repo.get(
+                db_apis.get_session(),
+                id=vthunder_id)
+            if vthunder is None:
+                return
+
+            existing_ip_addr_partition = '{}:{}'.format(vthunder.ip_address,
+                                                        vthunder.partition_name)
+            config_ip_addr_partition = '{}:{}'.format(vthunder_config.ip_address,
+                                                      vthunder_config.partition_name)
+            if existing_ip_addr_partition == config_ip_addr_partition:
+                if vthunder.project_id != loadbalancer.project_id:
+                    raise exceptions.ProjectInUseByExistingThunderError(config_ip_addr_partition,
+                                                                        vthunder.project_id,
+                                                                        loadbalancer.project_id)
 
 
 class DeleteVThunderEntry(BaseDatabaseTask):
