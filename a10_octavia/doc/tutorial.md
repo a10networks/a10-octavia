@@ -137,7 +137,7 @@ Location: /usr/local/lib/python2.7/dist-packages
 Requires: octavia, python-novaclient, octavia-lib, tenacity, acos-client, python-barbicanclient, python-glanceclient, pyOpenSSL, taskflow
 ```
 
-From the `/usr/local/lib/python2.7/dist-packages/a10_octavia/db/migration` folder execute the followinga
+From the `/usr/local/lib/python2.7/dist-packages/a10_octavia/db/migration` folder execute the following
 
 ```shell
 alembic upgrade head
@@ -382,7 +382,7 @@ Jul 30 07:24:44 docu a10-octavia-worker[20712]: ERROR oslo_messaging.rpc.server
 
 **Fix:** Ensure the `project_id` is correct in the `a10-octavia.conf` and that you have restarted the `a10-controller-worker.service`. Ensure that the proper `--project` value option being provided matches the `project_id` or name of the project assocciated with the given `project_id`
 
-### Step 11: Create the listener
+#### Step 11: Create the listener
 
 ```shell
 openstack loadbalancer listener create --protocol HTTP --protocol-port 8080 --name l1 lb1 
@@ -482,11 +482,57 @@ slb virtual-server 6a830cc0-7798-436b-92da-219f4feba544 18.64.10.191
 !
 ```
 
+*Note: A pool in openstack is a service group on the Thunder side*
 
 #### Step 13: Create the health monitor
 
 ```
-openstack loadbalancer healthmonitor create --delay 5 --max-retries 4 --timeout 10 --type HTTP --url-path /healthcheck pool1
+openstack loadbalancer healthmonitor create --delay 10 --max-retries 4 --timeout 5 --type HTTP --url-path /healthcheck pool1
+```
+
+```
++---------------------+--------------------------------------+
+| Field               | Value                                |
++---------------------+--------------------------------------+
+| project_id          | 0e567ea4ea824228b06fce04805c8c16     |
+| name                |                                      |
+| admin_state_up      | True                                 |
+| pools               | d140e112-f37b-4f6a-8dd1-12f5c8f137e3 |
+| created_at          | 2020-08-24T04:47:22                  |
+| provisioning_status | PENDING_CREATE                       |
+| updated_at          | None                                 |
+| delay               | 10                                   |
+| expected_codes      | 200                                  |
+| max_retries         | 4                                    |
+| http_method         | GET                                  |
+| timeout             | 5                                    |
+| max_retries_down    | 3                                    |
+| url_path            | /healthcheck                         |
+| type                | HTTP                                 |
+| id                  | e2fdd166-4c37-4499-ba5d-6f285a582942 |
+| operating_status    | OFFLINE                              |
+| http_version        | None                                 |
+| domain_name         | None                                 |
++---------------------+--------------------------------------+
+```
+
+##### Check the Thunder
+```
+health monitor e2fdd166-4c37-4499-ba5d-6f285a582942 
+  retry 4 
+  override-port 8080
+  interval 10 
+  method http port 8080 expect response-code 200 url GET /healthcheck 
+!         
+slb service-group d140e112-f37b-4f6a-8dd1-12f5c8f137e3 tcp 
+  health-check e2fdd166-4c37-4499-ba5d-6f285a582942 
+!       
+slb virtual-server 6a830cc0-7798-436b-92da-219f4feba54 18.64.10.191
+  port 8080 http 
+    name 5096c0f6-3ca2-4111-8b11-fe88ad936602
+    extended-stats 
+    source-nat auto 
+    service-group d140e112-f37b-4f6a-8dd1-12f5c8f137e3 
 ```
 
 #### Step 14: Create and associate members with the real servers
@@ -541,17 +587,25 @@ openstack loadbalancer member create --address 18.64.10.54 --subnet-id provider-
 ##### Check the Thunder device
 
 ```
+!
+health monitor e2fdd166-4c37-4499-ba5d-6f285a582942 
+  retry 4 
+  override-port 8080
+  interval 10 
+  method http port 8080 expect response-code 200 url GET /healthcheck 
+!  
 slb server 0b187895-9bd9-4a62-9a9a-8bed1a96eb6d 18.64.10.227 
   conn-resume 1 
   port 80 tcp 
-!       
-slb server f805282f-301c-4134-bd0d-7ad2086b83cd 18.64.10.54 
+!
+  slb server f805282f-301c-4134-bd0d-7ad2086b83cd 18.64.10.54 
   conn-resume 1 
   port 80 tcp 
-!       
-slb service-group d140e112-f37b-4f6a-8dd1-12f5c8f137e3 tcp 
-  member 0b187895-9bd9-4a62-9a9a-8bed1a96eb6d 80 
-  member f805282f-301c-4134-bd0d-7ad2086b83cd 80 
+! 
+slb service-group d140e112-f37b-4f6a-8dd1-12f5c8f137e3 tcp
+  health-check e2fdd166-4c37-4499-ba5d-6f285a582942 
+  member 0b187895-9bd9-4a62-9a9a-8bed1a96eb6d 80
+  member f805282f-301c-4134-bd0d-7ad2086b83cd 80
 !       
 slb virtual-server 6a830cc0-7798-436b-92da-219f4feba544 18.64.10.191
   port 8080 http 
@@ -561,6 +615,8 @@ slb virtual-server 6a830cc0-7798-436b-92da-219f4feba544 18.64.10.191
     service-group d140e112-f37b-4f6a-8dd1-12f5c8f137e3 
 !    
 ```
+
+*Note: A member in openstack comprised of a server and member on the Thunder side (Openstack member == Thunder member+server).*
 
 ### L7 load balancing
 
@@ -652,7 +708,7 @@ The L7 Rules and Policies are translated into AFLEX scripts on the Thunder side.
 
 ##### Make requests
 
-**First let's make a regular curl request against the vip**
+**First let's make a regular curl request against the vip by logging into one of the members/servers**
 
 ```
 root@client:~# curl https://18.64.10.191:9001 --insecure
@@ -744,7 +800,7 @@ The `dev_team_1` project has members on subnet `10.10.12.0/24` where as `dev_tea
 In order to differentiate virtual routers, the last byte of the MAC address is configurable.
 
 ```
-[a10_globa]
+[a10_global]
 vrid = 0
 ```
 
@@ -1329,7 +1385,7 @@ devices = [
           ]
 ```
 
-The first thing to notice is the addition of the `vcs_device_id`. This can be found by executing the command `show avcs summary`. The next is the inclusion of a VRID floating IP which will be used by backend servers to ensure their connectivity remains in the case of failover. Finally, the VE IPs have distinct values between two devices.
+The first thing to notice is the addition of the `vcs_device_id`. This can be found by executing the command `show vcs summary`. The next is the inclusion of a VRID floating IP which will be used by backend servers to ensure their connectivity remains in the case of failover. Finally, the VE IPs have distinct values between two devices.
 
 ## Advanced Usage
 
@@ -1367,6 +1423,8 @@ openstack secret store --secret-type certificate --file MyCertificate.crt --name
 | Expiration    | None                                                                           |
 +---------------+--------------------------------------------------------------------------------+
 ```
+
+*Note: Sufficient user privileges are required to preform this action.*
 
 #### Step 3: Upload the key to the Barbican keystore
 
