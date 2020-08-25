@@ -41,6 +41,7 @@ class LoadBalancerParent(object):
             loadbalancer.id,
             loadbalancer.vip.ip_address,
             arp_disable=arp_disable,
+            description=loadbalancer.description,
             status=status, vrid=vrid,
             axapi_body=vip_meta)
 
