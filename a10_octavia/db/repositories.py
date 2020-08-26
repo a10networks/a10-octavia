@@ -228,6 +228,25 @@ class VThunderRepository(BaseRepository):
 
         return model.to_data_model()
 
+    def get_vthunders_by_project_id(self, session, project_id):
+        model_list = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+                and_(self.model_class.status == "ACTIVE",
+                     or_(self.model_class.role == "STANDALONE",
+                         self.model_class.role == "MASTER")))
+        id_list = [model.id for model in model_list]
+        return id_list
+
+    def get_vthunders_by_ip_address(self, session, ip_address):
+        model_list = session.query(self.model_class).filter(
+            self.model_class.ip_address == ip_address).filter(
+                and_(self.model_class.status == "ACTIVE",
+                     or_(self.model_class.role == "STANDALONE",
+                         self.model_class.role == "MASTER")))
+
+        id_list = [model.id for model in model_list]
+        return id_list
+
     def get_delete_compute_flag(self, session, compute_id):
         if compute_id:
             count = session.query(self.model_class).filter(
