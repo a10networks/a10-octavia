@@ -76,7 +76,7 @@ class ListenersParent(object):
             if ha_conn_mirror is not None:
                 ha_conn_mirror = None
                 LOG.warning("'ha_conn_mirror' is not allowed for HTTP, TERMINATED_HTTPS listener.")
-        else:
+        elif listener.protocol == 'TCP':
             template_tcp = CONF.listener.template_tcp
             if template_tcp and template_tcp.lower() == 'none':
                 template_tcp = None
