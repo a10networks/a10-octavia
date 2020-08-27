@@ -126,7 +126,7 @@ A10_SERVER_OPTS = [
                default=64000000,
                help=_('Connection Limit')),
     cfg.IntOpt('conn_resume', min=1, max=1000000,
-               default=1,
+               default=None,
                help=_('Connection Resume')),
     cfg.StrOpt('template_server',
                default=None,
