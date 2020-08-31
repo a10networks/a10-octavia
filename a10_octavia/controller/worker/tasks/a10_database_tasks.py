@@ -503,3 +503,14 @@ class MarkLBAndListenerActiveInDB(BaseDatabaseTask):
             LOG.error("Failed to update listener %(list) "
                       "provisioning status to ERROR due to: "
                       "%(except)s", {'list': listener.id, 'except': e})
+
+
+class CountMembersWithIP(BaseDatabaseTask):
+    def execute(self, member):
+        try:
+            return self.member_repo.get_member_count_by_ip_address(
+                db_apis.get_session(), member.ip_address)
+        except Exception as e:
+            LOG.exception("Failed to get count of members with given IP for a pool: %s", str(e))
+            raise e
+

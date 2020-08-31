@@ -328,3 +328,9 @@ class MemberRepository(repo.MemberRepository):
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
         return count
+
+    def get_member_count_by_ip_address(self, session, ip_address):
+        return session.query(self.model_class).filter(
+            and_(self.model_class.ip_address == ip_address,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
