@@ -14,6 +14,21 @@ HEALTHMANAGER="a10-health-manager.service"
 
 SERVICES=("$CONTROLLER" "$HOUSEKEEPER" "$HEALTHMANAGER")
 
+FILE1=/usr/bin/a10-octavia-worker
+if [ -f "$FILE1" ]; then
+    ln -s /usr/bin/a10-octavia-worker /usr/local/bin/a10-octavia-worker
+fi
+
+FILE2=/usr/bin/a10-health-manager
+if [ -f "$FILE2" ]; then
+    ln -s /usr/bin/a10-health-manager /usr/local/bin/a10-health-manager
+fi
+
+FILE3=/usr/bin/a10-house-keeper
+if [ -f "$FILE3" ]; then
+    ln -s /usr/bin/a10-house-keeper /usr/local/bin/a10-house-keeper
+fi
+
 echo "[+] Installing a10-controller-worker"
 echo "[+] Installing a10-house-keeper"
 echo "[+] Installing a10-health-manager"
