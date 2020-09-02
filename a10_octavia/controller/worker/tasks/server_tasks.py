@@ -71,17 +71,18 @@ class MemberCreate(task.Task):
 
     @axapi_client_decorator
     def revert(self, member, vthunder, pool, member_count_ip, *args, **kwargs):
-        if member_count_ip <= 1:
-            server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
-            try:
-                LOG.warning("Reverting creation of member: %s for pool: %s",
-                            member.id, pool.id)
-                self.axapi_client.slb.server.delete(server_name)
-            except exceptions.ConnectionError:
-                LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
-            except Exception as e:
-                LOG.exception("Failed to revert creation of member %s for pool %s due to %s",
-                              server_name, pool.id, str(e))
+        if member_count_ip > 1:
+            return
+        server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
+        try:
+            LOG.warning("Reverting creation of member: %s for pool: %s",
+                        member.id, pool.id)
+            self.axapi_client.slb.server.delete(server_name)
+        except exceptions.ConnectionError:
+            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
+        except Exception as e:
+            LOG.exception("Failed to revert creation of member %s for pool %s due to %s",
+                          server_name, pool.id, str(e))
 
 
 class MemberDelete(task.Task):
@@ -98,13 +99,19 @@ class MemberDelete(task.Task):
             LOG.exception("Failed to dissociate member %s from pool %s",
                           server_name, pool.id)
             raise e
-        if member_count_ip == 1:
-            try:
+
+        try:
+            if member_count_ip <= 1:
                 self.axapi_client.slb.server.delete(server_name)
                 LOG.debug("Successfully deleted member %s from pool %s", server_name, pool.id)
-            except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
-                LOG.exception("Failed to delete member: %s", server_name)
-                raise e
+            else:
+                self.axapi_client.slb.server.port.delete(server_name, member.protocol_port,
+                                                         member.protocol)
+                LOG.debug("Successfully deleted port for member %s from pool %s",
+                          server_name, pool.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to delete member/port: %s", server_name)
+            raise e
 
 
 class MemberUpdate(task.Task):
