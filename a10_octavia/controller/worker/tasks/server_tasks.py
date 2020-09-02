@@ -36,8 +36,12 @@ class MemberCreate(task.Task):
         server_args['conn-limit'] = CONF.server.conn_limit
         server_args['conn-resume'] = CONF.server.conn_resume
         server_args = {'server': server_args}
-        server_temp = {}
-        server_temp['template-server'] = CONF.server.template_server
+
+        template_server = CONF.server.template_server
+        if template_server and template_server.lower() == 'none':
+            template_server = None
+        server_temp = {'template-server': template_server}
+
         if not member.enabled:
             status = False
         else:
@@ -105,8 +109,12 @@ class MemberUpdate(task.Task):
         server_args['conn-limit'] = CONF.server.conn_limit
         server_args['conn-resume'] = CONF.server.conn_resume
         server_args = {'server': server_args}
-        server_temp = {}
-        server_temp['template-server'] = CONF.server.template_server
+
+        template_server = CONF.server.template_server
+        if template_server and template_server.lower() == 'none':
+            template_server = None
+        server_temp = {'template-server': template_server}
+
         if not member.enabled:
             status = False
         else:

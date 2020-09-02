@@ -34,9 +34,6 @@ LOG = logging.getLogger(__name__)
 
 
 A10_GLOBAL_OPTS = [
-    cfg.BoolOpt('enable_hierarchical_multitenancy', default=False,
-                help=_('Enable Hierarchical Multitenancy '
-                       'for racked - hardware thunder devices.')),
     cfg.BoolOpt('use_parent_partition', default=False,
                 help=_('Use parent project partition on Thunder device '
                        'in hierarchical project architecture.')),
@@ -60,7 +57,6 @@ A10_VTHUNDER_OPTS = [
     cfg.IntOpt('default_axapi_version',
                default=30,
                help=_('VThunder axapi version')),
-
 ]
 
 A10_SLB_OPTS = [
@@ -130,7 +126,7 @@ A10_SERVER_OPTS = [
                default=64000000,
                help=_('Connection Limit')),
     cfg.IntOpt('conn_resume', min=1, max=1000000,
-               default=1,
+               default=None,
                help=_('Connection Resume')),
     cfg.StrOpt('template_server',
                default=None,

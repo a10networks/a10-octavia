@@ -23,6 +23,7 @@ from oslo_config import fixture as oslo_fixture
 
 from octavia.common import constants as o_constants
 from octavia.common import data_models as o_data_models
+from octavia.common import exceptions
 
 from a10_octavia.common.config_options import A10_SERVICE_GROUP_OPTS
 from a10_octavia.common.data_models import VThunder
@@ -70,3 +71,13 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
             lb_method=mock_pool.axapi_client.slb.service_group.SOURCE_IP_HASH_ONLY,
             service_group_templates=mock.ANY,
             axapi_args=AXAPI_ARGS)
+
+    def test_create_pool_with_protocol_proxy(self):
+        mock_pool = task.PoolCreate()
+        mock_pool.axapi_client = self.client_mock
+        mock_pool.CONF = self.conf
+        pool = o_data_models.Pool(id=a10constants.MOCK_POOL_ID,
+                                  protocol=o_constants.PROTOCOL_PROXY,
+                                  lb_algorithm=o_constants.LB_ALGORITHM_SOURCE_IP)
+        self.assertRaises(exceptions.ProviderUnsupportedOptionError, mock_pool.execute, pool,
+                          VTHUNDER)

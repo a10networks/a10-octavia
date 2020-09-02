@@ -39,9 +39,11 @@ class ListenersParent(object):
         use_rcv_hop = CONF.listener.use_rcv_hop_for_resp
         ha_conn_mirror = CONF.listener.ha_conn_mirror
 
-        virtual_port_templates = {}
-        template_virtual_port = CONF.listener.template_virtual_port
-        virtual_port_templates['template-virtual-port'] = template_virtual_port
+        vport_templates = {}
+        template_vport = CONF.listener.template_virtual_port
+        if template_vport and template_vport.lower() == 'none':
+            template_vport = None
+        vport_templates['template-virtual-port'] = template_vport
 
         template_args = {}
 
@@ -67,17 +69,23 @@ class ListenersParent(object):
         if listener.protocol in a10constants.HTTP_TYPE:
             # TODO(hthompson6) work around for issue in acos client
             listener.protocol = listener.protocol.lower()
-            virtual_port_template = CONF.listener.template_http
-            virtual_port_templates['template-http'] = virtual_port_template
+            template_http = CONF.listener.template_http
+            if template_http and template_http.lower() == 'none':
+                template_http = None
+            vport_templates['template-http'] = template_http
             if ha_conn_mirror is not None:
                 ha_conn_mirror = None
                 LOG.warning("'ha_conn_mirror' is not allowed for HTTP, TERMINATED_HTTPS listener.")
-        else:
-            virtual_port_template = CONF.listener.template_tcp
-            virtual_port_templates['template-tcp'] = virtual_port_template
+        elif listener.protocol == 'TCP':
+            template_tcp = CONF.listener.template_tcp
+            if template_tcp and template_tcp.lower() == 'none':
+                template_tcp = None
+            vport_templates['template-tcp'] = template_tcp
 
-        virtual_port_template = CONF.listener.template_policy
-        virtual_port_templates['template-policy'] = virtual_port_template
+        template_policy = CONF.listener.template_policy
+        if template_policy and template_policy.lower() == 'none':
+            template_policy = None
+        vport_templates['template-policy'] = template_policy
 
         # Add all config filters here
         if no_dest_nat and (
@@ -101,7 +109,7 @@ class ListenersParent(object):
                    ha_conn_mirror=ha_conn_mirror,
                    use_rcv_hop=use_rcv_hop,
                    conn_limit=conn_limit,
-                   virtual_port_templates=virtual_port_templates,
+                   virtual_port_templates=vport_templates,
                    **template_args)
 
 

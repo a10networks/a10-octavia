@@ -41,6 +41,7 @@ class LoadBalancerParent(object):
             loadbalancer.id,
             loadbalancer.vip.ip_address,
             arp_disable=arp_disable,
+            description=loadbalancer.description,
             status=status, vrid=vrid,
             axapi_body=vip_meta)
 
@@ -75,12 +76,13 @@ class DeleteVirtualServerTask(task.Task):
 
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
-        try:
-            self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
-            LOG.debug("Successfully deleted load balancer: %s", loadbalancer.id)
-        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
-            LOG.exception("Failed to delete load balancer: %s", loadbalancer.id)
-            raise e
+        if vthunder:
+            try:
+                self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
+                LOG.debug("Successfully deleted load balancer: %s", loadbalancer.id)
+            except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+                LOG.exception("Failed to delete load balancer: %s", loadbalancer.id)
+                raise e
 
 
 class UpdateVirtualServerTask(LoadBalancerParent, task.Task):

@@ -78,8 +78,9 @@ def validate_params(hardware_info):
 def check_duplicate_entries(hardware_dict):
     hardware_count_dict = {}
     for hardware_device in hardware_dict.values():
-        candidate = '{}:{}'.format(hardware_device.ip_address, hardware_device.partition_name)
-        hardware_count_dict[candidate] = hardware_count_dict.get(candidate, 0) + 1
+        if hardware_device.hierarchical_multitenancy != "enable":
+            candidate = '{}:{}'.format(hardware_device.ip_address, hardware_device.partition_name)
+            hardware_count_dict[candidate] = hardware_count_dict.get(candidate, 0) + 1
     return [k for k, v in hardware_count_dict.items() if v > 1]
 
 
@@ -88,22 +89,28 @@ def convert_to_hardware_thunder_conf(hardware_list):
     hardware_dict = {}
     for hardware_device in hardware_list:
         hardware_device = validate_params(hardware_device)
-        if hardware_dict.get(hardware_device['project_id']):
-            raise cfg.ConfigFileValueError('Supplied duplicate project_id ' +
-                                           hardware_device['project_id'] +
-                                           ' in [hardware_thunder] section')
+        project_id = hardware_device['project_id']
+        if hardware_dict.get(project_id):
+            raise cfg.ConfigFileValueError('Supplied duplicate project_id {} '
+                                           ' in [hardware_thunder] section'.format(project_id))
         hardware_device['undercloud'] = True
         if hardware_device.get('interface_vlan_map'):
             hardware_device['device_network_map'] = validate_interface_vlan_map(hardware_device)
             del hardware_device['interface_vlan_map']
+        hierarchical_mt = hardware_device.get('hierarchical_multitenancy')
+        if hierarchical_mt == "enable":
+            hardware_device["partition_name"] = project_id[0:14]
+        elif hierarchical_mt != "disable" and hierarchical_mt is not None:
+            raise cfg.ConfigFileValueError('Option `hierarchical_multitenancy` specified '
+                                           'under project id {} only accepts "enable" and '
+                                           '"disable"'.format(project_id))
         vthunder_conf = data_models.HardwareThunder(**hardware_device)
-        hardware_dict[hardware_device['project_id']] = vthunder_conf
-
-    duplicates_list = check_duplicate_entries(hardware_dict)
-    if duplicates_list:
-        raise cfg.ConfigFileValueError('Duplicates found for the following '
-                                       '\'ip_address:partition_name\' entries: {}'
-                                       .format(list(duplicates_list)))
+        hardware_dict[project_id] = vthunder_conf
+        duplicates = check_duplicate_entries(hardware_dict)
+        if duplicates:
+            raise cfg.ConfigFileValueError('Duplicates found for the following '
+                                           '\'ip_address:partition_name\' entries: {}'
+                                           .format(list(duplicates)))
     return hardware_dict
 
 
