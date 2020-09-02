@@ -19,6 +19,7 @@ from taskflow import task
 
 import acos_client.errors as acos_errors
 
+from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -105,8 +106,10 @@ class MemberDelete(task.Task):
                 self.axapi_client.slb.server.delete(server_name)
                 LOG.debug("Successfully deleted member %s from pool %s", server_name, pool.id)
             else:
+                protocol = openstack_mappings.service_group_protocol(
+                    self.axapi_client, pool.protocol)
                 self.axapi_client.slb.server.port.delete(server_name, member.protocol_port,
-                                                         member.protocol)
+                                                         protocol)
                 LOG.debug("Successfully deleted port for member %s from pool %s",
                           server_name, pool.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
