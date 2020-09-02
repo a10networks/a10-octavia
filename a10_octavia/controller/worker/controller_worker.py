@@ -191,12 +191,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             raise db_exceptions.NoResultFound
 
         load_balancer = listener.load_balancer
-        if CONF.a10_global.use_parent_partition:
-            listener_parent_proj = utils.get_parent_project(listener.project_id)
-            parent_project_list = utils.get_parent_project_list()
 
-        if any([any([proj in parent_project_list for proj in (listener_parent_proj,
-                listener.project_id)]), listener.project_id in CONF.hardware_thunder.devices]):
+        if any([any([proj in utils.get_parent_project_list() for proj in (listener.project_id,
+                utils.get_parent_project(listener.project_id))
+                if CONF.a10_global.use_parent_partition]),
+                listener.project_id in CONF.hardware_thunder.devices]):
             create_listener_tf = self._taskflow_load(self._listener_flows.
                                                      get_rack_vthunder_create_listener_flow(
                                                          listener.project_id),
@@ -384,9 +383,10 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         if CONF.a10_global.use_parent_partition:
             member_parent_proj = utils.get_parent_project(member.project_id)
             parent_project_list = utils.get_parent_project_list()
-
-        if any([any([proj in parent_project_list for proj in (member_parent_proj,
-                member.project_id)]), member.project_id in CONF.hardware_thunder.devices]):
+        if any([any([proj in utils.get_parent_project_list() for proj in (member.project_id,
+                utils.get_parent_project(member.project_id))
+                if CONF.a10_global.use_parent_partition]),
+                member.project_id in CONF.hardware_thunder.devices]):
             create_member_tf = self._taskflow_load(
                 self._member_flows.get_rack_vthunder_create_member_flow(),
                 store={
