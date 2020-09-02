@@ -84,7 +84,7 @@ class MemberFlows(object):
                     requires=[constants.ADDED_PORTS, constants.LOADBALANCER],
                     rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
 
-        create_member_flow.add(database_tasks.CountMembersWithIPForPool(
+        create_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP
         ))
         create_member_flow.add(server_tasks.MemberCreate(
@@ -121,7 +121,7 @@ class MemberFlows(object):
         delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_member_flow.add(database_tasks.CountMembersWithIP(
+        delete_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP))
         delete_member_flow.add(server_tasks.MemberDelete(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
@@ -166,8 +166,11 @@ class MemberFlows(object):
         delete_member_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
             requires=a10constants.VTHUNDER,
             provides=a10constants.VTHUNDER))
+        delete_member_flow.add(a10_database_tasks.CountMembersWithIP(
+            requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP))
         delete_member_flow.add(server_tasks.MemberDelete(
-            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
+            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+                a10constants.MEMBER_COUNT_IP)))
         if CONF.a10_global.network_type == 'vlan':
             delete_member_flow.add(vthunder_tasks.DeleteInterfaceTagIfNotInUseForMember(
                 requires=[constants.MEMBER, a10constants.VTHUNDER]))
@@ -345,8 +348,11 @@ class MemberFlows(object):
             create_member_flow.add(vthunder_tasks.TagInterfaceForMember(
                 requires=[constants.MEMBER,
                           a10constants.VTHUNDER]))
+        create_member_flow.add(a10_database_tasks.CountMembersWithIP(
+            requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP))
         create_member_flow.add(server_tasks.MemberCreate(
-            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
+            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+                a10constants.MEMBER_COUNT_IP)))
         create_member_flow.add(database_tasks.MarkMemberActiveInDB(
             requires=constants.MEMBER))
         create_member_flow.add(database_tasks.MarkPoolActiveInDB(

@@ -31,7 +31,7 @@ class MemberCreate(task.Task):
     """Task to create a member and associate to pool"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool, member_count):
+    def execute(self, member, vthunder, pool, member_count_ip):
         server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         server_args = utils.meta(member, 'server', {})
         server_args['conn-limit'] = CONF.server.conn_limit
@@ -70,8 +70,8 @@ class MemberCreate(task.Task):
             raise e
 
     @axapi_client_decorator
-    def revert(self, member, vthunder, pool, member_count, *args, **kwargs):
-        if member_count <= 1:
+    def revert(self, member, vthunder, pool, member_count_ip, *args, **kwargs):
+        if member_count_ip <= 1:
             server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
             try:
                 LOG.warning("Reverting creation of member: %s for pool: %s",
@@ -88,7 +88,7 @@ class MemberDelete(task.Task):
     """Task to delete member"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool, member_count):
+    def execute(self, member, vthunder, pool, member_count_ip):
         server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         try:
             self.axapi_client.slb.service_group.member.delete(
@@ -98,7 +98,7 @@ class MemberDelete(task.Task):
             LOG.exception("Failed to dissociate member %s from pool %s",
                           server_name, pool.id)
             raise e
-        if member_count == 1:
+        if member_count_ip == 1:
             try:
                 self.axapi_client.slb.server.delete(server_name)
                 LOG.debug("Successfully deleted member %s from pool %s", server_name, pool.id)
