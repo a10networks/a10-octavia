@@ -380,9 +380,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
-        if CONF.a10_global.use_parent_partition:
-            member_parent_proj = utils.get_parent_project(member.project_id)
-            parent_project_list = utils.get_parent_project_list()
         if any([any([proj in utils.get_parent_project_list() for proj in (member.project_id,
                 utils.get_parent_project(member.project_id))
                 if CONF.a10_global.use_parent_partition]),
