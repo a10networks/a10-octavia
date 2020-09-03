@@ -137,7 +137,7 @@ class MissingMgmtIpConfigError(cfg.ConfigFileValueError):
 class InvalidVCSDeviceCount(cfg.ConfigFileValueError):
 
     def __init__(self, device_count):
-        msg = ('Number of devices in config is should be 1 when VCS is not enabled, ' +
+        msg = ('Number of devices in config should be 1 when VCS is not enabled, ' +
                'provided {0}').format(device_count)
         super(InvalidVCSDeviceCount, self).__init__(msg=msg)
 
