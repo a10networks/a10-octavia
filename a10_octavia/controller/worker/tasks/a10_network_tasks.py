@@ -668,29 +668,29 @@ class ApplyQosAmphora(BaseNetworkTask):
 
 
 class HandleVRIDFloatingIP(BaseNetworkTask):
-    """Handle VRID floating IP configurations for member"""
+    """Handle VRID floating IP configurations for loadbalancer resourse"""
 
     def __init__(self, *arg, **kwargs):
         self.fip_port = None
         super(HandleVRIDFloatingIP, self).__init__(*arg, **kwargs)
 
     @axapi_client_decorator
-    def execute(self, vthunder, member, vrid):
+    def execute(self, vthunder, lb_resource, vrid):
         device_vrid_ip = None
         if vrid:
             device_vrid_ip = vrid.vrid_floating_ip
 
-        conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(member.project_id)
+        conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(lb_resource.project_id)
         if conf_floating_ip:
-            subnet = self.network_driver.get_subnet(member.subnet_id)
+            subnet = self.network_driver.get_subnet(lb_resource.subnet_id)
             subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(subnet.cidr)
             if conf_floating_ip.lower() == 'dhcp':
                 if not a10_utils.check_ip_in_subnet_range(device_vrid_ip, subnet_ip, subnet_mask):
                     try:
                         self.fip_port = self.network_driver.create_port(subnet.network_id,
-                                                                        member.subnet_id)
+                                                                        lb_resource.subnet_id)
                     except Exception as e:
-                        LOG.error("Failed to create neutron port for member: %s", member.id)
+                        LOG.error("Failed to create neutron port for lb_resource: %s", lb_resource.id)
                         raise e
 
             else:
@@ -703,11 +703,11 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 if conf_floating_ip != device_vrid_ip:
                     try:
                         self.fip_port = self.network_driver.create_port(subnet.network_id,
-                                                                        member.subnet_id,
+                                                                        lb_resource.subnet_id,
                                                                         fixed_ip=conf_floating_ip)
                     except Exception as e:
-                        LOG.error("Failed to create neutron port for member: %s with "
-                                  "floating IP %s", member.id, conf_floating_ip)
+                        LOG.error("Failed to create neutron port for loadbalancer resource: %s with "
+                                  "floating IP %s", lb_resource.id, conf_floating_ip)
                         raise e
 
             if self.fip_port:
@@ -717,27 +717,27 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             try:
                 self.network_driver.delete_port(vrid.vrid_port_id)
             except Exception as e:
-                LOG.error("Failed to delete neutron port: %s for member %s on vrid %s",
-                          vrid.vrid_port_id, member.id, str(vrid))
+                LOG.error("Failed to delete neutron port: %s for loadbalancer resource %s on vrid %s",
+                          vrid.vrid_port_id, lb_resource.id, str(vrid))
                 raise e
             if not conf_floating_ip:
                 try:
                     self.axapi_client.vrrpa.update(vrid.vrid, floating_ip=None)
                 except Exception as e:
-                    LOG.exceptions("Failed to delete vrid %s for member %s", str(vrid), member.id)
+                    LOG.exceptions("Failed to delete vrid %s for loadbalancer resource %s", str(vrid), lb_resource.id)
                     raise e
 
         return self.fip_port
 
     @axapi_client_decorator
-    def revert(self, result, vthunder, member, vrid, *args, **kwargs):
+    def revert(self, result, vthunder, lb_resource, vrid, *args, **kwargs):
         if isinstance(result, failure.Failure):
             LOG.exception("Unable to allocate & configure VRRP Floating IP Port")
             return
 
         if self.fip_port:
-            LOG.warning("Reverting VRRP floating IP delta task for vrid %s on member %s",
-                        str(vrid), member.id)
+            LOG.warning("Reverting VRRP floating IP delta task for vrid %s on lb_resource %s",
+                        str(vrid), lb_resource.id)
             try:
                 self.network_driver.delete_port(self.fip_port.id)
                 if vrid:
@@ -745,8 +745,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             except req_exceptions.ConnectionError:
                 LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
             except Exception as e:
-                LOG.exception("Failed to revert VRRP floating IP delta task for member: %s"
-                              " due to %s", member.id, str(e))
+                LOG.exception("Failed to revert VRRP floating IP delta task for lb_resource: %s"
+                              " due to %s", lb_resource.id, str(e))
 
     def update_device_vrid_fip(self, conf_floating_ip, vthunder, vrid):
         vrid_value = CONF.a10_global.vrid
@@ -764,12 +764,12 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             raise e
 
 
-class DeleteMemberVRIDPort(BaseNetworkTask):
-    """Delete VRID Port if the last member associated with it is deleted
-    """
+class DeleteVRIDPort(BaseNetworkTask):
+    """Delete VRID Port if the last resource associated with it is deleted"""
+    
     @axapi_client_decorator
-    def execute(self, vthunder, vrid, member_count):
-        if vrid and member_count == 1:
+    def execute(self, vthunder, vrid, resource_count):
+        if vrid and resource_count == 1:
             try:
                 self.network_driver.delete_port(vrid.vrid_port_id)
                 self.axapi_client.vrrpa.update(vrid.vrid, floating_ip=None)

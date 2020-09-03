@@ -364,19 +364,18 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
         return vthunder
 
 
-class GetVRIDForProjectMember(BaseDatabaseTask):
+class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
-    def execute(self, member):
-        project_id = member.project_id
+    def execute(self, lb_resource):
+        project_id = lb_resource.project_id
         vrid = self.vrid_repo.get_vrid_from_project_id(
             db_apis.get_session(), project_id=project_id)
         return vrid
 
 
-class UpdateVRIDForProjectMember(BaseDatabaseTask):
+class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
 
-    def execute(self, member, vrid, port):
-        vrid_value = CONF.a10_global.vrid
+    def execute(self, lb_resource, vrid, port):
         if port:
             if vrid:
                 try:
@@ -386,8 +385,8 @@ class UpdateVRIDForProjectMember(BaseDatabaseTask):
                         vrid_floating_ip=port.fixed_ips[0].ip_address,
                         vrid_port_id=port.id,
                         vrid=vrid_value)
-                    LOG.debug("Successfully updated DB vrid %s entry for member %s",
-                              vrid.id, member.id)
+                    LOG.debug("Successfully updated DB vrid %s entry for loadbalancer resource %s",
+                              vrid.id, lb_resource.id)
                 except Exception as e:
                     LOG.error("Failed to update vrid %(vrid)s "
                               "DB entry due to: %(except)s",
@@ -396,12 +395,12 @@ class UpdateVRIDForProjectMember(BaseDatabaseTask):
             else:
                 try:
                     self.vrid_repo.create(db_apis.get_session(),
-                                          project_id=member.project_id,
+                                          project_id=lb_resource.project_id,
                                           vrid_floating_ip=port.fixed_ips[0].ip_address,
                                           vrid_port_id=port.id,
                                           vrid=vrid_value)
-                    LOG.debug("Successfully created DB entry for vrid for member %s",
-                              member.id)
+                    LOG.debug("Successfully created DB entry for vrid for loadbalancer resource %s",
+                              lb_resource.id)
                 except Exception as e:
                     LOG.error("Failed to create vrid DB entry due to: %s", str(e))
                     raise e
@@ -420,6 +419,15 @@ class UpdateVRIDForProjectMember(BaseDatabaseTask):
                               {'vrid': vrid.id, 'except': e})
                     raise e
 
+class CountLoadbalancersInProject(BaseDatabaseTask):
+    def execute(self, lb):
+        try:
+            return self.lb_repo.get_lb_count(
+                db_apis.get_session(),
+                project_id=lb.project_id)
+        except Exception as e:
+            LOG.exception("Failed to get count of loadbalancers in given project: %s", str(e))
+            raise e
 
 class CountMembersInProject(BaseDatabaseTask):
     def execute(self, member):

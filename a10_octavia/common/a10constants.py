@@ -44,6 +44,7 @@ HTTP_TYPE = ['HTTP', 'HTTPS']
 PERS_TYPE = ['cookie_persistence', 'src_ip_persistence']
 NO_DEST_NAT_SUPPORTED_PROTOCOL = ['tcp', 'udp']
 PORT = 'port'
+LB_COUNT = 'member_count'
 MEMBER_COUNT = 'member_count'
 DELETE_VRID = 'delete_vrid'
 

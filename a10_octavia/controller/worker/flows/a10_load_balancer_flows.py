@@ -148,6 +148,10 @@ class LoadBalancerFlows(object):
 
         store = {}
         delete_LB_flow = linear_flow.Flow(constants.DELETE_LOADBALANCER_FLOW)
+        delete_LB_flow.add(a10_database_tasks.
+                           CountMembersInProject(
+                               requires=constants.LOADBALANCER,
+                               provides=a10constants.LB_COUNT))
         delete_LB_flow.add(lifecycle_tasks.LoadBalancerToErrorOnRevertTask(
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
@@ -165,6 +169,7 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
+        delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
         if CONF.a10_global.network_type == 'vlan':
             delete_LB_flow.add(vthunder_tasks.DeleteInterfaceTagIfNotInUseForLB(
                 requires=[constants.LOADBALANCER,
@@ -267,6 +272,7 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER, constants.UPDATE_DICT)))
         # update_LB_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        post_create_lb_flow.add(handle_vrid_for_loadbalancer_subflow())
         update_LB_flow.add(virtual_server_tasks.UpdateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
@@ -329,9 +335,9 @@ class LoadBalancerFlows(object):
                 name=sf_name + '-' + constants.RELOAD_LB_AFTER_AMP_ASSOC,
                 requires=constants.LOADBALANCER_ID,
                 provides=constants.LOADBALANCER))
-
         post_create_lb_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
+        post_create_lb_flow.add(handle_vrid_for_loadbalancer_subflow())
         if CONF.a10_global.network_type == 'vlan':
             post_create_lb_flow.add(vthunder_tasks.TagInterfaceForLB(
                 requires=[constants.LOADBALANCER,
@@ -341,3 +347,28 @@ class LoadBalancerFlows(object):
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
                 requires=constants.LOADBALANCER))
         return post_create_lb_flow
+
+def handle_vrid_for_loadbalancer_subflow(self):
+    handle_vrid_for_lb_subflow = linear_flow.Flow(a10constants.HANDLE_VRID_LOADBALANCER_SUBFLOW)
+    handle_vrid_for_lb_subflow.add(a10_database_tasks.GetVRIDForLoadbalancerResource(
+        requires=constants.LOADBALANCER,
+        provides=a10constants.VRID))
+    handle_vrid_for_lb_subflow.add(a10_network_tasks.HandleVRIDFloatingIP(
+        requires=[constants.LOADBALANCER, a10constants.VTHUNDER, a10constants.VRID],
+        provides=a10constants.PORT))
+    handle_vrid_for_lb_subflow.add(a10_database_tasks.UpdateVRIDForLoadbalancerResource(
+        requires=[constants.LOADBALANCER, a10constants.VRID, a10constants.PORT]))
+    return handle_vrid_for_lb_subflow
+
+def get_delete_lb_vrid_subflow(self):
+    delete_lb_vrid_subflow = linear_flow.Flow(
+        a10constants.DELETE_LOADBALANCER_VRID_SUBFLOW)
+    delete_lb_vrid_subflow.add(a10_database_tasks.GetVRIDForLoadbalancerResource(
+        requires=constants.LOADBALANCER,
+        provides=a10constants.VRID))
+    delete_lb_vrid_subflow.add(a10_network_tasks.DeleteVRIDPort(
+        requires=[a10constants.VTHUNDER, a10constants.VRID, a10constants.LB_COUNT],
+        provides=a10constants.DELETE_VRID))
+    delete_lb_vrid_subflow.add(a10_database_tasks.DeleteVRIDEntry(
+        requires=[a10constants.VRID, a10constants.DELETE_VRID]))
+    return delete_lb_vrid_subflow
