@@ -118,10 +118,13 @@ class PoolFlows(object):
         delete_member_vthunder_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBERS_SUBFLOW_WITH_POOL_DELETE_FLOW)
         member_store = {}
+        prev_ip_addr = None
         for member in members:
             member_store[member.id] = member
-            delete_member_vthunder_subflow.add(
-                self.member_flow.get_delete_member_vthunder_internal_subflow(member.id))
+            if prev_ip_addr != member.ip_address:
+                delete_member_vthunder_subflow.add(
+                    self.member_flow.get_delete_member_vthunder_internal_subflow(member.id))
+            prev_ip_addr = member.ip_address
         if members:
             delete_member_vthunder_subflow.add(
                 self.member_flow.get_delete_member_vrid_internal_subflow(members[-1].id))
