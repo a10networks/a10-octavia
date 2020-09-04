@@ -1,8 +1,19 @@
 #!/bin/bash
 
+# To bring support for alias
+shopt -s expand_aliases
+
 if [ "$EUID" -ne 0 ]
     then echo "Please run as root"
     exit
+fi
+
+# Figuring out correct pip version
+pip2 -V
+if [ $? -eq 0 ]; then
+   alias pip='pip2'
+else
+   alias pip='pip3'
 fi
 
 SYSTEMD_SCRIPT_DIR=$(pip show a10-octavia | grep Location | awk '{print $2}')
