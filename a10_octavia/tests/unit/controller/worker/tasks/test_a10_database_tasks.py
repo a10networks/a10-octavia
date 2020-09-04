@@ -15,6 +15,7 @@
 
 import copy
 import imp
+
 try:
     from unittest import mock
 except ImportError:
@@ -179,4 +180,11 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.member_repo.get_member_count = mock.Mock()
         mock_vrid_entry.member_repo.get_member_count.return_value = 1
         member_count = mock_vrid_entry.execute(MEMBER_1)
+        self.assertEqual(1, member_count)
+
+    def test_count_members_in_project_ip(self):
+        mock_count_member = task.CountMembersWithIP()
+        mock_count_member.member_repo.get_member_count_by_ip_address = mock.Mock()
+        mock_count_member.member_repo.get_member_count_by_ip_address.return_value = 1
+        member_count = mock_count_member.execute(MEMBER_1)
         self.assertEqual(1, member_count)
