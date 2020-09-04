@@ -63,7 +63,7 @@ class TestHandlerServerTasks(BaseTaskTestCase):
         mock_member = task.MemberCreate()
         member_port_count_ip = 1
         mock_member.axapi_client = self.client_mock
-        mock_member.revert(MEMBER, VTHUNDER, POOL, 
+        mock_member.revert(MEMBER, VTHUNDER, POOL,
                            member_port_count_ip)
         self.client_mock.slb.server.delete.assert_called_with(
             SERVER_NAME)
@@ -73,7 +73,7 @@ class TestHandlerServerTasks(BaseTaskTestCase):
         member_port_count_ip = 1
         mock_create_member.CONF = self.conf
         mock_create_member.axapi_client = self.client_mock
-        mock_create_member.execute(MEMBER, VTHUNDER, POOL, 
+        mock_create_member.execute(MEMBER, VTHUNDER, POOL,
                                    member_port_count_ip)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
@@ -103,7 +103,7 @@ class TestHandlerServerTasks(BaseTaskTestCase):
         mock_delete_member.axapi_client = self.client_mock
         mock_delete_member.axapi_client.slb.service_group.TCP = \
             pool_protocol_tcp
-        mock_delete_member.execute(MEMBER, VTHUNDER, POOL, 
+        mock_delete_member.execute(MEMBER, VTHUNDER, POOL,
                                    member_port_count_ip)
         self.client_mock.slb.service_group.member.delete.assert_called_with(
             POOL.id, SERVER_NAME, MEMBER.protocol_port)

@@ -513,4 +513,3 @@ class CountMembersWithIP(BaseDatabaseTask):
         except Exception as e:
             LOG.exception("Failed to get count of members with given IP for a pool: %s", str(e))
             raise e
-
