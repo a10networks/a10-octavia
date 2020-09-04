@@ -6,7 +6,7 @@ ExecReload = /bin/kill -HUP $MAINPID
 TimeoutStopSec = 300
 KillMode = process
 ExecStart = /usr/local/bin/a10-house-keeper  --config-dir=/etc/octavia/ --config-file=/etc/a10/a10-octavia.conf
-User = octavia
+User = %user%
 
 [Install]
 WantedBy = multi-user.target
