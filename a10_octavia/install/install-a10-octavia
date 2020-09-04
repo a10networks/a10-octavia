@@ -16,6 +16,9 @@ else
    alias pip='pip3'
 fi
 
+SYSTEMD_SCRIPT_DIR=$(pip show a10-octavia | grep Location | awk '{print $2}')
+SYSTEMD_SCRIPT_DIR="${SYSTEMD_SCRIPT_DIR}/a10_octavia/install"
+
 CONTROLLER="a10-controller-worker.service"
 HOUSEKEEPER="a10-house-keeper.service"
 HEALTHMANAGER="a10-health-manager.service"
@@ -24,14 +27,11 @@ SERVICES=("$CONTROLLER" "$HOUSEKEEPER" "$HEALTHMANAGER")
 
 for service in ${SERVICES[@]}; do
         if id "octavia" >/dev/null 2>&1; then
-            sed -i 's/%user%/octavia/' ${service}
+            sed -i 's/%user%/octavia/' "${SYSTEMD_SCRIPT_DIR}/${service}"
         else
-            sed -i 's/%user%/root/' ${service}
+            sed -i 's/%user%/root/' "${SYSTEMD_SCRIPT_DIR}/${service}"
         fi
 done
-
-SYSTEMD_SCRIPT_DIR=$(pip show a10-octavia | grep Location | awk '{print $2}')
-SYSTEMD_SCRIPT_DIR="${SYSTEMD_SCRIPT_DIR}/a10_octavia/install"
 
 FILE1=/usr/bin/a10-octavia-worker
 if [ -f "$FILE1" ]; then
