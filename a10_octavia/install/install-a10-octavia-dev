@@ -1,0 +1,70 @@
+#!/bin/bash
+
+# To bring support for alias
+shopt -s expand_aliases
+
+if [ "$EUID" -ne 0 ]
+    then echo "Please run as root"
+    exit
+fi
+
+# Figuring out correct pip version
+pip2 -V
+if [ $? -eq 0 ]; then
+   alias pip='pip2'
+else
+   alias pip='pip3'
+fi
+
+SYSTEMD_SCRIPT_DIR=$(pip show a10-octavia | grep Location | awk '{print $2}')
+SYSTEMD_SCRIPT_DIR="${SYSTEMD_SCRIPT_DIR}/a10_octavia/install"
+
+CONTROLLER="a10-controller-worker.service"
+HOUSEKEEPER="a10-house-keeper.service"
+HEALTHMANAGER="a10-health-manager.service"
+
+SERVICES=("$CONTROLLER" "$HOUSEKEEPER" "$HEALTHMANAGER")
+
+for service in ${SERVICES[@]}; do
+        if id "octavia" >/dev/null 2>&1; then
+            sed -i 's/%user%/octavia/' "${SYSTEMD_SCRIPT_DIR}/${service}"
+        else
+            sed -i 's/%user%/stack/' "${SYSTEMD_SCRIPT_DIR}/${service}"
+        fi
+done
+
+FILE1=/usr/bin/a10-octavia-worker
+if [ -f "$FILE1" ]; then
+    ln -s /usr/bin/a10-octavia-worker /usr/local/bin/a10-octavia-worker
+fi
+
+FILE2=/usr/bin/a10-health-manager
+if [ -f "$FILE2" ]; then
+    ln -s /usr/bin/a10-health-manager /usr/local/bin/a10-health-manager
+fi
+
+FILE3=/usr/bin/a10-house-keeper
+if [ -f "$FILE3" ]; then
+    ln -s /usr/bin/a10-house-keeper /usr/local/bin/a10-house-keeper
+fi
+
+echo "[+] Installing a10-controller-worker"
+echo "[+] Installing a10-house-keeper"
+echo "[+] Installing a10-health-manager"
+
+for i in ${SERVICES[@]}; do
+	cp -f "$SYSTEMD_SCRIPT_DIR/${i}" /etc/systemd/system/
+	chown root:root /etc/systemd/system/${i}
+done
+
+echo "[=] Reloading systemd" 
+systemctl daemon-reload
+
+for j in ${SERVICES[@]}; do
+	echo "[=] Enabling ${j}"
+        systemctl enable ${j}
+        echo "[=] Starting ${j}"
+        systemctl start ${j}
+done
+
+echo "Completed installation a10-controller-worker, a10-house-keeper and a10-health-manager service"
