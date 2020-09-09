@@ -335,3 +335,12 @@ class MemberRepository(repo.MemberRepository):
             and_(self.model_class.ip_address == ip_address,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
+
+    def get_member_count_by_ip_address_port(self, session, ip_address, project_id, port):
+        return session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.ip_address == ip_address,
+                 self.model_class.protocol_port = port,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
+

@@ -104,3 +104,4 @@ LB_TO_VTHUNDER_SUBFLOW = 'lb-to-vthunder-subflow'
 
 # Member count with specific IP.
 MEMBER_COUNT_IP = 'member_count_ip'
+MEMBER_COUNT_IP_PORT = 'member_count_ip_port'

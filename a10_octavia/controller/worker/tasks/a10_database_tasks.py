@@ -513,3 +513,15 @@ class CountMembersWithIP(BaseDatabaseTask):
         except Exception as e:
             LOG.exception("Failed to get count of members with given IP for a pool: %s", str(e))
             raise e
+
+
+class CountMembersWithIPPort(BaseDatabaseTask):
+    def execute(self, member):
+        try:
+            return self.member_repo.get_member_count_by_ip_address_port(
+                db_apis.get_session(), member.ip_address, member.project_id, 
+                member.protocol_port)
+        except Exception as e:
+            LOG.exception("Failed to get count of members with given IP fnd port for a pool: %s", str(e))
+            raise e
+
