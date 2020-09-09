@@ -274,6 +274,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             raise db_exceptions.NoResultFound
 
         store = {constants.LOADBALANCER_ID: load_balancer_id,
+                 constants.VIP: lb.vip,
                  constants.BUILD_TYPE_PRIORITY:
                  constants.LB_CREATE_NORMAL_PRIORITY}
 
@@ -310,6 +311,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                                         vthunder.compute_id)
         (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute)
         store.update({constants.LOADBALANCER: lb,
+                      constants.VIP: lb.vip,
                       constants.SERVER_GROUP_ID: lb.server_group_id})
 
         delete_lb_tf = self._taskflow_load(flow, store=store)
@@ -340,6 +342,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         update_lb_tf = self._taskflow_load(
             self._lb_flows.get_update_load_balancer_flow(),
             store={constants.LOADBALANCER: lb,
+                   constants.VIP: lb.vip,
                    constants.LISTENERS: listeners,
                    constants.UPDATE_DICT: load_balancer_updates})
 

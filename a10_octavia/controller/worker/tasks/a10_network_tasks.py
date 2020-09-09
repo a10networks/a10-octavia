@@ -682,13 +682,17 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
         conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(lb_resource.project_id)
         if conf_floating_ip:
-            subnet = self.network_driver.get_subnet(lb_resource.subnet_id)
+            if not hasattr(lb_resource, 'subnet_id'):
+                # Special case for load balancers as their vips have the subnet info
+                subnet = self.network_driver.get_subnet(lb_resource.vip.subnet_id)
+            else:
+                subnet = self.network_driver.get_subnet(lb_resource.subnet_id)
             subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(subnet.cidr)
             if conf_floating_ip.lower() == 'dhcp':
                 if not a10_utils.check_ip_in_subnet_range(device_vrid_ip, subnet_ip, subnet_mask):
                     try:
                         self.fip_port = self.network_driver.create_port(subnet.network_id,
-                                                                        lb_resource.subnet_id)
+                                                                        subnet.id)
                     except Exception as e:
                         LOG.error("Failed to create neutron port for lb_resource: %s", lb_resource.id)
                         raise e
@@ -703,7 +707,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 if conf_floating_ip != device_vrid_ip:
                     try:
                         self.fip_port = self.network_driver.create_port(subnet.network_id,
-                                                                        lb_resource.subnet_id,
+                                                                        subnet.id,
                                                                         fixed_ip=conf_floating_ip)
                     except Exception as e:
                         LOG.error("Failed to create neutron port for loadbalancer resource: %s with "
@@ -766,7 +770,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
 class DeleteVRIDPort(BaseNetworkTask):
     """Delete VRID Port if the last resource associated with it is deleted"""
-    
     @axapi_client_decorator
     def execute(self, vthunder, vrid, resource_count):
         if vrid and resource_count == 1:

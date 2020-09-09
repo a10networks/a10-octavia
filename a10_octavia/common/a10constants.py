@@ -48,6 +48,8 @@ LB_COUNT = 'member_count'
 MEMBER_COUNT = 'member_count'
 DELETE_VRID = 'delete_vrid'
 
+LB_RESOURCE = 'lb_resource'
+
 SUBNET_ID = "subnet_id"
 VLAN_ID = "vlan_id"
 TAG_INTERFACE = "tag_interface"
@@ -92,6 +94,8 @@ CHANGE_PARTITION = 'change-partition'
 CREATE_SSL_CERT_FLOW = 'create-ssl-cert-flow'
 DELETE_SSL_CERT_FLOW = 'delete-ssl-cert-flow'
 LISTENER_TYPE_DECIDER_FLOW = 'listener_type_decider_flow'
+DELETE_LOADBALANCER_VRID_SUBFLOW = 'delete-loadbalancer-vrid-subflow'
+HANDLE_VRID_LOADBALANCER_SUBFLOW = 'handle-vrid-loadbalancer-subflow'
 DELETE_MEMBER_VTHUNDER_INTERNAL_SUBFLOW = 'delete-member-vthunder-internal-subflow'
 DELETE_MEMBER_VRID_SUBFLOW = 'delete-member-vrid-subflow'
 DELETE_MEMBER_VRID_INTERNAL_SUBFLOW = 'delete-member-vrid-internal-subflow'

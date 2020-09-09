@@ -149,7 +149,7 @@ class LoadBalancerFlows(object):
         store = {}
         delete_LB_flow = linear_flow.Flow(constants.DELETE_LOADBALANCER_FLOW)
         delete_LB_flow.add(a10_database_tasks.
-                           CountMembersInProject(
+                           CountLoadbalancersInProject(
                                requires=constants.LOADBALANCER,
                                provides=a10constants.LB_COUNT))
         delete_LB_flow.add(lifecycle_tasks.LoadBalancerToErrorOnRevertTask(
@@ -337,7 +337,7 @@ class LoadBalancerFlows(object):
                 provides=constants.LOADBALANCER))
         post_create_lb_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
-        post_create_lb_flow.add(handle_vrid_for_loadbalancer_subflow())
+        post_create_lb_flow.add(self.handle_vrid_for_loadbalancer_subflow())
         if CONF.a10_global.network_type == 'vlan':
             post_create_lb_flow.add(vthunder_tasks.TagInterfaceForLB(
                 requires=[constants.LOADBALANCER,
@@ -348,27 +348,30 @@ class LoadBalancerFlows(object):
                 requires=constants.LOADBALANCER))
         return post_create_lb_flow
 
-def handle_vrid_for_loadbalancer_subflow(self):
-    handle_vrid_for_lb_subflow = linear_flow.Flow(a10constants.HANDLE_VRID_LOADBALANCER_SUBFLOW)
-    handle_vrid_for_lb_subflow.add(a10_database_tasks.GetVRIDForLoadbalancerResource(
-        requires=constants.LOADBALANCER,
-        provides=a10constants.VRID))
-    handle_vrid_for_lb_subflow.add(a10_network_tasks.HandleVRIDFloatingIP(
-        requires=[constants.LOADBALANCER, a10constants.VTHUNDER, a10constants.VRID],
-        provides=a10constants.PORT))
-    handle_vrid_for_lb_subflow.add(a10_database_tasks.UpdateVRIDForLoadbalancerResource(
-        requires=[constants.LOADBALANCER, a10constants.VRID, a10constants.PORT]))
-    return handle_vrid_for_lb_subflow
+    def handle_vrid_for_loadbalancer_subflow(self):
+        handle_vrid_for_lb_subflow = linear_flow.Flow(a10constants.HANDLE_VRID_LOADBALANCER_SUBFLOW)
+        handle_vrid_for_lb_subflow.add(a10_database_tasks.GetVRIDForLoadbalancerResource(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=a10constants.VRID))
+        handle_vrid_for_lb_subflow.add(a10_network_tasks.HandleVRIDFloatingIP(
+            requires=[a10constants.VTHUNDER, a10constants.VRID],
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=a10constants.PORT))
+        handle_vrid_for_lb_subflow.add(a10_database_tasks.UpdateVRIDForLoadbalancerResource(
+            requires=[a10constants.VRID, a10constants.PORT],
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER}))
+        return handle_vrid_for_lb_subflow
 
-def get_delete_lb_vrid_subflow(self):
-    delete_lb_vrid_subflow = linear_flow.Flow(
-        a10constants.DELETE_LOADBALANCER_VRID_SUBFLOW)
-    delete_lb_vrid_subflow.add(a10_database_tasks.GetVRIDForLoadbalancerResource(
-        requires=constants.LOADBALANCER,
-        provides=a10constants.VRID))
-    delete_lb_vrid_subflow.add(a10_network_tasks.DeleteVRIDPort(
-        requires=[a10constants.VTHUNDER, a10constants.VRID, a10constants.LB_COUNT],
-        provides=a10constants.DELETE_VRID))
-    delete_lb_vrid_subflow.add(a10_database_tasks.DeleteVRIDEntry(
-        requires=[a10constants.VRID, a10constants.DELETE_VRID]))
-    return delete_lb_vrid_subflow
+    def get_delete_lb_vrid_subflow(self):
+        delete_lb_vrid_subflow = linear_flow.Flow(
+            a10constants.DELETE_LOADBALANCER_VRID_SUBFLOW)
+        delete_lb_vrid_subflow.add(a10_database_tasks.GetVRIDForLoadbalancerResource(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=a10constants.VRID))
+        delete_lb_vrid_subflow.add(a10_network_tasks.DeleteVRIDPort(
+            requires=[ a10constants.VRID, a10constants.LB_COUNT],
+            rebind={a10constants.LB_RESOURCE: constants.VIP},
+            provides=a10constants.DELETE_VRID))
+        delete_lb_vrid_subflow.add(a10_database_tasks.DeleteVRIDEntry(
+            requires=[a10constants.VRID, a10constants.DELETE_VRID]))
+        return delete_lb_vrid_subflow
