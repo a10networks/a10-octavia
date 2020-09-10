@@ -195,6 +195,10 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
                         vthunder.project_id)
                     if parent_project_id:
                         vthunder.partition_name = parent_project_id[:14]
+                    else:   ## TODO Should be handled via new db architechture
+                        LOG.warning("The parent project for project %s does not exist. "
+                                    "Configuration will be applied in project partition itself. ",
+                                    vthunder.project_id)
                 else:
                     LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
                                 "configuration will not be applied for loadbalancer: %s",
