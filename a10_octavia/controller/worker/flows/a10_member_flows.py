@@ -314,7 +314,7 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER))
         return update_member_flow
 
-    def get_rack_vthunder_create_member_flow(self):
+    def get_rack_vthunder_member_flow(self):
         """Create a flow to create a rack vthunder member
 
         :returns: The flow for creating a rack vthunder member
