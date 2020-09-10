@@ -745,7 +745,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             try:
                 self.network_driver.delete_port(self.fip_port.id)
                 if vrid:
-                    self.axapi_client.vrrpa.update(vrid.vrid, vrid.vrid_floating_ip)
+                    self.axapi_client.vrrpa.update(vrid.vrid, floating_ips=[vrid.vrid_floating_ip])
             except req_exceptions.ConnectionError:
                 LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
             except Exception as e:
@@ -758,9 +758,9 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             vrid_value = vrid.vrid
         try:
             if not vthunder.partition_name or vthunder.partition_name == 'shared':
-                self.axapi_client.vrrpa.update(vrid_value, floating_ip=conf_floating_ip)
+                self.axapi_client.vrrpa.update(vrid_value, floating_ips=[conf_floating_ip])
             else:
-                self.axapi_client.vrrpa.update(vrid_value, floating_ip=conf_floating_ip,
+                self.axapi_client.vrrpa.update(vrid_value, floating_ips=[conf_floating_ip],
                                                is_partition=True)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to update VRRP floating IP %s for vrid: %s",

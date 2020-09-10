@@ -420,11 +420,11 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                     raise e
 
 class CountLoadbalancersInProject(BaseDatabaseTask):
-    def execute(self, lb):
-        try:
-            return self.lb_repo.get_lb_count(
+    def execute(self, loadbalancer):
+        try:    
+            return self.loadbalancer_repo.get_lb_count(
                 db_apis.get_session(),
-                project_id=lb.project_id)
+                project_id=loadbalancer.project_id)
         except Exception as e:
             LOG.exception("Failed to get count of loadbalancers in given project: %s", str(e))
             raise e
