@@ -539,7 +539,7 @@ mysql> DELETE FROM alembic_version;
 With `a10-octavia` installed, run the following command to register the services
 
 ```shell
-$ install-a10-octavia
+$ install-a10-octavia-dev
 ```
 
 This will install systemd services with names - `a10-controller-worker.service`, `a10-health-manager.service` and `a10-house-keeper.service`.
