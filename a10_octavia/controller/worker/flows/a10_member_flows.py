@@ -95,9 +95,9 @@ class MemberFlows(object):
         create_member_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
         create_member_flow.add(database_tasks.
-            MarkLBAndListenersActiveInDB(
-            requires=(constants.LOADBALANCER,
-                      constants.LISTENERS)))
+                               MarkLBAndListenersActiveInDB(
+                                   requires=(constants.LOADBALANCER,
+                                             constants.LISTENERS)))
         create_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return create_member_flow
@@ -117,7 +117,7 @@ class MemberFlows(object):
             requires=constants.MEMBER))
         delete_member_flow.add(model_tasks.
                                DeleteModelObject(rebind={constants.OBJECT:
-                                                             constants.MEMBER}))
+                                                         constants.MEMBER}))
         delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -158,7 +158,7 @@ class MemberFlows(object):
             requires=constants.MEMBER))
         delete_member_flow.add(model_tasks.
                                DeleteModelObject(rebind={constants.OBJECT:
-                                                             constants.MEMBER}))
+                                                         constants.MEMBER}))
         delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -286,9 +286,9 @@ class MemberFlows(object):
         update_member_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
         update_member_flow.add(database_tasks.
-            MarkLBAndListenersActiveInDB(
-            requires=[constants.LOADBALANCER,
-                      constants.LISTENERS]))
+                               MarkLBAndListenersActiveInDB(
+                                   requires=[constants.LOADBALANCER,
+                                             constants.LISTENERS]))
         update_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return update_member_flow
@@ -326,9 +326,9 @@ class MemberFlows(object):
         update_member_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
         update_member_flow.add(database_tasks.
-            MarkLBAndListenersActiveInDB(
-            requires=[constants.LOADBALANCER,
-                      constants.LISTENERS]))
+                               MarkLBAndListenersActiveInDB(
+                                   requires=[constants.LOADBALANCER,
+                                             constants.LISTENERS]))
         update_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return update_member_flow
@@ -367,9 +367,9 @@ class MemberFlows(object):
         create_member_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
         create_member_flow.add(database_tasks.
-            MarkLBAndListenersActiveInDB(
-            requires=(constants.LOADBALANCER,
-                      constants.LISTENERS)))
+                               MarkLBAndListenersActiveInDB(
+                                   requires=(constants.LOADBALANCER,
+                                             constants.LISTENERS)))
         create_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         return create_member_flow

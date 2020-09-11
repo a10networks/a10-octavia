@@ -519,10 +519,12 @@ class CountMembersWithIPPort(BaseDatabaseTask):
     def execute(self, member):
         try:
             return self.member_repo.get_member_count_by_ip_address_port(
-                db_apis.get_session(), member.ip_address, member.project_id, 
+                db_apis.get_session(), member.ip_address, member.project_id,
                 member.protocol_port)
         except Exception as e:
-            LOG.exception("Failed to get count of members with given IP fnd port for a pool: %s", str(e))
+            LOG.exception(
+                "Failed to get count of members with given IP fnd port for a pool: %s",
+                str(e))
             raise e
 
 
@@ -530,7 +532,7 @@ class PoolCountforIP(BaseDatabaseTask):
     def execute(self, member):
         try:
             return self.member_repo.get_pool_count_by_ip(
-                    db_apis.get_session(), member.ip_address, member.project_id)
+                db_apis.get_session(), member.ip_address, member.project_id)
         except Exception as e:
             LOG.exception("Failed to get pool count with same IP address: %s", str(e))
             raise e

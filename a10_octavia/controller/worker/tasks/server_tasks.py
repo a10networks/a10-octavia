@@ -164,7 +164,8 @@ class MemberDeletePool(task.Task):
                                                          protocol)
                 LOG.debug("Successfully deleted port for member %s from pool %s",
                           member.id, pool.id)
-        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+        except acos_errors.ACOSException:
+            pass
+        except exceptions.ConnectionError as e:
             LOG.exception("Failed to delete member/port: %s", member.id)
             raise e
-
