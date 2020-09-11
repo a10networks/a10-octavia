@@ -343,11 +343,11 @@ class MemberRepository(repo.MemberRepository):
                  self.model_class.protocol_port == port,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
-    
 
     def get_pool_count_by_ip(self, session, ip_address, project_id):
         return session.query(self.model_class).filter(
-                and_(self.model_class.ip_address == ip_address,
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.ip_address == ip_address,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).distinct(
-                             self.model_class.pool).count()
+            self.model_class.pool_id).count()

@@ -90,28 +90,28 @@ class MemberDelete(task.Task):
     """Task to delete member"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool, member_count_ip=0):
+    def execute(self, member, vthunder, pool, member_count_ip, member_count_ip_port):
         server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         try:
             self.axapi_client.slb.service_group.member.delete(
                 pool.id, server_name, member.protocol_port)
-            LOG.debug("Successfully dissociated member %s from pool %s", server_name, pool.id)
+            LOG.debug("Successfully dissociated member %s from pool %s", member.id, pool.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to dissociate member %s from pool %s",
-                          server_name, pool.id)
+                          member.id, pool.id)
             raise e
 
         try:
             if member_count_ip <= 1:
                 self.axapi_client.slb.server.delete(server_name)
-                LOG.debug("Successfully deleted member %s from pool %s", server_name, pool.id)
-            else:
+                LOG.debug("Successfully deleted member %s from pool %s", member.id, pool.id)
+            elif member_count_ip_port <= 1:
                 protocol = openstack_mappings.service_group_protocol(
                     self.axapi_client, pool.protocol)
                 self.axapi_client.slb.server.port.delete(server_name, member.protocol_port,
                                                          protocol)
                 LOG.debug("Successfully deleted port for member %s from pool %s",
-                          server_name, pool.id)
+                          member.id, pool.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to delete member/port: %s", server_name)
             raise e
@@ -152,19 +152,18 @@ class MemberDeletePool(task.Task):
 
     @axapi_client_decorator
     def execute(self, member, vthunder, pool, pool_count_ip, member_count_ip_port):
-        server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
-
         try:
+            server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
             if pool_count_ip <= 1:
                 self.axapi_client.slb.server.delete(server_name)
-                LOG.debug("Successfully deleted member %s from pool %s", server_name, pool.id)
+                LOG.debug("Successfully deleted member %s from pool %s", member.id, pool.id)
             elif member_count_ip_port <= 1:
                 protocol = openstack_mappings.service_group_protocol(
                     self.axapi_client, pool.protocol)
                 self.axapi_client.slb.server.port.delete(server_name, member.protocol_port,
                                                          protocol)
                 LOG.debug("Successfully deleted port for member %s from pool %s",
-                          server_name, pool.id)
+                          member.id, pool.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to delete member/port: %s", member.id)
             raise e
