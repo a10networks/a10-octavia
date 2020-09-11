@@ -145,3 +145,27 @@ class MemberUpdate(task.Task):
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update member: %s", member.id)
             raise e
+
+
+class MemberDeletePool(task.Task):
+    """Task to delete member"""
+
+    @axapi_client_decorator
+    def execute(self, member, vthunder, pool, pool_count_ip, member_count_ip_port):
+        server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
+
+        try:
+            if pool_count_ip <= 1:
+                self.axapi_client.slb.server.delete(server_name)
+                LOG.debug("Successfully deleted member %s from pool %s", server_name, pool.id)
+            elif member_count_ip_port <= 1:
+                protocol = openstack_mappings.service_group_protocol(
+                    self.axapi_client, pool.protocol)
+                self.axapi_client.slb.server.port.delete(server_name, member.protocol_port,
+                                                         protocol)
+                LOG.debug("Successfully deleted port for member %s from pool %s",
+                          server_name, pool.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to delete member/port: %s", member.id)
+            raise e
+

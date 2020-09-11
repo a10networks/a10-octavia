@@ -168,10 +168,8 @@ class MemberFlows(object):
         delete_member_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
             requires=a10constants.VTHUNDER,
             provides=a10constants.VTHUNDER))
-        delete_member_flow.add(a10_database_tasks.CountMembersWithIP(
-            requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP))
-        delete_member_flow.add(a10_database_tasks.CountMembersWithIPPort(
-            requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP_PORT))
+        # delete_member_flow.add(a10_database_tasks.CountMembersWithIPPort(
+        #    requires=(constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP_PORT)))
         delete_member_flow.add(server_tasks.MemberDelete(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                       a10constants.MEMBER_COUNT_IP, a10constants.MEMBER_COUNT_IP_PORT)))
@@ -201,9 +199,18 @@ class MemberFlows(object):
             name='setup_device_network_map_' + member_id,
             requires=a10constants.VTHUNDER,
             provides=a10constants.VTHUNDER))
-        delete_member_thunder_subflow.add(server_tasks.MemberDelete(
+        delete_member_thunder_subflow.add(a10_database_tasks.CountMembersWithIPPort(
+            name='count_members_ip_port_' + member_id,
+            requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP_PORT,
+            rebind={constants.MEMBER: member_id}))
+        delete_member_thunder_subflow.add(a10_database_tasks.PoolCountforIP(
+            name='pool_count_for_ip_' + member_id,
+            requires=constants.MEMBER, provides=a10constants.POOL_COUNT_IP,
+            rebind={constants.MEMBER: member_id}))
+        delete_member_thunder_subflow.add(server_tasks.MemberDeletePool(
             name='delete_thunder_member_' + member_id,
-            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL),
+            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL, 
+                a10constants.POOL_COUNT_IP, a10constants.MEMBER_COUNT_IP_PORT),
             rebind={constants.MEMBER: member_id}))
         if CONF.a10_global.network_type == 'vlan':
             delete_member_thunder_subflow.add(vthunder_tasks.DeleteInterfaceTagIfNotInUseForMember(
