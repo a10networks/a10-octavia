@@ -91,7 +91,7 @@ class TestHandlerServerTasks(BaseTaskTestCase):
     def test_delete_member_task_single_no_port(self):
         mock_delete_member = task.MemberDelete()
         mock_delete_member.axapi_client = self.client_mock
-        mock_delete_member.execute(MEMBER, VTHUNDER, POOL)
+        mock_delete_member.execute(MEMBER, VTHUNDER, POOL, 0, 0)
         self.client_mock.slb.service_group.member.delete.assert_called_with(
             POOL.id, SERVER_NAME, MEMBER.protocol_port)
         self.client_mock.slb.server.delete.assert_called_with(SERVER_NAME)
@@ -104,7 +104,7 @@ class TestHandlerServerTasks(BaseTaskTestCase):
         mock_delete_member.axapi_client.slb.service_group.TCP = \
             pool_protocol_tcp
         mock_delete_member.execute(MEMBER, VTHUNDER, POOL,
-                                   member_port_count_ip)
+                                   member_port_count_ip, 0)
         self.client_mock.slb.service_group.member.delete.assert_called_with(
             POOL.id, SERVER_NAME, MEMBER.protocol_port)
         self.client_mock.slb.server.port.delete.assert_called_with(
