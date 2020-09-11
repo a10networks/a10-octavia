@@ -53,11 +53,11 @@ class MemberCreate(task.Task):
             self.axapi_client.slb.server.create(server_name, member.ip_address, status=status,
                                                 server_templates=server_temp,
                                                 axapi_args=server_args)
-            LOG.debug("Successfully created member: %s", server_name)
+            LOG.debug("Successfully created member: %s", member.id)
         except (acos_errors.Exists, acos_errors.AddressSpecifiedIsInUse):
             pass
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
-            LOG.exception("Failed to create member: %s", server_name)
+            LOG.exception("Failed to create member: %s", member.id)
             raise e
 
         try:
@@ -67,7 +67,7 @@ class MemberCreate(task.Task):
                       member.id, pool.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to associate member %s to pool %s",
-                          server_name, pool.id)
+                          member.id, pool.id)
             raise e
 
     @axapi_client_decorator
@@ -83,7 +83,7 @@ class MemberCreate(task.Task):
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
             LOG.exception("Failed to revert creation of member %s for pool %s due to %s",
-                          server_name, pool.id, str(e))
+                          member.id, pool.id, str(e))
 
 
 class MemberDelete(task.Task):
@@ -113,7 +113,7 @@ class MemberDelete(task.Task):
                 LOG.debug("Successfully deleted port for member %s from pool %s",
                           member.id, pool.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
-            LOG.exception("Failed to delete member/port: %s", server_name)
+            LOG.exception("Failed to delete member/port: %s", member.id)
             raise e
 
 
