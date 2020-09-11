@@ -87,6 +87,8 @@ class ListenersParent(object):
             template_policy = None
         vport_templates['template-policy'] = template_policy
 
+	vport_templates = utils.handle_virtual_port_templates(vport_templates, self.acos_client)
+
         # Add all config filters here
         if no_dest_nat and (
                 listener.protocol.lower()
