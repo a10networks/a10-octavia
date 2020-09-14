@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import json
 import logging
 
@@ -60,29 +61,13 @@ def meta(lbaas_obj, key, default):
         return default
     return meta_json.get(key, default)
 
-
-def handle_virtual_port_templates(templates, acos_client):
-        if CONF.a10_global.use_shared_for_template_lookup:
-                existing_templates_list = acos_client.slb.template.templates.get()
-		# HTTP Template
-                if template['template-http']:
-                    if existing_templates_list[]:
-                        template['template-http-shared'] =  template['template-http']
-                        template['shared-partition-http-template'] = True
-			del template['template-http']
-
-		# TCP Template
-		if template['template-tcp']:
-                    if existing_templates_list[]:
-                        template['template-tcp-shared'] =  template['template-tcp']
-                        template['shared-partition-tcp-template'] = True
-                        del template['template-tcp']
-
-                # Template Policy
-                if template['template-policy']:
-                    if existing_templates_list[]:
-                        template['template-tcp-shared'] =  template['template-policy']
-                        template['shared-partition-policy-template'] = True
-                        del template['template-policy']
-        else:
-            return template
+def shared_template_modifier(template_type, template_name, device_templates):
+    resource_list_key = "{0}-list".format(template_type)
+    if resource_list_key in device_templates:
+        for device_template in device_templates[resource_list_key]:
+            resouce_type = device_template.keys()[0]
+            device_template_name = device_template[resouce_type].get("name")
+            if template_name == device_template_name
+                break
+            template_type = "shared-partition-{0}".format(template_type)
+    return template_type
