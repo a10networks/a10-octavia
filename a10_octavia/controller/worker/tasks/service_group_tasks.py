@@ -35,6 +35,8 @@ class PoolParent(object):
     def set(self, set_method, pool):
         axapi_args = {'service_group': utils.meta(pool, 'service_group', {})}
 
+        device_templates = self.axapi_client.slb.template.templates.get()
+
         service_group_temp = {}
         template_server = CONF.service_group.template_server
         if template_server and template_server.lower() == 'none':
@@ -47,9 +49,13 @@ class PoolParent(object):
         service_group_temp['template-port'] = template_port
 
         template_policy = CONF.service_group.template_policy
-        if template_policy and template_policy.lower() == 'none':
-            template_policy = None
-        service_group_temp['template-policy'] = template_policy
+        if template_policy and template_policy.lower() != 'none':
+            template_key = 'template-policy'
+            if CONF.a10_global.use_shared_for_template_lookup:
+                template_key = utils.shared_template_modifier(template_key,
+                                                              template_policy,
+                                                              device_templates)
+            service_group_temp[template_key] = template_policy
 
         protocol = openstack_mappings.service_group_protocol(
             self.axapi_client, pool.protocol)
