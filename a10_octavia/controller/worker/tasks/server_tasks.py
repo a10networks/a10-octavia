@@ -20,6 +20,7 @@ from taskflow import task
 import acos_client.errors as acos_errors
 
 from a10_octavia.common import openstack_mappings
+from a10_octavia.common import exceptions as a10exp
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -42,6 +43,10 @@ class MemberCreate(task.Task):
         template_server = CONF.server.template_server
         if template_server and template_server.lower() == 'none':
             template_server = None
+        if CONF.a10_global.use_shared_for_template_lookup:
+            if template_server:
+                raise a10exp.SharedPartitionTemplateNotSupported(resource='server',
+                                                                 template_key='template-server')
         server_temp = {'template-server': template_server}
 
         if not member.enabled:

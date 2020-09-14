@@ -192,3 +192,12 @@ class ParentProjectNotFound(keystone_exceptions.Error):
         msg = ('The project {0} does not have a parent or has default project'
                ' as parent. ').format(project_id)
         super(ParentProjectNotFound, self).__init__(message=msg)
+
+
+class SharedPartitionTemplateNotSupported(acos_errors.FeatureNotSupported):
+    """ Occurs when shared partition lookup for templates is not supported on acos client"""
+
+    def __init__(self, resource, template_key):
+        msg = ('Shared partition template lookup for [{0}] is not supported'
+               ' on template `{1}`').format(resource, template_key)
+        super(SharedPartitionTemplateNotSupported, self).__init__(code=505, msg=msg)
