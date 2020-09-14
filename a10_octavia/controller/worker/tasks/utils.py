@@ -59,3 +59,30 @@ def meta(lbaas_obj, key, default):
     except Exception:
         return default
     return meta_json.get(key, default)
+
+
+def handle_virtual_port_templates(templates, acos_client):
+        if CONF.a10_global.use_shared_for_template_lookup:
+                existing_templates_list = acos_client.slb.template.templates.get()
+		# HTTP Template
+                if template['template-http']:
+                    if existing_templates_list[]:
+                        template['template-http-shared'] =  template['template-http']
+                        template['shared-partition-http-template'] = True
+			del template['template-http']
+
+		# TCP Template
+		if template['template-tcp']:
+                    if existing_templates_list[]:
+                        template['template-tcp-shared'] =  template['template-tcp']
+                        template['shared-partition-tcp-template'] = True
+                        del template['template-tcp']
+
+                # Template Policy
+                if template['template-policy']:
+                    if existing_templates_list[]:
+                        template['template-tcp-shared'] =  template['template-policy']
+                        template['shared-partition-policy-template'] = True
+                        del template['template-policy']
+        else:
+            return template
