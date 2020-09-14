@@ -122,6 +122,7 @@ class MemberUpdate(task.Task):
 
     @axapi_client_decorator
     def execute(self, member, vthunder):
+        server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         server_args = utils.meta(member, 'server', {})
         server_args['conn-limit'] = CONF.server.conn_limit
         server_args['conn-resume'] = CONF.server.conn_resume
@@ -138,7 +139,7 @@ class MemberUpdate(task.Task):
             status = True
 
         try:
-            self.axapi_client.slb.server.update(member.id, member.ip_address, status=status,
+            self.axapi_client.slb.server.update(server_name, member.ip_address, status=status,
                                                 server_templates=server_temp,
                                                 axapi_args=server_args)
             LOG.debug("Successfully updated member: %s", member.id)
