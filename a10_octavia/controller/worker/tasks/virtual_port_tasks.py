@@ -38,7 +38,7 @@ class ListenersParent(object):
         ipinip = CONF.listener.ipinip
         use_rcv_hop = CONF.listener.use_rcv_hop_for_resp
         ha_conn_mirror = CONF.listener.ha_conn_mirror
-        
+
         status = self.axapi_client.slb.UP
         if not listener.enabled:
             self.axapi_client.slb.DOWN
@@ -86,7 +86,7 @@ class ListenersParent(object):
                                                               listener.id,
                                                               device_templates)
             template_args[template_key] = listener.id
-        elif listener.protocol in a10constants.HTTP_TYPE.lower():
+        elif listener.protocol.upper() in a10constants.HTTP_TYPE:
             template_http = CONF.listener.template_http
             if template_http and template_http.lower() != 'none':
                 template_key = 'template-http'
@@ -104,7 +104,7 @@ class ListenersParent(object):
                 template_key = 'template-tcp'
                 if CONF.a10_global.use_shared_for_template_lookup:
                     template_key = utils.shared_template_modifier(template_key,
-                                                                  template_http,
+                                                                  template_tcp,
                                                                   device_templates)
                 vport_templates[template_key] = template_tcp
 
@@ -113,8 +113,8 @@ class ListenersParent(object):
             template_key = 'template-policy'
             if CONF.a10_global.use_shared_for_template_lookup:
                 template_key = utils.shared_template_modifier(template_key,
-                                                  template_http,
-                                                  device_templates)
+                                                              template_policy,
+                                                              device_templates)
             vport_templates[template_key] = template_policy
 
         set_method(loadbalancer.id, listener.id,
