@@ -67,7 +67,9 @@ def shared_template_modifier(template_type, template_name, device_templates):
         for device_template in device_templates[resource_list_key]:
             resouce_type = device_template.keys()[0]
             device_template_name = device_template[resouce_type].get("name")
-            if template_name == device_template_name
+            if template_name == device_template_name:
                 break
-            template_type = "shared-partition-{0}".format(template_type)
+            template_type = "{0}-shared".format(template_type)
+    else:
+        template_type = "{0}-shared".format(template_type)
     return template_type

@@ -70,24 +70,30 @@ class ListenersParent(object):
         vport_templates = {}
         template_vport = CONF.listener.template_virtual_port
         if template_vport and template_vport.lower() != 'none':
-            template_key = utils.shared_template_modifier('template-virtual-port',
-                                                          template_vport,
-                                                          device_templates)
+            template_key = 'template-virtual-port'
+            if CONF.a10_global.use_shared_for_template_lookup:
+                template_key = utils.shared_template_modifier(template_key,
+                                                              template_vport,
+                                                              device_templates)
             vport_templates[template_key] = template_vport
 
         template_args = {}
         if listener.protocol == 'https' and listener.tls_certificate_id:
             # Adding TERMINATED_HTTPS SSL cert, created in previous task
-            template_key = utils.shared_template_modifier('template-client-ssl',
-                                                          listener.id,
-                                                          device_templates)
+            template_key = 'template-client-ssl'
+            if CONF.a10_global.use_shared_for_template_lookup:
+                template_key = utils.shared_template_modifier(template_key,
+                                                              listener.id,
+                                                              device_templates)
             template_args[template_key] = listener.id
         elif listener.protocol in a10constants.HTTP_TYPE.lower():
             template_http = CONF.listener.template_http
             if template_http and template_http.lower() != 'none':
-                template_key = utils.shared_template_modifier('template-http',
-                                                              template_http,
-                                                              device_templates)
+                template_key = 'template-http'
+                if CONF.a10_global.use_shared_for_template_lookup:
+                    template_key = utils.shared_template_modifier(template_key,
+                                                                  template_http,
+                                                                  device_templates)
                 vport_templates[template_key] = template_http
             if ha_conn_mirror is not None:
                 ha_conn_mirror = None
@@ -95,16 +101,20 @@ class ListenersParent(object):
         elif listener.protocol == 'tcp':
             template_tcp = CONF.listener.template_tcp
             if template_tcp and template_tcp.lower() != 'none':
-                template_key = utils.shared_template_modifier('template-tcp',
-                                                              template_http,
-                                                              device_templates)
+                template_key = 'template-tcp'
+                if CONF.a10_global.use_shared_for_template_lookup:
+                    template_key = utils.shared_template_modifier(template_key,
+                                                                  template_http,
+                                                                  device_templates)
                 vport_templates[template_key] = template_tcp
 
         template_policy = CONF.listener.template_policy
         if template_policy and template_policy.lower() != 'none':
-            template_key = utils.shared_template_modifier('template-policy',
-                                              template_http,
-                                              device_templates)
+            template_key = 'template-policy'
+            if CONF.a10_global.use_shared_for_template_lookup:
+                template_key = utils.shared_template_modifier(template_key,
+                                                  template_http,
+                                                  device_templates)
             vport_templates[template_key] = template_policy
 
         set_method(loadbalancer.id, listener.id,
