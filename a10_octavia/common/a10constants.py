@@ -95,9 +95,14 @@ DELETE_MEMBER_VTHUNDER_INTERNAL_SUBFLOW = 'delete-member-vthunder-internal-subfl
 DELETE_MEMBER_VRID_SUBFLOW = 'delete-member-vrid-subflow'
 DELETE_MEMBER_VRID_INTERNAL_SUBFLOW = 'delete-member-vrid-internal-subflow'
 DELETE_HEALTH_MONITOR_VTHUNDER_SUBFLOW = 'delete-hm-vthunder-subflow'
-DELETE_HEALTH_MONITOR_SUBFLOW_WITH_POOL_DELETE_FLOW = 'delete-health-monitor-subflow'\
-    '-with-pool-delete-flow'
+DELETE_HEALTH_MONITOR_SUBFLOW_WITH_POOL_DELETE_FLOW = 'delete-health-monitor-subflow' \
+                                                      '-with-pool-delete-flow'
 DELETE_MEMBERS_SUBFLOW_WITH_POOL_DELETE_FLOW = 'delete-members-subflow-with-pool-delete-flow'
 HANDLE_VRID_MEMBER_SUBFLOW = 'handle-vrid-member-subflow'
 SPARE_VTHUNDER_CREATE = 'spare-vthunder-create'
 LB_TO_VTHUNDER_SUBFLOW = 'lb-to-vthunder-subflow'
+
+# Member count with specific IP.
+MEMBER_COUNT_IP = 'member_count_ip'
+MEMBER_COUNT_IP_PORT = 'member_count_ip_port'
+POOL_COUNT_IP = 'pool_count_ip'
