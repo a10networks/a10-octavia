@@ -181,12 +181,3 @@ class PartitionNotActiveError(acos_errors.ACOSException):
     def __init__(self, partition_name, device_ip):
         msg = 'Partition {0} on device {1} is set to Not-Active'
         super(PartitionNotActiveError, self).__init__(msg=msg)
-
-
-class SharedPartitionTemplateNotSupported(acos_errors.FeatureNotSupported):
-    """ Occurs when shared partition lookup for templates is not supported on acos client"""
-
-    def __init__(self, resource, template_key):
-        msg = ('Shared partition template lookup for [{0}] is not supported'
-               ' on template `{1}`').format(resource, template_key)
-        super(SharedPartitionTemplateNotSupported, self).__init__(code=505, msg=msg)
