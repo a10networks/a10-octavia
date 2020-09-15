@@ -405,7 +405,7 @@ These settings are added to the `a10-octavia.conf` file. They allow the operator
 network_type = vlan
 use_parent_partition = True
 
-<!-- Use this for allowing templates to be used from shared partition for attaching them to components in l3v partition -->
+[NOTE: Use this flag for allowing templates to be used from shared partition for attaching them to components in l3v partition]
 use_shared_for_template_lookup = True
 ```
 #### Loadbalancer/virtual server config example
