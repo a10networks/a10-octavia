@@ -21,6 +21,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import uuidutils
 from taskflow import task
+from taskflow.types import failure
 
 from octavia.common import constants
 from octavia.db import api as db_apis
@@ -189,15 +190,20 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
             return None
         if vthunder.undercloud:
             use_parent_part = CONF.a10_global.use_parent_partition
-            if use_parent_part and not vthunder.hierarchical_multitenancy:
-                LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
-                            "configuration will not be applied for loadbalancer: %s",
-                            loadbalancer.id)
-            elif use_parent_part and vthunder.hierarchical_multitenancy:
-                parent_project_id = utils.get_parent_project(
-                    vthunder.project_id)
-                if parent_project_id:
-                    vthunder.partition_name = parent_project_id[:14]
+            if use_parent_part:
+                if vthunder.hierarchical_multitenancy == 'enable':
+                    parent_project_id = utils.get_parent_project(
+                        vthunder.project_id)
+                    if parent_project_id:
+                        vthunder.partition_name = parent_project_id[:14]
+                    else:
+                        LOG.error("The parent project for project %s does not exist. ",
+                                  vthunder.project_id)
+                        raise exceptions.ParentProjectNotFound(vthunder.project_id)
+                else:
+                    LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
+                                "configuration will not be applied for loadbalancer: %s",
+                                loadbalancer.id)
         return vthunder
 
 
@@ -301,6 +307,19 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
             LOG.error('Failed to create vThunder entry in db for load balancer: %s.',
                       loadbalancer.id)
             raise e
+
+    def revert(self, result, loadbalancer, vthunder_config, *args, **kwargs):
+        if isinstance(result, failure.Failure):
+            # This task's execute failed, so nothing needed to be done to
+            # revert
+            return
+
+        LOG.warning('Reverting create Rack VThunder in DB for load balancer: %s', loadbalancer.id)
+        try:
+            self.vthunder_repo.delete(
+                db_apis.get_session(), loadbalancer_id=loadbalancer.id)
+        except Exception as e:
+            LOG.error("Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
 
 
 class CreateVThunderHealthEntry(BaseDatabaseTask):
