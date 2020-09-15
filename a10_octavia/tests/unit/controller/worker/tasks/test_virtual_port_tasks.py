@@ -42,6 +42,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
         self.conf.register_opts(config_options.A10_LISTENER_OPTS,
                                 group=a10constants.LISTENER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
+                                group=a10constants.A10_GLOBAL_CONF_SECTION)
 
     def tearDown(self):
         super(TestHandlerVirtualPortTasks, self).tearDown()
@@ -86,3 +88,20 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         args, kwargs = self.client_mock.slb.virtual_server.vport.update.call_args
         self.assertIn('use_rcv_hop', kwargs)
         self.assertFalse(kwargs.get('use_rcv_hop'))
+
+    def test_create_http_virtual_port_attach_shared_template(self):
+        listener = self._mock_listener('HTTP', 1000)
+
+        listener_task = task.ListenerCreate()
+        listener_task.axapi_client = self.client_mock
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_shared_for_template_lookup=True)
+        self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
+                         template_http="temp1")
+        device_templates = {"template": {"http-list": [{"name": "temp1"}]}} 
+        listener_task.axapi_client.slb.template.templates.get.return_value = device_templates
+        listener_task.execute(LB, listener, VTHUNDER)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn('template_http_shared', kwargs)
+        self.assertTrue(kwargs.get('template_tcp_shared'))
+        self.client_mock.slb.virtual_server.vport.create.assert_called_with(template_http_shared="temp1")
