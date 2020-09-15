@@ -19,7 +19,6 @@ from taskflow import task
 
 import acos_client.errors as acos_errors
 
-from a10_octavia.common import exceptions as a10exp
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -43,8 +42,8 @@ class MemberCreate(task.Task):
             template_server = None
         if CONF.a10_global.use_shared_for_template_lookup:
             if template_server:
-                raise a10exp.SharedPartitionTemplateNotSupported(resource='server',
-                                                                 template_key='template-server')
+                LOG.warning('Shared partition template lookup for `[server]`'
+                            ' is not supported on template `template-server`')
         server_temp = {'template-server': template_server}
 
         if not member.enabled:

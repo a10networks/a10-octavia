@@ -22,7 +22,6 @@ from octavia.common import exceptions
 
 import acos_client.errors as acos_errors
 
-from a10_octavia.common import exceptions as a10exp
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
@@ -44,8 +43,8 @@ class PoolParent(object):
             template_server = None
         if CONF.a10_global.use_shared_for_template_lookup:
             if template_server:
-                raise a10exp.SharedPartitionTemplateNotSupported(resource='service-group',
-                                                                 template_key='template-server')
+                LOG.warning('Shared partition template lookup for `[service-group]`'
+                            ' is not supported on template `template-server`')
         service_group_temp['template-server'] = template_server
 
         template_port = CONF.service_group.template_port
@@ -53,8 +52,8 @@ class PoolParent(object):
             template_port = None
         if CONF.a10_global.use_shared_for_template_lookup:
             if template_port:
-                raise a10exp.SharedPartitionTemplateNotSupported(resource='service-group',
-                                                                 template_key='template-port')
+                LOG.warning('Shared partition template lookup for `[service-group]`'
+                            ' is not supported on template `template-port`')
         service_group_temp['template-port'] = template_port
 
         template_policy = CONF.service_group.template_policy
