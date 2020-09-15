@@ -45,8 +45,8 @@ class MemberCreate(task.Task):
             template_server = None
         if CONF.a10_global.use_shared_for_template_lookup:
             if template_server:
-                raise a10exp.SharedPartitionTemplateNotSupported(resource='server',
-                                                                 template_key='template-server')
+                LOG.warning('Shared partition template lookup for `[server]`'
+                            ' is not supported on template `template-server`')
         server_temp = {'template-server': template_server}
 
         if not member.enabled:
