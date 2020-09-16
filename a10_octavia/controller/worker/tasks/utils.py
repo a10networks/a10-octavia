@@ -62,11 +62,11 @@ def meta(lbaas_obj, key, default):
     return meta_json.get(key, default)
 
 def shared_template_modifier(template_type, template_name, device_templates):
-    resource_list_key = "{0}-list".format(template_type)
-    if resource_list_key in device_templates:
-        for device_template in device_templates[resource_list_key]:
-            resouce_type = device_template.keys()[0]
-            device_template_name = device_template[resouce_type].get("name")
+    resource_type = template_type.split('-', 1)[1]
+    resource_list_key = "{0}-list".format(resource_type)
+    if resource_list_key in device_templates['template']:
+        for device_template in device_templates['template'][resource_list_key]:
+            device_template_name = device_template[resource_type].get("name")
             if template_name == device_template_name:
                 break
             template_type = "{0}-shared".format(template_type)
