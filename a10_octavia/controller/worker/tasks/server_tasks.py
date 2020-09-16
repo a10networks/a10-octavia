@@ -40,14 +40,13 @@ class MemberCreate(task.Task):
         server_args['conn-resume'] = CONF.server.conn_resume
         server_args = {'server': server_args}
 
+        server_temp = {}
         template_server = CONF.server.template_server
-        if template_server and template_server.lower() == 'none':
-            template_server = None
-        if CONF.a10_global.use_shared_for_template_lookup:
-            if template_server:
+        if template_server and template_server.lower() != 'none':
+            if CONF.a10_global.use_shared_for_template_lookup:
                 LOG.warning('Shared partition template lookup for `[server]`'
                             ' is not supported on template `template-server`')
-        server_temp = {'template-server': template_server}
+            server_temp = {'template-server': template_server}
 
         if not member.enabled:
             status = False
