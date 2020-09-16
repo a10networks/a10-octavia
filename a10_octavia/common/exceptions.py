@@ -180,7 +180,8 @@ class PartitionNotActiveError(acos_errors.ACOSException):
     """ Occurs when the partition has been unloaded, but not deleted """
 
     def __init__(self, partition_name, device_ip):
-        msg = 'Partition {0} on device {1} is set to Not-Active'
+        msg = ('Partition {0} on device {1} is set to Not-Active').format(partition_name,
+                                                                          device_ip)
         super(PartitionNotActiveError, self).__init__(msg=msg)
 
 
