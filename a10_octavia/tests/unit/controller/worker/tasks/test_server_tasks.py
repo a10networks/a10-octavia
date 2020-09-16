@@ -25,15 +25,19 @@ from oslo_config import fixture as oslo_fixture
 
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
+from oslo_config import cfg
+from oslo_config import fixture as oslo_fixture
 
 from a10_octavia.common.config_options import A10_SERVER_OPTS
 from a10_octavia.common.data_models import VThunder
+from a10_octavia.common import config_options
+from a10_octavia.common import data_models
 import a10_octavia.controller.worker.tasks.server_tasks as task
 from a10_octavia.controller.worker.tasks import utils
 from a10_octavia.tests.common import a10constants
-from a10_octavia.tests.unit.base import BaseTaskTestCase
+from a10_octavia.tests.unit import base
 
-VTHUNDER = VThunder()
+VTHUNDER = data_models.VThunder()
 POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID,
                           protocol=a10constants.MOCK_SERVICE_GROUP_PROTOCOL)
 MEMBER = o_data_models.Member(
@@ -45,21 +49,48 @@ SERVER_NAME = '{}_{}'.format(MEMBER.project_id[:5],
                              MEMBER.ip_address.replace('.', '_'))
 
 
-class TestHandlerServerTasks(BaseTaskTestCase):
+class TestHandlerServerTasks(base.BaseTaskTestCase):
 
     def setUp(self):
         super(TestHandlerServerTasks, self).setUp()
         imp.reload(task)
         self.client_mock = mock.Mock()
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
-        self.conf.register_opts(A10_SERVER_OPTS,
+        self.conf.register_opts(config_options.A10_SERVER_OPTS,
                                 group=a10constants.SERVER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
+                                group=a10constants.A10_GLOBAL_CONF_SECTION)
 
     def tearDown(self):
         super(TestHandlerServerTasks, self).tearDown()
         self.conf.reset()
 
-    def test_revert_member_create_task(self):
+    def _create_member_task_with_server_template(self, template_name, use_shared=False):
+        member_task = task.MemberCreate()
+        member_task.axapi_client = self.client_mock
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_shared_for_template_lookup=use_shared)
+        self.conf.config(group=a10constants.SERVER_CONF_SECTION, template_server=template_name)
+        member_task.CONF = self.conf
+        return member_task
+
+    def test_MemberCreate_execute_create_with_server_template(self):
+        member_task = self._create_member_task_with_server_template('my_server_template')
+        member_task.execute(MEMBER, VTHUNDER, POOL)
+        args, kwargs = self.client_mock.slb.server.create.call_args
+        self.assertIn('template-server', kwargs['server_templates'])
+        self.assertEqual(kwargs['server_templates']['template-server'], 'my_server_template')
+        
+    def test_MemberCreate_execute_create_with_shared_template_log_warning(self):
+        member_task = self._create_member_task_with_server_template('my_server_template', use_shared=True)
+
+        task_path = "a10_octavia.controller.worker.tasks.server_tasks"
+        log_message = str("Shared partition template lookup for `[server]` "
+                          "is not supported on template `template-server`")
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
+        with self.assertLogs(task_path, level='WARN') as cm:
+            member_task.execute(MEMBER, VTHUNDER, POOL)
+
+    def test_MemberCreate_revert_created_member(self):
         mock_member = task.MemberCreate()
         member_port_count_ip = 1
         mock_member.axapi_client = self.client_mock
