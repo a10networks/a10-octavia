@@ -55,6 +55,30 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         listener.connection_limit = conn_limit
         return listener
 
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
+    @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
+    def _create_shared_template(self, template_protocol, template_config, mock_protocol, mock_templates):
+        template_protocol = template_protocol.lower()
+        shared_template_type = 'template-{}-shared'.format(template_protocol)
+        mock_templates.return_value = shared_template_type
+        listener = self._mock_listener(template_protocol.upper(), 1000)
+        mock_protocol.return_value = listener.protocol
+
+        listener_task = task.ListenerCreate()
+        listener_task.axapi_client = self.client_mock
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_shared_for_template_lookup=True)
+        self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
+                         **template_config)
+        listener_task.CONF = self.conf
+        device_templates = {"template": {"{}-list".format(template_protocol): [{template_protocol: {"name": "temp1"}}]}}
+        listener_task.axapi_client.slb.template.templates.get.return_value = device_templates
+        listener_task.execute(LB, listener, VTHUNDER)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn(shared_template_type, kwargs['virtual_port_templates'])
+        self.assertTrue(kwargs['virtual_port_templates'])
+
+
     def test_create_http_virtual_port_use_rcv_hop(self):
         listener = self._mock_listener('HTTP', 1000)
 
@@ -88,20 +112,3 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         args, kwargs = self.client_mock.slb.virtual_server.vport.update.call_args
         self.assertIn('use_rcv_hop', kwargs)
         self.assertFalse(kwargs.get('use_rcv_hop'))
-
-    def test_create_http_virtual_port_attach_shared_template(self):
-        listener = self._mock_listener('HTTP', 1000)
-
-        listener_task = task.ListenerCreate()
-        listener_task.axapi_client = self.client_mock
-        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_shared_for_template_lookup=True)
-        self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
-                         template_http="temp1")
-        device_templates = {"template": {"http-list": [{"name": "temp1"}]}} 
-        listener_task.axapi_client.slb.template.templates.get.return_value = device_templates
-        listener_task.execute(LB, listener, VTHUNDER)
-
-        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
-        self.assertIn('template_http_shared', kwargs)
-        self.assertTrue(kwargs.get('template_tcp_shared'))
-        self.client_mock.slb.virtual_server.vport.create.assert_called_with(template_http_shared="temp1")
