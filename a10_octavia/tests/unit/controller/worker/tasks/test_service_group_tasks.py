@@ -117,8 +117,8 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         service_group_task.axapi_client.slb.template.templates.get.return_value = device_templates
         service_group_task.execute(POOL, VTHUNDER)
         args, kwargs = self.client_mock.slb.service_group.create.call_args
-        self.assertIn('template-policy', kwargs['service_group_templates'])
-        self.assertEqual(kwargs['service_group_templates']['template-policy'], 'my_policy_template')
+        self.assertIn('template-policy-shared', kwargs['service_group_templates'])
+        self.assertEqual(kwargs['service_group_templates']['template-policy-shared'], 'my_policy_template')
 
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())

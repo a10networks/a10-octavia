@@ -40,7 +40,7 @@ class TestUtils(base.TestCase):
         template_type = utils.shared_template_modifier('template-tcp',
                                                        'my_tcp_temp',
                                                        device_templates)
-        self.assertEqual('template-tcp', template_type)
+        self.assertEqual('template-tcp-shared', template_type)
 
     def test_shared_template_modifier_resource_found_name_not_found(self):
         device_templates = self._get_device_templates('tcp', 'my_secondary_tcp')
