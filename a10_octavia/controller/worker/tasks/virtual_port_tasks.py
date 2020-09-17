@@ -80,12 +80,8 @@ class ListenersParent(object):
         template_args = {}
         if listener.protocol == 'https' and listener.tls_certificate_id:
             # Adding TERMINATED_HTTPS SSL cert, created in previous task
-            template_key = 'template-client-ssl'
-            if CONF.a10_global.use_shared_for_template_lookup:
-                template_key = utils.shared_template_modifier(template_key,
-                                                              listener.id,
-                                                              device_templates)
             template_args[template_key] = listener.id
+
         elif listener.protocol.upper() in a10constants.HTTP_TYPE:
             template_http = CONF.listener.template_http
             if template_http and template_http.lower() != 'none':
