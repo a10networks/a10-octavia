@@ -403,7 +403,10 @@ These settings are added to the `a10-octavia.conf` file. They allow the operator
 ```shell
 [a10_global]
 network_type = vlan
-use_parent_partition = True 
+use_parent_partition = True
+
+[NOTE: Use this flag for allowing templates to be used from shared partition for attaching them to components in l3v partition]
+use_shared_for_template_lookup = True
 ```
 #### Loadbalancer/virtual server config example
 ```shell
