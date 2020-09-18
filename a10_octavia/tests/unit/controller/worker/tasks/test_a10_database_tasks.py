@@ -198,11 +198,6 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
             protocol_port=t_constants.MOCK_PORT_ID,
             project_id=t_constants.MOCK_PROJECT_ID,
             ip_address=t_constants.MOCK_IP_ADDRESS)
-        member_2 = o_data_models.Member(
-            id=uuidutils.generate_uuid(),
-            protocol_port=t_constants.MOCK_PORT_ID,
-            project_id=t_constants.MOCK_PROJECT_ID,
-            ip_address=t_constants.MOCK_IP_ADDRESS)
         mock_count_member = task.CountMembersWithIPPortProtocol()
         mock_count_member.member_repo.get_member_count_by_ip_address_port_protocol = mock.Mock()
         mock_count_member.member_repo.get_member_count_by_ip_address_port_protocol.return_value = 2
@@ -214,12 +209,6 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
                                         project_id=t_constants.MOCK_PROJECT_ID,
                                         ip_address=t_constants.MOCK_IP_ADDRESS,
                                         pool_id=a10constants.MOCK_POOL_ID)
-        member_2 = o_data_models.Member(
-            id=uuidutils.generate_uuid(),
-            protocol_port=t_constants.MOCK_PORT_ID,
-            project_id=t_constants.MOCK_PROJECT_ID,
-            ip_address=t_constants.MOCK_IP_ADDRESS,
-            pool_id=a10constants.MOCK_POOL_ID_2)
         mock_count_pool = task.PoolCountforIP()
         mock_count_pool.member_repo.get_pool_count_by_ip = mock.Mock()
         mock_count_pool.member_repo.get_pool_count_by_ip.return_value = 2
