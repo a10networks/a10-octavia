@@ -201,9 +201,9 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
             protocol_port=t_constants.MOCK_PORT_ID,
             project_id=t_constants.MOCK_PROJECT_ID,
             ip_address=t_constants.MOCK_IP_ADDRESS)
-        mock_count_member = task.CountMembersWithIPPort()
-        mock_count_member.member_repo.get_member_count_by_ip_address_port = mock.Mock()
-        mock_count_member.member_repo.get_member_count_by_ip_address_port.return_value = 2
+        mock_count_member = task.CountMembersWithIPPortProtocol()
+        mock_count_member.member_repo.get_member_count_by_ip_address_port_protocol = mock.Mock()
+        mock_count_member.member_repo.get_member_count_by_ip_address_port_protocol.return_value = 2
         member_count = mock_count_member.execute(member_1)
         self.assertEqual(2, member_count)
 
