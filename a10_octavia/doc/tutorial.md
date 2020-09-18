@@ -54,7 +54,7 @@ Openstack Compute Node Minimum Requirements
 * vCPUs: 8
 * Memory: 16GB
 * Disk: 40GB
-* OS: Ubuntu 18.04 or later
+* OS: Ubuntu 18.04+ or Centos 7/8
 * 2 NICs
 * Openstack (Nova, Neutron, Etc): Stein Release
 
@@ -1660,7 +1660,7 @@ Page from server1
 
 #### Health Monitoring with Terminated HTTPS
 
-Members can have multiple ports associated with them thus health monitors are connected with listeners. Therefore, when a listener has a different port than a member, it's not possible for the health monitoring to occur. This results in issues when using Terminated HTTPS as it's standard to listen for HTTPS requests on 443 and HTTP requests on 80.
+Pools can contain members with distinct ports, yet only one health monitor can be attributed to a given pool. As pools can also only have one listener, the listener’s port is used to determine the health monitor port instead of an arbitrary member.  This results in issues when using Terminated HTTPS as it's standard to listen for HTTPS requests on 443 and HTTP requests on 80.
 
 If health monitoring is required, then the operator will need to match the listener's port with the member's and ensure that the real server is hosting the application on the same port.
 
