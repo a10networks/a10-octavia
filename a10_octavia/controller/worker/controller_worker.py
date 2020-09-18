@@ -114,7 +114,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             store={constants.HEALTH_MON: health_mon,
                    constants.POOL: pool,
                    constants.LISTENERS: listeners,
-                   constants.LOADBALANCER: load_balancer})
+                   constants.LOADBALANCER: load_balancer,
+                   a10constants.WRITE_MEM_SHARED_PART: True})
         with tf_logging.DynamicLoggingListener(create_hm_tf,
                                                log=LOG):
             create_hm_tf.run()
@@ -138,7 +139,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             store={constants.HEALTH_MON: health_mon,
                    constants.POOL: pool,
                    constants.LISTENERS: listeners,
-                   constants.LOADBALANCER: load_balancer})
+                   constants.LOADBALANCER: load_balancer,
+                   a10constants.WRITE_MEM_SHARED_PART: True})
         with tf_logging.DynamicLoggingListener(delete_hm_tf,
                                                log=LOG):
             delete_hm_tf.run()
@@ -174,7 +176,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                    constants.POOL: pool,
                    constants.LISTENERS: listeners,
                    constants.LOADBALANCER: load_balancer,
-                   constants.UPDATE_DICT: health_monitor_updates})
+                   constants.UPDATE_DICT: health_monitor_updates,
+                   a10constants.WRITE_MEM_SHARED_PART: True})
         with tf_logging.DynamicLoggingListener(update_hm_tf,
                                                log=LOG):
             update_hm_tf.run()
