@@ -42,7 +42,7 @@ HW_THUNDER = data_models.HardwareThunder(project_id=a10constants.MOCK_PROJECT_ID
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
 FIXED_IP = n_data_models.FixedIP(ip_address='10.10.10.10')
 PORT = n_data_models.Port(id=uuidutils.generate_uuid(), fixed_ips=[FIXED_IP])
-VRID = data_models.VRID(id=uuidutils.generate_uuid(), project_id=a10constants.MOCK_PROJECT_ID,
+VRID = data_models.VRID(id=uuidutils.generate_uuid(), vrid=0, project_id=a10constants.MOCK_PROJECT_ID,
                         vrid_port_id=uuidutils.generate_uuid(), vrid_floating_ip='10.0.12.32')
 MEMBER_1 = o_data_models.Member(id=uuidutils.generate_uuid(),
                                 project_id=a10constants.MOCK_PROJECT_ID)
@@ -91,7 +91,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
 
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo = mock.MagicMock()
-        mock_get_vthunder.vthunder_repo.get_vthunder_from_lb().return_value = mock_vthunder
+        mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = mock_vthunder
         vthunder = mock_get_vthunder.execute(LB)
         self.assertEqual(vthunder.partition_name, a10constants.MOCK_PARENT_PROJECT_ID[:14])
 
@@ -168,6 +168,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo.update.assert_called_once_with(
             mock.ANY,
             VRID.id,
+            vrid=VRID.vrid,
             vrid_floating_ip=PORT.fixed_ips[0].ip_address,
             vrid_port_id=PORT.id)
         mock_vrid_entry.vrid_repo.create.assert_not_called()
@@ -179,6 +180,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo.create.assert_called_once_with(
             mock.ANY,
             project_id=MEMBER_1.project_id,
+            vrid=VRID.vrid,
             vrid_floating_ip=PORT.fixed_ips[0].ip_address,
             vrid_port_id=PORT.id)
         mock_vrid_entry.vrid_repo.update.assert_not_called()
