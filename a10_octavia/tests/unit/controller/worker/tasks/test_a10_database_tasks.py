@@ -30,6 +30,7 @@ from octavia.tests.common import constants as t_constants
 
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
+from a10_octavia.common import exceptions
 from a10_octavia.common import utils
 from a10_octavia.controller.worker.tasks import a10_database_tasks as task
 from a10_octavia.tests.common import a10constants
@@ -87,7 +88,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
         mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = 1
+        mock_vthunder.hierarchical_multitenancy = "enable"
 
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo = mock.MagicMock()
@@ -104,13 +105,12 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
         mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = 1
+        mock_vthunder.hierarchical_multitenancy = "enable"
 
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb = mock.MagicMock()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = mock_vthunder
-        vthunder = mock_get_vthunder.execute(LB)
-        self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PART)
+        self.assertRaises(exceptions.ParentProjectNotFound, mock_get_vthunder.execute, LB)
 
     def test_get_vthunder_by_loadbalancer_parent_partition_no_ohm(self):
         self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
@@ -118,7 +118,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
         mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = 0
+        mock_vthunder.hierarchical_multitenancy = "disable"
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb = mock.MagicMock()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = mock_vthunder
@@ -131,7 +131,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PROJECT_ID[:14]
         mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = 1
+        mock_vthunder.hierarchical_multitenancy = "enable"
 
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb = mock.MagicMock()
