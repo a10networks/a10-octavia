@@ -30,25 +30,29 @@ from octavia.tests.common import constants as t_constants
 
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
+from a10_octavia.common import utils
 from a10_octavia.controller.worker.tasks import a10_database_tasks as task
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
 VTHUNDER = data_models.VThunder()
+HW_THUNDER = data_models.HardwareThunder(project_id=a10constants.MOCK_PROJECT_ID, device_name="rack_thunder_1",
+                                         undercloud=True, username="abc", password="abc",
+                                         ip_address="10.10.10.10", partition_name="shared")
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
-
 FIXED_IP = n_data_models.FixedIP(ip_address='10.10.10.10')
 PORT = n_data_models.Port(id=uuidutils.generate_uuid(), fixed_ips=[FIXED_IP])
-
 VRID = data_models.VRID(id=uuidutils.generate_uuid(), project_id=a10constants.MOCK_PROJECT_ID,
                         vrid_port_id=uuidutils.generate_uuid(), vrid_floating_ip='10.0.12.32')
 MEMBER_1 = o_data_models.Member(id=uuidutils.generate_uuid(),
                                 project_id=a10constants.MOCK_PROJECT_ID)
-
 POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID)
 
 
+
+
 class TestA10DatabaseTasks(base.BaseTaskTestCase):
+
     def setUp(self):
         super(TestA10DatabaseTasks, self).setUp()
         imp.reload(task)
@@ -56,6 +60,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
         self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
                                 group=a10constants.A10_GLOBAL_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.HARDWARE_THUNDER_CONF_SECTION)
         self.db_session = mock.patch(
             'a10_octavia.controller.worker.tasks.a10_database_tasks.db_apis.get_session')
         self.db_session.start()
@@ -63,6 +69,15 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
     def tearDown(self):
         super(TestA10DatabaseTasks, self).tearDown()
         self.db_session.stop()
+
+    def _generate_hardware_device_conf(self, thunder):
+        hardware_device_conf = [{"project_id": a10constants.MOCK_PROJECT_ID,
+                                 "username": thunder.username,
+                                 "password": thunder.password,
+                                 "device_name": thunder.device_name,
+                                 "vrid_floating_ip": thunder.vrid_floating_ip,
+                                 "ip_address": thunder.ip_address}]
+        return hardware_device_conf
 
     @mock.patch('a10_octavia.common.utils.get_parent_project',
                 return_value=a10constants.MOCK_PARENT_PROJECT_ID)
@@ -132,6 +147,14 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.assertEqual(VRID, vrid)
 
     def test_update_vrid_for_project_member_with_no_port(self):
+        thunder = copy.deepcopy(HW_THUNDER)
+        thunder.vrid_floating_ip = VRID.vrid_floating_ip
+        hardware_device_conf = self._generate_hardware_device_conf(thunder)
+        self.conf.config(group=a10constants.HARDWARE_THUNDER_CONF_SECTION,
+                         devices=[hardware_device_conf])
+        self.conf.conf.hardware_thunder.devices = {a10constants.MOCK_PROJECT_ID: thunder}
+        utils.get_vrid_floating_ip_for_project.CONF = self.conf
+
         mock_vrid_entry = task.UpdateVRIDForProjectMember()
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.execute(MEMBER_1, VRID, None)
