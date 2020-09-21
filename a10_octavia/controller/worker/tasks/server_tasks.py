@@ -93,7 +93,7 @@ class MemberDelete(task.Task):
     """Task to delete member"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool, member_count_ip, member_count_ip_port):
+    def execute(self, member, vthunder, pool, member_count_ip, member_count_ip_port_protocol):
         server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         try:
             self.axapi_client.slb.service_group.member.delete(
@@ -108,7 +108,7 @@ class MemberDelete(task.Task):
             if member_count_ip <= 1:
                 self.axapi_client.slb.server.delete(server_name)
                 LOG.debug("Successfully deleted member %s from pool %s", member.id, pool.id)
-            elif member_count_ip_port <= 1:
+            elif member_count_ip_port_protocol <= 1:
                 protocol = openstack_mappings.service_group_protocol(
                     self.axapi_client, pool.protocol)
                 self.axapi_client.slb.server.port.delete(server_name, member.protocol_port,
@@ -155,13 +155,13 @@ class MemberDeletePool(task.Task):
     """Task to delete member"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool, pool_count_ip, member_count_ip_port):
+    def execute(self, member, vthunder, pool, pool_count_ip, member_count_ip_port_protocol):
         try:
             server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
             if pool_count_ip <= 1:
                 self.axapi_client.slb.server.delete(server_name)
                 LOG.debug("Successfully deleted member %s from pool %s", member.id, pool.id)
-            elif member_count_ip_port <= 1:
+            elif member_count_ip_port_protocol <= 1:
                 protocol = openstack_mappings.service_group_protocol(
                     self.axapi_client, pool.protocol)
                 self.axapi_client.slb.server.port.delete(server_name, member.protocol_port,

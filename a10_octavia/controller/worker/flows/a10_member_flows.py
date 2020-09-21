@@ -123,11 +123,12 @@ class MemberFlows(object):
             provides=a10constants.VTHUNDER))
         delete_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP))
-        delete_member_flow.add(a10_database_tasks.CountMembersWithIPPort(
-            requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP_PORT))
+        delete_member_flow.add(a10_database_tasks.CountMembersWithIPPortProtocol(
+            requires=(constants.MEMBER, constants.POOL),
+            provides=a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL))
         delete_member_flow.add(server_tasks.MemberDelete(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
-                      a10constants.MEMBER_COUNT_IP, a10constants.MEMBER_COUNT_IP_PORT)))
+                      a10constants.MEMBER_COUNT_IP, a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL)))
         delete_member_flow.add(database_tasks.DeleteMemberInDB(
             requires=constants.MEMBER))
         delete_member_flow.add(database_tasks.DecrementMemberQuota(
@@ -167,11 +168,12 @@ class MemberFlows(object):
             provides=a10constants.VTHUNDER))
         delete_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP))
-        delete_member_flow.add(a10_database_tasks.CountMembersWithIPPort(
-            requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP_PORT))
+        delete_member_flow.add(a10_database_tasks.CountMembersWithIPPortProtocol(
+            requires=(constants.MEMBER, constants.POOL),
+            provides=a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL))
         delete_member_flow.add(server_tasks.MemberDelete(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
-                      a10constants.MEMBER_COUNT_IP, a10constants.MEMBER_COUNT_IP_PORT)))
+                      a10constants.MEMBER_COUNT_IP, a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL)))
         if CONF.a10_global.network_type == 'vlan':
             delete_member_flow.add(vthunder_tasks.DeleteInterfaceTagIfNotInUseForMember(
                 requires=[constants.MEMBER, a10constants.VTHUNDER]))
@@ -197,9 +199,10 @@ class MemberFlows(object):
             name='setup_device_network_map_' + member_id,
             requires=a10constants.VTHUNDER,
             provides=a10constants.VTHUNDER))
-        delete_member_thunder_subflow.add(a10_database_tasks.CountMembersWithIPPort(
+        delete_member_thunder_subflow.add(a10_database_tasks.CountMembersWithIPPortProtocol(
             name='count_members_ip_port_' + member_id,
-            requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP_PORT,
+            requires=(constants.MEMBER, constants.POOL),
+            provides=a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL,
             rebind={constants.MEMBER: member_id}))
         delete_member_thunder_subflow.add(a10_database_tasks.PoolCountforIP(
             name='pool_count_for_ip_' + member_id,
@@ -208,7 +211,7 @@ class MemberFlows(object):
         delete_member_thunder_subflow.add(server_tasks.MemberDeletePool(
             name='delete_thunder_member_pool_' + member_id,
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
-                      a10constants.POOL_COUNT_IP, a10constants.MEMBER_COUNT_IP_PORT),
+                      a10constants.POOL_COUNT_IP, a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL),
             rebind={constants.MEMBER: member_id}))
         if CONF.a10_global.network_type == 'vlan':
             delete_member_thunder_subflow.add(vthunder_tasks.DeleteInterfaceTagIfNotInUseForMember(
