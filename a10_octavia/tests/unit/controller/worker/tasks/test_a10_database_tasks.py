@@ -37,19 +37,20 @@ from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
 VTHUNDER = data_models.VThunder()
-HW_THUNDER = data_models.HardwareThunder(project_id=a10constants.MOCK_PROJECT_ID, device_name="rack_thunder_1",
-                                         undercloud=True, username="abc", password="abc",
-                                         ip_address="10.10.10.10", partition_name="shared")
+HW_THUNDER = data_models.HardwareThunder(project_id=a10constants.MOCK_PROJECT_ID,
+                                         device_name="rack_thunder_1", undercloud=True,
+                                         username="abc", password="abc", ip_address="10.10.10.10",
+                                         partition_name="shared")
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
 FIXED_IP = n_data_models.FixedIP(ip_address='10.10.10.10')
 PORT = n_data_models.Port(id=uuidutils.generate_uuid(), fixed_ips=[FIXED_IP])
-VRID = data_models.VRID(id=uuidutils.generate_uuid(), vrid=0, project_id=a10constants.MOCK_PROJECT_ID,
-                        vrid_port_id=uuidutils.generate_uuid(), vrid_floating_ip='10.0.12.32')
+VRID = data_models.VRID(id=uuidutils.generate_uuid(), vrid=0,
+                        project_id=a10constants.MOCK_PROJECT_ID,
+                        vrid_port_id=uuidutils.generate_uuid(),
+                        vrid_floating_ip='10.0.12.32')
 MEMBER_1 = o_data_models.Member(id=uuidutils.generate_uuid(),
                                 project_id=a10constants.MOCK_PROJECT_ID)
 POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID)
-
-
 
 
 class TestA10DatabaseTasks(base.BaseTaskTestCase):
