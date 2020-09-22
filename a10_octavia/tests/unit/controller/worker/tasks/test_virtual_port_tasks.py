@@ -55,7 +55,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         listener.connection_limit = conn_limit
         return listener
 
-    def _create_shared_template(self, template_type, template_config, mock_protocol, mock_templates):
+    def _create_shared_template(self, template_type, template_config,
+                                mock_protocol, mock_templates):
         template_type = template_type.lower()
         mock_templates.return_value = 'template-{}-shared'.format(template_type)
         listener = self._mock_listener(template_type.upper(), 1000)
@@ -63,23 +64,25 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         listener_task = task.ListenerCreate()
         listener_task.axapi_client = self.client_mock
-        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_shared_for_template_lookup=True)
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION,
+                         use_shared_for_template_lookup=True)
         self.conf.config(group=a10constants.LISTENER_CONF_SECTION, **template_config)
         listener_task.CONF = self.conf
-        
+
         device_templates = {"template": {
-                                "{}-list".format(template_type): [{
-                                        template_type: {"name": template_config.values()[0]}
-                                    }]
-                                }
-                            }
+            "{}-list".format(template_type): [{
+                template_type: {"name": list(template_config.values())[0]}
+            }]
+        }
+        }
         listener_task.axapi_client.slb.template.templates.get.return_value = device_templates
         return listener_task, listener
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
     def test_create_listener_with_template_http_shared(self, mock_protocol, mock_templates):
-        listener_task, listener = self._create_shared_template('http', {'template_http': 'temp1'}, mock_protocol, mock_templates)
+        listener_task, listener = self._create_shared_template(
+            'http', {'template_http': 'temp1'}, mock_protocol, mock_templates)
         listener_task.execute(LB, listener, VTHUNDER)
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
         self.assertIn('template-http-shared', kwargs['virtual_port_templates'])
@@ -87,7 +90,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
     @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
     def test_create_listener_with_template_tcp_shared(self, mock_protocol, mock_templates):
-        listener_task, listener = self._create_shared_template('tcp', {'template_tcp': 'temp1'}, mock_protocol, mock_templates)
+        listener_task, listener = self._create_shared_template(
+            'tcp', {'template_tcp': 'temp1'}, mock_protocol, mock_templates)
         listener_task.execute(LB, listener, VTHUNDER)
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
         self.assertIn('template-tcp-shared', kwargs['virtual_port_templates'])
@@ -95,7 +99,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
     @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
     def test_create_listener_with_template_policy_shared(self, mock_protocol, mock_templates):
-        listener_task, listener = self._create_shared_template('policy', {'template_policy': 'temp1'}, mock_protocol, mock_templates)
+        listener_task, listener = self._create_shared_template(
+            'policy', {'template_policy': 'temp1'}, mock_protocol, mock_templates)
         listener_task.execute(LB, listener, VTHUNDER)
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
         self.assertIn('template-policy-shared', kwargs['virtual_port_templates'])
@@ -103,7 +108,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
     @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
     def test_create_listener_with_template_virtual_port_shared(self, mock_protocol, mock_templates):
-        listener_task, listener = self._create_shared_template('virtual-port', {'template_virtual_port': 'temp1'}, mock_protocol, mock_templates)
+        listener_task, listener = self._create_shared_template(
+            'virtual-port', {'template_virtual_port': 'temp1'}, mock_protocol, mock_templates)
         listener_task.execute(LB, listener, VTHUNDER)
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
         self.assertIn('template-virtual-port-shared', kwargs['virtual_port_templates'])

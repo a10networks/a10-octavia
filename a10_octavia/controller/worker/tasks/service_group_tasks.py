@@ -41,14 +41,14 @@ class PoolParent(object):
         template_server = CONF.service_group.template_server
         if template_server and template_server.lower() != 'none':
             if CONF.a10_global.use_shared_for_template_lookup:
-                LOG.warning('Shared partition template lookup for `[service-group]`'
+                LOG.warning('Shared partition template lookup for `[service_group]`'
                             ' is not supported on template `template-server`')
             service_group_temp['template-server'] = template_server
 
         template_port = CONF.service_group.template_port
         if template_port and template_port.lower() != 'none':
             if CONF.a10_global.use_shared_for_template_lookup:
-                LOG.warning('Shared partition template lookup for `[service-group]`'
+                LOG.warning('Shared partition template lookup for `[service_group]`'
                             ' is not supported on template `template-port`')
             service_group_temp['template-port'] = template_port
 
