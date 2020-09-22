@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
 import json
 import logging
 
@@ -60,6 +59,7 @@ def meta(lbaas_obj, key, default):
     except Exception:
         return default
     return meta_json.get(key, default)
+
 
 def shared_template_modifier(template_type, template_name, device_templates):
     resource_type = template_type.split('-', 1)[1]

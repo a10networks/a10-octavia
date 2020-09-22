@@ -20,7 +20,6 @@ from taskflow import task
 import acos_client.errors as acos_errors
 
 from a10_octavia.common import openstack_mappings
-from a10_octavia.common import exceptions as a10exp
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 

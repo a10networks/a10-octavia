@@ -21,11 +21,11 @@ class TestUtils(base.TestCase):
 
     def _get_device_templates(self, template_type, template_name):
         device_templates = {"template": {
-                                "{}-list".format(template_type): [{
-                                        template_type: {"name": template_name}
-                                    }]
-                                }
-                            }
+            "{}-list".format(template_type): [{
+                template_type: {"name": template_name}
+            }]
+        }
+        }
         return device_templates
 
     def test_shared_template_modifier_resource_not_found(self):

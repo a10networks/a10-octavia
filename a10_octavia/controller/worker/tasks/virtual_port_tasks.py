@@ -93,7 +93,8 @@ class ListenersParent(object):
                 vport_templates[template_key] = template_http
             if ha_conn_mirror is not None:
                 ha_conn_mirror = None
-                LOG.warning("'ha_conn_mirror' is not allowed for HTTP or TERMINATED_HTTPS listeners.")
+                LOG.warning("'ha_conn_mirror' is not allowed for HTTP "
+                            "or TERMINATED_HTTPS listeners.")
         elif listener.protocol == 'tcp':
             template_tcp = CONF.listener.template_tcp
             if template_tcp and template_tcp.lower() != 'none':

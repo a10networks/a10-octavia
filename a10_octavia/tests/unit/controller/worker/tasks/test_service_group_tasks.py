@@ -56,7 +56,8 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
     def _create_service_group_task_with_template(self, config_template, use_shared=False):
         service_group_task = task.PoolCreate()
         service_group_task.axapi_client = self.client_mock
-        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_shared_for_template_lookup=use_shared)
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION,
+                         use_shared_for_template_lookup=use_shared)
         self.conf.config(group=a10constants.SERVICE_GROUP_CONF_SECTION, **config_template)
         service_group_task.CONF = self.conf
         return service_group_task
@@ -64,7 +65,8 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
     def test_PoolCreate_execute_create_with_server_template(self, ):
-        service_group_task = self._create_service_group_task_with_template({'template_server': 'my_server_template'})
+        service_group_task = self._create_service_group_task_with_template(
+            {'template_server': 'my_server_template'})
         service_group_task.execute(POOL, VTHUNDER)
         args, kwargs = self.client_mock.slb.service_group.create.call_args
         self.assertIn('template-server', kwargs['service_group_templates'])
@@ -73,7 +75,8 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
     def test_PoolCreate_execute_create_with_shared_server_template_log_warning(self):
-        service_group_task = self._create_service_group_task_with_template({'template_server': 'my_server_template'}, use_shared=True)
+        service_group_task = self._create_service_group_task_with_template(
+            {'template_server': 'my_server_template'}, use_shared=True)
 
         task_path = "a10_octavia.controller.worker.tasks.service_group_tasks"
         log_message = str("Shared partition template lookup for `[service_group]` "
@@ -81,11 +84,13 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
         with self.assertLogs(task_path, level='WARN') as cm:
             service_group_task.execute(POOL, VTHUNDER)
+            self.assertEqual(expected_log, cm.output)
 
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
     def test_PoolCreate_execute_create_with_port_template(self):
-        service_group_task = self._create_service_group_task_with_template({'template_port': 'my_port_template'})
+        service_group_task = self._create_service_group_task_with_template(
+            {'template_port': 'my_port_template'})
         service_group_task.execute(POOL, VTHUNDER)
         args, kwargs = self.client_mock.slb.service_group.create.call_args
         self.assertIn('template-port', kwargs['service_group_templates'])
@@ -94,7 +99,8 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
     def test_PoolCreate_execute_create_with_shared_port_template_log_warning(self):
-        service_group_task = self._create_service_group_task_with_template({'template_port': 'my_server_template'}, use_shared=True)
+        service_group_task = self._create_service_group_task_with_template(
+            {'template_port': 'my_server_template'}, use_shared=True)
 
         task_path = "a10_octavia.controller.worker.tasks.service_group_tasks"
         log_message = str("Shared partition template lookup for `[service_group]` "
@@ -102,40 +108,47 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
         with self.assertLogs(task_path, level='WARN') as cm:
             service_group_task.execute(POOL, VTHUNDER)
+            self.assertEqual(expected_log, cm.output)
 
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
     def test_PoolCreate_execute_create_with_l3v_local_policy_template(self):
-        service_group_task = self._create_service_group_task_with_template({'template_policy': 'my_policy_template'})
-        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_shared_for_template_lookup=True)
+        service_group_task = self._create_service_group_task_with_template(
+            {'template_policy': 'my_policy_template'})
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION,
+                         use_shared_for_template_lookup=True)
         device_templates = {"template": {
-                                "policy-list": [{
-                                        "policy": {"name": "my_policy_template"}
-                                    }]
-                                }
-                            }
+            "policy-list": [{
+                "policy": {"name": "my_policy_template"}
+            }]
+        }
+        }
         service_group_task.axapi_client.slb.template.templates.get.return_value = device_templates
         service_group_task.execute(POOL, VTHUNDER)
         args, kwargs = self.client_mock.slb.service_group.create.call_args
         self.assertIn('template-policy-shared', kwargs['service_group_templates'])
-        self.assertEqual(kwargs['service_group_templates']['template-policy-shared'], 'my_policy_template')
+        self.assertEqual(kwargs['service_group_templates']
+                         ['template-policy-shared'], 'my_policy_template')
 
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
     def test_PoolCreate_execute_create_with_shared_policy_template(self):
-        service_group_task = self._create_service_group_task_with_template({'template_policy': 'my_policy_template_other'})
-        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_shared_for_template_lookup=True)
+        service_group_task = self._create_service_group_task_with_template(
+            {'template_policy': 'my_policy_template_other'})
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION,
+                         use_shared_for_template_lookup=True)
         device_templates = {"template": {
-                                "policy-list": [{
-                                        "policy": {"name": "my_policy_template"}
-                                    }]
-                                }
-                            }
+            "policy-list": [{
+                "policy": {"name": "my_policy_template"}
+            }]
+        }
+        }
         service_group_task.axapi_client.slb.template.templates.get.return_value = device_templates
         service_group_task.execute(POOL, VTHUNDER)
         args, kwargs = self.client_mock.slb.service_group.create.call_args
         self.assertIn('template-policy-shared', kwargs['service_group_templates'])
-        self.assertEqual(kwargs['service_group_templates']['template-policy-shared'], 'my_policy_template_other')
+        self.assertEqual(kwargs['service_group_templates']
+                         ['template-policy-shared'], 'my_policy_template_other')
 
     def test_revert_pool_create_task(self):
         mock_pool = task.PoolCreate()

@@ -25,11 +25,7 @@ from oslo_config import fixture as oslo_fixture
 
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
-from oslo_config import cfg
-from oslo_config import fixture as oslo_fixture
 
-from a10_octavia.common.config_options import A10_SERVER_OPTS
-from a10_octavia.common.data_models import VThunder
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
 import a10_octavia.controller.worker.tasks.server_tasks as task
@@ -68,27 +64,32 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
     def _create_member_task_with_server_template(self, template_name, use_shared=False):
         member_task = task.MemberCreate()
         member_task.axapi_client = self.client_mock
-        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_shared_for_template_lookup=use_shared)
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION,
+                         use_shared_for_template_lookup=use_shared)
         self.conf.config(group=a10constants.SERVER_CONF_SECTION, template_server=template_name)
         member_task.CONF = self.conf
         return member_task
 
     def test_MemberCreate_execute_create_with_server_template(self):
+        member_port_count_ip = 1
         member_task = self._create_member_task_with_server_template('my_server_template')
-        member_task.execute(MEMBER, VTHUNDER, POOL)
+        member_task.execute(MEMBER, VTHUNDER, POOL, member_port_count_ip)
         args, kwargs = self.client_mock.slb.server.create.call_args
         self.assertIn('template-server', kwargs['server_templates'])
         self.assertEqual(kwargs['server_templates']['template-server'], 'my_server_template')
-        
+
     def test_MemberCreate_execute_create_with_shared_template_log_warning(self):
-        member_task = self._create_member_task_with_server_template('my_server_template', use_shared=True)
+        member_port_count_ip = 1
+        member_task = self._create_member_task_with_server_template(
+            'my_server_template', use_shared=True)
 
         task_path = "a10_octavia.controller.worker.tasks.server_tasks"
         log_message = str("Shared partition template lookup for `[server]` "
                           "is not supported on template `template-server`")
         expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
         with self.assertLogs(task_path, level='WARN') as cm:
-            member_task.execute(MEMBER, VTHUNDER, POOL)
+            member_task.execute(MEMBER, VTHUNDER, POOL, member_port_count_ip)
+            self.assertEqual(expected_log, cm.output)
 
     def test_MemberCreate_revert_created_member(self):
         mock_member = task.MemberCreate()
