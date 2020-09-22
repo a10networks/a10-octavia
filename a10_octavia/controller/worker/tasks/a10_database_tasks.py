@@ -318,7 +318,7 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
         try:
             self.vthunder_repo.delete(
                 db_apis.get_session(), loadbalancer_id=loadbalancer.id)
-        except Exception as e:
+        except Exception:
             LOG.error("Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
 
 
