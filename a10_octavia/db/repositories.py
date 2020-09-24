@@ -310,9 +310,10 @@ class LoadBalancerRepository(BaseRepository):
 class VRIDRepository(BaseRepository):
     model_class = models.VRID
 
-    def get_vrid_from_project_id(self, session, project_id):
+    def get_vrid_from_project_id(self, session, project_id, subnet_id):
         model = session.query(self.model_class).filter(
-            self.model_class.project_id == project_id).first()
+            self.model_class.project_id == project_id).filter(
+                self.model_claass.subnet_id == subnet_id).first()
 
         if not model:
             return None

@@ -366,10 +366,10 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
 
 class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
-    def execute(self, lb_resource):
+    def execute(self, lb_resource, subnet):
         project_id = lb_resource.project_id
         vrid = self.vrid_repo.get_vrid_from_project_id(
-            db_apis.get_session(), project_id=project_id)
+            db_apis.get_session(), project_id=project_id, subnet_id=subnet.id)
         return vrid
 
 

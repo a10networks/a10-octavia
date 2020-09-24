@@ -202,8 +202,11 @@ class MemberFlows(object):
     def get_delete_member_vrid_subflow(self):
         delete_member_vrid_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBER_VRID_SUBFLOW)
-        delete_member_vrid_subflow.add(a10_database_tasks.GetVRIDForProjectMember(
+        delete_member_flow.add(a10_network_tasks.GetLBResourceSubnet(
             requires=constants.MEMBER,
+            provides=constants.SUBNET))
+        delete_member_vrid_subflow.add(a10_database_tasks.GetVRIDForProjectMember(
+            requires=[constants.MEMBER, constants.SUBNET]
             provides=a10constants.VRID))
         delete_member_vrid_subflow.add(a10_network_tasks.DeleteMemberVRIDPort(
             requires=[a10constants.VTHUNDER, a10constants.VRID, a10constants.MEMBER_COUNT],
@@ -232,11 +235,14 @@ class MemberFlows(object):
 
     def handle_vrid_for_member_subflow(self):
         handle_vrid_for_member_subflow = linear_flow.Flow(a10constants.HANDLE_VRID_MEMBER_SUBFLOW)
-        handle_vrid_for_member_subflow.add(a10_database_tasks.GetVRIDForProjectMember(
+        handle_vrid_for_member_subflow.add(a10_network_tasks.GetLBResourceSubnet(
             requires=constants.MEMBER,
+            provides=constants.SUBNET))
+        handle_vrid_for_member_subflow.add(a10_database_tasks.GetVRIDForProjectMember(
+            requires=[constants.MEMBER, constants.SUBNET], 
             provides=a10constants.VRID))
         handle_vrid_for_member_subflow.add(a10_network_tasks.HandleVRIDFloatingIP(
-            requires=[constants.MEMBER, a10constants.VTHUNDER, a10constants.VRID],
+            requires=[constants.MEMBER, a10constants.VTHUNDER, a10constants.VRID, constants.SUBNET],
             provides=a10constants.PORT))
         handle_vrid_for_member_subflow.add(a10_database_tasks.UpdateVRIDForProjectMember(
             requires=[constants.MEMBER, a10constants.VRID, a10constants.PORT]))
