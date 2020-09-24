@@ -188,22 +188,6 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
             db_apis.get_session(), loadbalancer_id)
         if vthunder is None:
             return None
-        if vthunder.undercloud:
-            use_parent_part = CONF.a10_global.use_parent_partition
-            if use_parent_part:
-                if vthunder.hierarchical_multitenancy == 'enable':
-                    parent_project_id = utils.get_parent_project(
-                        vthunder.project_id)
-                    if parent_project_id:
-                        vthunder.partition_name = parent_project_id[:14]
-                    else:
-                        LOG.error("The parent project for project %s does not exist. ",
-                                  vthunder.project_id)
-                        raise exceptions.ParentProjectNotFound(vthunder.project_id)
-                else:
-                    LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
-                                "configuration will not be applied for loadbalancer: %s",
-                                loadbalancer.id)
         return vthunder
 
 
@@ -282,8 +266,22 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
     """ Create VThunder device entry in DB """
 
     def execute(self, loadbalancer, vthunder_config):
+        hierarchical_mt = vthunder_config.hierarchical_multitenancy
+        if CONF.a10_global.use_parent_partition:
+            if hierarchical_mt == 'enable':
+                parent_project_id = utils.get_parent_project(
+                    vthunder_config.project_id)
+                if parent_project_id:
+                    vthunder_config.partition_name = parent_project_id[:14]
+                else:
+                    LOG.error("The parent project for project %s does not exist. ",
+                              vthunder_config.project_id)
+                    raise exceptions.ParentProjectNotFound(vthunder_config.project_id)
+            else:
+                LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
+                            "configuration will not be applied for loadbalancer: %s",
+                            loadbalancer.id)
         try:
-            hierarchical_mt = vthunder_config.hierarchical_multitenancy
             self.vthunder_repo.create(db_apis.get_session(),
                                       vthunder_id=uuidutils.generate_uuid(),
                                       device_name=vthunder_config.device_name,
