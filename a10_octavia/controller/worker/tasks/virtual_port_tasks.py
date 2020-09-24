@@ -41,7 +41,7 @@ class ListenersParent(object):
 
         status = self.axapi_client.slb.UP
         if not listener.enabled:
-            self.axapi_client.slb.DOWN
+            status = self.axapi_client.slb.DOWN
 
         conn_limit = CONF.listener.conn_limit
         if listener.connection_limit != -1:
