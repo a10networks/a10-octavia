@@ -36,9 +36,11 @@ class LoadBalancerParent(object):
         vip_meta = utils.meta(loadbalancer, 'virtual_server', {})
         arp_disable = CONF.slb.arp_disable
         vrid = CONF.slb.default_virtual_server_vrid
-        description = str(loadbalancer.description) if loadbalancer.description else ""
-        if description.isspace():
-            description = ""
+        description = loadbalancer.description
+        if not loadbalancer.description:
+            description = None
+        else:
+            description = loadbalancer.description.strip()
 
         set_method(
             loadbalancer.id,
