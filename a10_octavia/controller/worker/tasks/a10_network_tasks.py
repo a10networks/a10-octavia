@@ -666,16 +666,6 @@ class ApplyQosAmphora(BaseNetworkTask):
             LOG.error('Failed to remove QoS policy: %s from port: %s due '
                       'to error: %s', orig_qos_id, amp_data.vrrp_port_id, e)
 
-class GetLBResourceSubnet(BaseNetworkTask):
-    "Provides subnet ID for LB resource"
-    def execute(self, lb_resource):
-        if not hasattr(lb_resource, 'subnet_id'):
-                # Special case for load balancers as their vips have the subnet info
-                subnet = self.network_driver.get_subnet(lb_resource.vip.subnet_id)
-            else:
-                subnet = self.network_driver.get_subnet(lb_resource.subnet_id)
-        return subnet
-
 
 class HandleVRIDFloatingIP(BaseNetworkTask):
     """Handle VRID floating IP configurations for loadbalancer resourse"""
@@ -686,22 +676,23 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
     @axapi_client_decorator
     def execute(self, vthunder, lb_resource, vrid_list):
+        vrid = None
+        device_vrid_ip = None
+        vrid_floating_ip_list = []
+
         # Figure out VRID of resource
         if not hasattr(lb_resource, 'subnet_id'):
-                subnet = self.network_driver.get_subnet(lb_resource.vip.subnet_id)
-            else:
-                subnet = self.network_driver.get_subnet(lb_resource.subnet_id)
+            subnet = self.network_driver.get_subnet(lb_resource.vip.subnet_id)
+        else:
+            subnet = self.network_driver.get_subnet(lb_resource.subnet_id)
 
-        vrid = None
         for vr in vrid_list:
             if vr.subnet_id == subnet.id:
                 vrid = vr
-                vrid_list.remove(vr)
-                break
-
-        device_vrid_ip = None
-        if vrid:
-            device_vrid_ip = vrid.vrid_floating_ip
+                device_vrid_ip = vrid.vrid_floating_ip
+            else:
+                vrid_floating_ip_list.append(vr.floating_ip)
+        vrid_list.remove(vrid)
 
         conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(lb_resource.project_id)
         if conf_floating_ip:        
@@ -731,13 +722,10 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                         LOG.error("Failed to create neutron port for loadbalancer resource: %s with "
                                   "floating IP %s", lb_resource.id, conf_floating_ip)
                         raise e
-                    
-            vrid.ip_address = self.fip_port.fixed_ips[0].ip_address
-            vrid.port = self.fip_port.ids
-            vrid_list.append(vrid)
 
             if self.fip_port:
-                self.update_device_vrid_fip(self.fip_port.fixed_ips[0].ip_address, vthunder, vrid_list)
+                vrid_floating_ip_list.append(self.fip_port.fixed_ips[0].ip_address)
+                self.update_device_vrid_fip(vthunder, vrid_floating_ip_list)
 
         if vrid and vrid.vrid_port_id and (self.fip_port or not conf_floating_ip):
             try:
@@ -748,10 +736,11 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 raise e
             if not conf_floating_ip:
                 try:
-                    ###self.axapi_client.vrrpa.update(vrid.vrid, floating_ip=None)
                     # Write a function to handle deletion of specific floating IP in vrid
+                    self.axapi_client.vrrpa.update(vrid.vrid, floating_ip=vrid_floating_ip_list)
                 except Exception as e:
-                    LOG.exceptions("Failed to delete vrid %s for loadbalancer resource %s", str(vrid), lb_resource.id)
+                    LOG.exceptions("Failed to delete vrid %s for loadbalancer resource %s",
+                                   str(vrid), lb_resource.id)
                     raise e
 
         return self.fip_port, vrid
@@ -775,18 +764,17 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 LOG.exception("Failed to revert VRRP floating IP delta task for lb_resource: %s"
                               " due to %s", lb_resource.id, str(e))
 
-    def update_device_vrid_fip(self, updated_floating_ip, vthunder, vrid_list):
+    def update_device_vrid_fip(self, vthunder, vrid_floating_ip_list):
         vrid_value = CONF.a10_global.vrid
-        conf_floating_ip = [vrid.floating_ip for vrid in vrid_list]
         try:
             if not vthunder.partition_name or vthunder.partition_name == 'shared':
-                self.axapi_client.vrrpa.update(vrid_value, floating_ips=conf_floating_ip)
+                self.axapi_client.vrrpa.update(vrid_value, floating_ips=vrid_floating_ip_list)
             else:
-                self.axapi_client.vrrpa.update(vrid_value, floating_ips=conf_floating_ip,
+                self.axapi_client.vrrpa.update(vrid_value, floating_ips=vrid_floating_ip_list,
                                                is_partition=True)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to update VRRP floating IP %s for vrid: %s",
-                          updated_floating_ip, str(vrid_value))
+                          vrid_floating_ip_list, str(vrid_value))
             raise e
 
 

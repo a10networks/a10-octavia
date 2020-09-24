@@ -366,16 +366,17 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
 
 class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
-    def execute(self, lb_resource, subnet):
+    def execute(self, lb_resource):
         project_id = lb_resource.project_id
-        vrid = self.vrid_repo.get_vrid_from_project_id(
-            db_apis.get_session(), project_id=project_id, subnet_id=subnet.id)
-        return vrid
+        vrid_list = self.vrid_repo.get_vrid_from_project_id(
+            db_apis.get_session(), project_id=project_id)
+        return vrid_list
 
 
 class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
 
     def execute(self, lb_resource, vrid, port):
+        vrid_value = CONF.a10_global.vrid
         if port:
             if vrid:
                 try:
@@ -406,18 +407,19 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                     raise e
         else:
             conf_floating_ip = utils.get_vrid_floating_ip_for_project(
-                member.project_id)
+                lb_resource.project_id)
             if vrid and not conf_floating_ip:
                 try:
                     self.vrid_repo.delete(
                         db_apis.get_session(), id=vrid.id)
                     LOG.debug("Successfully deleted DB vrid %s entry for member %s",
-                              vrid.id, member.id)
+                              vrid.id, lb_resource.id)
                 except Exception as e:
                     LOG.error("Failed to delete vrid %(vrid)s "
                               "DB entry due to: %(except)s",
                               {'vrid': vrid.id, 'except': e})
                     raise e
+
 
 class CountLoadbalancersInProject(BaseDatabaseTask):
     def execute(self, loadbalancer):
@@ -428,6 +430,7 @@ class CountLoadbalancersInProject(BaseDatabaseTask):
         except Exception as e:
             LOG.exception("Failed to get count of loadbalancers in given project: %s", str(e))
             raise e
+
 
 class CountMembersInProject(BaseDatabaseTask):
     def execute(self, member):
