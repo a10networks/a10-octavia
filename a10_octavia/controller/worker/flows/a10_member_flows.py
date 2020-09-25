@@ -232,15 +232,18 @@ class MemberFlows(object):
 
     def handle_vrid_for_member_subflow(self):
         handle_vrid_for_member_subflow = linear_flow.Flow(a10constants.HANDLE_VRID_MEMBER_SUBFLOW)
+        handle_vrid_for_member_subflow.add(a10_network_tasks.GetLBResourceSubnet(
+            rebind={a10constants.LB_RESOURCE: constants.MEMBER},
+            provides=constants.SUBNET))
         handle_vrid_for_member_subflow.add(a10_database_tasks.GetVRIDForLoadbalancerResource(
             rebind={a10constants.LB_RESOURCE: constants.MEMBER},
             provides=a10constants.VRID_LIST))
         handle_vrid_for_member_subflow.add(a10_network_tasks.HandleVRIDFloatingIP(
-            requires=[a10constants.VTHUNDER, a10constants.VRID_LIST],
+            requires=[a10constants.VTHUNDER, a10constants.VRID_LIST, constants.SUBNET],
             rebind={a10constants.LB_RESOURCE: constants.MEMBER},
             provides=(a10constants.PORT, a10constants.VRID)))
         handle_vrid_for_member_subflow.add(a10_database_tasks.UpdateVRIDForLoadbalancerResource(
-            requires=[a10constants.VRID, a10constants.PORT],
+            requires=[a10constants.VRID, a10constants.PORT, constants.SUBNET],
             rebind={a10constants.LB_RESOURCE: constants.MEMBER}))
 
         return handle_vrid_for_member_subflow

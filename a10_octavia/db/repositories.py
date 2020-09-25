@@ -318,8 +318,7 @@ class VRIDRepository(BaseRepository):
             self.model_class.project_id == project_id)
         for data in model:
             vrid_obj_list.append(data.to_data_model())
-        if vrid_obj_list:
-            return vrid_obj_list
+        return vrid_obj_list
 
 
 class MemberRepository(repo.MemberRepository):

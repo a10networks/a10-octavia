@@ -375,7 +375,7 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
 class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
 
-    def execute(self, lb_resource, vrid, port):
+    def execute(self, lb_resource, vrid, port, subnet):
         vrid_value = CONF.a10_global.vrid
         if port:
             if vrid:
@@ -385,7 +385,8 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                         vrid.id,
                         vrid_floating_ip=port.fixed_ips[0].ip_address,
                         vrid_port_id=port.id,
-                        vrid=vrid_value)
+                        vrid=vrid_value,
+                        subnet_id=subnet.id)
                     LOG.debug("Successfully updated DB vrid %s entry for loadbalancer resource %s",
                               vrid.id, lb_resource.id)
                 except Exception as e:
@@ -399,7 +400,8 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                                           project_id=lb_resource.project_id,
                                           vrid_floating_ip=port.fixed_ips[0].ip_address,
                                           vrid_port_id=port.id,
-                                          vrid=vrid_value)
+                                          vrid=vrid_value,
+                                          subnet_id=subnet.id)
                     LOG.debug("Successfully created DB entry for vrid for loadbalancer resource %s",
                               lb_resource.id)
                 except Exception as e:

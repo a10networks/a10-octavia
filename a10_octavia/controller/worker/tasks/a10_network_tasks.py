@@ -675,15 +675,10 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         super(HandleVRIDFloatingIP, self).__init__(*arg, **kwargs)
 
     @axapi_client_decorator
-    def execute(self, vthunder, lb_resource, vrid_list):
+    def execute(self, vthunder, lb_resource, vrid_list, subnet):
         vrid = None
         device_vrid_ip = None
         vrid_floating_ip_list = []
-        # Figure out VRID of resource
-        if not hasattr(lb_resource, 'subnet_id'):
-            subnet = self.network_driver.get_subnet(lb_resource.vip.subnet_id)
-        else:
-            subnet = self.network_driver.get_subnet(lb_resource.subnet_id)
 
         for vr in vrid_list:
             if vr.subnet_id == subnet.id:
@@ -753,7 +748,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
         if self.fip_port:
             LOG.warning("Reverting VRRP floating IP delta task for vrid %s on lb_resource %s",
-                        str(vrid), lb_resource.id)
+                        str(vrid_list), lb_resource.id)
             try:
                 self.network_driver.delete_port(self.fip_port.id)
                 #if vrid:
@@ -819,3 +814,14 @@ class GetMemberSubnetVLANID(GetSubnetVLANIDParent, BaseNetworkTask):
 
     def execute(self, member):
         return self.get_vlan_id(member.subnet_id)
+
+
+class GetLBResourceSubnet(BaseNetworkTask):
+    "Provides subnet ID for LB resource"
+    def execute(self, lb_resource):
+        if not hasattr(lb_resource, 'subnet_id'):
+            # Special case for load balancers as their vips have the subnet info
+            subnet = self.network_driver.get_subnet(lb_resource.vip.subnet_id)
+        else:
+            subnet = self.network_driver.get_subnet(lb_resource.subnet_id)
+        return subnet
