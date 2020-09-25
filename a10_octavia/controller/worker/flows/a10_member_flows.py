@@ -236,10 +236,12 @@ class MemberFlows(object):
             rebind={a10constants.LB_RESOURCE: constants.MEMBER},
             provides=a10constants.VRID_LIST))
         handle_vrid_for_member_subflow.add(a10_network_tasks.HandleVRIDFloatingIP(
-            requires=[constants.MEMBER, a10constants.VTHUNDER, a10constants.VRID_LIST],
+            requires=[a10constants.VTHUNDER, a10constants.VRID_LIST],
+            rebind={a10constants.LB_RESOURCE: constants.MEMBER},
             provides=(a10constants.PORT, a10constants.VRID)))
         handle_vrid_for_member_subflow.add(a10_database_tasks.UpdateVRIDForLoadbalancerResource(
-            requires=[constants.MEMBER, a10constants.VRID, a10constants.PORT]))
+            requires=[a10constants.VRID, a10constants.PORT],
+            rebind={a10constants.LB_RESOURCE: constants.MEMBER}))
 
         return handle_vrid_for_member_subflow
 
@@ -315,7 +317,7 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER))
         return update_member_flow
 
-    def get_rack_vthunder_member_flow(self):
+    def get_rack_vthunder_create_member_flow(self):
         """Create a flow to create a rack vthunder member
 
         :returns: The flow for creating a rack vthunder member

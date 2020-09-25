@@ -679,7 +679,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         vrid = None
         device_vrid_ip = None
         vrid_floating_ip_list = []
-
         # Figure out VRID of resource
         if not hasattr(lb_resource, 'subnet_id'):
             subnet = self.network_driver.get_subnet(lb_resource.vip.subnet_id)
@@ -691,8 +690,9 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 vrid = vr
                 device_vrid_ip = vrid.vrid_floating_ip
             else:
-                vrid_floating_ip_list.append(vr.floating_ip)
-        vrid_list.remove(vrid)
+                vrid_floating_ip_list.append(vr.vrid_floating_ip)
+        if vrid:
+            vrid_list.remove(vrid)
 
         conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(lb_resource.project_id)
         if conf_floating_ip:        
@@ -746,7 +746,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         return self.fip_port, vrid
 
     @axapi_client_decorator
-    def revert(self, result, vthunder, lb_resource, vrid, *args, **kwargs):
+    def revert(self, result, vthunder, lb_resource, vrid_list, *args, **kwargs):
         if isinstance(result, failure.Failure):
             LOG.exception("Unable to allocate & configure VRRP Floating IP Port")
             return
@@ -756,8 +756,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                         str(vrid), lb_resource.id)
             try:
                 self.network_driver.delete_port(self.fip_port.id)
-                if vrid:
-                    self.axapi_client.vrrpa.update(vrid.vrid, floating_ips=[vrid.vrid_floating_ip])
+                #if vrid:
+                #    self.axapi_client.vrrpa.update(vrid.vrid, floating_ips=[vrid.vrid_floating_ip])
             except req_exceptions.ConnectionError:
                 LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
             except Exception as e:
