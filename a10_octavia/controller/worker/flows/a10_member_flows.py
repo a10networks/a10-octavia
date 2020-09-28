@@ -147,9 +147,6 @@ class MemberFlows(object):
         :returns: The flow for deleting a member
         """
         delete_member_flow = linear_flow.Flow(constants.DELETE_MEMBER_FLOW)
-        delete_member_flow.add(a10_database_tasks.CountMembersInProject(
-            requires=constants.MEMBER,
-            provides=a10constants.MEMBER_COUNT))
         delete_member_flow.add(lifecycle_tasks.MemberToErrorOnRevertTask(
             requires=[constants.MEMBER,
                       constants.LISTENERS,
@@ -236,7 +233,7 @@ class MemberFlows(object):
         delete_member_vrid_subflow.add(a10_network_tasks.DeleteVRIDPort(
             requires=[a10constants.VTHUNDER, a10constants.VRID_LIST, constants.SUBNET],
             rebind={a10constants.RESOURCE_COUNT: a10constants.MEMBER_COUNT},
-            provides=a10constants.DELETE_VRID))
+            provides=(a10constants.VRID, a10constants.DELETE_VRID)))
         delete_member_vrid_subflow.add(a10_database_tasks.DeleteVRIDEntry(
             requires=[a10constants.VRID, a10constants.DELETE_VRID]))
         return delete_member_vrid_subflow
