@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from keystone import exception as keystone_exceptions
 from oslo_config import cfg
 
 from octavia.common import exceptions
@@ -179,5 +180,24 @@ class PartitionNotActiveError(acos_errors.ACOSException):
     """ Occurs when the partition has been unloaded, but not deleted """
 
     def __init__(self, partition_name, device_ip):
-        msg = 'Partition {0} on device {1} is set to Not-Active'
+        msg = ('Partition {0} on device {1} is set to Not-Active').format(partition_name,
+                                                                          device_ip)
         super(PartitionNotActiveError, self).__init__(msg=msg)
+
+
+class ParentProjectNotFound(keystone_exceptions.Error):
+    """Occurs if no parent project found."""
+
+    def __init__(self, project_id):
+        msg = ('The project {0} does not have a parent or has default project'
+               ' as parent. ').format(project_id)
+        super(ParentProjectNotFound, self).__init__(message=msg)
+
+
+class SharedPartitionTemplateNotSupported(acos_errors.FeatureNotSupported):
+    """ Occurs when shared partition lookup for templates is not supported on acos client"""
+
+    def __init__(self, resource, template_key):
+        msg = ('Shared partition template lookup for [{0}] is not supported'
+               ' on template `{1}`').format(resource, template_key)
+        super(SharedPartitionTemplateNotSupported, self).__init__(code=505, msg=msg)

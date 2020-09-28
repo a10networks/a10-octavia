@@ -403,7 +403,10 @@ These settings are added to the `a10-octavia.conf` file. They allow the operator
 ```shell
 [a10_global]
 network_type = vlan
-use_parent_partition = True 
+use_parent_partition = True
+
+[NOTE: Use this flag for allowing templates to be used from shared partition for attaching them to components in l3v partition]
+use_shared_for_template_lookup = True
 ```
 #### Loadbalancer/virtual server config example
 ```shell
@@ -539,7 +542,7 @@ mysql> DELETE FROM alembic_version;
 With `a10-octavia` installed, run the following command to register the services
 
 ```shell
-$ install-a10-octavia
+$ /path/to/a10-octavia/a10_octavia/install/install-a10-octavia-dev
 ```
 
 This will install systemd services with names - `a10-controller-worker.service`, `a10-health-manager.service` and `a10-house-keeper.service`.

@@ -45,6 +45,9 @@ A10_GLOBAL_OPTS = [
                default=a10constants.FLAT,
                choices=a10constants.SUPPORTED_NETWORK_TYPE,
                help=_('Neutron ML2 Tenent Network Type')),
+    cfg.BoolOpt('use_shared_for_template_lookup',
+                default=False,
+                help=_('Use shared for template')),
 ]
 
 A10_VTHUNDER_OPTS = [
