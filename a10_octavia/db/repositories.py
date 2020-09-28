@@ -336,3 +336,10 @@ class MemberRepository(repo.MemberRepository):
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
         return count
+
+    def get_member_count_by_subnet(self, session, project_id, subnet_id):
+        return session.query(self.model_class).filter(
+            and_(self.model_class.project_id == project_id,
+                 self.model_class.subnet_id == subnet_id,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()

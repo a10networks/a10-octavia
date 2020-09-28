@@ -434,12 +434,12 @@ class CountLoadbalancersInProject(BaseDatabaseTask):
             raise e
 
 
-class CountMembersInProject(BaseDatabaseTask):
-    def execute(self, member):
+class CountMembersInProjectBySubnet(BaseDatabaseTask):
+    def execute(self, member, subnet):
         try:
-            return self.member_repo.get_member_count(
+            return self.member_repo.get_member_count_by_subnet(
                 db_apis.get_session(),
-                project_id=member.project_id)
+                project_id=member.project_id, subnet_id=subnet.id)
         except Exception as e:
             LOG.exception(
                 "Failed to get count of members in given project: %s", str(e))

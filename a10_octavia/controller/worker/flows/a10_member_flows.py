@@ -139,10 +139,10 @@ class MemberFlows(object):
         :returns: The flow for deleting a member
         """
         delete_member_flow = linear_flow.Flow(constants.DELETE_MEMBER_FLOW)
-        delete_member_flow.add(a10_database_tasks.
-            CountMembersInProject(
-            requires=constants.MEMBER,
-            provides=a10constants.MEMBER_COUNT))
+        # delete_member_flow.add(a10_database_tasks.
+        #     CountMembersInProject(
+        #     requires=constants.MEMBER,
+        #     provides=a10constants.MEMBER_COUNT))
         delete_member_flow.add(lifecycle_tasks.MemberToErrorOnRevertTask(
             requires=[constants.MEMBER,
                       constants.LISTENERS,
@@ -202,12 +202,12 @@ class MemberFlows(object):
     def get_delete_member_vrid_subflow(self):
         delete_member_vrid_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBER_VRID_SUBFLOW)
-        # delete_member_vrid_subflow.add(a10_database_tasks.GetVRIDForLoadbalancerResource(
-        #     rebind={a10constants.LB_RESOURCE: constants.MEMBER},
-        #     provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(a10_network_tasks.GetLBResourceSubnet(
             rebind={a10constants.LB_RESOURCE: constants.MEMBER},
             provides=constants.SUBNET))
+        delete_member_vrid_subflow.add(a10_database_tasks.CountMembersInProjectBySubnet(
+            requires=[constants.MEMBER, constants.SUBNET],
+            provides=a10constants.MEMBER_COUNT))
         delete_member_vrid_subflow.add(a10_database_tasks.GetVRIDForLBResourceSubnet(
             requires=constants.SUBNET,
             rebind={a10constants.LB_RESOURCE: constants.MEMBER},
