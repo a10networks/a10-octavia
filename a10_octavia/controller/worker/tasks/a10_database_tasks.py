@@ -559,12 +559,13 @@ class MarkLBAndListenerActiveInDB(BaseDatabaseTask):
                       "%(except)s", {'list': listener.id, 'except': e})
 
 
-class GetVRIDForLBResourceSubnet(BaseDatabaseTask):
-    def execute(self, lb_resource, subnet):
-        project_id = lb_resource.project_id
-        vrid = self.vrid_repo.get_vrid_for_subnet(
-            db_apis.get_session(), project_id=project_id, subnet_id=subnet.id)
-        return vrid
+# class GetVRIDForLBResourceSubnet(BaseDatabaseTask):
+#     def execute(self, lb_resource, subnet):
+#         project_id = lb_resource.project_id
+#         vrid = self.vrid_repo.get_vrid_for_subnet(
+#             db_apis.get_session(), project_id=project_id, subnet_id=subnet.id)
+#         return vrid
+
 
 class CountMembersWithIP(BaseDatabaseTask):
     def execute(self, member):

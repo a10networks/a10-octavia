@@ -320,12 +320,12 @@ class VRIDRepository(BaseRepository):
             vrid_obj_list.append(data.to_data_model())
         return vrid_obj_list
 
-    def get_vrid_for_subnet(self, session, project_id, subnet_id):
-        vrid = session.query(self.model_class).filter(
-            and_(self.model_class.project_id == project_id,
-                 self.model_class.subnet_id == subnet_id)).first()
-        if vrid:
-            return vrid.to_data_model()
+    # def get_vrid_for_subnet(self, session, project_id, subnet_id):
+    #     vrid = session.query(self.model_class).filter(
+    #         and_(self.model_class.project_id == project_id,
+    #              self.model_class.subnet_id == subnet_id)).first()
+    #     if vrid:
+    #         return vrid.to_data_model()
 
 
 class MemberRepository(repo.MemberRepository):

@@ -732,7 +732,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             if not conf_floating_ip:
                 try:
                     # Write a function to handle deletion of specific floating IP in vrid
-                    self.axapi_client.vrrpa.update(vrid.vrid, floating_ip=vrid_floating_ip_list)
+                    self.axapi_client.vrrpa.update(vrid.vrid, floating_ips=vrid_floating_ip_list)
                 except Exception as e:
                     LOG.exceptions("Failed to delete vrid %s for loadbalancer resource %s",
                                    str(vrid), lb_resource.id)
@@ -776,11 +776,18 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 class DeleteVRIDPort(BaseNetworkTask):
     """Delete VRID Port if the last resource associated with it is deleted"""
     @axapi_client_decorator
-    def execute(self, vthunder, vrid, resource_count):
-        if vrid and resource_count == 1:
+    def execute(self, vthunder, vrid_list, resource_count, subnet):
+        vrid = None
+        vrid_floating_ip_list = []
+        if resource_count == 1:
+            for vr in vrid_list:
+                if vr.subnet_id == subnet.id:
+                    vrid = vr
+                else:
+                    vrid_floating_ip_list.append(vr.vrid_floating_ip)
             try:
                 self.network_driver.delete_port(vrid.vrid_port_id)
-                self.axapi_client.vrrpa.update(vrid.vrid, floating_ip=None)
+                self.axapi_client.vrrpa.update(vrid.vrid, floating_ips=vrid_floating_ip_list)
                 LOG.info("VRID floating IP: %s deleted", vrid.vrid_floating_ip)
                 return True
             except Exception as e:
