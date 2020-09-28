@@ -764,10 +764,10 @@ class WriteMemory(VThunderBaseTask):
     """Task to write memory of the Thunder device"""
 
     @axapi_client_decorator
-    def execute(self, vthunder):
+    def execute(self, vthunder, write_mem_shared_part=False):
         try:
             if vthunder:
-                if vthunder.partition_name != "shared":
+                if vthunder.partition_name != "shared" and not write_mem_shared_part:
                     self.axapi_client.system.action.write_memory(
                         partition="specified",
                         specified_partition=vthunder.partition_name)

@@ -15,6 +15,7 @@
 
 import copy
 import imp
+
 try:
     from unittest import mock
 except ImportError:
@@ -25,26 +26,35 @@ from oslo_utils import uuidutils
 
 from octavia.common import data_models as o_data_models
 from octavia.network import data_models as n_data_models
+from octavia.tests.common import constants as t_constants
 
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
+from a10_octavia.common import exceptions
+from a10_octavia.common import utils
 from a10_octavia.controller.worker.tasks import a10_database_tasks as task
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
 VTHUNDER = data_models.VThunder()
+HW_THUNDER = data_models.HardwareThunder(project_id=a10constants.MOCK_PROJECT_ID,
+                                         device_name="rack_thunder_1", undercloud=True,
+                                         username="abc", password="abc", ip_address="10.10.10.10",
+                                         partition_name="shared")
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
-
 FIXED_IP = n_data_models.FixedIP(ip_address='10.10.10.10')
 PORT = n_data_models.Port(id=uuidutils.generate_uuid(), fixed_ips=[FIXED_IP])
-
-VRID = data_models.VRID(id=uuidutils.generate_uuid(), project_id=a10constants.MOCK_PROJECT_ID,
-                        vrid_port_id=uuidutils.generate_uuid(), vrid_floating_ip='10.0.12.32')
+VRID = data_models.VRID(id=uuidutils.generate_uuid(), vrid=0,
+                        project_id=a10constants.MOCK_PROJECT_ID,
+                        vrid_port_id=uuidutils.generate_uuid(),
+                        vrid_floating_ip='10.0.12.32')
 MEMBER_1 = o_data_models.Member(id=uuidutils.generate_uuid(),
                                 project_id=a10constants.MOCK_PROJECT_ID)
+POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID)
 
 
 class TestA10DatabaseTasks(base.BaseTaskTestCase):
+
     def setUp(self):
         super(TestA10DatabaseTasks, self).setUp()
         imp.reload(task)
@@ -52,6 +62,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
         self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
                                 group=a10constants.A10_GLOBAL_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
+                                group=a10constants.HARDWARE_THUNDER_CONF_SECTION)
         self.db_session = mock.patch(
             'a10_octavia.controller.worker.tasks.a10_database_tasks.db_apis.get_session')
         self.db_session.start()
@@ -59,6 +71,15 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
     def tearDown(self):
         super(TestA10DatabaseTasks, self).tearDown()
         self.db_session.stop()
+
+    def _generate_hardware_device_conf(self, thunder):
+        hardware_device_conf = [{"project_id": a10constants.MOCK_PROJECT_ID,
+                                 "username": thunder.username,
+                                 "password": thunder.password,
+                                 "device_name": thunder.device_name,
+                                 "vrid_floating_ip": thunder.vrid_floating_ip,
+                                 "ip_address": thunder.ip_address}]
+        return hardware_device_conf
 
     @mock.patch('a10_octavia.common.utils.get_parent_project',
                 return_value=a10constants.MOCK_PARENT_PROJECT_ID)
@@ -68,11 +89,11 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
         mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = 1
+        mock_vthunder.hierarchical_multitenancy = "enable"
 
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo = mock.MagicMock()
-        mock_get_vthunder.vthunder_repo.get_vthunder_from_lb().return_value = mock_vthunder
+        mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = mock_vthunder
         vthunder = mock_get_vthunder.execute(LB)
         self.assertEqual(vthunder.partition_name, a10constants.MOCK_PARENT_PROJECT_ID[:14])
 
@@ -85,13 +106,12 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
         mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = 1
+        mock_vthunder.hierarchical_multitenancy = "enable"
 
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb = mock.MagicMock()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = mock_vthunder
-        vthunder = mock_get_vthunder.execute(LB)
-        self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PART)
+        self.assertRaises(exceptions.ParentProjectNotFound, mock_get_vthunder.execute, LB)
 
     def test_get_vthunder_by_loadbalancer_parent_partition_no_ohm(self):
         self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
@@ -99,7 +119,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
         mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = 0
+        mock_vthunder.hierarchical_multitenancy = "disable"
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb = mock.MagicMock()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = mock_vthunder
@@ -112,7 +132,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PROJECT_ID[:14]
         mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = 1
+        mock_vthunder.hierarchical_multitenancy = "enable"
 
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb = mock.MagicMock()
@@ -128,6 +148,14 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.assertEqual(VRID, vrid)
 
     def test_update_vrid_for_project_member_with_no_port(self):
+        thunder = copy.deepcopy(HW_THUNDER)
+        thunder.vrid_floating_ip = VRID.vrid_floating_ip
+        hardware_device_conf = self._generate_hardware_device_conf(thunder)
+        self.conf.config(group=a10constants.HARDWARE_THUNDER_CONF_SECTION,
+                         devices=[hardware_device_conf])
+        self.conf.conf.hardware_thunder.devices = {a10constants.MOCK_PROJECT_ID: thunder}
+        utils.get_vrid_floating_ip_for_project.CONF = self.conf
+
         mock_vrid_entry = task.UpdateVRIDForProjectMember()
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.execute(MEMBER_1, VRID, None)
@@ -141,6 +169,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo.update.assert_called_once_with(
             mock.ANY,
             VRID.id,
+            vrid=VRID.vrid,
             vrid_floating_ip=PORT.fixed_ips[0].ip_address,
             vrid_port_id=PORT.id)
         mock_vrid_entry.vrid_repo.create.assert_not_called()
@@ -152,6 +181,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo.create.assert_called_once_with(
             mock.ANY,
             project_id=MEMBER_1.project_id,
+            vrid=VRID.vrid,
             vrid_floating_ip=PORT.fixed_ips[0].ip_address,
             vrid_port_id=PORT.id)
         mock_vrid_entry.vrid_repo.update.assert_not_called()
@@ -180,3 +210,33 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.member_repo.get_member_count.return_value = 1
         member_count = mock_vrid_entry.execute(MEMBER_1)
         self.assertEqual(1, member_count)
+
+    def test_count_members_in_project_ip(self):
+        mock_count_member = task.CountMembersWithIP()
+        mock_count_member.member_repo.get_member_count_by_ip_address = mock.Mock()
+        mock_count_member.member_repo.get_member_count_by_ip_address.return_value = 1
+        member_count = mock_count_member.execute(MEMBER_1)
+        self.assertEqual(1, member_count)
+
+    def test_count_members_in_project_ip_port_protocol(self):
+        member_1 = o_data_models.Member(
+            id=uuidutils.generate_uuid(),
+            protocol_port=t_constants.MOCK_PORT_ID,
+            project_id=t_constants.MOCK_PROJECT_ID,
+            ip_address=t_constants.MOCK_IP_ADDRESS)
+        mock_count_member = task.CountMembersWithIPPortProtocol()
+        mock_count_member.member_repo.get_member_count_by_ip_address_port_protocol = mock.Mock()
+        mock_count_member.member_repo.get_member_count_by_ip_address_port_protocol.return_value = 2
+        member_count = mock_count_member.execute(member_1, POOL)
+        self.assertEqual(2, member_count)
+
+    def test_pool_count_accn_ip(self):
+        member_1 = o_data_models.Member(id=uuidutils.generate_uuid(),
+                                        project_id=t_constants.MOCK_PROJECT_ID,
+                                        ip_address=t_constants.MOCK_IP_ADDRESS,
+                                        pool_id=a10constants.MOCK_POOL_ID)
+        mock_count_pool = task.PoolCountforIP()
+        mock_count_pool.member_repo.get_pool_count_by_ip = mock.Mock()
+        mock_count_pool.member_repo.get_pool_count_by_ip.return_value = 2
+        pool_count = mock_count_pool.execute(member_1)
+        self.assertEqual(2, pool_count)

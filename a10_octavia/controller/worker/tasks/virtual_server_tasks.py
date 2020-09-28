@@ -36,12 +36,14 @@ class LoadBalancerParent(object):
         vip_meta = utils.meta(loadbalancer, 'virtual_server', {})
         arp_disable = CONF.slb.arp_disable
         vrid = CONF.slb.default_virtual_server_vrid
+        desc = loadbalancer.description
+        desc = desc.strip() if desc and desc.strip() else None
 
         set_method(
             loadbalancer.id,
             loadbalancer.vip.ip_address,
             arp_disable=arp_disable,
-            description=loadbalancer.description,
+            description=desc,
             status=status, vrid=vrid,
             axapi_body=vip_meta)
 

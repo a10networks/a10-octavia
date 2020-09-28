@@ -343,3 +343,27 @@ class MemberRepository(repo.MemberRepository):
                  self.model_class.subnet_id == subnet_id,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
+
+    def get_member_count_by_ip_address(self, session, ip_address, project_id):
+        return session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.ip_address == ip_address,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
+
+    def get_member_count_by_ip_address_port_protocol(self, session, ip_address, project_id, port,
+                                                     protocol):
+        return session.query(self.model_class).join(base_models.Pool).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.ip_address == ip_address,
+                 self.model_class.protocol_port == port,
+                 base_models.Pool.protocol == protocol,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
+
+    def get_pool_count_by_ip(self, session, ip_address, project_id):
+        return session.query(self.model_class.pool_id.distinct()).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.ip_address == ip_address,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count() 
