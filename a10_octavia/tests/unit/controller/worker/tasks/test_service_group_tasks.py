@@ -13,6 +13,7 @@
 #    under the License.
 
 
+import copy
 import imp
 try:
     from unittest import mock
@@ -113,6 +114,8 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
     def test_PoolCreate_execute_create_with_l3v_local_policy_template(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.partition_name = "my_partition"
         service_group_task = self._create_service_group_task_with_template(
             {'template_policy': 'my_policy_template'})
         self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION,
@@ -124,7 +127,7 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         }
         }
         service_group_task.axapi_client.slb.template.templates.get.return_value = device_templates
-        service_group_task.execute(POOL, VTHUNDER)
+        service_group_task.execute(POOL, vthunder)
         args, kwargs = self.client_mock.slb.service_group.create.call_args
         self.assertIn('template-policy-shared', kwargs['service_group_templates'])
         self.assertEqual(kwargs['service_group_templates']
@@ -133,6 +136,8 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
     def test_PoolCreate_execute_create_with_shared_policy_template(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.partition_name = "shared"
         service_group_task = self._create_service_group_task_with_template(
             {'template_policy': 'my_policy_template_other'})
         self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION,
@@ -144,11 +149,11 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         }
         }
         service_group_task.axapi_client.slb.template.templates.get.return_value = device_templates
-        service_group_task.execute(POOL, VTHUNDER)
+        service_group_task.execute(POOL, vthunder)
         args, kwargs = self.client_mock.slb.service_group.create.call_args
-        self.assertIn('template-policy-shared', kwargs['service_group_templates'])
+        self.assertIn('template-policy', kwargs['service_group_templates'])
         self.assertEqual(kwargs['service_group_templates']
-                         ['template-policy-shared'], 'my_policy_template_other')
+                         ['template-policy'], 'my_policy_template_other')
 
     def test_revert_pool_create_task(self):
         mock_pool = task.PoolCreate()
