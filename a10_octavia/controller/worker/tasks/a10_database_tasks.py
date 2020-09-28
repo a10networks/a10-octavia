@@ -538,3 +538,11 @@ class MarkLBAndListenerActiveInDB(BaseDatabaseTask):
             LOG.error("Failed to update listener %(list) "
                       "provisioning status to ERROR due to: "
                       "%(except)s", {'list': listener.id, 'except': e})
+
+
+class GetVRIDForLBResourceSubnet(BaseDatabaseTask):
+    def execute(self, lb_resource, subnet):
+        project_id = lb_resource.project_id
+        vrid = self.vrid_repo.get_vrid_for_subnet(
+            db_apis.get_session(), project_id=project_id, subnet_id=subnet.id)
+        return vrid
