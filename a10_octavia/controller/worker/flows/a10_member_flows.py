@@ -213,7 +213,8 @@ class MemberFlows(object):
             rebind={a10constants.LB_RESOURCE: constants.MEMBER},
             provides=a10constants.VRID))
         delete_member_vrid_subflow.add(a10_network_tasks.DeleteVRIDPort(
-            requires=[a10constants.VTHUNDER, a10constants.VRID, a10constants.MEMBER_COUNT],
+            requires=[a10constants.VTHUNDER, a10constants.VRID],
+            rebind={a10constants.RESOURCE_COUNT: a10constants.MEMBER_COUNT},
             provides=a10constants.DELETE_VRID))
         delete_member_vrid_subflow.add(a10_database_tasks.DeleteVRIDEntry(
             requires=[a10constants.VRID, a10constants.DELETE_VRID]))
