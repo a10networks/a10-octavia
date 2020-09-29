@@ -796,6 +796,27 @@ class DeleteVRIDPort(BaseNetworkTask):
         return None, False
 
 
+class DeleteMultipleVRIDPort(BaseNetworkTask):
+    @axapi_client_decorator
+    def execute(self, vrid_list, subnet_list):
+        try:
+            if subnet_list:
+                vrids = []
+                vrid_floating_ip_list = []
+                for vrid in vrid_list:
+                    if vrid.subnet_id in subnet_list:
+                        vrids.append(vrid)
+                        self.network_driver.delete_port(vrid.vrid_port_id)
+                    else:
+                        vrid_floating_ip_list.append(vrid.vrid_floating_ip)
+                self.axapi_client.vrrpa.update(vrid.vrid, floating_ips=vrid_floating_ip_list)
+                LOG.info("VRID floating IP: %s deleted", vrid_floating_ip_list)
+                return vrids
+        except Exception as e:
+            LOG.exception("Failed to delete vrid floating ip : %s", str(e))
+            raise e
+
+
 class GetSubnetVLANIDParent(object):
     """Get the Subnet VLAN_ID"""
 

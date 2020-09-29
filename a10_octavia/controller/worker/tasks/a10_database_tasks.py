@@ -476,6 +476,18 @@ class DeleteVRIDEntry(BaseDatabaseTask):
                 raise e
 
 
+class DeleteMultiVRIDEntry(BaseDatabaseTask):
+    def execute(self, vrid_list):
+        if vrid_list:
+            try:
+                self.vrid_repo.delete_batch(db_apis.get_session(),
+                                            ids=[vrid.id for vrid in vrid_list])
+            except Exception as e:
+                LOG.exception(
+                    "Failed to delete VRID entry from vrid table: %s", str(e))
+                raise e
+
+
 class CheckVLANCanBeDeletedParent(object):
 
     """ Checks all vip and member subnet_ids for project ID"""
@@ -598,3 +610,15 @@ class PoolCountforIP(BaseDatabaseTask):
         except Exception as e:
             LOG.exception("Failed to get pool count with same IP address: %s", str(e))
             raise e
+
+
+class GetSubnetForDeletion(BaseDatabaseTask):
+    def execute(self, member_list):
+        subnet_list = []
+        for member in member_list:
+            pool_count_subnet = self.member_repo.get_pool_count_subnet(
+                db_apis.get_session(), member.project_id, member.subnet_id)
+            if pool_count_subnet <= 1:
+                subnet_list.append(member.subnet_id)
+        return subnet_list
+

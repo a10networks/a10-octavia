@@ -367,3 +367,10 @@ class MemberRepository(repo.MemberRepository):
             and_(self.model_class.ip_address == ip_address,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count() 
+
+    def get_pool_count_subnet(self, session, project_id, subnet_id):
+        return session.query(self.model_class.pool_id.distinct()).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.subnet_id == subnet_id,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()

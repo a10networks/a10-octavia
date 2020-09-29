@@ -116,3 +116,6 @@ POOL_COUNT_IP = 'pool_count_ip'
 WRITE_MEM_SHARED_PART = 'write_mem_shared_part'
 WRITE_MEM_FOR_SHARED_PARTITION = 'write_memory_for_shared_partition'
 WRITE_MEM_FOR_LOCAL_PARTITION = 'write_memory_for_local_partition'
+
+MEMBER_LIST = 'member_list'
+SUBNET_LIST = 'subnet_list'

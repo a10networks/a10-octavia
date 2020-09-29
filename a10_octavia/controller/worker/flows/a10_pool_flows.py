@@ -123,8 +123,9 @@ class PoolFlows(object):
             delete_member_vthunder_subflow.add(
                 self.member_flow.get_delete_member_vthunder_internal_subflow(member.id))
         if members:
+            store.update({a10constants.MEMBER_LIST: members})
             delete_member_vthunder_subflow.add(
-                self.member_flow.get_delete_member_vrid_internal_subflow(members[-1].id))
+                self.member_flow.get_delete_member_vrid_internal_subflow())
         store.update(member_store)
         return delete_member_vthunder_subflow
 
