@@ -677,6 +677,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
     @axapi_client_decorator
     def execute(self, vthunder, lb_resource, vrid_list, subnet):
         vrid = None
+
         device_vrid_ip = None
         vrid_floating_ip_list = []
 

@@ -421,6 +421,7 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                                           vrid_port_id=port.id,
                                           vrid=vrid_value,
                                           subnet_id=subnet.id)
+
                     LOG.debug("Successfully created DB entry for vrid for loadbalancer resource %s",
                               lb_resource.id)
                 except Exception as e:
@@ -441,6 +442,15 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                               {'vrid': vrid.id, 'except': e})
                     raise e
 
+class CountLoadbalancersInProject(BaseDatabaseTask):
+    def execute(self, loadbalancer):
+        try:    
+            return self.loadbalancer_repo.get_lb_count(
+                db_apis.get_session(),
+                project_id=loadbalancer.project_id)
+        except Exception as e:
+            LOG.exception("Failed to get count of loadbalancers in given project: %s", str(e))
+            raise e
 
 class CountLoadbalancersInProject(BaseDatabaseTask):
     def execute(self, loadbalancer):
