@@ -267,8 +267,9 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
 
     def execute(self, loadbalancer, vthunder_config):
         hierarchical_mt = vthunder_config.hierarchical_multitenancy
-        if CONF.a10_global.use_parent_partition:
-            if hierarchical_mt == 'enable':
+        if hierarchical_mt == 'enable':
+            vthunder_config.partition_name = loadbalancer.project_id[:14]
+            if CONF.a10_global.use_parent_partition:
                 parent_project_id = utils.get_parent_project(
                     vthunder_config.project_id)
                 if parent_project_id:
@@ -276,31 +277,33 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                 else:
                     LOG.error("The parent project for project %s does not exist. ",
                               vthunder_config.project_id)
-                    raise exceptions.ParentProjectNotFound(vthunder_config.project_id)
+                    raise exceptions.ParentProjectNotFound(
+                        vthunder_config.project_id)
             else:
                 LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
                             "configuration will not be applied for loadbalancer: %s",
                             loadbalancer.id)
         try:
-            self.vthunder_repo.create(db_apis.get_session(),
-                                      vthunder_id=uuidutils.generate_uuid(),
-                                      device_name=vthunder_config.device_name,
-                                      username=vthunder_config.username,
-                                      password=vthunder_config.password,
-                                      ip_address=vthunder_config.ip_address,
-                                      undercloud=vthunder_config.undercloud,
-                                      loadbalancer_id=loadbalancer.id,
-                                      project_id=vthunder_config.project_id,
-                                      axapi_version=vthunder_config.axapi_version,
-                                      topology="STANDALONE",
-                                      role="MASTER",
-                                      status="ACTIVE",
-                                      last_udp_update=datetime.utcnow(),
-                                      created_at=datetime.utcnow(),
-                                      updated_at=datetime.utcnow(),
-                                      partition_name=vthunder_config.partition_name,
-                                      hierarchical_multitenancy=hierarchical_mt)
+            vthunder = self.vthunder_repo.create(db_apis.get_session(),
+                                                 vthunder_id=uuidutils.generate_uuid(),
+                                                 device_name=vthunder_config.device_name,
+                                                 username=vthunder_config.username,
+                                                 password=vthunder_config.password,
+                                                 ip_address=vthunder_config.ip_address,
+                                                 undercloud=vthunder_config.undercloud,
+                                                 loadbalancer_id=loadbalancer.id,
+                                                 project_id=vthunder_config.project_id,
+                                                 axapi_version=vthunder_config.axapi_version,
+                                                 topology="STANDALONE",
+                                                 role="MASTER",
+                                                 status="ACTIVE",
+                                                 last_udp_update=datetime.utcnow(),
+                                                 created_at=datetime.utcnow(),
+                                                 updated_at=datetime.utcnow(),
+                                                 partition_name=vthunder_config.partition_name,
+                                                 hierarchical_multitenancy=hierarchical_mt)
             LOG.info("Successfully created vthunder entry in database.")
+            return vthunder
         except Exception as e:
             LOG.error('Failed to create vThunder entry in db for load balancer: %s.',
                       loadbalancer.id)

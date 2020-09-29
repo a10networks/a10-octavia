@@ -81,64 +81,82 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
                                  "ip_address": thunder.ip_address}]
         return hardware_device_conf
 
-    @mock.patch('a10_octavia.common.utils.get_parent_project',
-                return_value=a10constants.MOCK_PARENT_PROJECT_ID)
-    def test_get_vthunder_by_loadbalancer_parent_partition_exists(self,
-                                                                  mock_parent_project_id):
-        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
-        mock_vthunder = copy.deepcopy(VTHUNDER)
-        mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
-        mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = "enable"
-
+    def test_get_vthunder_by_loadbalancer(self):
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo = mock.MagicMock()
-        mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = mock_vthunder
+        mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = None
         vthunder = mock_get_vthunder.execute(LB)
-        self.assertEqual(vthunder.partition_name, a10constants.MOCK_PARENT_PROJECT_ID[:14])
+        self.assertEqual(vthunder, None)
+
+    @mock.patch('a10_octavia.common.utils.get_parent_project',
+                return_value=a10constants.MOCK_PARENT_PROJECT_ID)
+    def test_create_rack_vthunder_entry_parent_partition_exists(self,
+                                                                mock_parent_project_id):
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
+        mock_lb = copy.deepcopy(LB)
+        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
+        mock_vthunder_config = copy.deepcopy(HW_THUNDER)
+        mock_vthunder_config.hierarchical_multitenancy = "enable"
+        mock_create_vthunder = task.CreateRackVthunderEntry()
+        mock_create_vthunder.vthunder_repo = mock.MagicMock()
+        mock_vthunder = copy.deepcopy(VTHUNDER)
+        mock_vthunder.partition_name = a10constants.MOCK_PARENT_PROJECT_ID[:14]
+        mock_create_vthunder.vthunder_repo.create.return_value = mock_vthunder
+        vthunder = mock_create_vthunder.execute(mock_lb, mock_vthunder_config)
+        self.assertEquals(vthunder.partition_name,
+                          a10constants.MOCK_PARENT_PROJECT_ID[:14])
 
     @mock.patch('a10_octavia.common.utils.get_parent_project',
                 return_value=None)
-    def test_get_vthunder_by_loadbalancer_parent_partition_not_exists(self,
-                                                                      mock_parent_project_id):
-        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
-
+    def test_create_rack_vthunder_entry_parent_partition_not_exists(self,
+                                                                    mock_parent_project_id):
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
+        mock_lb = copy.deepcopy(LB)
+        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
+        mock_vthunder_config = copy.deepcopy(HW_THUNDER)
+        mock_vthunder_config.hierarchical_multitenancy = "enable"
+        mock_create_vthunder = task.CreateRackVthunderEntry()
+        mock_create_vthunder.vthunder_repo = mock.MagicMock()
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
-        mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = "enable"
+        self.assertRaises(exceptions.ParentProjectNotFound,
+                          mock_create_vthunder.execute, mock_lb,
+                          mock_vthunder_config)
 
-        mock_get_vthunder = task.GetVThunderByLoadBalancer()
-        mock_get_vthunder.vthunder_repo.get_vthunder_from_lb = mock.MagicMock()
-        mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = mock_vthunder
-        self.assertRaises(exceptions.ParentProjectNotFound, mock_get_vthunder.execute, LB)
-
-    def test_get_vthunder_by_loadbalancer_parent_partition_no_ohm(self):
-        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
-
+    def test_create_rack_vthunder_entry_parent_partition_no_hmt(self):
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION,
+                         use_parent_partition=True)
+        mock_lb = copy.deepcopy(LB)
+        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
+        mock_vthunder_config = copy.deepcopy(HW_THUNDER)
+        mock_vthunder_config.hierarchical_multitenancy = "disable"
+        mock_create_vthunder = task.CreateRackVthunderEntry()
+        mock_create_vthunder.vthunder_repo = mock.MagicMock()
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
-        mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = "disable"
-        mock_get_vthunder = task.GetVThunderByLoadBalancer()
-        mock_get_vthunder.vthunder_repo.get_vthunder_from_lb = mock.MagicMock()
-        mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = mock_vthunder
-        vthunder = mock_get_vthunder.execute(LB)
+
+        mock_create_vthunder.vthunder_repo.create.return_value = mock_vthunder
+        vthunder = mock_create_vthunder.execute(mock_lb, mock_vthunder_config)
         self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PART)
 
-    def test_get_vthunder_by_loadbalancer_parent_partition_ohm_no_use_parent_partition(self):
-        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=False)
-
+    def test_create_rack_vthunder_entry_parent_partition_hmt_no_use_parent_partition(self):
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=False)
+        mock_lb = copy.deepcopy(LB)
+        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
+        mock_vthunder_config = copy.deepcopy(HW_THUNDER)
+        mock_vthunder_config.hierarchical_multitenancy = "enable"
+        mock_create_vthunder = task.CreateRackVthunderEntry()
+        mock_create_vthunder.vthunder_repo = mock.MagicMock()
         mock_vthunder = copy.deepcopy(VTHUNDER)
-        mock_vthunder.partition_name = a10constants.MOCK_CHILD_PROJECT_ID[:14]
-        mock_vthunder.undercloud = True
-        mock_vthunder.hierarchical_multitenancy = "enable"
-
-        mock_get_vthunder = task.GetVThunderByLoadBalancer()
-        mock_get_vthunder.vthunder_repo.get_vthunder_from_lb = mock.MagicMock()
-        mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = mock_vthunder
-        vthunder = mock_get_vthunder.execute(LB)
-        self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PROJECT_ID[:14])
+        mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
+        mock_create_vthunder.vthunder_repo.create.return_value = mock_vthunder
+        vthunder = mock_create_vthunder.execute(mock_lb, mock_vthunder_config)
+        self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PART)
 
     def test_get_vrid_for_project_member(self):
         mock_vrid_entry = task.GetVRIDForProjectMember()
