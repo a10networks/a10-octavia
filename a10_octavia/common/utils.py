@@ -99,9 +99,7 @@ def convert_to_hardware_thunder_conf(hardware_list):
             hardware_device['device_network_map'] = validate_interface_vlan_map(hardware_device)
             del hardware_device['interface_vlan_map']
         hierarchical_mt = hardware_device.get('hierarchical_multitenancy')
-        if hierarchical_mt == "enable":
-            hardware_device["partition_name"] = project_id[0:14]
-        elif hierarchical_mt != "disable" and hierarchical_mt is not None:
+        if hierarchical_mt and hierarchical_mt not in ('enable', 'disable'):
             raise cfg.ConfigFileValueError('Option `hierarchical_multitenancy` specified '
                                            'under project id {} only accepts "enable" and '
                                            '"disable"'.format(project_id))
@@ -231,14 +229,14 @@ def convert_interface_to_data_model(interface_obj):
             raise exceptions.InvalidVlanIdConfigError(vlan_id)
         if vlan_id in interface_dm.tags:
             raise exceptions.DuplicateVlanTagsConfigError(interface_num, vlan_id)
-        if vlan_map.get('use_dhcp'):
-            if not vlan_map.get('use_dhcp') in ("True", "False"):
+        if vlan_map.get('use_dhcp') and vlan_map.get('use_dhcp') not in ("True", "False"):
                 raise exceptions.InvalidUseDhcpConfigError(vlan_map.get('use_dhcp'))
+        if vlan_map.get('use_dhcp') == 'True':
             if vlan_map.get('ve_ip'):
                 raise exceptions.VirtEthCollisionConfigError(interface_num, vlan_id)
             else:
                 interface_dm.ve_ips.append('dhcp')
-        else:
+        if not vlan_map.get('use_dhcp') or vlan_map.get('use_dhcp') == 'False':
             if not vlan_map.get('ve_ip'):
                 raise exceptions.VirtEthMissingConfigError(interface_num, vlan_id)
             interface_dm.ve_ips.append(validate_partial_ipv4(vlan_map.get('ve_ip')))
