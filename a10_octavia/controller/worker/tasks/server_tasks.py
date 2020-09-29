@@ -19,6 +19,7 @@ from taskflow import task
 
 import acos_client.errors as acos_errors
 
+from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -31,16 +32,20 @@ class MemberCreate(task.Task):
     """Task to create a member and associate to pool"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool):
+    def execute(self, member, vthunder, pool, member_count_ip):
+        server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         server_args = utils.meta(member, 'server', {})
         server_args['conn-limit'] = CONF.server.conn_limit
         server_args['conn-resume'] = CONF.server.conn_resume
         server_args = {'server': server_args}
 
+        server_temp = {}
         template_server = CONF.server.template_server
-        if template_server and template_server.lower() == 'none':
-            template_server = None
-        server_temp = {'template-server': template_server}
+        if template_server and template_server.lower() != 'none':
+            if CONF.a10_global.use_shared_for_template_lookup:
+                LOG.warning('Shared partition template lookup for `[server]`'
+                            ' is not supported on template `template-server`')
+            server_temp = {'template-server': template_server}
 
         if not member.enabled:
             status = False
@@ -48,17 +53,22 @@ class MemberCreate(task.Task):
             status = True
 
         try:
-            self.axapi_client.slb.server.create(member.id, member.ip_address, status=status,
-                                                server_templates=server_temp,
-                                                axapi_args=server_args)
-            LOG.debug("Successfully created member: %s", member.id)
+            try:
+                self.axapi_client.slb.server.create(server_name, member.ip_address, status=status,
+                                                    server_templates=server_temp,
+                                                    axapi_args=server_args)
+                LOG.debug("Successfully created member: %s", member.id)
+            except (acos_errors.Exists, acos_errors.AddressSpecifiedIsInUse):
+                self.axapi_client.slb.server.update(server_name, member.ip_address, status=status,
+                                                    server_templates=server_temp,
+                                                    axapi_args=server_args)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to create member: %s", member.id)
             raise e
 
         try:
             self.axapi_client.slb.service_group.member.create(
-                pool.id, member.id, member.protocol_port)
+                pool.id, server_name, member.protocol_port)
             LOG.debug("Successfully associated member %s to pool %s",
                       member.id, pool.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
@@ -67,11 +77,14 @@ class MemberCreate(task.Task):
             raise e
 
     @axapi_client_decorator
-    def revert(self, member, vthunder, pool, *args, **kwargs):
+    def revert(self, member, vthunder, pool, member_count_ip, *args, **kwargs):
+        if member_count_ip > 1:
+            return
+        server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         try:
             LOG.warning("Reverting creation of member: %s for pool: %s",
                         member.id, pool.id)
-            self.axapi_client.slb.server.delete(member.id)
+            self.axapi_client.slb.server.delete(server_name)
         except exceptions.ConnectionError:
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
         except Exception as e:
@@ -83,20 +96,30 @@ class MemberDelete(task.Task):
     """Task to delete member"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool):
+    def execute(self, member, vthunder, pool, member_count_ip, member_count_ip_port_protocol):
+        server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         try:
             self.axapi_client.slb.service_group.member.delete(
-                pool.id, member.id, member.protocol_port)
+                pool.id, server_name, member.protocol_port)
             LOG.debug("Successfully dissociated member %s from pool %s", member.id, pool.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to dissociate member %s from pool %s",
                           member.id, pool.id)
             raise e
+
         try:
-            self.axapi_client.slb.server.delete(member.id)
-            LOG.debug("Successfully deleted member %s from pool %s", member.id, pool.id)
+            if member_count_ip <= 1:
+                self.axapi_client.slb.server.delete(server_name)
+                LOG.debug("Successfully deleted member %s from pool %s", member.id, pool.id)
+            elif member_count_ip_port_protocol <= 1:
+                protocol = openstack_mappings.service_group_protocol(
+                    self.axapi_client, pool.protocol)
+                self.axapi_client.slb.server.port.delete(server_name, member.protocol_port,
+                                                         protocol)
+                LOG.debug("Successfully deleted port for member %s from pool %s",
+                          member.id, pool.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
-            LOG.exception("Failed to delete member: %s", member.id)
+            LOG.exception("Failed to delete member/port: %s", member.id)
             raise e
 
 
@@ -105,6 +128,7 @@ class MemberUpdate(task.Task):
 
     @axapi_client_decorator
     def execute(self, member, vthunder):
+        server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         server_args = utils.meta(member, 'server', {})
         server_args['conn-limit'] = CONF.server.conn_limit
         server_args['conn-resume'] = CONF.server.conn_resume
@@ -121,10 +145,34 @@ class MemberUpdate(task.Task):
             status = True
 
         try:
-            self.axapi_client.slb.server.update(member.id, member.ip_address, status=status,
+            self.axapi_client.slb.server.update(server_name, member.ip_address, status=status,
                                                 server_templates=server_temp,
                                                 axapi_args=server_args)
             LOG.debug("Successfully updated member: %s", member.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update member: %s", member.id)
+            raise e
+
+
+class MemberDeletePool(task.Task):
+    """Task to delete member"""
+
+    @axapi_client_decorator
+    def execute(self, member, vthunder, pool, pool_count_ip, member_count_ip_port_protocol):
+        try:
+            server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
+            if pool_count_ip <= 1:
+                self.axapi_client.slb.server.delete(server_name)
+                LOG.debug("Successfully deleted member %s from pool %s", member.id, pool.id)
+            elif member_count_ip_port_protocol <= 1:
+                protocol = openstack_mappings.service_group_protocol(
+                    self.axapi_client, pool.protocol)
+                self.axapi_client.slb.server.port.delete(server_name, member.protocol_port,
+                                                         protocol)
+                LOG.debug("Successfully deleted port for member %s from pool %s",
+                          member.id, pool.id)
+        except acos_errors.ACOSException:
+            pass
+        except exceptions.ConnectionError as e:
+            LOG.exception("Failed to delete member/port: %s", member.id)
             raise e

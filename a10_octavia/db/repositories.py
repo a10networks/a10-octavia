@@ -187,9 +187,9 @@ class VThunderRepository(BaseRepository):
         model = session.query(self.model_class).filter(
             self.model_class.created_at < initial_setup_wait_time).filter(
             self.model_class.last_udp_update < failover_wait_time).filter(
-                self.model_class.status == 'ACTIVE').filter(
-                or_(self.model_class.role == "MASTER",
-                    self.model_class.role == "BACKUP")).first()
+            self.model_class.status == 'ACTIVE').filter(
+            or_(self.model_class.role == "MASTER",
+                self.model_class.role == "BACKUP")).first()
         if model is None:
             return None
         return model.to_data_model()
@@ -197,8 +197,8 @@ class VThunderRepository(BaseRepository):
     def get_vthunder_from_lb(self, session, lb_id):
         model = session.query(self.model_class).filter(
             self.model_class.loadbalancer_id == lb_id).filter(
-                or_(self.model_class.role == "STANDALONE",
-                    self.model_class.role == "MASTER")).first()
+            or_(self.model_class.role == "STANDALONE",
+                self.model_class.role == "MASTER")).first()
 
         if not model:
             return None
@@ -208,8 +208,8 @@ class VThunderRepository(BaseRepository):
     def get_backup_vthunder_from_lb(self, session, lb_id):
         model = session.query(self.model_class).filter(
             self.model_class.loadbalancer_id == lb_id).filter(
-                or_(self.model_class.role == "STANDALONE",
-                    self.model_class.role == "BACKUP")).first()
+            or_(self.model_class.role == "STANDALONE",
+                self.model_class.role == "BACKUP")).first()
 
         if not model:
             return None
@@ -219,9 +219,9 @@ class VThunderRepository(BaseRepository):
     def get_vthunder_by_project_id(self, session, project_id):
         model = session.query(self.model_class).filter(
             self.model_class.project_id == project_id).filter(
-                and_(self.model_class.status == "ACTIVE",
-                     or_(self.model_class.role == "STANDALONE",
-                         self.model_class.role == "MASTER"))).first()
+            and_(self.model_class.status == "ACTIVE",
+                 or_(self.model_class.role == "STANDALONE",
+                     self.model_class.role == "MASTER"))).first()
 
         if not model:
             return None
@@ -231,18 +231,18 @@ class VThunderRepository(BaseRepository):
     def get_vthunders_by_project_id(self, session, project_id):
         model_list = session.query(self.model_class).filter(
             self.model_class.project_id == project_id).filter(
-                and_(self.model_class.status == "ACTIVE",
-                     or_(self.model_class.role == "STANDALONE",
-                         self.model_class.role == "MASTER")))
+            and_(self.model_class.status == "ACTIVE",
+                 or_(self.model_class.role == "STANDALONE",
+                     self.model_class.role == "MASTER")))
         id_list = [model.id for model in model_list]
         return id_list
 
     def get_vthunders_by_ip_address(self, session, ip_address):
         model_list = session.query(self.model_class).filter(
             self.model_class.ip_address == ip_address).filter(
-                and_(self.model_class.status == "ACTIVE",
-                     or_(self.model_class.role == "STANDALONE",
-                         self.model_class.role == "MASTER")))
+            and_(self.model_class.status == "ACTIVE",
+                 or_(self.model_class.role == "STANDALONE",
+                     self.model_class.role == "MASTER")))
 
         id_list = [model.id for model in model_list]
         return id_list
@@ -328,3 +328,27 @@ class MemberRepository(repo.MemberRepository):
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
         return count
+
+    def get_member_count_by_ip_address(self, session, ip_address, project_id):
+        return session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.ip_address == ip_address,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
+
+    def get_member_count_by_ip_address_port_protocol(self, session, ip_address, project_id, port,
+                                                     protocol):
+        return session.query(self.model_class).join(base_models.Pool).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.ip_address == ip_address,
+                 self.model_class.protocol_port == port,
+                 base_models.Pool.protocol == protocol,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
+
+    def get_pool_count_by_ip(self, session, ip_address, project_id):
+        return session.query(self.model_class.pool_id.distinct()).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.ip_address == ip_address,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count() 

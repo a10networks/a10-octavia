@@ -29,7 +29,7 @@ for service in ${SERVICES[@]}; do
         if id "octavia" >/dev/null 2>&1; then
             sed -i 's/%user%/octavia/' "${SYSTEMD_SCRIPT_DIR}/${service}"
         else
-            sed -i 's/%user%/root/' "${SYSTEMD_SCRIPT_DIR}/${service}"
+            sed -i 's/%user%/stack/' "${SYSTEMD_SCRIPT_DIR}/${service}"
         fi
 done
 
