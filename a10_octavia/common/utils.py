@@ -230,7 +230,7 @@ def convert_interface_to_data_model(interface_obj):
         if vlan_id in interface_dm.tags:
             raise exceptions.DuplicateVlanTagsConfigError(interface_num, vlan_id)
         if vlan_map.get('use_dhcp') and vlan_map.get('use_dhcp') not in ("True", "False"):
-                raise exceptions.InvalidUseDhcpConfigError(vlan_map.get('use_dhcp'))
+            raise exceptions.InvalidUseDhcpConfigError(vlan_map.get('use_dhcp'))
         if vlan_map.get('use_dhcp') == 'True':
             if vlan_map.get('ve_ip'):
                 raise exceptions.VirtEthCollisionConfigError(interface_num, vlan_id)

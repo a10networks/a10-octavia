@@ -106,8 +106,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder.partition_name = a10constants.MOCK_PARENT_PROJECT_ID[:14]
         mock_create_vthunder.vthunder_repo.create.return_value = mock_vthunder
         vthunder = mock_create_vthunder.execute(mock_lb, mock_vthunder_config)
-        self.assertEquals(vthunder.partition_name,
-                          a10constants.MOCK_PARENT_PROJECT_ID[:14])
+        self.assertEqual(vthunder.partition_name, a10constants.MOCK_PARENT_PROJECT_ID[:14])
 
     @mock.patch('a10_octavia.common.utils.get_parent_project',
                 return_value=None)
