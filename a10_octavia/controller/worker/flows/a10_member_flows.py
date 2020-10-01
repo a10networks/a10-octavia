@@ -224,15 +224,20 @@ class MemberFlows(object):
         delete_member_vrid_subflow.add(a10_network_tasks.GetLBResourceSubnet(
             rebind={a10constants.LB_RESOURCE: constants.MEMBER},
             provides=constants.SUBNET))
+        delete_member_vrid_subflow.add(a10_database_tasks.CountLoadbalancersInProjectBySubnet(
+            requires=constants.SUBNET,
+            rebind={a10constants.LB_RESOURCE: constants.MEMBER},
+            provides=a10constants.LB_COUNT))
         delete_member_vrid_subflow.add(a10_database_tasks.CountMembersInProjectBySubnet(
-            requires=[constants.MEMBER, constants.SUBNET],
+            requires=constants.SUBNET,
+            rebind={a10constants.LB_RESOURCE: constants.MEMBER},
             provides=a10constants.MEMBER_COUNT))
         delete_member_vrid_subflow.add(a10_database_tasks.GetVRIDForLoadbalancerResource(
             rebind={a10constants.LB_RESOURCE: constants.MEMBER},
             provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(a10_network_tasks.DeleteVRIDPort(
-            requires=[a10constants.VTHUNDER, a10constants.VRID_LIST, constants.SUBNET],
-            rebind={a10constants.RESOURCE_COUNT: a10constants.MEMBER_COUNT},
+            requires=[a10constants.VTHUNDER, a10constants.VRID_LIST, constants.SUBNET,
+                      a10constants.LB_COUNT, a10constants.MEMBER_COUNT],
             provides=(a10constants.VRID, a10constants.DELETE_VRID)))
         delete_member_vrid_subflow.add(a10_database_tasks.DeleteVRIDEntry(
             requires=[a10constants.VRID, a10constants.DELETE_VRID]))
@@ -241,7 +246,7 @@ class MemberFlows(object):
     def get_delete_member_vrid_internal_subflow(self):
         delete_member_vrid_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBER_VRID_INTERNAL_SUBFLOW)
-        delete_member_vrid_subflow.add(a10_database_tasks.GetSubnetForDeletion(
+        delete_member_vrid_subflow.add(a10_database_tasks.GetSubnetForDeletionInPool(
             requires=a10constants.MEMBER_LIST,
             provides=a10constants.SUBNET_LIST))
         delete_member_vrid_subflow.add(a10_database_tasks.GetVRIDForLoadbalancerResource(
@@ -344,7 +349,7 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER))
         return update_member_flow
 
-    def get_rack_vthunder_member_flow(self):
+    def get_rack_vthunder_create_member_flow(self):
         """Create a flow to create a rack vthunder member
 
         :returns: The flow for creating a rack vthunder member
