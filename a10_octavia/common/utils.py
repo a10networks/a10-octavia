@@ -200,6 +200,7 @@ def validate_vcs_device_info(device_network_map):
                 raise exceptions.MissingMgmtIpConfigError(device_id)
             else:
                 validate_ipv4(device_obj.mgmt_ip_address)
+                validate_partial_ipv4(device_obj.ve_ip_address)
 
 
 def convert_interface_to_data_model(interface_obj):
@@ -241,6 +242,8 @@ def validate_interface_vlan_map(hardware_device):
     device_network_map = []
     for device_id, device_obj in hardware_device.get('interface_vlan_map').items():
         device_map = data_models.DeviceNetworkMap(device_obj.get('vcs_device_id'))
+        if device_obj.get('ve_ip_address'):
+            data_map.ve_ip = device_obj.get('ve_ip_address')
         if device_obj.get('ethernet_interfaces'):
             for eth in device_obj.get('ethernet_interfaces'):
                 device_map.ethernet_interfaces.append(convert_interface_to_data_model(eth))
