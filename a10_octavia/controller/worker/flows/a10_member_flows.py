@@ -250,10 +250,10 @@ class MemberFlows(object):
             requires=a10constants.MEMBER_LIST,
             provides=a10constants.SUBNET_LIST))
         delete_member_vrid_subflow.add(a10_database_tasks.GetVRIDForLoadbalancerResource(
-            rebind={a10constants.LB_RESOURCE: constants.MEMBER},
+            rebind={a10constants.LB_RESOURCE: constants.POOL},
             provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(a10_network_tasks.DeleteMultipleVRIDPort(
-            requires=[a10constants.VRID_LIST, a10constants.SUBNET_LIST],
+            requires=[a10constants.VTHUNDER, a10constants.VRID_LIST, a10constants.SUBNET_LIST],
             provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(a10_database_tasks.DeleteMultiVRIDEntry(
             requires=a10constants.VRID_LIST))
