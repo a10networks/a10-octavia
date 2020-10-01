@@ -799,7 +799,7 @@ class DeleteVRIDPort(BaseNetworkTask):
 
 class DeleteMultipleVRIDPort(BaseNetworkTask):
     @axapi_client_decorator
-    def execute(self, vrid_list, subnet_list):
+    def execute(self, vthunder, vrid_list, subnet_list):
         try:
             if subnet_list:
                 vrids = []

@@ -245,10 +245,10 @@ class MemberFlows(object):
             requires=a10constants.MEMBER_LIST,
             provides=a10constants.SUBNET_LIST))
         delete_member_vrid_subflow.add(a10_database_tasks.GetVRIDForLoadbalancerResource(
-            rebind={a10constants.LB_RESOURCE: constants.MEMBER},
+            rebind={a10constants.LB_RESOURCE: constants.POOL},
             provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(a10_network_tasks.DeleteMultipleVRIDPort(
-            requires=[a10constants.VRID_LIST, a10constants.SUBNET_LIST],
+            requires=[a10constants.VTHUNDER, a10constants.VRID_LIST, a10constants.SUBNET_LIST],
             provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(a10_database_tasks.DeleteMultiVRIDEntry(
             requires=a10constants.VRID_LIST))
@@ -344,7 +344,7 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER))
         return update_member_flow
 
-    def get_rack_vthunder_member_flow(self):
+    def get_rack_vthunder_create_member_flow(self):
         """Create a flow to create a rack vthunder member
 
         :returns: The flow for creating a rack vthunder member
