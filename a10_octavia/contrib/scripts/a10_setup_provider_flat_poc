@@ -1,0 +1,388 @@
+#!/bin/bash
+
+#
+# This script is used for setting up devstack VLAN config with provider VLAN and Openstack 
+# VLAN networks. This scripts sets up three openstack networks 
+# provider-flat (subnet: set by user input)
+# with which openstack instances can be launched and communicate with vthunder on provider 
+# network.
+#
+
+function usage {
+cat << EOF
+usage: $0
+
+POSITIONAL ARUGMENTS:
+  <network address>          only C class networks are supported 
+
+OPTIONS:
+  --help                     prints this message
+  --setup-provider-flat      sets up provider ovs bridge br-provider, neutron flat config and
+                             openstack flat networks.
+                             make sure to delete all non devstack entities created by user
+                             in openstack before running this command. 
+  --teardown-provider-flat   tears down the openstack flat networks, ovs bridge settings and
+                             removes neutron flat config.
+                             make sure to delete all flat net entities created by user
+                             in openstack before running this command.
+EOF
+}
+
+function check_exists {
+    local cmd="${1}"
+    local pattern="${2}"
+
+    local output=$(${cmd})
+    local exists=$(echo "${output}" | grep "${pattern}")
+    if [ -z "${exists}" ]
+    then
+        echo 0
+        return
+    fi
+
+    echo 1
+}
+
+function host_install_packages {
+    echo "[+] Installing virt-manager on host"
+    sudo apt-get install -y virt-manager
+}
+
+function add_veth_pair {
+    local interface_1="${1}"
+    local interface_2="${2}"
+    local ip_address="${3}"
+
+    local exists=$(check_exists "ip link show" "${interface_1}")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[+] Creating veth pair ${interface_1}-${interface_2} on the host"
+        sudo ip link add ${interface_1} type veth peer name ${interface_2}
+        sudo ip link set ${interface_1} up
+        sudo ip link set ${interface_2} up
+        echo "[=] Setting ${ip_address}/24 on ${interface_1}"
+        sudo ip addr add ${ip_address}/24 dev ${interface_1}
+    fi
+}
+
+function add_tap_interface {
+    local interface="${1}"
+
+    exists=$(check_exists "ip link show" "${interface}")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[+] Creating tap interface ${interface} on the host"
+        sudo ip tuntap add mode tap ${interface}
+    fi
+}
+
+function setup_host_networking {
+    add_veth_pair veth0 veth1 10.0.0.1
+    add_veth_pair veth2 veth3 "${1}1"
+
+    add_tap_interface tap1
+    add_tap_interface tap2
+
+    pflat_dhcp_running=$(ps -ef | grep -v grep | grep setup-flat-dnsmasq.pid)
+    if [[ -z ${pflat_dhcp_running} ]]; then
+        echo "[+] Starting DHCP server for management and flat networks" 
+        sudo dnsmasq --no-hosts --pid-file=/var/run/setup-flat-dnsmasq.pid --dhcp-range=interface:vnet0,10.0.0.40,10.0.0.90,72h --dhcp-range=interface:vnet2,"${1}40","${1}90",72h --dhcp-option=19,0 --local-service --bind-dynamic --conf-file=
+    fi
+}
+
+function add_ovs_bridge {
+    local bridge="${1}"
+
+    local exists=$(check_exists "sudo ovs-vsctl list-br" "${bridge}")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[+] Creating OVS bridge ${bridge}"
+        sudo ovs-vsctl add-br ${bridge}
+    fi
+}
+
+function add_port_to_bridge {
+    local bridge="${1}"
+    local port="${2}"
+
+    exists=$(check_exists "sudo ovs-vsctl list-ports ${bridge}" "${port}")
+    if [[ ${exists} -ne 1 ]]; then
+            echo "[+] Adding port ${port} to OVS bridge ${bridge}"
+            sudo ovs-vsctl add-port ${bridge} ${port}
+    fi
+}
+
+function setup_host_ovs_bridges {
+    add_ovs_bridge br-mgmt
+    add_port_to_bridge br-mgmt veth1
+
+    add_ovs_bridge br-provider
+    add_port_to_bridge br-provider veth3
+
+    add_port_to_bridge br-provider tap1
+}
+
+function patch_conf_files {
+    echo "[+] Patching config files"
+
+    exists=$(check_exists "/bin/cat /etc/neutron/neutron.conf" "service_plugins = neutron.services.l3_router.l3_router_plugin.L3RouterPlugin")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting service_plugins in /etc/neutron/neutron.conf"
+        sed -i "s/service_plugins = .*/service_plugins = /" /etc/neutron/neutron.conf
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "#type_drivers =")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting type_drivers in /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/#type_drivers = /type_drivers = flat/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "mechanism_drivers = openvswitch,linuxbridge")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting mechanism_drivers in /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/mechanism_drivers = .*/mechanism_drivers = openvswitch/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "flat_networks = public,")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting flat_networks /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/flat_networks = .*/flat_networks = provider/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi  
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "tenant_network_types = vxlan")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting tenant_network_types in /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/tenant_network_types = .*/tenant_network_types = /" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "provider:br-provider")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[=] Overwriting bridge_mappings in /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/bridge_mappings = .*/bridge_mappings = public:br-ex,provider:br-provider/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/dhcp_agent.ini" "#force_metadata =")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting force_metadata in /etc/neutron/dhcp_agent.ini"
+        sed -i "s/#force_metadata = .*/force_metadata = true/" /etc/neutron/dhcp_agent.ini
+    fi
+}
+
+function restart_services {
+    echo "[=] Restarting devstack@neutron-* services"
+    pushd /etc/systemd/system/
+    sudo systemctl restart devstack@q-*
+    popd
+}
+
+function create_network {
+    local network_name="${1}"
+    local subnet_name="${2}"
+    local subnet_range="${3}"
+    local allocation_pool="${4}"
+
+    exists=$(check_exists "openstack network list" "${network_name}")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[+] Creating ${network_name}"
+        openstack network create --external --provider-network-type flat --provider-physical-network provider --share ${network_name}
+        sleep 1
+    fi
+
+    exists=$(check_exists "openstack subnet list" "${subnet_name}")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[+] Creating ${subnet_name}"
+        openstack subnet create --ip-version 4 --allocation-pool ${allocation_pool} --network ${network_name} --subnet-range ${subnet_range} ${subnet_name}
+        sleep 1
+    fi
+
+    local snat_rule="POSTROUTING -s ${subnet_range} ! -d ${subnet_range} -j MASQUERADE"
+    exists=$(check_exists "sudo iptables-save -t nat" "${snat_rule}")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[+] Creating SNAT rule ${snat_rule}"
+        sudo iptables -t nat -A ${snat_rule}
+    fi
+}
+
+function setup_provider_flat {
+    host_install_packages
+    setup_host_networking ${1}
+    setup_host_ovs_bridges
+
+    patch_conf_files
+    restart_services
+    sleep 2
+
+    create_network provider-flat provider-flat-subnet "${1}0/24" start="${1}100",end="${1}200"
+}
+
+function delete_network {
+    local network_name="${1}"
+    local subnet_name="${2}"
+    local subnet_range="${3}"
+
+    local snat_rule="POSTROUTING -s ${subnet_range} ! -d ${subnet_range} -j MASQUERADE"
+    local exists=$(check_exists "sudo iptables-save -t nat" "${snat_rule}")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[-] Deleting SNAT rule ${snat_rule}"
+        sudo iptables -t nat -D ${snat_rule}
+    fi
+
+    exists=$(check_exists "openstack subnet list" "${subnet_name}")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[-] Deleting ${subnet_name}"
+        openstack subnet delete ${subnet_name}
+    fi
+
+    exists=$(check_exists "openstack network list" "${network_name}")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[-] Deleting ${network_name}"
+        openstack network delete ${network_name}
+    fi
+}
+
+function delete_ostack_networks {
+    delete_network provider-flat provider-flat-subnet ${1}
+}
+
+function unpatch_conf_files {
+    echo "[-] Removing flat patch in config files"
+
+    local exists=$(check_exists "/bin/cat /etc/neutron/neutron.conf" "service_plugins = neutron.services.l3_router.l3_router_plugin.L3RouterPlugin")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[=] Overwriting service_plugins in /etc/neutron/neutron.conf"
+        sed -i "s/service_plugins =/service_plugins = neutron.services.l3_router.l3_router_plugin.L3RouterPlugin/" /etc/neutron/neutron.conf
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "type_drivers = flat")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting type_drivers in /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/type_drivers = flat/#type_drivers = /" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "mechanism_drivers = openvswitch,linuxbridge")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[=] Overwriting mechanism_drivers in /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/mechanism_drivers = .*/mechanism_drivers = openvswitch,linuxbridge/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "flat_networks = provider")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting flat_networks /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/flat_networks = provider/flat_networks = public,/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi  
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "tenant_network_types = vxlan")
+    if [[ ${exists} -ne 1 ]]; then
+        echo "[=] Overwriting tenant_network_types in /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/tenant_network_types =/tenant_network_types = vxlan/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+
+    exists=$(check_exists "/bin/cat /etc/neutron/plugins/ml2/ml2_conf.ini" "provider:br-provider")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[=] Overwriting bridge_mappings in /etc/neutron/plugins/ml2/ml2_conf.ini"
+        sed -i "s/bridge_mappings = public:br-ex,provider:br-provider/bridge_mappings = public:br-ex/" /etc/neutron/plugins/ml2/ml2_conf.ini
+    fi
+}
+
+function delete_ovs_bridges {
+    local exists=$(check_exists "sudo ovs-vsctl list-br" "br-provider")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[-] Deleting tap ports from br-provider"
+        sudo ovs-vsctl del-port br-provider tap1
+
+        echo "[-] Deleting veth ports from br-provider"
+        sudo ovs-vsctl del-port br-provider veth3
+
+        echo "[-] Deleting OVS bridge br-provider"
+        sudo ovs-vsctl del-br br-provider
+    fi
+
+    exists=$(check_exists "sudo ovs-vsctl list-br" "br-mgmt")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[-] Deleting veth port from br-mgmt"
+        sudo ovs-vsctl del-port br-mgmt veth1
+
+        echo "[-] Deleting OVS bridge br-mgmt"
+        sudo ovs-vsctl del-br br-mgmt
+    fi
+}
+
+function delete_veth_pair {
+    local interface="${1}"
+
+    exists=$(check_exists "ip link show" "${interface}")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[-] Deleting ${interface} veth pair"
+        sudo ip link del ${interface}
+    fi
+}
+
+function delete_tap_interface {
+    local interface="${1}"
+
+    exists=$(check_exists "ip link show" "${interface}")
+    if [[ ${exists} -eq 1 ]]; then
+        echo "[-] Deleting ${interface} interface"
+        sudo ip tuntap del mode tap ${interface}
+    fi
+}
+
+function delete_host_tap_and_veth_interfaces {
+    local pflat_dhcp_pid=$(ps -ef | grep -v grep | grep setup-flatp-dnsmasq.pid | awk '{print $2}')
+    if [[ -n ${pflat_dhcp_pid} ]]; then
+        echo "[-] Stoping DHCP server for management and flat networks"
+        sudo kill -9 ${pflat_dhcp_pid}
+        sudo rm -f /var/run/setup-flatp-dnsmasq.pid
+    fi
+
+    delete_veth_pair veth0
+    delete_tap_interface tap1
+}
+
+function teardown_provider_flat {
+    delete_ostack_networks
+    unpatch_conf_files
+    delete_ovs_bridges
+    delete_host_tap_and_veth_interfaces
+    restart_services
+}
+
+arg_setup_provider_flat=false
+arg_teardown_provider_flat=false
+
+function set_args {
+    if [[ $# -eq 0 ]] || [[ $# -gt 2 ]]; then
+        echo "Improper number of arguments. Pass only two arguments."
+        usage
+        exit 0
+    fi
+    case "$1" in
+        "--help")
+            usage
+            exit 0
+            ;;
+        "--setup-provider-flat")
+            arg_setup_provider_flat=true
+            ;;
+        "--teardown-provider-flat")
+            arg_teardown_provider_flat=true
+            ;;
+        *)
+            usage
+            exit 0
+    esac
+    shift
+}
+
+function main {
+    set_args "$@"
+    if [[ $arg_setup_provider_flat = true ]]; then
+        net_addr=""
+        IFS='.' read -ra ADDR <<< "$2"
+        for i in {0..2}; do
+            net_addr+="${ADDR[$i]}."
+        done
+        setup_provider_flat ${net_addr}
+    else
+        teardown_provider_flat
+    fi
+}
+
+main "$@"
