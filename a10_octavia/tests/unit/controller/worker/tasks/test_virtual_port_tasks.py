@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import imp
 try:
     from unittest import mock
@@ -81,38 +82,90 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
     @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
     def test_create_listener_with_template_http_shared(self, mock_protocol, mock_templates):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.partition_name = "my_partition"
         listener_task, listener = self._create_shared_template(
             'http', {'template_http': 'temp1'}, mock_protocol, mock_templates)
-        listener_task.execute(LB, listener, VTHUNDER)
+        listener_task.execute(LB, listener, vthunder)
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
         self.assertIn('template-http-shared', kwargs['virtual_port_templates'])
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
     def test_create_listener_with_template_tcp_shared(self, mock_protocol, mock_templates):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.partition_name = "my_partition"
         listener_task, listener = self._create_shared_template(
             'tcp', {'template_tcp': 'temp1'}, mock_protocol, mock_templates)
-        listener_task.execute(LB, listener, VTHUNDER)
+        listener_task.execute(LB, listener, vthunder)
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
         self.assertIn('template-tcp-shared', kwargs['virtual_port_templates'])
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
     def test_create_listener_with_template_policy_shared(self, mock_protocol, mock_templates):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.partition_name = "my_partition"
         listener_task, listener = self._create_shared_template(
             'policy', {'template_policy': 'temp1'}, mock_protocol, mock_templates)
-        listener_task.execute(LB, listener, VTHUNDER)
+        listener_task.execute(LB, listener, vthunder)
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
         self.assertIn('template-policy-shared', kwargs['virtual_port_templates'])
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
     def test_create_listener_with_template_virtual_port_shared(self, mock_protocol, mock_templates):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.partition_name = "my_partition"
         listener_task, listener = self._create_shared_template(
             'virtual-port', {'template_virtual_port': 'temp1'}, mock_protocol, mock_templates)
-        listener_task.execute(LB, listener, VTHUNDER)
+        listener_task.execute(LB, listener, vthunder)
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
         self.assertIn('template-virtual-port-shared', kwargs['virtual_port_templates'])
+
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
+    @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
+    def test_create_listener_with_template_http(self, mock_protocol, mock_templates):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.partition_name = "shared"
+        listener_task, listener = self._create_shared_template(
+            'http', {'template_http': 'temp1'}, mock_protocol, mock_templates)
+        listener_task.execute(LB, listener, vthunder)
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn('template-http', kwargs['virtual_port_templates'])
+
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
+    @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
+    def test_create_listener_with_template_tcp(self, mock_protocol, mock_templates):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.partition_name = "shared"
+        listener_task, listener = self._create_shared_template(
+            'tcp', {'template_tcp': 'temp1'}, mock_protocol, mock_templates)
+        listener_task.execute(LB, listener, vthunder)
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn('template-tcp', kwargs['virtual_port_templates'])
+
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
+    @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
+    def test_create_listener_with_template_policy(self, mock_protocol, mock_templates):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.partition_name = "shared"
+        listener_task, listener = self._create_shared_template(
+            'policy', {'template_policy': 'temp1'}, mock_protocol, mock_templates)
+        listener_task.execute(LB, listener, vthunder)
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn('template-policy', kwargs['virtual_port_templates'])
+
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
+    @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
+    def test_create_listener_with_template_virtual_port(self, mock_protocol, mock_templates):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.partition_name = "shared"
+        listener_task, listener = self._create_shared_template(
+            'virtual-port', {'template_virtual_port': 'temp1'}, mock_protocol, mock_templates)
+        listener_task.execute(LB, listener, vthunder)
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn('template-virtual-port', kwargs['virtual_port_templates'])
 
     def test_create_http_virtual_port_use_rcv_hop(self):
         listener = self._mock_listener('HTTP', 1000)
