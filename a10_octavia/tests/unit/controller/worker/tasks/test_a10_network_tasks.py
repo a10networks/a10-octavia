@@ -65,8 +65,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project', return_value=None)
     def test_HandleVRIDFloatingIP_noop_vrrpa_config_not_specified(self, mock_utils):
         network_task = a10_network_tasks.HandleVRIDFloatingIP()
-        result = network_task.execute(VTHUNDER, MEMBER, None)
-        self.assertEqual(result, None)
+        result = network_task.execute(VTHUNDER, MEMBER, [], mock.ANY)
+        self.assertEqual(result, (None, None))
 
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
