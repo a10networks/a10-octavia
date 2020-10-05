@@ -182,7 +182,8 @@ class ListenerUpdateForPool(ListenersParent, task.Task):
     def execute(self, loadbalancer, listener, vthunder):
         try:
             if listener:
-                listener.default_pool_id = None
+                listener.protocol = openstack_mappings.virtual_port_protocol(
+                    self.axapi_client, listener.protocol).lower()
                 self.axapi_client.slb.virtual_server.vport.update(
                     loadbalancer.id,
                     listener.id,
