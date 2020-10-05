@@ -175,7 +175,7 @@ class ListenerUpdate(ListenersParent, task.Task):
             raise e
 
 
-class ListenerUpdateForPoolDelete(ListenersParent, task.Task):
+class ListenerUpdateForPool(ListenersParent, task.Task):
     """Task to update listener while pool delete"""
 
     @axapi_client_decorator
