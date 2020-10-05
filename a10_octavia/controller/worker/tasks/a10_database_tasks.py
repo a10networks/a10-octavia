@@ -37,7 +37,6 @@ LOG = logging.getLogger(__name__)
 
 
 class BaseDatabaseTask(task.Task):
-
     """Base task to load drivers common to the tasks."""
 
     def __init__(self, **kwargs):
@@ -46,14 +45,13 @@ class BaseDatabaseTask(task.Task):
         self.vrid_repo = a10_repo.VRIDRepository()
         self.amphora_repo = repo.AmphoraRepository()
         self.member_repo = a10_repo.MemberRepository()
-        self.loadbalancer_repo = repo.LoadBalancerRepository()
+        self.loadbalancer_repo = a10_repo.LoadBalancerRepository()
         self.vip_repo = repo.VipRepository()
         self.listener_repo = repo.ListenerRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
 class GetVThunderTask(BaseDatabaseTask):
-
     """Test VThunder entry"""
 
     def execute(self, amphora):
@@ -62,7 +60,6 @@ class GetVThunderTask(BaseDatabaseTask):
 
 
 class CreateVThunderEntry(BaseDatabaseTask):
-
     """ Create VThunder device entry in DB"""
 
     def execute(self, amphora, loadbalancer, role, status):
@@ -167,7 +164,6 @@ class CheckExistingThunderToProjectMappedEntries(BaseDatabaseTask):
 
 
 class DeleteVThunderEntry(BaseDatabaseTask):
-
     """ Delete VThunder device entry in DB  """
 
     def execute(self, loadbalancer):
@@ -208,7 +204,6 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
 
 
 class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
-
     """ Get VThunder details from LoadBalancer"""
 
     def execute(self, loadbalancer):
@@ -217,6 +212,7 @@ class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
             db_apis.get_session(), loadbalancer_id)
         return vthunder
         LOG.info("Successfully fetched vThunder details for LB")
+
 
 # class GetVThunderByLoadBalancerID(BaseDatabaseTask):
 #     """ Get VThunder details from LoadBalancer ID """
@@ -227,7 +223,6 @@ class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
 
 
 class GetComputeForProject(BaseDatabaseTask):
-
     """ Get Compute details form Loadbalancer object -> project ID"""
 
     def execute(self, loadbalancer):
@@ -245,7 +240,6 @@ class GetComputeForProject(BaseDatabaseTask):
 
 
 class MapLoadbalancerToAmphora(BaseDatabaseTask):
-
     """Maps and assigns a load balancer to an amphora in the database."""
 
     def execute(self, loadbalancer, server_group_id=None):
@@ -278,7 +272,6 @@ class MapLoadbalancerToAmphora(BaseDatabaseTask):
 
 
 class CreateRackVthunderEntry(BaseDatabaseTask):
-
     """ Create VThunder device entry in DB """
 
     def execute(self, loadbalancer, vthunder_config):
@@ -323,7 +316,6 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
 
 
 class CreateVThunderHealthEntry(BaseDatabaseTask):
-
     """ Create VThunder Health entry in DB """
 
     def execute(self, loadbalancer, vthunder_config):
@@ -387,14 +379,15 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
     def execute(self, lb_resource):
         project_id = lb_resource.project_id
-        vrid = self.vrid_repo.get_vrid_from_project_id(
+        vrid_list = self.vrid_repo.get_vrid_from_project_id(
             db_apis.get_session(), project_id=project_id)
-        return vrid
+        return vrid_list
 
 
 class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
 
-    def execute(self, lb_resource, vrid, port):
+    def execute(self, lb_resource, vrid, port, subnet):
+        vrid_value = CONF.a10_global.vrid
         if port:
             if vrid:
                 try:
@@ -403,7 +396,8 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                         vrid.id,
                         vrid_floating_ip=port.fixed_ips[0].ip_address,
                         vrid_port_id=port.id,
-                        vrid=vrid_value)
+                        vrid=vrid_value,
+                        subnet_id=subnet.id)
                     LOG.debug("Successfully updated DB vrid %s entry for loadbalancer resource %s",
                               vrid.id, lb_resource.id)
                 except Exception as e:
@@ -417,7 +411,9 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                                           project_id=lb_resource.project_id,
                                           vrid_floating_ip=port.fixed_ips[0].ip_address,
                                           vrid_port_id=port.id,
-                                          vrid=vrid_value)
+                                          vrid=vrid_value,
+                                          subnet_id=subnet.id)
+
                     LOG.debug("Successfully created DB entry for vrid for loadbalancer resource %s",
                               lb_resource.id)
                 except Exception as e:
@@ -425,35 +421,37 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                     raise e
         else:
             conf_floating_ip = utils.get_vrid_floating_ip_for_project(
-                member.project_id)
+                lb_resource.project_id)
             if vrid and not conf_floating_ip:
                 try:
                     self.vrid_repo.delete(
                         db_apis.get_session(), id=vrid.id)
                     LOG.debug("Successfully deleted DB vrid %s entry for member %s",
-                              vrid.id, member.id)
+                              vrid.id, lb_resource.id)
                 except Exception as e:
                     LOG.error("Failed to delete vrid %(vrid)s "
                               "DB entry due to: %(except)s",
                               {'vrid': vrid.id, 'except': e})
                     raise e
 
-class CountLoadbalancersInProject(BaseDatabaseTask):
-    def execute(self, loadbalancer):
-        try:    
-            return self.loadbalancer_repo.get_lb_count(
+
+class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
+    def execute(self, lb_resource, subnet):
+        try:
+            return self.loadbalancer_repo.get_lb_count_by_subnet(
                 db_apis.get_session(),
-                project_id=loadbalancer.project_id)
+                project_id=lb_resource.project_id, subnet_id=subnet.id)
         except Exception as e:
             LOG.exception("Failed to get count of loadbalancers in given project: %s", str(e))
             raise e
 
-class CountMembersInProject(BaseDatabaseTask):
-    def execute(self, member):
+
+class CountMembersInProjectBySubnet(BaseDatabaseTask):
+    def execute(self, lb_resource, subnet):
         try:
-            return self.member_repo.get_member_count(
+            return self.member_repo.get_member_count_by_subnet(
                 db_apis.get_session(),
-                project_id=member.project_id)
+                project_id=lb_resource.project_id, subnet_id=subnet.id)
         except Exception as e:
             LOG.exception(
                 "Failed to get count of members in given project: %s", str(e))
@@ -471,8 +469,19 @@ class DeleteVRIDEntry(BaseDatabaseTask):
                 raise e
 
 
-class CheckVLANCanBeDeletedParent(object):
+class DeleteMultiVRIDEntry(BaseDatabaseTask):
+    def execute(self, vrid_list):
+        if vrid_list:
+            try:
+                self.vrid_repo.delete_batch(db_apis.get_session(),
+                                            ids=[vrid.id for vrid in vrid_list])
+            except Exception as e:
+                LOG.exception(
+                    "Failed to delete VRID entry from vrid table: %s", str(e))
+                raise e
 
+
+class CheckVLANCanBeDeletedParent(object):
     """ Checks all vip and member subnet_ids for project ID"""
 
     def is_vlan_deletable(self, project_id, subnet_id, is_vip):
@@ -505,7 +514,6 @@ class CheckVLANCanBeDeletedParent(object):
 
 
 class CheckVipVLANCanBeDeleted(CheckVLANCanBeDeletedParent, BaseDatabaseTask):
-
     default_provides = a10constants.DELETE_VLAN
 
     def execute(self, loadbalancer):
@@ -515,7 +523,6 @@ class CheckVipVLANCanBeDeleted(CheckVLANCanBeDeletedParent, BaseDatabaseTask):
 
 
 class CheckMemberVLANCanBeDeleted(CheckVLANCanBeDeletedParent, BaseDatabaseTask):
-
     default_provides = a10constants.DELETE_VLAN
 
     def execute(self, member):
@@ -554,6 +561,14 @@ class MarkLBAndListenerActiveInDB(BaseDatabaseTask):
                       "%(except)s", {'list': listener.id, 'except': e})
 
 
+# class GetVRIDForLBResourceSubnet(BaseDatabaseTask):
+#     def execute(self, lb_resource, subnet):
+#         project_id = lb_resource.project_id
+#         vrid = self.vrid_repo.get_vrid_for_subnet(
+#             db_apis.get_session(), project_id=project_id, subnet_id=subnet.id)
+#         return vrid
+
+
 class CountMembersWithIP(BaseDatabaseTask):
     def execute(self, member):
         try:
@@ -584,4 +599,32 @@ class PoolCountforIP(BaseDatabaseTask):
                 db_apis.get_session(), member.ip_address, member.project_id)
         except Exception as e:
             LOG.exception("Failed to get pool count with same IP address: %s", str(e))
+            raise e
+
+
+class GetSubnetForDeletionInPool(BaseDatabaseTask):
+
+    def execute(self, member_list):
+        """
+
+        :param member_list: Receives the list of members, under specific pool.
+        :return: returns the list subnet those used in a pool's members only.
+        Description: Iterates over the member list, to check if member's  subnet is
+        anywhere else, along with pool count is also takes LB into account.
+        """
+        try:
+            subnet_list = []
+            member_subnet = []
+            for member in member_list:
+                if member.subnet_id not in member_subnet:
+                    pool_count_subnet = self.member_repo.get_pool_count_subnet(
+                        db_apis.get_session(), member.project_id, member.subnet_id)
+                    lb_count_subnet = self.loadbalancer_repo.get_lb_count_by_subnet(
+                        db_apis.get_session(), member.project_id, member.subnet_id)
+                    if pool_count_subnet <= 1 and lb_count_subnet == 0:
+                        subnet_list.append(member.subnet_id)
+                    member_subnet.append(member.subnet_id)
+            return subnet_list
+        except Exception as e:
+            LOG.exception("Failed to get subnet list for members: %s", str(e))
             raise e
