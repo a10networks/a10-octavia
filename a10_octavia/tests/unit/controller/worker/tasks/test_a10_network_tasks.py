@@ -38,6 +38,9 @@ SUBNET = o_net_data_models.Subnet()
 PORT = o_net_data_models.Port()
 VRID = data_models.VRID()
 VRID_VALUE = 0
+SUBNET_1 = o_net_data_models.Subnet(id=a10constants.MOCK_SUBNET_ID)
+VRID_1 = o_net_data_models.VRID(id=a10constants.MOCK_VRID_ID,
+                                subnet_id=a10constants.MOCK_SUBNET_ID)
 
 
 class MockIP(object):
@@ -75,8 +78,9 @@ class TestNetworkTasks(base.BaseTaskTestCase):
     def test_HandleVRIDFloatingIP_create_floating_ip_in_shared_partition_with_static_ip(
             self, mock_patched_ip, mock_floating_ip):
         member = copy.deepcopy(MEMBER)
-        member.subnet_id = a10constants.MOCK_SUBNET_ID
-        subnet = copy.deepcopy(SUBNET)
+        # member.subnet_id = a10constants.MOCK_SUBNET_ID
+        member.subnet_id = SUBNET_1.id
+        subnet = copy.deepcopy(SUBNET_1)
         subnet.cidr = a10constants.MOCK_SUBNET_CIDR
         port = copy.deepcopy(PORT)
         port.fixed_ips.append(MockIP(a10constants.MOCK_VRID_FLOATING_IP_1))
@@ -86,7 +90,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.network_driver_mock.create_port.return_value = port
         self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
                          vrid=VRID_VALUE)
-        mock_network_task.execute(VTHUNDER, member, None)
+        mock_network_task.execute(VTHUNDER, member, [VRID_1])
         self.network_driver_mock.create_port.assert_called_with(
             subnet.network_id, member.subnet_id, fixed_ip=a10constants.MOCK_VRID_FLOATING_IP_1)
         self.client_mock.vrrpa.update.assert_called_with(
