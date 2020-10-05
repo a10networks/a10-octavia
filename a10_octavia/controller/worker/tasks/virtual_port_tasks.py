@@ -181,7 +181,6 @@ class ListenerUpdateForPoolDelete(ListenersParent, task.Task):
     @axapi_client_decorator
     def execute(self, loadbalancer, listener, vthunder):
         try:
-            vport_templates = {}
             if listener:
                 listener.default_pool_id = None
                 self.axapi_client.slb.virtual_server.vport.update(
