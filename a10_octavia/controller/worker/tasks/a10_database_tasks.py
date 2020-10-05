@@ -318,7 +318,7 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
         try:
             self.vthunder_repo.delete(
                 db_apis.get_session(), loadbalancer_id=loadbalancer.id)
-        except Exception as e:
+        except Exception:
             LOG.error("Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
 
 
@@ -556,12 +556,12 @@ class CountMembersWithIP(BaseDatabaseTask):
             raise e
 
 
-class CountMembersWithIPPort(BaseDatabaseTask):
-    def execute(self, member):
+class CountMembersWithIPPortProtocol(BaseDatabaseTask):
+    def execute(self, member, pool):
         try:
-            return self.member_repo.get_member_count_by_ip_address_port(
+            return self.member_repo.get_member_count_by_ip_address_port_protocol(
                 db_apis.get_session(), member.ip_address, member.project_id,
-                member.protocol_port)
+                member.protocol_port, pool.protocol)
         except Exception as e:
             LOG.exception(
                 "Failed to get count of members with given IP fnd port for a pool: %s",

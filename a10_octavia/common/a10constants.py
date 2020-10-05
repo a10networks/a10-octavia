@@ -104,7 +104,7 @@ LB_TO_VTHUNDER_SUBFLOW = 'lb-to-vthunder-subflow'
 
 # Member count with specific IP.
 MEMBER_COUNT_IP = 'member_count_ip'
-MEMBER_COUNT_IP_PORT = 'member_count_ip_port'
+MEMBER_COUNT_IP_PORT_PROTOCOL = 'member_count_ip_port_protocol'
 POOL_COUNT_IP = 'pool_count_ip'
 WRITE_MEM_SHARED_PART = 'write_mem_shared_part'
 WRITE_MEM_FOR_SHARED_PARTITION = 'write_memory_for_shared_partition'

@@ -174,7 +174,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         mock_network_task.axapi_client = self.client_mock
         result = mock_network_task.execute(VTHUNDER, MEMBER, vrid)
         self.network_driver_mock.delete_port.assert_called_with(vrid.vrid_port_id)
-        self.client_mock.vrrpa.delete.assert_called_with(vrid.vrid)
+        self.client_mock.vrrpa.update.assert_called_with(vrid.vrid, floating_ip=None)
         self.assertEqual(result, None)
 
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
@@ -380,7 +380,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.client_mock.vrrpa.update.assert_called_with(
             VRID_VALUE, floating_ip=a10constants.MOCK_VRID_FULL_FLOATING_IP)
 
-    def test_DeleteMemberVRIDPort_delete_vrid_entry_member_count_equals_one(self):
+    def test_DeleteMemberVRIDPort_delete_vrid_ip_member_count_equals_one(self):
         mock_network_task = a10_network_tasks.DeleteMemberVRIDPort()
         vrid = copy.deepcopy(VRID)
         vrid.vrid_port_id = a10constants.MOCK_VRRP_PORT_ID
@@ -388,7 +388,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         mock_network_task.axapi_client = self.client_mock
         mock_network_task.execute(VTHUNDER, vrid, 1)
         self.network_driver_mock.delete_port.assert_called_with(a10constants.MOCK_VRRP_PORT_ID)
-        self.client_mock.vrrpa.delete.assert_called_with(vrid.vrid)
+        self.client_mock.vrrpa.update.assert_called_with(vrid.vrid, floating_ip=None)
 
     def test_DeleteMemberVRIDPort_noop_member_count_equals_zero(self):
         mock_network_task = a10_network_tasks.DeleteMemberVRIDPort()

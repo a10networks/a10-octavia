@@ -39,10 +39,13 @@ class MemberCreate(task.Task):
         server_args['conn-resume'] = CONF.server.conn_resume
         server_args = {'server': server_args}
 
+        server_temp = {}
         template_server = CONF.server.template_server
-        if template_server and template_server.lower() == 'none':
-            template_server = None
-        server_temp = {'template-server': template_server}
+        if template_server and template_server.lower() != 'none':
+            if CONF.a10_global.use_shared_for_template_lookup:
+                LOG.warning('Shared partition template lookup for `[server]`'
+                            ' is not supported on template `template-server`')
+            server_temp = {'template-server': template_server}
 
         if not member.enabled:
             status = False
@@ -50,12 +53,15 @@ class MemberCreate(task.Task):
             status = True
 
         try:
-            self.axapi_client.slb.server.create(server_name, member.ip_address, status=status,
-                                                server_templates=server_temp,
-                                                axapi_args=server_args)
-            LOG.debug("Successfully created member: %s", member.id)
-        except (acos_errors.Exists, acos_errors.AddressSpecifiedIsInUse):
-            pass
+            try:
+                self.axapi_client.slb.server.create(server_name, member.ip_address, status=status,
+                                                    server_templates=server_temp,
+                                                    axapi_args=server_args)
+                LOG.debug("Successfully created member: %s", member.id)
+            except (acos_errors.Exists, acos_errors.AddressSpecifiedIsInUse):
+                self.axapi_client.slb.server.update(server_name, member.ip_address, status=status,
+                                                    server_templates=server_temp,
+                                                    axapi_args=server_args)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to create member: %s", member.id)
             raise e
@@ -90,7 +96,7 @@ class MemberDelete(task.Task):
     """Task to delete member"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool, member_count_ip, member_count_ip_port):
+    def execute(self, member, vthunder, pool, member_count_ip, member_count_ip_port_protocol):
         server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         try:
             self.axapi_client.slb.service_group.member.delete(
@@ -105,7 +111,7 @@ class MemberDelete(task.Task):
             if member_count_ip <= 1:
                 self.axapi_client.slb.server.delete(server_name)
                 LOG.debug("Successfully deleted member %s from pool %s", member.id, pool.id)
-            elif member_count_ip_port <= 1:
+            elif member_count_ip_port_protocol <= 1:
                 protocol = openstack_mappings.service_group_protocol(
                     self.axapi_client, pool.protocol)
                 self.axapi_client.slb.server.port.delete(server_name, member.protocol_port,
@@ -152,13 +158,13 @@ class MemberDeletePool(task.Task):
     """Task to delete member"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool, pool_count_ip, member_count_ip_port):
+    def execute(self, member, vthunder, pool, pool_count_ip, member_count_ip_port_protocol):
         try:
             server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
             if pool_count_ip <= 1:
                 self.axapi_client.slb.server.delete(server_name)
                 LOG.debug("Successfully deleted member %s from pool %s", member.id, pool.id)
-            elif member_count_ip_port <= 1:
+            elif member_count_ip_port_protocol <= 1:
                 protocol = openstack_mappings.service_group_protocol(
                     self.axapi_client, pool.protocol)
                 self.axapi_client.slb.server.port.delete(server_name, member.protocol_port,

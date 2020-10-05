@@ -32,24 +32,35 @@ LOG = logging.getLogger(__name__)
 
 class PoolParent(object):
 
-    def set(self, set_method, pool):
+    def set(self, set_method, pool, vthunder):
         axapi_args = {'service_group': utils.meta(pool, 'service_group', {})}
+
+        device_templates = self.axapi_client.slb.template.templates.get()
 
         service_group_temp = {}
         template_server = CONF.service_group.template_server
-        if template_server and template_server.lower() == 'none':
-            template_server = None
-        service_group_temp['template-server'] = template_server
+        if template_server and template_server.lower() != 'none':
+            if CONF.a10_global.use_shared_for_template_lookup:
+                LOG.warning('Shared partition template lookup for `[service_group]`'
+                            ' is not supported on template `template-server`')
+            service_group_temp['template-server'] = template_server
 
         template_port = CONF.service_group.template_port
-        if template_port and template_port.lower() == 'none':
-            template_port = None
-        service_group_temp['template-port'] = template_port
+        if template_port and template_port.lower() != 'none':
+            if CONF.a10_global.use_shared_for_template_lookup:
+                LOG.warning('Shared partition template lookup for `[service_group]`'
+                            ' is not supported on template `template-port`')
+            service_group_temp['template-port'] = template_port
 
         template_policy = CONF.service_group.template_policy
-        if template_policy and template_policy.lower() == 'none':
-            template_policy = None
-        service_group_temp['template-policy'] = template_policy
+        if template_policy and template_policy.lower() != 'none':
+            template_key = 'template-policy'
+            if vthunder.partition_name != "shared":
+                if CONF.a10_global.use_shared_for_template_lookup:
+                    template_key = utils.shared_template_modifier(template_key,
+                                                                  template_policy,
+                                                                  device_templates)
+            service_group_temp[template_key] = template_policy
 
         protocol = openstack_mappings.service_group_protocol(
             self.axapi_client, pool.protocol)
@@ -74,7 +85,7 @@ class PoolCreate(PoolParent, task.Task):
                     user_msg=("A pool with protocol PROXY is not supported by A10 provider."
                               "Failed to create pool {0}").format(pool.id))
 
-            self.set(self.axapi_client.slb.service_group.create, pool)
+            self.set(self.axapi_client.slb.service_group.create, pool, vthunder)
             LOG.debug("Successfully created pool: %s", pool.id)
             return pool
         except (acos_errors.ACOSException, ConnectionError) as e:
@@ -114,7 +125,7 @@ class PoolUpdate(PoolParent, task.Task):
     def execute(self, pool, vthunder, update_dict):
         pool.update(update_dict)
         try:
-            self.set(self.axapi_client.slb.service_group.update, pool)
+            self.set(self.axapi_client.slb.service_group.update, pool, vthunder)
             LOG.debug("Successfully updated pool: %s", pool.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update pool: %s", pool.id)
