@@ -55,7 +55,7 @@ class PoolFlows(object):
             requires=[constants.POOL, a10constants.VTHUNDER],
             provides=constants.POOL)
         create_pool_flow.add(*self._get_sess_pers_subflow(create_pool))
-        create_pool_flow.add(virtual_port_tasks.ListenerUpdate(
+        create_pool_flow.add(virtual_port_tasks.ListenerUpdateForPoolDelete(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         create_pool_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
@@ -86,7 +86,7 @@ class PoolFlows(object):
         delete_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        delete_pool_flow.add(virtual_port_tasks.ListenerUpdate(
+        delete_pool_flow.add(virtual_port_tasks.ListenerUpdateForPoolDelete(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         delete_pool_flow.add(persist_tasks.DeleteSessionPersistence(
             requires=[a10constants.VTHUNDER, constants.POOL]))
