@@ -183,25 +183,13 @@ class ListenerUpdateForPoolDelete(ListenersParent, task.Task):
         try:
             vport_templates = {}
             if listener:
-                old_listener = self.axapi_client.slb.virtual_server.vport.get(
-                    loadbalancer.id,
-                    listener.id,
-                    listener.protocol,
-                    listener.protocol_port)
-                templates = ["template-virtual-port-shared", "template-http-shared",
-                             "template-tcp-shared", "template-policy-shared",
-                             "template-virtual-port", "template-http",
-                             "template-tcp", "template-policy"]
-                for template_key in templates:
-                    if template_key in old_listener['port']:
-                        vport_templates[template_key] = old_listener['port'][template_key]
+                listener.default_pool_id = None
                 self.axapi_client.slb.virtual_server.vport.update(
                     loadbalancer.id,
                     listener.id,
                     listener.protocol,
                     listener.protocol_port,
-                    listener.default_pool_id,
-                    virtual_port_templates=vport_templates)
+                    listener.default_pool_id)
                 LOG.debug("Successfully updated listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update listener: %s", listener.id)
