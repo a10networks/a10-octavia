@@ -200,3 +200,51 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         args, kwargs = self.client_mock.slb.virtual_server.vport.update.call_args
         self.assertIn('use_rcv_hop', kwargs)
         self.assertFalse(kwargs.get('use_rcv_hop'))
+
+    def test_listener_update_for_pool_with_http_protocol(self):
+        listener = self._mock_listener('HTTP', 1000)
+
+        listener_task = task.ListenerUpdateForPool()
+        listener_task.axapi_client = self.client_mock
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER)
+        self.client_mock.slb.virtual_server.vport.update.assert_called_with(LB.id,
+                                                                            listener.id,
+                                                                            listener.protocol,
+                                                                            listener.protocol_port,
+                                                                            listener.default_pool_id
+                                                                            )
+
+    def test_listener_update_for_pool_with_https_protocol(self):
+        listener = self._mock_listener('HTTPS', 1000)
+
+        listener_task = task.ListenerUpdateForPool()
+        listener_task.axapi_client = self.client_mock
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER)
+        self.client_mock.slb.virtual_server.vport.update.assert_called_with(LB.id,
+                                                                            listener.id,
+                                                                            listener.protocol,
+                                                                            listener.protocol_port,
+                                                                            listener.default_pool_id
+                                                                            )
+
+    def test_listener_update_for_pool_with_tcp_protocol(self):
+        listener = self._mock_listener('TCP', 1000)
+
+        listener_task = task.ListenerUpdateForPool()
+        listener_task.axapi_client = self.client_mock
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER)
+        self.client_mock.slb.virtual_server.vport.update.assert_called_with(LB.id,
+                                                                            listener.id,
+                                                                            listener.protocol,
+                                                                            listener.protocol_port,
+                                                                            listener.default_pool_id
+                                                                            )
