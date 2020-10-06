@@ -394,10 +394,33 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.client_mock.vrrpa.update.assert_called_with(vrid.vrid, floating_ips=[])
         self.assertEqual(result, (vrid, True))
 
-    def test_DeleteMemberVRIDPort_noop_member_count_equals_zero(self):
+    def test_DeleteMemberVRIDPort_member_count_lb_count(self):
         mock_network_task = a10_network_tasks.DeleteVRIDPort()
         mock_network_task.axapi_client = self.client_mock
         result = mock_network_task.execute(VTHUNDER, [VRID_1], SUBNET_1, 1, 1)
         self.network_driver_mock.delete_port.assert_not_called()
         self.client_mock.vrrpa.delete.assert_not_called()
         self.assertEqual(result, (None, False))
+
+    def delete_multi_vrid_port_against_subnet_not_used(self):
+        mock_network_task = a10_network_tasks.DeleteVRIDPort()
+        vrid = copy.deepcopy(VRID_1)
+        vrid.vrid_port_id = a10constants.MOCK_VRRP_PORT_ID
+        vrid.vrid = VRID_VALUE
+        mock_network_task.axapi_client = self.client_mock
+        result = mock_network_task.execute(VTHUNDER, [vrid], [SUBNET_1])
+        self.network_driver_mock.delete_port.assert_called_with(a10constants.MOCK_VRRP_PORT_ID)
+        self.client_mock.vrrpa.update.assert_called_with(vrid.vrid, floating_ips=[])
+        self.assertEqual(result, [])
+
+    def delete_multi_vrid_port_against_all_subnet_used(self):
+        mock_network_task = a10_network_tasks.DeleteVRIDPort()
+        vrid = copy.deepcopy(VRID_1)
+        vrid.vrid_port_id = a10constants.MOCK_VRRP_PORT_ID
+        vrid.vrid = VRID_VALUE
+        mock_network_task.axapi_client = self.client_mock
+        result = mock_network_task.execute(VTHUNDER, [vrid], [])
+        self.network_driver_mock.delete_port.assert_not_called()
+        self.client_mock.vrrpa.update.assert_not_called()
+        self.assertEqual(result, None)
+
