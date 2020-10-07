@@ -212,6 +212,7 @@ def validate_vcs_device_info(device_network_map):
 
 
 def convert_interface_to_data_model(interface_obj):
+    ve_ip = interface_obj.get('ve_ip')
     vlan_map_list = interface_obj.get('vlan_map')
     interface_num = interface_obj.get('interface_num')
     interface_dm = data_models.Interface()
@@ -219,8 +220,16 @@ def convert_interface_to_data_model(interface_obj):
         raise exceptions.MissingInterfaceNumConfigError()
     if not type(interface_num) == int:
         raise exceptions.InvalidInterfaceNumberConfigError(interface_num)
-    if not vlan_map_list:
-        LOG.warning("Empty vlan map provided in configuration file")
+    if ve_ip:
+        if vlan_map_list:
+            LOG.warning("Applying global configuration without vlan ID")
+            vlan_map_list = {}
+        interface_dm.ve_ips.append(validate_partial_ipv4(ve_ip))
+    else:
+        LOG.warning("Tagging each vlanID with interfaces")
+        if not vlan_map_list:
+            LOG.warning("Empty vlan map provided in configuration file")
+
     for vlan_map in vlan_map_list:
         vlan_id = vlan_map.get('vlan_id')
         if not vlan_id:
