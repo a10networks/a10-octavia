@@ -16,6 +16,7 @@
 import acos_client.errors as acos_errors
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import uuidutils
 from requests import exceptions as req_exceptions
 import six
 from taskflow import task
@@ -27,9 +28,11 @@ from octavia.network import base
 from octavia.network import data_models as n_data_models
 
 from a10_octavia.common import a10constants
+from a10_octavia.common import data_models
 from a10_octavia.common import exceptions
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -677,86 +680,88 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
     @axapi_client_decorator
     def execute(self, vthunder, lb_resource, vrid_list, subnet):
-        vrid = None
+        """
 
-        device_vrid_ip = None
-        vrid_floating_ip_list = []
-
+        :param vthunder:
+        :param lb_resource: Can accept LB or member
+        :param vrid_list: VRID object list for LB resource's project.
+        :param subnet: subnet of the resource in question, will be helpful if there is no
+        VRID object present for the provided subnet then is should create new VRID
+        floating IP instead of updating existing(delete + create -> update)
+        :return: return the update list of VRID object, If empty the need to remove all VRID
+        objects from DB else need update existing ones.
+        """
+        vrid_floating_ips = []
+        vrid_value = CONF.a10_global.vrid
+        conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
+                               lb_resource.project_id)
         for vr in vrid_list:
             if vr.subnet_id == subnet.id:
-                vrid = vr
-                device_vrid_ip = vrid.vrid_floating_ip
-            else:
-                vrid_floating_ip_list.append(vr.vrid_floating_ip)
-        if vrid:
-            vrid_list.remove(vrid)
+                break
+        else:
+            vrid_list.append(data_models.VRID(id=uuidutils.generate_uuid(), vrid=vrid_value,
+                                              project_id=lb_resource.project_id,
+                                              vrid_port_id=None,
+                                              vrid_floating_ip=None,
+                                              subnet_id=subnet.id))
 
-        conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
-            lb_resource.project_id)
         if conf_floating_ip:
-            subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(
-                subnet.cidr)
             if conf_floating_ip.lower() == 'dhcp':
-                if not a10_utils.check_ip_in_subnet_range(
-                        device_vrid_ip, subnet_ip, subnet_mask):
-                    try:
-                        self.fip_port = self.network_driver.create_port(
-                            subnet.network_id, subnet.id)
-                    except Exception as e:
-                        LOG.error(
-                            "Failed to create neutron port for lb_resource: %s",
-                            lb_resource.id)
-                        raise e
-
+                for vrid in vrid_list:
+                    subnet = self.network_driver.get_subnet(vrid.subnet_id)
+                    subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(
+                        subnet.cidr)
+                    if not a10_utils.check_ip_in_subnet_range(
+                            vrid.vrid_floating_ip, subnet_ip, subnet_mask):
+                        try:
+                            # delete existing port associated to vrid in question.
+                            if vrid.vrid_port_id:
+                                self.network_driver.delete_port(vrid.vrid_port_id)
+                            fip_obj = self.network_driver.create_port(
+                                subnet.network_id, subnet.id)
+                            vrid.vrid_floating_ip = fip_obj.fixed_ips[0].ip_address
+                            vrid.vrid_port_id = fip_obj.id
+                        except Exception as e:
+                            LOG.error(
+                                "Failed to create neutron port for lb_resource: %s",
+                                lb_resource.id)
+                            raise e
+                    vrid_floating_ips.append(vrid.vrid_floating_ip)
             else:
-                conf_floating_ip = a10_utils.get_patched_ip_address(
-                    conf_floating_ip, subnet.cidr)
-                if not a10_utils.check_ip_in_subnet_range(
-                        conf_floating_ip, subnet_ip, subnet_mask):
-                    msg = "Invalid VRID floating IP. IP out of subnet range: "
-                    msg += str(conf_floating_ip)
-                    raise exceptions.VRIDIPNotInSubentRangeError(msg)
+                for vrid in vrid_list:
+                    subnet = self.network_driver.get_subnet(vrid.subnet_id)
+                    conf_floating_ip = a10_utils.get_patched_ip_address(
+                        conf_floating_ip, subnet.cidr)
+                    subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(
+                        subnet.cidr)
+                    if not a10_utils.check_ip_in_subnet_range(
+                            conf_floating_ip, subnet_ip, subnet_mask):
+                        msg = "Invalid VRID floating IP. IP out of subnet range: "
+                        msg += str(conf_floating_ip)
+                        raise exceptions.VRIDIPNotInSubentRangeError(msg)
 
-                if conf_floating_ip != device_vrid_ip:
-                    try:
-                        self.fip_port = self.network_driver.create_port(
-                            subnet.network_id, subnet.id, fixed_ip=conf_floating_ip)
-                    except Exception as e:
-                        LOG.error(
-                            "Failed to create neutron port for loadbalancer resource: %s with "
-                            "floating IP %s", lb_resource.id, conf_floating_ip)
-                        raise e
-
-            if self.fip_port:
-                vrid_floating_ip_list.append(
-                    self.fip_port.fixed_ips[0].ip_address)
-                self.update_device_vrid_fip(vthunder, vrid_floating_ip_list)
-
-        if vrid and vrid.vrid_port_id and (
-                self.fip_port or not conf_floating_ip):
-            try:
+                    if conf_floating_ip != vrid.vrid_floating_ip:
+                        try:
+                            # delete existing port associated to vrid in question.
+                            if vrid.vrid_port_id:
+                                self.network_driver.delete_port(vrid.vrid_port_id)
+                            fip_obj = self.network_driver.create_port(
+                                subnet.network_id, subnet.id, fixed_ip=conf_floating_ip)
+                            vrid.vrid_floating_ip = fip_obj.fixed_ips[0].ip_address
+                            vrid.vrid_port_id = fip_obj.id
+                        except Exception as e:
+                            LOG.error(
+                                "Failed to create neutron port for loadbalancer resource: %s with "
+                                "floating IP %s", lb_resource.id, conf_floating_ip)
+                            raise e
+                    vrid_floating_ips.append(vrid.vrid_floating_ip)
+        else:
+            for vrid in vrid_list:
                 self.network_driver.delete_port(vrid.vrid_port_id)
-            except Exception as e:
-                LOG.error(
-                    "Failed to delete neutron port: %s for loadbalancer resource %s on vrid %s",
-                    vrid.vrid_port_id,
-                    lb_resource.id,
-                    str(vrid))
-                raise e
-            if not conf_floating_ip:
-                try:
-                    # Write a function to handle deletion of specific floating
-                    # IP in vrid
-                    self.axapi_client.vrrpa.update(
-                        vrid.vrid, floating_ips=vrid_floating_ip_list)
-                except Exception as e:
-                    LOG.exceptions(
-                        "Failed to delete vrid %s for loadbalancer resource %s",
-                        str(vrid),
-                        lb_resource.id)
-                    raise e
+            vrid_list = []
+        self.update_device_vrid_fip(vthunder, vrid_floating_ips)
 
-        return self.fip_port, vrid
+        return vrid_list
 
     @axapi_client_decorator
     def revert(

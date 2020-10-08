@@ -387,53 +387,32 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
 class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
 
-    def execute(self, lb_resource, vrid, port, subnet):
-        vrid_value = CONF.a10_global.vrid
-        if port:
-            if vrid:
-                try:
-                    self.vrid_repo.update(
-                        db_apis.get_session(),
-                        vrid.id,
-                        vrid_floating_ip=port.fixed_ips[0].ip_address,
-                        vrid_port_id=port.id,
-                        vrid=vrid_value,
-                        subnet_id=subnet.id)
-                    LOG.debug("Successfully updated DB vrid %s entry for loadbalancer resource %s",
-                              vrid.id, lb_resource.id)
-                except Exception as e:
-                    LOG.error("Failed to update vrid %(vrid)s "
-                              "DB entry due to: %(except)s",
-                              {'vrid': vrid.id, 'except': e})
-                    raise e
+    def execute(self, lb_resource, vrid_list):
+        if not vrid_list:
+            # delete all vrids from DB for the lB resource's project.
+            self.vrid_repo.delete(db_apis.get_session(),
+                                  project_id=lb_resource.project_id)
+            LOG.debug("Successfully deleted DB vrid from project %s",
+                      lb_resource.project_id)
+            return
+        for vrid in vrid_list:
+            if self.vrid_repo.exists(db_apis.get_session(), vrid.id):
+                self.vrid_repo.update(
+                    db_apis.get_session(),
+                    vrid.id,
+                    vrid_floating_ip=vrid.vrid_floating_ip,
+                    vrid_port_id=vrid.vrid_port_id,
+                    vrid=vrid.vrid,
+                    subnet_id=vrid.subnet_id)
+                LOG.debug("Successfully updated DB vrid %s entry for loadbalancer resource %s",
+                          vrid.id, lb_resource.id)
             else:
-                try:
-                    self.vrid_repo.create(db_apis.get_session(),
-                                          project_id=lb_resource.project_id,
-                                          vrid_floating_ip=port.fixed_ips[0].ip_address,
-                                          vrid_port_id=port.id,
-                                          vrid=vrid_value,
-                                          subnet_id=subnet.id)
-
-                    LOG.debug("Successfully created DB entry for vrid for loadbalancer resource %s",
-                              lb_resource.id)
-                except Exception as e:
-                    LOG.error("Failed to create vrid DB entry due to: %s", str(e))
-                    raise e
-        else:
-            conf_floating_ip = utils.get_vrid_floating_ip_for_project(
-                lb_resource.project_id)
-            if vrid and not conf_floating_ip:
-                try:
-                    self.vrid_repo.delete(
-                        db_apis.get_session(), id=vrid.id)
-                    LOG.debug("Successfully deleted DB vrid %s entry for member %s",
-                              vrid.id, lb_resource.id)
-                except Exception as e:
-                    LOG.error("Failed to delete vrid %(vrid)s "
-                              "DB entry due to: %(except)s",
-                              {'vrid': vrid.id, 'except': e})
-                    raise e
+                self.vrid_repo.create(db_apis.get_session(),
+                                      project_id=vrid.project_id,
+                                      vrid_floating_ip=vrid.vrid_floating_ip,
+                                      vrid_port_id=vrid.vrid_port_id,
+                                      vrid=vrid.vrid,
+                                      subnet_id=vrid.subnet_id)
 
 
 class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
