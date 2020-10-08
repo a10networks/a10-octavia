@@ -197,6 +197,6 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
                         return_value=listener.protocol):
             listener_task.execute(LB, listener, VTHUNDER)
 
-        args, kwargs = self.client_mock.slb.virtual_server.vport.update.call_args
+        args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
         self.assertIn('use_rcv_hop', kwargs)
         self.assertFalse(kwargs.get('use_rcv_hop'))
