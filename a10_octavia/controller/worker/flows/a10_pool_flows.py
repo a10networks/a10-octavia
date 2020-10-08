@@ -147,7 +147,7 @@ class PoolFlows(object):
             requires=[constants.POOL, a10constants.VTHUNDER, constants.UPDATE_DICT],
             provides=constants.POOL)
         update_pool_flow.add(*self._get_sess_pers_subflow(update_pool))
-        update_pool_flow.add(virtual_port_tasks.ListenerUpdate(
+        update_pool_flow.add(virtual_port_tasks.ListenerUpdateForPool(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         update_pool_flow.add(database_tasks.UpdatePoolInDB(
             requires=[constants.POOL, constants.UPDATE_DICT]))
