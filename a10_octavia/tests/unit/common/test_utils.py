@@ -85,7 +85,7 @@ RESULT_HARDWARE_DEVICE_LIST = {'project-1': VTHUNDER_1,
 INTERFACE_CONF = {"interface_num": 1,
                   "vlan_map": [
                       {"vlan_id": 11, "ve_ip": "10.20"},
-                      {"vlan_id": 12, "use_dhcp": True},
+                      {"vlan_id": 12, "use_dhcp": "True"},
                       {"vlan_id": 13, "ve_ip": "10.30"}]
                   }
 INTERFACE = data_models.Interface(interface_num=1, tags=[11, 12, 13], ve_ips=[
@@ -140,9 +140,9 @@ class TestUtils(base.BaseTaskTestCase):
         self.assertRaises(cfg.ConfigFileValueError, utils.validate_partial_ipv4, '10.333.11.10')
 
     def test_validate_partition_valid(self):
-        self.assertEqual(utils.validate_partition(HARDWARE_DEVICE), HARDWARE_DEVICE)
+        self.assertEqual(utils.validate_partition(HARDWARE_DEVICE), None)
         empty_hardware_device = {}
-        self.assertEqual(utils.validate_partition(empty_hardware_device), SHARED_HARDWARE_DEVICE)
+        self.assertEqual(utils.validate_partition(empty_hardware_device), None)
 
     def test_validate_partition_invalid(self):
         long_partition_hardware_device = copy.deepcopy(HARDWARE_DEVICE)
@@ -151,7 +151,6 @@ class TestUtils(base.BaseTaskTestCase):
 
     def test_validate_params_valid(self):
         shared_hardware_info = copy.deepcopy(HARDWARE_INFO)
-        shared_hardware_info['partition_name'] = 'shared'
         self.assertEqual(utils.validate_params(HARDWARE_INFO), shared_hardware_info)
 
     def test_validate_params_invalid(self):
@@ -326,18 +325,18 @@ class TestUtils(base.BaseTaskTestCase):
                           utils.convert_interface_to_data_model, missing_ve_ip_in_iface_obj)
         ve_ips_collision_in_iface_obj = {"interface_num": 1,
                                          "vlan_map": [
-                                             {"vlan_id": 11, "use_dhcp": True, "ve_ip": "10.30"}]}
+                                             {"vlan_id": 11, "use_dhcp": "True", "ve_ip": "10.30"}]}
         self.assertRaises(exceptions.VirtEthCollisionConfigError,
                           utils.convert_interface_to_data_model, ve_ips_collision_in_iface_obj)
         missing_ve_ip_in_iface_obj = {"interface_num": 1,
                                       "vlan_map": [
-                                          {"vlan_id": 11, "use_dhcp": False}]}
+                                          {"vlan_id": 11, "use_dhcp": "False"}]}
         self.assertRaises(exceptions.VirtEthMissingConfigError,
                           utils.convert_interface_to_data_model, missing_ve_ip_in_iface_obj)
         duplicate_vlan_ids_in_iface_obj = {"interface_num": 1,
                                            "vlan_map": [
                                                {"vlan_id": 11, "ve_ip": "10.20"},
-                                               {"vlan_id": 11, "use_dhcp": True}]}
+                                               {"vlan_id": 11, "use_dhcp": "True"}]}
         self.assertRaises(exceptions.DuplicateVlanTagsConfigError,
                           utils.convert_interface_to_data_model, duplicate_vlan_ids_in_iface_obj)
 
