@@ -37,7 +37,7 @@ class LoadBalancerParent(object):
         arp_disable = CONF.slb.arp_disable
         vrid = CONF.slb.default_virtual_server_vrid
         desc = loadbalancer.description
-        desc = desc.strip() if desc and desc.strip() else None
+        desc = "" if str(desc).isspace() else desc
 
         set_method(
             loadbalancer.id,

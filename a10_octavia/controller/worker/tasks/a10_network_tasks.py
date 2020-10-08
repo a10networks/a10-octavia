@@ -707,7 +707,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                             "Failed to create neutron port for lb_resource: %s",
                             lb_resource.id)
                         raise e
-
             else:
                 conf_floating_ip = a10_utils.get_patched_ip_address(
                     conf_floating_ip, subnet.cidr)
