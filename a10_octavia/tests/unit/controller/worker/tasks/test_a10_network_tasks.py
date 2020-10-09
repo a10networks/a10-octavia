@@ -71,8 +71,10 @@ class TestNetworkTasks(base.BaseTaskTestCase):
     def test_HandleVRIDFloatingIP_noop_vrrpa_config_not_specified(
             self, mock_utils):
         network_task = a10_network_tasks.HandleVRIDFloatingIP()
-        result = network_task.execute(VTHUNDER, MEMBER, [], mock.ANY)
-        self.assertEqual(result, (None, None))
+        subnet = copy.deepcopy(SUBNET_1)
+        subnet.cidr = a10constants.MOCK_SUBNET_CIDR
+        result = network_task.execute(VTHUNDER, MEMBER, [], subnet)
+        self.assertEqual(result, [])
 
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
@@ -92,7 +94,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.network_driver_mock.create_port.return_value = port
         self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
                          vrid=VRID_VALUE)
-        mock_network_task.execute(VTHUNDER, member, [VRID_1], subnet)
+        mock_network_task.execute(VTHUNDER, member, [], subnet)
         self.network_driver_mock.create_port.assert_called_with(
             subnet.network_id,
             member.subnet_id,
@@ -120,7 +122,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.network_driver_mock.create_port.return_value = port
         self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
                          vrid=VRID_VALUE)
-        mock_network_task.execute(vthunder, member, [VRID_1], subnet)
+        mock_network_task.execute(vthunder, member, [], subnet)
         self.network_driver_mock.create_port.assert_called_with(
             subnet.network_id,
             member.subnet_id,
@@ -199,7 +201,7 @@ class TestNetworkTasks(base.BaseTaskTestCase):
             vrid.vrid_port_id)
         self.client_mock.vrrpa.update.assert_called_with(
             vrid.vrid, floating_ips=[])
-        self.assertEqual(result, (None, vrid))
+        self.assertEqual(result, [])
 
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
@@ -221,7 +223,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.network_driver_mock.get_subnet.return_value = subnet
         mock_network_task.execute(VTHUNDER, member, [vrid], subnet)
         self.network_driver_mock.create_port.assert_not_called()
-        self.client_mock.vrrpa.update.assert_not_called()
+        self.client_mock.vrrpa.update.assert_called_with(
+            vrid.vrid, floating_ips=[a10constants.MOCK_VRID_FLOATING_IP_1])
 
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_2)
@@ -309,9 +312,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.network_driver_mock.get_subnet.return_value = subnet
         fip_port = mock_network_task.execute(VTHUNDER, member, [vrid], subnet)
         self.network_driver_mock.create_port.assert_not_called()
-        self.client_mock.vrrpa.update.assert_not_called()
         self.network_driver_mock.delete_port.assert_not_called()
-        self.assertEqual(fip_port, (None, vrid))
+        self.assertEqual(fip_port, [vrid])
 
     @mock.patch(
         'a10_octavia.common.utils.check_ip_in_subnet_range',

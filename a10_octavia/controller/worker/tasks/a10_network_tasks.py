@@ -675,7 +675,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
     """Handle VRID floating IP configurations for loadbalancer resourse"""
 
     def __init__(self, *arg, **kwargs):
-        self.fip_port = None
+        self.added_fip_ports = []
         super(HandleVRIDFloatingIP, self).__init__(*arg, **kwargs)
 
     @axapi_client_decorator
@@ -692,9 +692,10 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         objects from DB else need update existing ones.
         """
         vrid_floating_ips = []
+        vrid_history_flag = True if vrid_list else False
         vrid_value = CONF.a10_global.vrid
         conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
-                               lb_resource.project_id)
+            lb_resource.project_id)
         for vr in vrid_list:
             if vr.subnet_id == subnet.id:
                 break
@@ -719,6 +720,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                                 self.network_driver.delete_port(vrid.vrid_port_id)
                             fip_obj = self.network_driver.create_port(
                                 subnet.network_id, subnet.id)
+                            self.added_fip_ports.append(fip_obj)
                             vrid.vrid_floating_ip = fip_obj.fixed_ips[0].ip_address
                             vrid.vrid_port_id = fip_obj.id
                         except Exception as e:
@@ -731,7 +733,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 for vrid in vrid_list:
                     subnet = self.network_driver.get_subnet(vrid.subnet_id)
                     conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
-                               lb_resource.project_id)
+                        lb_resource.project_id)
                     conf_floating_ip = a10_utils.get_patched_ip_address(
                         conf_floating_ip, subnet.cidr)
                     subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(
@@ -749,6 +751,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                                 self.network_driver.delete_port(vrid.vrid_port_id)
                             fip_obj = self.network_driver.create_port(
                                 subnet.network_id, subnet.id, fixed_ip=conf_floating_ip)
+                            self.added_fip_ports.append(fip_obj)
                             vrid.vrid_floating_ip = fip_obj.fixed_ips[0].ip_address
                             vrid.vrid_port_id = fip_obj.id
                         except Exception as e:
@@ -761,7 +764,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             for vrid in vrid_list:
                 self.network_driver.delete_port(vrid.vrid_port_id)
             vrid_list = []
-        self.update_device_vrid_fip(vthunder, vrid_floating_ips)
+        if conf_floating_ip or vrid_history_flag:
+            self.update_device_vrid_fip(vthunder, vrid_floating_ips)
 
         return vrid_list
 
@@ -772,6 +776,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             vthunder,
             lb_resource,
             vrid_list,
+            subnet,
             *args,
             **kwargs):
         if isinstance(result, failure.Failure):
@@ -779,23 +784,20 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 "Unable to allocate & configure VRRP Floating IP Port")
             return
 
-        if self.fip_port:
-            LOG.warning(
-                "Reverting VRRP floating IP delta task for vrid %s on lb_resource %s",
-                str(vrid_list),
-                lb_resource.id)
+        LOG.warning(
+            "Reverting VRRP floating IP delta task for lb_resource %s",
+            lb_resource.id)
+        # Delete newly added ports
+        for port in self.added_fip_ports:
             try:
-                self.network_driver.delete_port(self.fip_port.id)
-                # if vrid:
-                #    self.axapi_client.vrrpa.update(vrid.vrid, floating_ips=[vrid.vrid_floating_ip])
-            except req_exceptions.ConnectionError:
-                LOG.exception(
-                    "Failed to connect A10 Thunder device: %s",
-                    vthunder.ip_address)
+                self.network_driver.delete_port(port.id)
             except Exception as e:
-                LOG.exception(
-                    "Failed to revert VRRP floating IP delta task for lb_resource: %s"
-                    " due to %s", lb_resource.id, str(e))
+                LOG.error("Failed to delete portL %s", port.id)
+
+        # Normalize old vrid entries
+        vrid_floating_ip_list = [vrid.vrid_floating_ip for vrid in vrid_list]
+        if vrid_floating_ip_list:
+            self.update_device_vrid_fip(vthunder, vrid_floating_ip_list)
 
     def update_device_vrid_fip(self, vthunder, vrid_floating_ip_list):
         vrid_value = CONF.a10_global.vrid
@@ -825,15 +827,16 @@ class DeleteVRIDPort(BaseNetworkTask):
                     vrid = vr
                 else:
                     vrid_floating_ip_list.append(vr.vrid_floating_ip)
-            try:
-                self.network_driver.delete_port(vrid.vrid_port_id)
-                self.axapi_client.vrrpa.update(
-                    vrid.vrid, floating_ips=vrid_floating_ip_list)
-                LOG.info("VRID floating IP: %s deleted", vrid.vrid_floating_ip)
-                return vrid, True
-            except Exception as e:
-                LOG.exception("Failed to delete vrid floating ip : %s", str(e))
-                raise e
+            if vrid:
+                try:
+                    self.network_driver.delete_port(vrid.vrid_port_id)
+                    self.axapi_client.vrrpa.update(
+                        vrid.vrid, floating_ips=vrid_floating_ip_list)
+                    LOG.info("VRID floating IP: %s deleted", vrid.vrid_floating_ip)
+                    return vrid, True
+                except Exception as e:
+                    LOG.exception("Failed to delete vrid floating ip : %s", str(e))
+                    raise e
         return None, False
 
 
