@@ -303,21 +303,35 @@ class VThunderRepository(BaseRepository):
         return id_list
 
 
-class LoadBalancerRepository(BaseRepository):
-    model_class = base_models.LoadBalancer
+class LoadBalancerRepository(repo.LoadBalancerRepository):
+
+    def get_lb_count_by_subnet(self, session, project_id, subnet_id):
+        return session.query(self.model_class).join(base_models.Vip).filter(
+            and_(self.model_class.project_id == project_id,
+                 base_models.Vip.subnet_id == subnet_id,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
 
 
 class VRIDRepository(BaseRepository):
     model_class = models.VRID
 
+    # A project can have multiple VRIDs, so need to convert each vrid object through
+    # "to_data_model"
     def get_vrid_from_project_id(self, session, project_id):
+        vrid_obj_list = []
         model = session.query(self.model_class).filter(
-            self.model_class.project_id == project_id).first()
+            self.model_class.project_id == project_id)
+        for data in model:
+            vrid_obj_list.append(data.to_data_model())
+        return vrid_obj_list
 
-        if not model:
-            return None
-
-        return model.to_data_model()
+    # def get_vrid_for_subnet(self, session, project_id, subnet_id):
+    #     vrid = session.query(self.model_class).filter(
+    #         and_(self.model_class.project_id == project_id,
+    #              self.model_class.subnet_id == subnet_id)).first()
+    #     if vrid:
+    #         return vrid.to_data_model()
 
 
 class MemberRepository(repo.MemberRepository):
@@ -328,6 +342,13 @@ class MemberRepository(repo.MemberRepository):
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
         return count
+
+    def get_member_count_by_subnet(self, session, project_id, subnet_id):
+        return session.query(self.model_class).filter(
+            and_(self.model_class.project_id == project_id,
+                 self.model_class.subnet_id == subnet_id,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
 
     def get_member_count_by_ip_address(self, session, ip_address, project_id):
         return session.query(self.model_class).filter(
@@ -352,3 +373,10 @@ class MemberRepository(repo.MemberRepository):
             and_(self.model_class.ip_address == ip_address,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count() 
+
+    def get_pool_count_subnet(self, session, project_id, subnet_id):
+        return session.query(self.model_class.pool_id.distinct()).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.subnet_id == subnet_id,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
