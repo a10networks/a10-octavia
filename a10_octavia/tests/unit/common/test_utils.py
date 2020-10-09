@@ -58,12 +58,27 @@ DUP_PARTITION_HARDWARE_INFO = {
     'username': 'abc',
     'password': 'abc'}
 
+HARDWARE_INFO_WITH_HMT_ENABLED = [{
+    'project_id': '5fef4dab3190438a875d057ddc7af567',
+    'ip_address': '13.13.13.13',
+    'device_name': 'rack_thunder_3',
+    'username': 'usr',
+    'password': 'pwd',
+    'hierarchical_multitenancy': 'enable',
+    'partition_name': 'shared'
+}]
+
 VTHUNDER_1 = data_models.HardwareThunder(project_id="project-1", device_name="rack_thunder_1",
                                          undercloud=True, username="abc", password="abc",
                                          ip_address="10.10.10.10", partition_name="shared")
 VTHUNDER_2 = data_models.HardwareThunder(project_id="project-2", device_name="rack_thunder_2",
                                          undercloud=True, username="def", password="def",
                                          ip_address="12.12.12.12", partition_name="def-sample")
+VTHUNDER_3 = data_models.HardwareThunder(project_id="5fef4dab3190438a875d057ddc7af567",
+                                         device_name="rack_thunder_3",
+                                         undercloud=True, username="usr", password="pwd",
+                                         hierarchical_multitenancy='enable',
+                                         ip_address="13.13.13.13", partition_name="5fef4dab319043")
 
 DUPLICATE_DICT = {'project_1': VTHUNDER_1,
                   'project_2': VTHUNDER_1}
@@ -82,6 +97,7 @@ DUPLICATE_PARTITION_HARDWARE_DEVICE_LIST = [DUP_PARTITION_HARDWARE_INFO, HARDWAR
 RESULT_HARDWARE_DEVICE_LIST = {'project-1': VTHUNDER_1,
                                'project-2': VTHUNDER_2}
 
+RESULT_HMT_HARDWARE_DEVICE_LIST = {'5fef4dab3190438a875d057ddc7af567': VTHUNDER_3}
 INTERFACE_CONF = {"interface_num": 1,
                   "vlan_map": [
                       {"vlan_id": 11, "ve_ip": "10.20"},
@@ -177,6 +193,10 @@ class TestUtils(base.BaseTaskTestCase):
                           DUPLICATE_PROJECT_HARDWARE_DEVICE_LIST)
         self.assertRaises(cfg.ConfigFileValueError, utils.convert_to_hardware_thunder_conf,
                           DUPLICATE_PARTITION_HARDWARE_DEVICE_LIST)
+
+    def test_convert_to_hardware_thunder_conf_with_hmt(self):
+        self.assertEqual(utils.convert_to_hardware_thunder_conf(HARDWARE_INFO_WITH_HMT_ENABLED),
+                         RESULT_HMT_HARDWARE_DEVICE_LIST)
 
     @mock.patch('octavia.common.keystone.KeystoneSession')
     @mock.patch('a10_octavia.common.utils.keystone_client.Client')
