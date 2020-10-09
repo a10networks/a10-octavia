@@ -59,7 +59,7 @@ DUP_PARTITION_HARDWARE_INFO = {
     'password': 'abc'}
 
 HARDWARE_INFO_WITH_HMT_ENABLED = [{
-    'project_id': '5fef4dab3190438a875d057ddc7af567',
+    'project_id': a10constants.MOCK_CHILD_PROJECT_ID,
     'ip_address': '13.13.13.13',
     'device_name': 'rack_thunder_3',
     'username': 'usr',
@@ -74,11 +74,12 @@ VTHUNDER_1 = data_models.HardwareThunder(project_id="project-1", device_name="ra
 VTHUNDER_2 = data_models.HardwareThunder(project_id="project-2", device_name="rack_thunder_2",
                                          undercloud=True, username="def", password="def",
                                          ip_address="12.12.12.12", partition_name="def-sample")
-VTHUNDER_3 = data_models.HardwareThunder(project_id="5fef4dab3190438a875d057ddc7af567",
+VTHUNDER_3 = data_models.HardwareThunder(project_id=a10constants.MOCK_CHILD_PROJECT_ID,
                                          device_name="rack_thunder_3",
                                          undercloud=True, username="usr", password="pwd",
                                          hierarchical_multitenancy='enable',
-                                         ip_address="13.13.13.13", partition_name="5fef4dab319043")
+                                         ip_address="13.13.13.13",
+                                         partition_name=a10constants.MOCK_CHILD_PARTITION)
 
 DUPLICATE_DICT = {'project_1': VTHUNDER_1,
                   'project_2': VTHUNDER_1}
@@ -97,7 +98,8 @@ DUPLICATE_PARTITION_HARDWARE_DEVICE_LIST = [DUP_PARTITION_HARDWARE_INFO, HARDWAR
 RESULT_HARDWARE_DEVICE_LIST = {'project-1': VTHUNDER_1,
                                'project-2': VTHUNDER_2}
 
-RESULT_HMT_HARDWARE_DEVICE_LIST = {'5fef4dab3190438a875d057ddc7af567': VTHUNDER_3}
+RESULT_HMT_HARDWARE_DEVICE_LIST = {a10constants.MOCK_CHILD_PROJECT_ID: VTHUNDER_3}
+
 INTERFACE_CONF = {"interface_num": 1,
                   "vlan_map": [
                       {"vlan_id": 11, "ve_ip": "10.20"},
