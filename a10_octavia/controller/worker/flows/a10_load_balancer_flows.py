@@ -356,9 +356,9 @@ class LoadBalancerFlows(object):
         handle_vrid_for_lb_subflow.add(a10_network_tasks.HandleVRIDFloatingIP(
             requires=[a10constants.VTHUNDER, a10constants.VRID_LIST, constants.SUBNET],
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
-            provides=(a10constants.PORT, a10constants.VRID)))
+            provides= a10constants.VRID_LIST))
         handle_vrid_for_lb_subflow.add(a10_database_tasks.UpdateVRIDForLoadbalancerResource(
-            requires=[a10constants.VRID, a10constants.PORT, constants.SUBNET],
+            requires=a10constants.VRID_LIST,
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER}))
         return handle_vrid_for_lb_subflow
 

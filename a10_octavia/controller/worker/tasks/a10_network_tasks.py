@@ -730,6 +730,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             else:
                 for vrid in vrid_list:
                     subnet = self.network_driver.get_subnet(vrid.subnet_id)
+                    conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
+                               lb_resource.project_id)
                     conf_floating_ip = a10_utils.get_patched_ip_address(
                         conf_floating_ip, subnet.cidr)
                     subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(

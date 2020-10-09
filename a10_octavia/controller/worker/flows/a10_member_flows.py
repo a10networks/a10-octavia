@@ -344,15 +344,10 @@ class MemberFlows(object):
                     constants.SUBNET],
                 rebind={
                     a10constants.LB_RESOURCE: constants.MEMBER},
-                provides=(
-                    a10constants.PORT,
-                    a10constants.VRID)))
+                provides=a10constants.VRID_LIST))
         handle_vrid_for_member_subflow.add(
             a10_database_tasks.UpdateVRIDForLoadbalancerResource(
-                requires=[
-                    a10constants.VRID,
-                    a10constants.PORT,
-                    constants.SUBNET],
+                requires=a10constants.VRID_LIST,
                 rebind={
                     a10constants.LB_RESOURCE: constants.MEMBER}))
 
