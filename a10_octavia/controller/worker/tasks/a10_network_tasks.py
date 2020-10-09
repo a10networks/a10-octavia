@@ -817,15 +817,16 @@ class DeleteVRIDPort(BaseNetworkTask):
                     vrid = vr
                 else:
                     vrid_floating_ip_list.append(vr.vrid_floating_ip)
-            try:
-                self.network_driver.delete_port(vrid.vrid_port_id)
-                self.axapi_client.vrrpa.update(
-                    vrid.vrid, floating_ips=vrid_floating_ip_list)
-                LOG.info("VRID floating IP: %s deleted", vrid.vrid_floating_ip)
-                return vrid, True
-            except Exception as e:
-                LOG.exception("Failed to delete vrid floating ip : %s", str(e))
-                raise e
+            if vrid:
+                try:
+                    self.network_driver.delete_port(vrid.vrid_port_id)
+                    self.axapi_client.vrrpa.update(
+                        vrid.vrid, floating_ips=vrid_floating_ip_list)
+                    LOG.info("VRID floating IP: %s deleted", vrid.vrid_floating_ip)
+                    return vrid, True
+                except Exception as e:
+                    LOG.exception("Failed to delete vrid floating ip : %s", str(e))
+                    raise e
         return None, False
 
 
