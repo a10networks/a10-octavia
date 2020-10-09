@@ -306,9 +306,9 @@ class VThunderRepository(BaseRepository):
 class LoadBalancerRepository(repo.LoadBalancerRepository):
 
     def get_lb_count_by_subnet(self, session, project_id, subnet_id):
-        return session.query(self.model_class).filter(
+        return session.query(self.model_class).join(base_models.Vip).filter(
             and_(self.model_class.project_id == project_id,
-                 self.model_class.subnet_id == subnet_id,
+                 base_models.Vip.subnet_id == subnet_id,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
 

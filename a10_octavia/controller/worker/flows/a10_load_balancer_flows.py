@@ -377,7 +377,7 @@ class LoadBalancerFlows(object):
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=a10constants.MEMBER_COUNT))
         delete_lb_vrid_subflow.add(a10_database_tasks.GetVRIDForLoadbalancerResource(
-            rebind={a10constants.LB_RESOURCE: constants.MEMBER},
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=a10constants.VRID_LIST))
         delete_lb_vrid_subflow.add(a10_network_tasks.DeleteVRIDPort(
             requires=[a10constants.VTHUNDER, a10constants.VRID_LIST, constants.SUBNET,

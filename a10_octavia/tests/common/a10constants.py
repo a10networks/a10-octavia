@@ -53,3 +53,5 @@ SERVER_CONF_SECTION = 'server'
 
 MOCK_SERVICE_GROUP_PROTOCOL = "HTTP"
 MOCK_POOL_ID_2 = "mock-pool-2"
+MOCK_SUBNET_ID_2 = "mock-subnet-2"
+MOCK_VRID_ID = 'mock-vrid-1'

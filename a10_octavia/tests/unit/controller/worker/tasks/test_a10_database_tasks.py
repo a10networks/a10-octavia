@@ -37,10 +37,14 @@ from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
 VTHUNDER = data_models.VThunder()
-HW_THUNDER = data_models.HardwareThunder(project_id=a10constants.MOCK_PROJECT_ID,
-                                         device_name="rack_thunder_1", undercloud=True,
-                                         username="abc", password="abc", ip_address="10.10.10.10",
-                                         partition_name="shared")
+HW_THUNDER = data_models.HardwareThunder(
+    project_id=a10constants.MOCK_PROJECT_ID,
+    device_name="rack_thunder_1",
+    undercloud=True,
+    username="abc",
+    password="abc",
+    ip_address="10.10.10.10",
+    partition_name="shared")
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
 FIXED_IP = n_data_models.FixedIP(ip_address='10.10.10.10')
 PORT = n_data_models.Port(id=uuidutils.generate_uuid(), fixed_ips=[FIXED_IP])
@@ -49,8 +53,14 @@ VRID = data_models.VRID(id=uuidutils.generate_uuid(), vrid=0,
                         vrid_port_id=uuidutils.generate_uuid(),
                         vrid_floating_ip='10.0.12.32')
 MEMBER_1 = o_data_models.Member(id=uuidutils.generate_uuid(),
-                                project_id=a10constants.MOCK_PROJECT_ID)
+                                project_id=a10constants.MOCK_PROJECT_ID,
+                                subnet_id=a10constants.MOCK_SUBNET_ID)
+MEMBER_2 = o_data_models.Member(id=uuidutils.generate_uuid(),
+                                project_id=a10constants.MOCK_PROJECT_ID,
+                                subnet_id=a10constants.MOCK_SUBNET_ID_2)
+
 POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID)
+SUBNET = n_data_models.Subnet(id=uuidutils.generate_uuid())
 
 
 class TestA10DatabaseTasks(base.BaseTaskTestCase):
@@ -62,8 +72,9 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
         self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
                                 group=a10constants.A10_GLOBAL_CONF_SECTION)
-        self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
-                                group=a10constants.HARDWARE_THUNDER_CONF_SECTION)
+        self.conf.register_opts(
+            config_options.A10_HARDWARE_THUNDER_OPTS,
+            group=a10constants.HARDWARE_THUNDER_CONF_SECTION)
         self.db_session = mock.patch(
             'a10_octavia.controller.worker.tasks.a10_database_tasks.db_apis.get_session')
         self.db_session.start()
@@ -158,7 +169,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PART)
 
     def test_get_vrid_for_project_member(self):
-        mock_vrid_entry = task.GetVRIDForProjectMember()
+        mock_vrid_entry = task.GetVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.get_vrid_from_project_id.return_value = VRID
         vrid = mock_vrid_entry.execute(MEMBER_1)
@@ -170,44 +181,48 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         hardware_device_conf = self._generate_hardware_device_conf(thunder)
         self.conf.config(group=a10constants.HARDWARE_THUNDER_CONF_SECTION,
                          devices=[hardware_device_conf])
-        self.conf.conf.hardware_thunder.devices = {a10constants.MOCK_PROJECT_ID: thunder}
+        self.conf.conf.hardware_thunder.devices = {
+            a10constants.MOCK_PROJECT_ID: thunder}
         utils.get_vrid_floating_ip_for_project.CONF = self.conf
 
-        mock_vrid_entry = task.UpdateVRIDForProjectMember()
+        mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
-        mock_vrid_entry.execute(MEMBER_1, VRID, None)
+        mock_vrid_entry.execute(MEMBER_1, VRID, None, mock.ANY)
         mock_vrid_entry.vrid_repo.update.assert_not_called()
         mock_vrid_entry.vrid_repo.create.assert_not_called()
 
     def test_update_vrid_for_project_member_with_port_and_with_vrid(self):
-        mock_vrid_entry = task.UpdateVRIDForProjectMember()
+        mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
-        mock_vrid_entry.execute(MEMBER_1, VRID, PORT)
+        mock_vrid_entry.execute(MEMBER_1, VRID, PORT, SUBNET)
         mock_vrid_entry.vrid_repo.update.assert_called_once_with(
             mock.ANY,
             VRID.id,
             vrid=VRID.vrid,
             vrid_floating_ip=PORT.fixed_ips[0].ip_address,
-            vrid_port_id=PORT.id)
+            vrid_port_id=PORT.id,
+            subnet_id=SUBNET.id)
         mock_vrid_entry.vrid_repo.create.assert_not_called()
 
     def test_update_vrid_for_project_member_with_port_and_no_vrid(self):
-        mock_vrid_entry = task.UpdateVRIDForProjectMember()
+        mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
-        mock_vrid_entry.execute(MEMBER_1, None, PORT)
+        mock_vrid_entry.execute(MEMBER_1, None, PORT, SUBNET)
         mock_vrid_entry.vrid_repo.create.assert_called_once_with(
             mock.ANY,
             project_id=MEMBER_1.project_id,
             vrid=VRID.vrid,
             vrid_floating_ip=PORT.fixed_ips[0].ip_address,
-            vrid_port_id=PORT.id)
+            vrid_port_id=PORT.id,
+            subnet_id=SUBNET.id)
         mock_vrid_entry.vrid_repo.update.assert_not_called()
 
     def test_delete_vrid_entry_with_vrid(self):
         mock_vrid_entry = task.DeleteVRIDEntry()
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.execute(VRID, True)
-        mock_vrid_entry.vrid_repo.delete.assert_called_once_with(mock.ANY, id=VRID.id)
+        mock_vrid_entry.vrid_repo.delete.assert_called_once_with(
+            mock.ANY, id=VRID.id)
 
     def test_delete_vrid_entry_negative(self):
         mock_vrid_entry = task.DeleteVRIDEntry()
@@ -221,12 +236,13 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.execute(None, False)
         mock_vrid_entry.vrid_repo.delete.assert_not_called()
 
-    def test_count_members_in_project(self):
-        mock_vrid_entry = task.CountMembersInProject()
-        mock_vrid_entry.member_repo.get_member_count = mock.Mock()
-        mock_vrid_entry.member_repo.get_member_count.return_value = 1
-        member_count = mock_vrid_entry.execute(MEMBER_1)
-        self.assertEqual(1, member_count)
+    def test_delete_vrid_entry_with_multi_vrids(self):
+        VRID_1 = data_models.VRID(id=uuidutils.generate_uuid())
+        mock_vrid_entry = task.DeleteMultiVRIDEntry()
+        mock_vrid_entry.vrid_repo = mock.Mock()
+        mock_vrid_entry.execute([VRID, VRID_1])
+        mock_vrid_entry.vrid_repo.delete_batch.assert_called_once_with(
+            mock.ANY, ids=[VRID.id, VRID_1.id])
 
     def test_count_members_in_project_ip(self):
         mock_count_member = task.CountMembersWithIP()
@@ -257,3 +273,21 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_count_pool.member_repo.get_pool_count_by_ip.return_value = 2
         pool_count = mock_count_pool.execute(member_1)
         self.assertEqual(2, pool_count)
+
+    def test_get_subnet_for_deletion_with_pool_no_lb(self):
+        mock_subnets = task.GetSubnetForDeletionInPool()
+        mock_subnets.member_repo.get_pool_count_subnet = mock.Mock()
+        mock_subnets.member_repo.get_pool_count_subnet.return_value = 1
+        mock_subnets.loadbalancer_repo.get_lb_count_by_subnet = mock.Mock()
+        mock_subnets.loadbalancer_repo.get_lb_count_by_subnet.return_value = 0
+        subnet_list = mock_subnets.execute([MEMBER_1, MEMBER_2])
+        self.assertEqual(['mock-subnet-1', 'mock-subnet-2'], subnet_list)
+
+    def test_get_subnet_for_deletion_with_multiple_pool_lb(self):
+        mock_subnets = task.GetSubnetForDeletionInPool()
+        mock_subnets.member_repo.get_pool_count_subnet = mock.Mock()
+        mock_subnets.member_repo.get_pool_count_subnet.return_value = 2
+        mock_subnets.loadbalancer_repo.get_lb_count_by_subnet = mock.Mock()
+        mock_subnets.loadbalancer_repo.get_lb_count_by_subnet.return_value = 2
+        subnet_list = mock_subnets.execute([MEMBER_1, MEMBER_2])
+        self.assertEqual([], subnet_list)
