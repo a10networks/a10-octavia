@@ -766,7 +766,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             vrid_list = []
         if conf_floating_ip or vrid_history_flag:
             self.update_device_vrid_fip(vthunder, vrid_floating_ips)
-
         return vrid_list
 
     @axapi_client_decorator
@@ -779,10 +778,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             subnet,
             *args,
             **kwargs):
-        if isinstance(result, failure.Failure):
-            LOG.exception(
-                "Unable to allocate & configure VRRP Floating IP Port")
-            return
 
         LOG.warning(
             "Reverting VRRP floating IP delta task for lb_resource %s",
