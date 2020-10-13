@@ -220,36 +220,33 @@ def convert_interface_to_data_model(interface_obj):
         raise exceptions.MissingInterfaceNumConfigError()
     if not type(interface_num) == int:
         raise exceptions.InvalidInterfaceNumberConfigError(interface_num)
-    if ve_ip:
-        if vlan_map_list:
-            LOG.warning("Applying global configuration without vlan ID")
-            vlan_map_list = {}
-        interface_dm.ve_ips.append(validate_partial_ipv4(ve_ip))
-    else:
-        LOG.warning("Tagging each vlanID with interfaces")
-        if not vlan_map_list:
-            LOG.warning("Empty vlan map provided in configuration file")
 
-    for vlan_map in vlan_map_list:
-        vlan_id = vlan_map.get('vlan_id')
-        if not vlan_id:
-            raise exceptions.MissingVlanIDConfigError(interface_num)
-        if not type(vlan_id) == int:
-            raise exceptions.InvalidVlanIdConfigError(vlan_id)
-        if vlan_id in interface_dm.tags:
-            raise exceptions.DuplicateVlanTagsConfigError(interface_num, vlan_id)
-        if vlan_map.get('use_dhcp') and vlan_map.get('use_dhcp') not in ("True", "False"):
-            raise exceptions.InvalidUseDhcpConfigError(vlan_map.get('use_dhcp'))
-        if vlan_map.get('use_dhcp') == 'True':
-            if vlan_map.get('ve_ip'):
-                raise exceptions.VirtEthCollisionConfigError(interface_num, vlan_id)
-            else:
-                interface_dm.ve_ips.append('dhcp')
-        if not vlan_map.get('use_dhcp') or vlan_map.get('use_dhcp') == 'False':
-            if not vlan_map.get('ve_ip'):
-                raise exceptions.VirtEthMissingConfigError(interface_num, vlan_id)
-            interface_dm.ve_ips.append(validate_partial_ipv4(vlan_map.get('ve_ip')))
-        interface_dm.tags.append(vlan_id)
+    if vlan_map_list:
+        for vlan_map in vlan_map_list:
+            vlan_id = vlan_map.get('vlan_id')
+            if not vlan_id:
+                raise exceptions.MissingVlanIDConfigError(interface_num)
+            if not type(vlan_id) == int:
+                raise exceptions.InvalidVlanIdConfigError(vlan_id)
+            if vlan_id in interface_dm.tags:
+                raise exceptions.DuplicateVlanTagsConfigError(interface_num, vlan_id)
+            if vlan_map.get('use_dhcp') and vlan_map.get('use_dhcp') not in ("True", "False"):
+                raise exceptions.InvalidUseDhcpConfigError(vlan_map.get('use_dhcp'))
+            if vlan_map.get('use_dhcp') == 'True':
+                if vlan_map.get('ve_ip'):
+                    raise exceptions.VirtEthCollisionConfigError(interface_num, vlan_id)
+                else:
+                    interface_dm.ve_ips.append('dhcp')
+            if not vlan_map.get('use_dhcp') or vlan_map.get('use_dhcp') == 'False':
+                if not vlan_map.get('ve_ip'):
+                    raise exceptions.VirtEthMissingConfigError(interface_num, vlan_id)
+                interface_dm.ve_ips.append(validate_partial_ipv4(vlan_map.get('ve_ip')))
+            interface_dm.tags.append(vlan_id)
+    else:
+        if ve_ip:
+            interface_dm.ve_ips.append(validate_partial_ipv4(ve_ip))
+        else:
+            LOG.warning("Empty vlan map or empty ve_ip value provided in configuration file")
     interface_dm.interface_num = interface_num
 
     return interface_dm
