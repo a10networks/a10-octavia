@@ -697,19 +697,22 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         vrid_value = CONF.a10_global.vrid
         conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
             lb_resource.project_id)
-        prev_vrid_value = copy.deepcopy(vrid_list[0].vrid) if vrid_list else None
+        prev_vrid_value = copy.deepcopy(
+            vrid_list[0].vrid) if vrid_list else None
 
         if conf_floating_ip:
             for vr in vrid_list:
                 if vr.subnet_id == subnet.id:
                     break
             else:
-                vrid_list.append(data_models.VRID(id=uuidutils.generate_uuid(),
-                                                  vrid=vrid_value,
-                                                  project_id=lb_resource.project_id,
-                                                  vrid_port_id=None,
-                                                  vrid_floating_ip=None,
-                                                  subnet_id=subnet.id))
+                vrid_list.append(
+                    data_models.VRID(
+                        id=uuidutils.generate_uuid(),
+                        vrid=vrid_value,
+                        project_id=lb_resource.project_id,
+                        vrid_port_id=None,
+                        vrid_floating_ip=None,
+                        subnet_id=subnet.id))
             if conf_floating_ip.lower() == 'dhcp':
                 for vrid in vrid_list:
                     subnet = self.network_driver.get_subnet(vrid.subnet_id)
@@ -719,9 +722,11 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                     if not a10_utils.check_ip_in_subnet_range(
                             vrid.vrid_floating_ip, subnet_ip, subnet_mask):
                         try:
-                            # delete existing port associated to vrid in question.
+                            # delete existing port associated to vrid in
+                            # question.
                             if vrid.vrid_port_id:
-                                self.network_driver.delete_port(vrid.vrid_port_id)
+                                self.network_driver.delete_port(
+                                    vrid.vrid_port_id)
                             fip_obj = self.network_driver.create_port(
                                 subnet.network_id, subnet.id)
                             self.added_fip_ports.append(fip_obj)
@@ -752,9 +757,11 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
                     if conf_floating_ip != vrid.vrid_floating_ip:
                         try:
-                            # delete existing port associated to vrid in question.
+                            # delete existing port associated to vrid in
+                            # question.
                             if vrid.vrid_port_id:
-                                self.network_driver.delete_port(vrid.vrid_port_id)
+                                self.network_driver.delete_port(
+                                    vrid.vrid_port_id)
                             fip_obj = self.network_driver.create_port(
                                 subnet.network_id, subnet.id, fixed_ip=conf_floating_ip)
                             self.added_fip_ports.append(fip_obj)
@@ -774,9 +781,11 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             vrid_list = []
         if (prev_vrid_value is not None) and (prev_vrid_value != vrid_value):
             self.update_device_vrid_fip(vthunder, [], prev_vrid_value)
-            self.update_device_vrid_fip(vthunder, vrid_floating_ips, vrid_value)
+            self.update_device_vrid_fip(
+                vthunder, vrid_floating_ips, vrid_value)
         elif update_vrid_flag:
-            self.update_device_vrid_fip(vthunder, vrid_floating_ips, vrid_value)
+            self.update_device_vrid_fip(
+                vthunder, vrid_floating_ips, vrid_value)
         return vrid_list
 
     @axapi_client_decorator
@@ -798,15 +807,20 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             try:
                 self.network_driver.delete_port(port.id)
             except Exception as e:
-                LOG.error("Failed to delete portL %s", port.id)
+                LOG.error("Failed to delete port %s due to %s", port.id, str(e))
 
         # Normalize old vrid entries
         vrid_floating_ip_list = [vrid.vrid_floating_ip for vrid in vrid_list]
         if vrid_floating_ip_list:
             vrid_value = CONF.a10_global.vrid
-            self.update_device_vrid_fip(vthunder, vrid_floating_ip_list, vrid_value)
+            self.update_device_vrid_fip(
+                vthunder, vrid_floating_ip_list, vrid_value)
 
-    def update_device_vrid_fip(self, vthunder, vrid_floating_ip_list, vrid_value):
+    def update_device_vrid_fip(
+            self,
+            vthunder,
+            vrid_floating_ip_list,
+            vrid_value):
         try:
             if not vthunder.partition_name or vthunder.partition_name == 'shared':
                 self.axapi_client.vrrpa.update(
@@ -838,10 +852,13 @@ class DeleteVRIDPort(BaseNetworkTask):
                     self.network_driver.delete_port(vrid.vrid_port_id)
                     self.axapi_client.vrrpa.update(
                         vrid.vrid, floating_ips=vrid_floating_ip_list)
-                    LOG.info("VRID floating IP: %s deleted", vrid.vrid_floating_ip)
+                    LOG.info(
+                        "VRID floating IP: %s deleted",
+                        vrid.vrid_floating_ip)
                     return vrid, True
                 except Exception as e:
-                    LOG.exception("Failed to delete vrid floating ip : %s", str(e))
+                    LOG.exception(
+                        "Failed to delete vrid floating ip : %s", str(e))
                     raise e
         return None, False
 

@@ -193,8 +193,6 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
             project_id=a10constants.MOCK_PROJECT_ID
         )
 
-    @mock.patch('a10_octavia.common.utils.get_parent_project',
-                return_value=None)
     def test_update_vrid_for_project_member_with_port_and_with_vrid(self):
         mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
@@ -204,22 +202,23 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
             mock.ANY,
             VRID.id,
             vrid=VRID.vrid,
-            vrid_floating_ip=PORT.fixed_ips[0].ip_address,
-            vrid_port_id=PORT.id,
-            subnet_id=SUBNET.id)
+            vrid_floating_ip=VRID.vrid_floating_ip,
+            vrid_port_id=VRID.vrid_port_id,
+            subnet_id=VRID.subnet_id)
         mock_vrid_entry.vrid_repo.create.assert_not_called()
 
     def test_update_vrid_for_project_member_with_port_and_no_vrid(self):
         mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
+        mock_vrid_entry.vrid_repo.exists.return_value = False
         mock_vrid_entry.execute(MEMBER_1, [VRID])
         mock_vrid_entry.vrid_repo.create.assert_called_once_with(
             mock.ANY,
             project_id=MEMBER_1.project_id,
             vrid=VRID.vrid,
-            vrid_floating_ip=PORT.fixed_ips[0].ip_address,
-            vrid_port_id=PORT.id,
-            subnet_id=SUBNET.id)
+            vrid_floating_ip=VRID.vrid_floating_ip,
+            vrid_port_id=VRID.vrid_port_id,
+            subnet_id=VRID.subnet_id)
         mock_vrid_entry.vrid_repo.update.assert_not_called()
 
     def test_delete_vrid_entry_with_vrid(self):
