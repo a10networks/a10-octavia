@@ -12,8 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 #
-import copy
 import acos_client.errors as acos_errors
+import copy
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import uuidutils
@@ -779,8 +779,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                     self.network_driver.delete_port(vrid.vrid_port_id)
                 except Exception as e:
                     LOG.error(
-                        "Failed to delete neutron port for VRID FIP: %s"
-                        , vrid.vrid_floating_ip)
+                        "Failed to delete neutron port for VRID FIP: %s",
+                        vrid.vrid_floating_ip)
                     raise e
                 update_vrid_flag = True
             vrid_list = []
@@ -812,7 +812,10 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             try:
                 self.network_driver.delete_port(port.id)
             except Exception as e:
-                LOG.error("Failed to delete port %s due to %s", port.id, str(e))
+                LOG.error(
+                    "Failed to delete port %s due to %s",
+                    port.id,
+                    str(e))
 
         # Normalize old vrid entries
         vrid_floating_ip_list = [vrid.vrid_floating_ip for vrid in vrid_list]
