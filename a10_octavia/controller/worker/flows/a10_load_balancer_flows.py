@@ -308,17 +308,16 @@ class LoadBalancerFlows(object):
                     a10constants.VTHUNDER_CONFIG: vthunder_conf},
                 requires=(
                     constants.LOADBALANCER,
-                    a10constants.VTHUNDER_CONFIG)))
+                    a10constants.VTHUNDER_CONFIG),
+                provides=a10constants.VTHUNDER_CONFIG))
         lb_create_flow.add(
             a10_database_tasks.CheckExistingThunderToProjectMappedEntries(
-                inject={
-                    a10constants.VTHUNDER_CONFIG: vthunder_conf},
                 requires=(
                     constants.LOADBALANCER,
                     a10constants.VTHUNDER_CONFIG)))
         lb_create_flow.add(
             self.vthunder_flows.get_rack_vthunder_for_lb_subflow(
-                vthunder_conf=vthunder_conf,
+                vthunder_conf=a10constants.VTHUNDER_CONFIG,
                 prefix=constants.ROLE_STANDALONE,
                 role=constants.ROLE_STANDALONE))
         post_amp_prefix = constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
