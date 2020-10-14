@@ -175,7 +175,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         vrid = mock_vrid_entry.execute(MEMBER_1)
         self.assertEqual(VRID, vrid)
 
-    def test_update_vrid_for_project_member_with_no_port(self):
+    def test_update_vrid_for_project_member_delete_vrid(self):
         thunder = copy.deepcopy(HW_THUNDER)
         thunder.vrid_floating_ip = VRID.vrid_floating_ip
         hardware_device_conf = self._generate_hardware_device_conf(thunder)
@@ -187,34 +187,38 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
 
         mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
-        mock_vrid_entry.execute(MEMBER_1, VRID, None, mock.ANY)
-        mock_vrid_entry.vrid_repo.update.assert_not_called()
-        mock_vrid_entry.vrid_repo.create.assert_not_called()
+        mock_vrid_entry.execute(MEMBER_1, [])
+        mock_vrid_entry.vrid_repo.delete.assert_called_once_with(
+            mock.ANY,
+            project_id=a10constants.MOCK_PROJECT_ID
+        )
 
     def test_update_vrid_for_project_member_with_port_and_with_vrid(self):
         mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
-        mock_vrid_entry.execute(MEMBER_1, VRID, PORT, SUBNET)
+        mock_vrid_entry.vrid_repo.exists.return_value = True
+        mock_vrid_entry.execute(MEMBER_1, [VRID])
         mock_vrid_entry.vrid_repo.update.assert_called_once_with(
             mock.ANY,
             VRID.id,
             vrid=VRID.vrid,
-            vrid_floating_ip=PORT.fixed_ips[0].ip_address,
-            vrid_port_id=PORT.id,
-            subnet_id=SUBNET.id)
+            vrid_floating_ip=VRID.vrid_floating_ip,
+            vrid_port_id=VRID.vrid_port_id,
+            subnet_id=VRID.subnet_id)
         mock_vrid_entry.vrid_repo.create.assert_not_called()
 
     def test_update_vrid_for_project_member_with_port_and_no_vrid(self):
         mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
-        mock_vrid_entry.execute(MEMBER_1, None, PORT, SUBNET)
+        mock_vrid_entry.vrid_repo.exists.return_value = False
+        mock_vrid_entry.execute(MEMBER_1, [VRID])
         mock_vrid_entry.vrid_repo.create.assert_called_once_with(
             mock.ANY,
             project_id=MEMBER_1.project_id,
             vrid=VRID.vrid,
-            vrid_floating_ip=PORT.fixed_ips[0].ip_address,
-            vrid_port_id=PORT.id,
-            subnet_id=SUBNET.id)
+            vrid_floating_ip=VRID.vrid_floating_ip,
+            vrid_port_id=VRID.vrid_port_id,
+            subnet_id=VRID.subnet_id)
         mock_vrid_entry.vrid_repo.update.assert_not_called()
 
     def test_delete_vrid_entry_with_vrid(self):
