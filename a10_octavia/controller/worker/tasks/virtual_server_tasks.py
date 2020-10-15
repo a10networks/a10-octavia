@@ -39,7 +39,7 @@ class LoadBalancerParent(object):
         desc = loadbalancer.description
         if not desc:
             desc = None
-        elif str(desc).isspace() or (not str(desc)):
+        elif str(desc).isspace() or not str(desc):
             desc = ""
         else:
             desc = '"{}"'.format(desc)
