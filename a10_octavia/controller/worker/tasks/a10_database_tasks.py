@@ -160,7 +160,7 @@ class CheckExistingThunderToProjectMappedEntries(BaseDatabaseTask):
 
     def execute(self, loadbalancer, vthunder_config):
         hierarchical_mt = vthunder_config.hierarchical_multitenancy
-        if ((hierarchical_mt == 'enable') and (CONF.a10_global.use_parent_partition)):
+        if hierarchical_mt == 'enable' and CONF.a10_global.use_parent_partition:
             return
         vthunder_ids = self.vthunder_repo.get_vthunders_by_ip_address(
             db_apis.get_session(),
