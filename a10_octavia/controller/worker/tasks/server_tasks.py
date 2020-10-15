@@ -145,9 +145,9 @@ class MemberUpdate(task.Task):
             status = True
 
         try:
-            self.axapi_client.slb.server.update(server_name, member.ip_address, status=status,
-                                                server_templates=server_temp,
-                                                axapi_args=server_args)
+            self.axapi_client.slb.server.replace(server_name, member.ip_address, status=status,
+                                                 server_templates=server_temp,
+                                                 axapi_args=server_args)
             LOG.debug("Successfully updated member: %s", member.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update member: %s", member.id)
