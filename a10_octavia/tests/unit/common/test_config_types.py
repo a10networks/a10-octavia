@@ -36,7 +36,7 @@ RACK_DEVICE_1 = {
     "interface_vlan_map": {
         "device_1": {
             "ethernet_interfaces": [{
-                "interface_num": "5",
+                "interface_num": 5,
                 "vlan_map": [
                     {"vlan_id": 11, "use_dhcp": "True"},
                     {"vlan_id": 12, "ve_ip": ".10"}
@@ -59,7 +59,7 @@ VTHUNDER_1 = data_models.HardwareThunder(project_id="project-1", device_name="ra
                                          undercloud=True, username="abc", password="abc",
                                          ip_address="10.0.0.1", partition_name="shared",
                                          device_network_map='"device_1":{"ethernet_interfaces":'
-                                         '[{"interface_num": "5", "vlan_map": ['
+                                         '[{"interface_num": 5, "vlan_map": ['
                                          '{"vlan_id": 11, "use_dhcp": "True"},'
                                          '{"vlan_id": 12, "ve_ip": ".10"}]}]}}')
 VTHUNDER_2 = data_models.HardwareThunder(project_id="project-2", device_name="rack_thunder_2",

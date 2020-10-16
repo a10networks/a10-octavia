@@ -175,6 +175,27 @@ class ListenerUpdate(ListenersParent, task.Task):
             raise e
 
 
+class ListenerUpdateForPool(ListenersParent, task.Task):
+    """Task to update listener while pool delete"""
+
+    @axapi_client_decorator
+    def execute(self, loadbalancer, listener, vthunder):
+        try:
+            if listener:
+                listener.protocol = openstack_mappings.virtual_port_protocol(
+                    self.axapi_client, listener.protocol).lower()
+                self.axapi_client.slb.virtual_server.vport.update(
+                    loadbalancer.id,
+                    listener.id,
+                    listener.protocol,
+                    listener.protocol_port,
+                    listener.default_pool_id)
+                LOG.debug("Successfully updated listener: %s", listener.id)
+        except (acos_errors.ACOSException, ConnectionError) as e:
+            LOG.exception("Failed to update listener: %s", listener.id)
+            raise e
+
+
 class ListenerDelete(ListenersParent, task.Task):
     """Task to delete the listener"""
 

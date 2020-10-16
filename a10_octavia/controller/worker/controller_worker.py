@@ -194,44 +194,26 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             raise db_exceptions.NoResultFound
 
         load_balancer = listener.load_balancer
+        parent_project_list = utils.get_parent_project_list()
+        listener_parent_proj = utils.get_parent_project(listener.project_id)
 
-        if CONF.a10_global.use_parent_partition:
-            parent_project_list = utils.get_parent_project_list()
-            listener_parent_proj = utils.get_parent_project(
-                listener.project_id)
-            if (listener.project_id in parent_project_list or
-                    (listener_parent_proj and listener_parent_proj in parent_project_list)
-                    or listener.project_id in CONF.hardware_thunder.devices):
-                create_listener_tf = self._taskflow_load(self._listener_flows.
-                                                         get_rack_vthunder_create_listener_flow(
-                                                             listener.project_id),
-                                                         store={constants.LOADBALANCER:
-                                                                load_balancer,
-                                                                constants.LISTENER:
-                                                                listener})
-            else:
-                create_listener_tf = self._taskflow_load(self._listener_flows.
-                                                         get_create_listener_flow(),
-                                                         store={constants.LOADBALANCER:
-                                                                load_balancer,
-                                                                constants.LISTENER:
-                                                                listener})
+        if (listener.project_id in parent_project_list or
+                (listener_parent_proj and listener_parent_proj in parent_project_list)
+                or listener.project_id in CONF.hardware_thunder.devices):
+            create_listener_tf = self._taskflow_load(self._listener_flows.
+                                                     get_rack_vthunder_create_listener_flow(
+                                                         listener.project_id),
+                                                     store={constants.LOADBALANCER:
+                                                            load_balancer,
+                                                            constants.LISTENER:
+                                                            listener})
         else:
-            if listener.project_id in CONF.hardware_thunder.devices:
-                create_listener_tf = self._taskflow_load(self._listener_flows.
-                                                         get_rack_vthunder_create_listener_flow(
-                                                             listener.project_id),
-                                                         store={constants.LOADBALANCER:
-                                                                load_balancer,
-                                                                constants.LISTENER:
-                                                                listener})
-            else:
-                create_listener_tf = self._taskflow_load(self._listener_flows.
-                                                         get_create_listener_flow(),
-                                                         store={constants.LOADBALANCER:
-                                                                load_balancer,
-                                                                constants.LISTENER:
-                                                                listener})
+            create_listener_tf = self._taskflow_load(self._listener_flows.
+                                                     get_create_listener_flow(),
+                                                     store={constants.LOADBALANCER:
+                                                            load_balancer,
+                                                            constants.LISTENER:
+                                                            listener})
 
         with tf_logging.DynamicLoggingListener(create_listener_tf,
                                                log=LOG):
@@ -401,50 +383,30 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = pool.load_balancer
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
+        parent_project_list = utils.get_parent_project_list()
+        member_parent_proj = utils.get_parent_project(
+            member.project_id)
 
-        if CONF.a10_global.use_parent_partition:
-            parent_project_list = utils.get_parent_project_list()
-            member_parent_proj = utils.get_parent_project(
-                member.project_id)
-            if (member.project_id in parent_project_list or
-                    (member_parent_proj and member_parent_proj in parent_project_list)
-                    or member.project_id in CONF.hardware_thunder.devices):
-                create_member_tf = self._taskflow_load(
-                    self._member_flows.get_rack_vthunder_create_member_flow(),
-                    store={
-                        constants.MEMBER: member,
-                        constants.LISTENERS: listeners,
-                        constants.LOADBALANCER: load_balancer,
-                        constants.POOL: pool})
-            else:
-                create_member_tf = self._taskflow_load(self._member_flows.
-                                                       get_create_member_flow(
-                                                           topology=topology),
-                                                       store={constants.MEMBER: member,
-                                                              constants.LISTENERS:
-                                                              listeners,
-                                                              constants.LOADBALANCER:
-                                                              load_balancer,
-                                                              constants.POOL: pool})
+        if (member.project_id in parent_project_list or
+                (member_parent_proj and member_parent_proj in parent_project_list)
+                or member.project_id in CONF.hardware_thunder.devices):
+            create_member_tf = self._taskflow_load(
+                self._member_flows.get_rack_vthunder_create_member_flow(),
+                store={
+                    constants.MEMBER: member,
+                    constants.LISTENERS: listeners,
+                    constants.LOADBALANCER: load_balancer,
+                    constants.POOL: pool})
         else:
-            if member.project_id in CONF.hardware_thunder.devices:
-                create_member_tf = self._taskflow_load(
-                    self._member_flows.get_rack_vthunder_create_member_flow(),
-                    store={
-                        constants.MEMBER: member,
-                        constants.LISTENERS: listeners,
-                        constants.LOADBALANCER: load_balancer,
-                        constants.POOL: pool})
-            else:
-                create_member_tf = self._taskflow_load(self._member_flows.
-                                                       get_create_member_flow(
-                                                           topology=topology),
-                                                       store={constants.MEMBER: member,
-                                                              constants.LISTENERS:
-                                                              listeners,
-                                                              constants.LOADBALANCER:
-                                                              load_balancer,
-                                                              constants.POOL: pool})
+            create_member_tf = self._taskflow_load(self._member_flows.
+                                                   get_create_member_flow(
+                                                       topology=topology),
+                                                   store={constants.MEMBER: member,
+                                                          constants.LISTENERS:
+                                                          listeners,
+                                                          constants.LOADBALANCER:
+                                                          load_balancer,
+                                                          constants.POOL: pool})
 
         with tf_logging.DynamicLoggingListener(create_member_tf,
                                                log=LOG):

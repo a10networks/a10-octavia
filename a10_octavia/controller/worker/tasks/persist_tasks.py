@@ -32,7 +32,6 @@ class HandleSessionPersistenceDelta(task.Task):
     def execute(self, vthunder, pool):
         sess_pers = pool.session_persistence
         if sess_pers and sess_pers.type in SP_OBJ_DICT:
-
             # Remove existing persistence template if any
             for sp_type in PERS_TYPE:
                 try:
@@ -63,9 +62,9 @@ class HandleSessionPersistenceDelta(task.Task):
     @axapi_client_decorator
     def revert(self, vthunder, pool, *args, **kwargs):
         LOG.warning("Reverting creation of session persistence for pool: %s", pool.id)
-        sp_template = getattr(self.axapi_client.slb.template,
-                              SP_OBJ_DICT[pool.session_persistence.type])
         try:
+            sp_template = getattr(self.axapi_client.slb.template,
+                                  SP_OBJ_DICT[pool.session_persistence.type])
             sp_template.delete(pool.id)
             LOG.debug("Successfully deleted session persistence template for pool: %s", pool.id)
         except acos_errors.NotFound:
