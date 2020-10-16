@@ -69,3 +69,4 @@ class VRID(base_models.BASE):
     vrid = sa.Column(sa.Integer, default=0)
     vrid_port_id = sa.Column(sa.String(36), nullable=False)
     vrid_floating_ip = sa.Column(sa.String(40))
+    subnet_id = sa.Column(sa.String(36), nullable=False)

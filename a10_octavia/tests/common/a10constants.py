@@ -43,6 +43,7 @@ A10_GLOBAL_OPTS = 'a10_global'
 MOCK_PARENT_PROJECT_ID = 'parent_project_id_with_length_32'
 MOCK_CHILD_PART = 'child_part'
 MOCK_CHILD_PROJECT_ID = '_child_project_id_with_length_32'
+MOCK_CHILD_PARTITION = '_child_project'
 MOCK_PROJECT_ID = 'mock-project-id'
 
 A10_GLOBAL_CONF_SECTION = 'a10_global'
@@ -53,3 +54,5 @@ SERVER_CONF_SECTION = 'server'
 
 MOCK_SERVICE_GROUP_PROTOCOL = "HTTP"
 MOCK_POOL_ID_2 = "mock-pool-2"
+MOCK_SUBNET_ID_2 = "mock-subnet-2"
+MOCK_VRID_ID = 'mock-vrid-1'

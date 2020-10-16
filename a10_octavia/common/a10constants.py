@@ -44,8 +44,11 @@ HTTP_TYPE = ['HTTP', 'HTTPS']
 PERS_TYPE = ['cookie_persistence', 'src_ip_persistence']
 NO_DEST_NAT_SUPPORTED_PROTOCOL = ['tcp', 'udp']
 PORT = 'port'
+LB_COUNT = 'lb_count'
 MEMBER_COUNT = 'member_count'
 DELETE_VRID = 'delete_vrid'
+
+LB_RESOURCE = 'lb_resource'
 
 SUBNET_ID = "subnet_id"
 VLAN_ID = "vlan_id"
@@ -91,6 +94,8 @@ CHANGE_PARTITION = 'change-partition'
 CREATE_SSL_CERT_FLOW = 'create-ssl-cert-flow'
 DELETE_SSL_CERT_FLOW = 'delete-ssl-cert-flow'
 LISTENER_TYPE_DECIDER_FLOW = 'listener_type_decider_flow'
+DELETE_LOADBALANCER_VRID_SUBFLOW = 'delete-loadbalancer-vrid-subflow'
+HANDLE_VRID_LOADBALANCER_SUBFLOW = 'handle-vrid-loadbalancer-subflow'
 DELETE_MEMBER_VTHUNDER_INTERNAL_SUBFLOW = 'delete-member-vthunder-internal-subflow'
 DELETE_MEMBER_VRID_SUBFLOW = 'delete-member-vrid-subflow'
 DELETE_MEMBER_VRID_INTERNAL_SUBFLOW = 'delete-member-vrid-internal-subflow'
@@ -101,6 +106,8 @@ DELETE_MEMBERS_SUBFLOW_WITH_POOL_DELETE_FLOW = 'delete-members-subflow-with-pool
 HANDLE_VRID_MEMBER_SUBFLOW = 'handle-vrid-member-subflow'
 SPARE_VTHUNDER_CREATE = 'spare-vthunder-create'
 LB_TO_VTHUNDER_SUBFLOW = 'lb-to-vthunder-subflow'
+VRID_LIST = 'vrid_list'
+RESOURCE_COUNT = 'resource_count'
 
 # Member count with specific IP.
 MEMBER_COUNT_IP = 'member_count_ip'
@@ -109,3 +116,6 @@ POOL_COUNT_IP = 'pool_count_ip'
 WRITE_MEM_SHARED_PART = 'write_mem_shared_part'
 WRITE_MEM_FOR_SHARED_PARTITION = 'write_memory_for_shared_partition'
 WRITE_MEM_FOR_LOCAL_PARTITION = 'write_memory_for_local_partition'
+
+MEMBER_LIST = 'member_list'
+SUBNET_LIST = 'subnet_list'
