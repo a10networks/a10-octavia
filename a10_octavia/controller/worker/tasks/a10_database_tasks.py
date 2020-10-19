@@ -114,6 +114,23 @@ class CheckExistingProjectToThunderMappedEntries(BaseDatabaseTask):
     """
 
     def execute(self, loadbalancer, vthunder_config):
+        hierarchical_mt = vthunder_config.hierarchical_multitenancy
+        if hierarchical_mt == 'enable':
+            vthunder_config.partition_name = loadbalancer.project_id[:14]
+            if CONF.a10_global.use_parent_partition:
+                parent_project_id = utils.get_parent_project(
+                    vthunder_config.project_id)
+                if parent_project_id:
+                    vthunder_config.partition_name = parent_project_id[:14]
+                else:
+                    LOG.error("The parent project for project %s does not exist. ",
+                              vthunder_config.project_id)
+                    raise exceptions.ParentProjectNotFound(
+                        vthunder_config.project_id)
+            else:
+                LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
+                            "configuration will not be applied for loadbalancer: %s",
+                            loadbalancer.id)
         vthunder_ids = self.vthunder_repo.get_vthunders_by_project_id(
             db_apis.get_session(),
             project_id=loadbalancer.project_id)
@@ -132,6 +149,7 @@ class CheckExistingProjectToThunderMappedEntries(BaseDatabaseTask):
                 raise exceptions.ThunderInUseByExistingProjectError(config_ip_addr_partition,
                                                                     existing_ip_addr_partition,
                                                                     loadbalancer.project_id)
+        return vthunder_config
 
 
 class CheckExistingThunderToProjectMappedEntries(BaseDatabaseTask):
@@ -141,6 +159,9 @@ class CheckExistingThunderToProjectMappedEntries(BaseDatabaseTask):
     """
 
     def execute(self, loadbalancer, vthunder_config):
+        hierarchical_mt = vthunder_config.hierarchical_multitenancy
+        if hierarchical_mt == 'enable' and CONF.a10_global.use_parent_partition:
+            return
         vthunder_ids = self.vthunder_repo.get_vthunders_by_ip_address(
             db_apis.get_session(),
             ip_address=vthunder_config.ip_address)
@@ -260,22 +281,6 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
 
     def execute(self, loadbalancer, vthunder_config):
         hierarchical_mt = vthunder_config.hierarchical_multitenancy
-        if hierarchical_mt == 'enable':
-            vthunder_config.partition_name = loadbalancer.project_id[:14]
-            if CONF.a10_global.use_parent_partition:
-                parent_project_id = utils.get_parent_project(
-                    vthunder_config.project_id)
-                if parent_project_id:
-                    vthunder_config.partition_name = parent_project_id[:14]
-                else:
-                    LOG.error("The parent project for project %s does not exist. ",
-                              vthunder_config.project_id)
-                    raise exceptions.ParentProjectNotFound(
-                        vthunder_config.project_id)
-            else:
-                LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
-                            "configuration will not be applied for loadbalancer: %s",
-                            loadbalancer.id)
         try:
             vthunder = self.vthunder_repo.create(db_apis.get_session(),
                                                  vthunder_id=uuidutils.generate_uuid(),

@@ -129,7 +129,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
         mock_vthunder_config = copy.deepcopy(HW_THUNDER)
         mock_vthunder_config.hierarchical_multitenancy = "enable"
-        mock_create_vthunder = task.CreateRackVthunderEntry()
+        mock_create_vthunder = task.CheckExistingProjectToThunderMappedEntries()
         mock_create_vthunder.vthunder_repo = mock.MagicMock()
         mock_vthunder = copy.deepcopy(VTHUNDER)
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
@@ -167,6 +167,21 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_create_vthunder.vthunder_repo.create.return_value = mock_vthunder
         vthunder = mock_create_vthunder.execute(mock_lb, mock_vthunder_config)
         self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PART)
+
+    def test_create_rack_vthunder_entry_child_partition_exists(self):
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=False)
+        mock_lb = copy.deepcopy(LB)
+        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
+        mock_vthunder_config = copy.deepcopy(HW_THUNDER)
+        mock_vthunder_config.hierarchical_multitenancy = "enable"
+        mock_create_vthunder = task.CreateRackVthunderEntry()
+        mock_create_vthunder.vthunder_repo = mock.MagicMock()
+        mock_vthunder = copy.deepcopy(VTHUNDER)
+        mock_vthunder.partition_name = a10constants.MOCK_CHILD_PROJECT_ID[:14]
+        mock_create_vthunder.vthunder_repo.create.return_value = mock_vthunder
+        vthunder = mock_create_vthunder.execute(mock_lb, mock_vthunder_config)
+        self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PROJECT_ID[:14])
 
     def test_get_vrid_for_project_member(self):
         mock_vrid_entry = task.GetVRIDForLoadbalancerResource()
