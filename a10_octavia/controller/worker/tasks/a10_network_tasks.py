@@ -29,7 +29,6 @@ from octavia.network import data_models as n_data_models
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
-from a10_octavia.common import exceptions
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 

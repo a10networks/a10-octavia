@@ -192,7 +192,11 @@ def get_patched_ip_address(ip, cidr):
         octets.insert(0, '0')
     host_ip = '.'.join(octets)
 
-    int_host_ip = struct.unpack('>L', socket.inet_aton(host_ip))[0]
+    try:
+        int_host_ip = struct.unpack('>L', socket.inet_aton(host_ip))[0]
+    except socket.error:
+        raise exceptions.VRIDIPNotInSubentRangeError(host_ip, cidr)
+
     int_net_ip = struct.unpack('>L', socket.inet_aton(net_ip))[0]
     int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
 
@@ -207,7 +211,7 @@ def get_patched_ip_address(ip, cidr):
     # Use truncated mask to fill in any missing octets of partial IP
     canidate_ip = (test_bits & int_net_ip) | int_host_ip
 
-    if (canidate_ip & int_netmask) != int_net_ip:
+    if (canidate_ip & int_netmask) != (int_net_ip & int_netmask):
         raise exceptions.VRIDIPNotInSubentRangeError(host_ip, cidr)
 
     return socket.inet_ntoa(struct.pack('>L', canidate_ip))
