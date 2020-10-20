@@ -98,7 +98,7 @@ class UpdateVirtualServerTask(LoadBalancerParent, task.Task):
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
         try:
-            self.set(self.axapi_client.slb.virtual_server.update, loadbalancer)
+            self.set(self.axapi_client.slb.virtual_server.replace, loadbalancer)
             LOG.debug("Successfully updated load balancer: %s", loadbalancer.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update load balancer: %s", loadbalancer.id)

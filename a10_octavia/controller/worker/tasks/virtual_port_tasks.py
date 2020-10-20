@@ -118,7 +118,8 @@ class ListenersParent(object):
                                                                   device_templates)
             vport_templates[template_key] = template_policy
 
-        set_method(loadbalancer.id, listener.id,
+        set_method(loadbalancer.id,
+                   listener.id,
                    listener.protocol,
                    listener.protocol_port,
                    listener.default_pool_id,
@@ -167,7 +168,7 @@ class ListenerUpdate(ListenersParent, task.Task):
     def execute(self, loadbalancer, listener, vthunder):
         try:
             if listener:
-                self.set(self.axapi_client.slb.virtual_server.vport.update,
+                self.set(self.axapi_client.slb.virtual_server.vport.replace,
                          loadbalancer, listener, vthunder)
                 LOG.debug("Successfully updated listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:

@@ -125,7 +125,7 @@ class PoolUpdate(PoolParent, task.Task):
     def execute(self, pool, vthunder, update_dict):
         pool.update(update_dict)
         try:
-            self.set(self.axapi_client.slb.service_group.update, pool, vthunder)
+            self.set(self.axapi_client.slb.service_group.replace, pool, vthunder)
             LOG.debug("Successfully updated pool: %s", pool.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update pool: %s", pool.id)
