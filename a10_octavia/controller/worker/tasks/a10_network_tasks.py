@@ -745,15 +745,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                         lb_resource.project_id)
                     conf_floating_ip = a10_utils.get_patched_ip_address(
                         conf_floating_ip, subnet.cidr)
-                    subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(
-                        subnet.cidr)
                     vrid.vrid = vrid_value
-                    if not a10_utils.check_ip_in_subnet_range(
-                            conf_floating_ip, subnet_ip, subnet_mask):
-                        msg = "Invalid VRID floating IP. IP out of subnet range: "
-                        msg += str(conf_floating_ip)
-                        raise exceptions.VRIDIPNotInSubentRangeError(msg)
-
                     if conf_floating_ip != vrid.vrid_floating_ip:
                         try:
                             # delete existing port associated to vrid in

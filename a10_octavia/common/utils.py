@@ -186,11 +186,9 @@ def get_patched_ip_address(ip, cidr):
         if check_ip_in_subnet_range(ip, net_ip, netmask):
             return ip
         else:
-            msg = "Invalid VRID floating IP. IP out of subnet range: "
-            msg += str(host_ip)
-            raise exceptions.VRIDIPNotInSubentRangeError(msg)
+            raise exceptions.VRIDIPNotInSubentRangeError(ip, cidr)
 
-    for idx in range(4 - len(octets)):
+    for i in range(4 - len(octets)):
         octets.insert(0, '0')
     host_ip = '.'.join(octets)
 
@@ -210,9 +208,7 @@ def get_patched_ip_address(ip, cidr):
     canidate_ip = (test_bits & int_net_ip) | int_host_ip
 
     if (canidate_ip & int_netmask) != int_net_ip:
-        msg = "Invalid VRID floating IP. IP out of subnet range: "
-        msg += str(host_ip)
-        raise exceptions.VRIDIPNotInSubentRangeError(msg)
+        raise exceptions.VRIDIPNotInSubentRangeError(host_ip, cidr)
 
     return socket.inet_ntoa(struct.pack('>L', canidate_ip))
 
