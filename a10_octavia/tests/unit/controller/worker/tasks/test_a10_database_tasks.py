@@ -186,7 +186,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
     def test_get_vrid_for_project_member(self):
         mock_vrid_entry = task.GetVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
-        mock_vrid_entry.vrid_repo.get_vrid_from_project_id.return_value = VRID
+        mock_vrid_entry.vrid_repo.get_vrid_from_project_ids.return_value = VRID
         vrid = mock_vrid_entry.execute(MEMBER_1)
         self.assertEqual(VRID, vrid)
 

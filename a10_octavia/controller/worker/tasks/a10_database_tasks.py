@@ -385,8 +385,17 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
     def execute(self, lb_resource):
         project_id = lb_resource.project_id
-        vrid_list = self.vrid_repo.get_vrid_from_project_id(
-            db_apis.get_session(), project_id=project_id)
+        vthunder_conf = CONF.hardware_thunder.devices[project_id]
+        if vthunder_conf.hierarchical_multitenancy and CONF.a10_global.use_parent_partition:
+            partition_name = self.vthunder_repo.get_partition_for_project(
+                db_apis.get_session(), project_id=project_id)
+            project_ids = self.vthunder_repo.get_project_list_using_partition(
+                db_apis.get_session(), partition_name=partition_name)
+
+        else:
+            project_ids = [project_id]
+        vrid_list = self.vrid_repo.get_vrid_from_project_ids(
+            db_apis.get_session(), project_ids=project_ids)
         return vrid_list
 
 
