@@ -94,7 +94,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
 
     def test_get_vthunder_by_loadbalancer(self):
         self.conf.config(
-            group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=True)
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo = mock.MagicMock()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = None
@@ -103,10 +104,11 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
 
     @mock.patch('a10_octavia.common.utils.get_parent_project',
                 return_value=a10constants.MOCK_PARENT_PROJECT_ID)
-    def test_create_rack_vthunder_entry_parent_partition_exists(self,
-                                                                mock_parent_project_id):
+    def test_create_rack_vthunder_entry_parent_partition_exists(
+            self, mock_parent_project_id):
         self.conf.config(
-            group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=True)
         mock_lb = copy.deepcopy(LB)
         mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
         mock_vthunder_config = copy.deepcopy(HW_THUNDER)
@@ -117,14 +119,16 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder.partition_name = a10constants.MOCK_PARENT_PROJECT_ID[:14]
         mock_create_vthunder.vthunder_repo.create.return_value = mock_vthunder
         vthunder = mock_create_vthunder.execute(mock_lb, mock_vthunder_config)
-        self.assertEqual(vthunder.partition_name, a10constants.MOCK_PARENT_PROJECT_ID[:14])
+        self.assertEqual(vthunder.partition_name,
+                         a10constants.MOCK_PARENT_PROJECT_ID[:14])
 
     @mock.patch('a10_octavia.common.utils.get_parent_project',
                 return_value=None)
-    def test_create_rack_vthunder_entry_parent_partition_not_exists(self,
-                                                                    mock_parent_project_id):
+    def test_create_rack_vthunder_entry_parent_partition_not_exists(
+            self, mock_parent_project_id):
         self.conf.config(
-            group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=True)
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=True)
         mock_lb = copy.deepcopy(LB)
         mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
         mock_vthunder_config = copy.deepcopy(HW_THUNDER)
@@ -153,9 +157,11 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         vthunder = mock_create_vthunder.execute(mock_lb, mock_vthunder_config)
         self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PART)
 
-    def test_create_rack_vthunder_entry_parent_partition_hmt_no_use_parent_partition(self):
+    def test_create_rack_vthunder_entry_parent_partition_hmt_no_use_parent_partition(
+            self):
         self.conf.config(
-            group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=False)
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=False)
         mock_lb = copy.deepcopy(LB)
         mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
         mock_vthunder_config = copy.deepcopy(HW_THUNDER)
@@ -170,7 +176,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
 
     def test_create_rack_vthunder_entry_child_partition_exists(self):
         self.conf.config(
-            group=a10constants.A10_GLOBAL_CONF_SECTION, use_parent_partition=False)
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=False)
         mock_lb = copy.deepcopy(LB)
         mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
         mock_vthunder_config = copy.deepcopy(HW_THUNDER)
@@ -181,13 +188,54 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vthunder.partition_name = a10constants.MOCK_CHILD_PROJECT_ID[:14]
         mock_create_vthunder.vthunder_repo.create.return_value = mock_vthunder
         vthunder = mock_create_vthunder.execute(mock_lb, mock_vthunder_config)
-        self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PROJECT_ID[:14])
+        self.assertEqual(vthunder.partition_name,
+                         a10constants.MOCK_CHILD_PROJECT_ID[:14])
 
-    def test_get_vrid_for_project_member(self):
+    def test_get_vrid_for_project_member_hmt_use_partition(self):
+        thunder = copy.deepcopy(HW_THUNDER)
+        thunder.hierarchical_multitenancy = 'enable'
+        thunder.vrid_floating_ip = VRID.vrid_floating_ip
+        hardware_device_conf = self._generate_hardware_device_conf(thunder)
+        self.conf.config(group=a10constants.HARDWARE_THUNDER_CONF_SECTION,
+                         devices=[hardware_device_conf])
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=True)
+        self.conf.conf.hardware_thunder.devices = {
+            a10constants.MOCK_PROJECT_ID: thunder}
+
         mock_vrid_entry = task.GetVRIDForLoadbalancerResource()
+        mock_vrid_entry.CONF = self.conf
+
         mock_vrid_entry.vrid_repo = mock.Mock()
-        mock_vrid_entry.vrid_repo.get_vrid_from_project_id.return_value = VRID
+        mock_vrid_entry.vthunder_repo = mock.Mock()
+        mock_vrid_entry.vrid_repo.get_vrid_from_project_ids.return_value = VRID
         vrid = mock_vrid_entry.execute(MEMBER_1)
+        mock_vrid_entry.vthunder_repo.get_partition_for_project.assert_called_once_with(
+            mock.ANY, project_id=a10constants.MOCK_PROJECT_ID)
+        self.assertEqual(VRID, vrid)
+
+    def test_get_vrid_for_project(self):
+        thunder = copy.deepcopy(HW_THUNDER)
+        thunder.hierarchical_multitenancy = 'disable'
+        thunder.vrid_floating_ip = VRID.vrid_floating_ip
+        hardware_device_conf = self._generate_hardware_device_conf(thunder)
+        self.conf.config(group=a10constants.HARDWARE_THUNDER_CONF_SECTION,
+                         devices=[hardware_device_conf])
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=False)
+        self.conf.conf.hardware_thunder.devices = {
+            a10constants.MOCK_PROJECT_ID: thunder}
+
+        mock_vrid_entry = task.GetVRIDForLoadbalancerResource()
+        mock_vrid_entry.CONF = self.conf
+
+        mock_vrid_entry.vrid_repo = mock.Mock()
+        mock_vrid_entry.vthunder_repo = mock.Mock()
+        mock_vrid_entry.vrid_repo.get_vrid_from_project_ids.return_value = VRID
+        vrid = mock_vrid_entry.execute(MEMBER_1)
+        mock_vrid_entry.vthunder_repo.get_partition_for_project.assert_not_called()
         self.assertEqual(VRID, vrid)
 
     def test_update_vrid_for_project_member_delete_vrid(self):

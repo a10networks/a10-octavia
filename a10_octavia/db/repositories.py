@@ -302,12 +302,20 @@ class VThunderRepository(BaseRepository):
         id_list = [model.id for model in model_list]
         return id_list
 
+    def get_partition_for_project(self, session, project_id):
+        return session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).first().partition_name
+
+    def get_project_list_using_partition(self, session, partition_name):
+        return [col_project[0] for col_project in session.query(self.model_class).filter(
+            self.model_class.partition_name == partition_name).values('project_id')]
+
 
 class LoadBalancerRepository(repo.LoadBalancerRepository):
 
-    def get_lb_count_by_subnet(self, session, project_id, subnet_id):
+    def get_lb_count_by_subnet(self, session, project_ids, subnet_id):
         return session.query(self.model_class).join(base_models.Vip).filter(
-            and_(self.model_class.project_id == project_id,
+            and_(self.model_class.project_id.in_(project_ids),
                  base_models.Vip.subnet_id == subnet_id,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
@@ -318,12 +326,14 @@ class VRIDRepository(BaseRepository):
 
     # A project can have multiple VRIDs, so need to convert each vrid object through
     # "to_data_model"
-    def get_vrid_from_project_id(self, session, project_id):
+    def get_vrid_from_project_ids(self, session, project_ids):
         vrid_obj_list = []
+
         model = session.query(self.model_class).filter(
-            self.model_class.project_id == project_id)
+            self.model_class.project_id.in_(project_ids))
         for data in model:
             vrid_obj_list.append(data.to_data_model())
+
         return vrid_obj_list
 
 
@@ -336,9 +346,9 @@ class MemberRepository(repo.MemberRepository):
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
         return count
 
-    def get_member_count_by_subnet(self, session, project_id, subnet_id):
+    def get_member_count_by_subnet(self, session, project_ids, subnet_id):
         return session.query(self.model_class).filter(
-            and_(self.model_class.project_id == project_id,
+            and_(self.model_class.project_id.in_(project_ids),
                  self.model_class.subnet_id == subnet_id,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
