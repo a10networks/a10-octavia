@@ -178,15 +178,43 @@ def get_network_driver():
 
 
 def get_patched_ip_address(ip, cidr):
-    host_ip = ip.lstrip('.')
-    octets = host_ip.split('.')
+    net_ip, netmask = get_net_info_from_cidr(cidr)
+    octets = ip.lstrip('.').split('.')
+
     if len(octets) == 4:
         validate_ipv4(ip)
-        return ip
-    for idx in range(4 - len(octets)):
+        if check_ip_in_subnet_range(ip, net_ip, netmask):
+            return ip
+        else:
+            raise exceptions.VRIDIPNotInSubentRangeError(ip, cidr)
+
+    for i in range(4 - len(octets)):
         octets.insert(0, '0')
     host_ip = '.'.join(octets)
-    return merge_host_and_network_ip(cidr, host_ip)
+
+    try:
+        int_host_ip = struct.unpack('>L', socket.inet_aton(host_ip))[0]
+    except socket.error:
+        raise exceptions.VRIDIPNotInSubentRangeError(host_ip, cidr)
+
+    int_net_ip = struct.unpack('>L', socket.inet_aton(net_ip))[0]
+    int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
+
+    # Create a set of test bits to find partial netmask octet
+    # ie 1.1.1.1 & 255.255.254.0 -> 1.1.0.0
+    test_bits = (1 << 24 | 1 << 16 | 1 << 8 | 1)
+    test_bits = (int_netmask & test_bits)
+
+    # Then shift 8 bits (1 -> 256) and subtract by 1 in each octet to get 255
+    test_bits = (test_bits << 8) - test_bits
+
+    # Use truncated mask to fill in any missing octets of partial IP
+    canidate_ip = (test_bits & int_net_ip) | int_host_ip
+
+    if (canidate_ip & int_netmask) != (int_net_ip & int_netmask):
+        raise exceptions.VRIDIPNotInSubentRangeError(host_ip, cidr)
+
+    return socket.inet_ntoa(struct.pack('>L', canidate_ip))
 
 
 def get_vrid_floating_ip_for_project(project_id):

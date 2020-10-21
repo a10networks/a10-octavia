@@ -262,14 +262,19 @@ class TestUtils(base.BaseTaskTestCase):
         self.assertEqual(utils.get_patched_ip_address('45', '10.10.0.0/24'), '10.10.0.45')
         self.assertEqual(utils.get_patched_ip_address('0.45', '10.10.0.0/24'), '10.10.0.45')
         self.assertEqual(utils.get_patched_ip_address('0.0.45', '10.10.0.0/24'), '10.10.0.45')
-        self.assertEqual(utils.get_patched_ip_address('1.0.0.23', '10.10.0.0/24'), '1.0.0.23')
         self.assertEqual(utils.get_patched_ip_address('.45', '10.10.0.0/24'), '10.10.0.45')
+        self.assertEqual(utils.get_patched_ip_address('11.45', '11.11.11.0/24'), '11.11.11.45')
+        self.assertEqual(utils.get_patched_ip_address('3.45', '11.11.2.0/23'), '11.11.3.45')
+        self.assertEqual(utils.get_patched_ip_address('3.45', '11.11.2.0/22'), '11.11.3.45')
 
     def test_get_patched_ip_address_invalid(self):
-        self.assertRaises(Exception, utils.get_patched_ip_address, 'abc.cef', '10.10.0.0/24')
-        self.assertRaises(Exception, utils.get_patched_ip_address, '11.10.0.11.10', '10.10.0.0/24')
-        self.assertRaises(Exception, utils.get_patched_ip_address, '10.333.11.10', '10.10.0.0/24')
-        self.assertRaises(Exception, utils.get_patched_ip_address, '1e.3d.4f.1o', '10.10.0.0/24')
+        vrid_exc = exceptions.VRIDIPNotInSubentRangeError
+        cfg_err = cfg.ConfigFileValueError
+        self.assertRaises(vrid_exc, utils.get_patched_ip_address, 'abc.cef', '10.10.0.0/24')
+        self.assertRaises(vrid_exc, utils.get_patched_ip_address, '.0.11.10', '10.10.0.0/24')
+        self.assertRaises(vrid_exc, utils.get_patched_ip_address, '1.0.0.23', '10.10.0.0/24')
+        self.assertRaises(cfg_err, utils.get_patched_ip_address, '10.333.11.10', '10.10.0.0/24')
+        self.assertRaises(cfg_err, utils.get_patched_ip_address, '1e.3d.4f.1o', '10.10.0.0/24')
 
     def test_get_vrid_floating_ip_for_project_with_only_local_config(self):
         vthunder = copy.deepcopy(VTHUNDER_1)
