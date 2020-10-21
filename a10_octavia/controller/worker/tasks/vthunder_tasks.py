@@ -34,6 +34,7 @@ from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
 from a10_octavia.common import openstack_mappings
 from a10_octavia.common import utils as a10_utils
+from a10_octavia.controller.worker.tasks.decorators import activate_partition
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import device_context_switch_decorator
 
@@ -466,6 +467,8 @@ class TagInterfaceBaseTask(VThunderBaseTask):
             device_obj = vthunder.device_network_map[1]
             client = acos_client.Client(device_obj.mgmt_ip_address, api_ver,
                                         vthunder.username, vthunder.password, timeout=30)
+            if vthunder.partition_name != "shared":
+                activate_partition(client, vthunder.partition_name)
             close_axapi_client = True
         else:
             client = self.axapi_client
