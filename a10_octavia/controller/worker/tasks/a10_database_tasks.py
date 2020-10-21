@@ -104,7 +104,8 @@ class CreateVThunderEntry(BaseDatabaseTask):
                 db_apis.get_session(), loadbalancer_id=loadbalancer.id)
         except NoResultFound:
             LOG.error(
-                "Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
+                "Failed to delete vThunder entry for load balancer: %s",
+                loadbalancer.id)
 
 
 class CheckExistingProjectToThunderMappedEntries(BaseDatabaseTask):
@@ -123,14 +124,16 @@ class CheckExistingProjectToThunderMappedEntries(BaseDatabaseTask):
                 if parent_project_id:
                     vthunder_config.partition_name = parent_project_id[:14]
                 else:
-                    LOG.error("The parent project for project %s does not exist. ",
-                              vthunder_config.project_id)
+                    LOG.error(
+                        "The parent project for project %s does not exist. ",
+                        vthunder_config.project_id)
                     raise exceptions.ParentProjectNotFound(
                         vthunder_config.project_id)
             else:
-                LOG.warning("Hierarchical multitenancy is disabled, use_parent_partition "
-                            "configuration will not be applied for loadbalancer: %s",
-                            loadbalancer.id)
+                LOG.warning(
+                    "Hierarchical multitenancy is disabled, use_parent_partition "
+                    "configuration will not be applied for loadbalancer: %s",
+                    loadbalancer.id)
         vthunder_ids = self.vthunder_repo.get_vthunders_by_project_id(
             db_apis.get_session(),
             project_id=loadbalancer.project_id)
@@ -141,14 +144,13 @@ class CheckExistingProjectToThunderMappedEntries(BaseDatabaseTask):
                 id=vthunder_id)
             if vthunder is None:
                 return
-            existing_ip_addr_partition = '{}:{}'.format(vthunder.ip_address,
-                                                        vthunder.partition_name)
-            config_ip_addr_partition = '{}:{}'.format(vthunder_config.ip_address,
-                                                      vthunder_config.partition_name)
+            existing_ip_addr_partition = '{}:{}'.format(
+                vthunder.ip_address, vthunder.partition_name)
+            config_ip_addr_partition = '{}:{}'.format(
+                vthunder_config.ip_address, vthunder_config.partition_name)
             if existing_ip_addr_partition != config_ip_addr_partition:
-                raise exceptions.ThunderInUseByExistingProjectError(config_ip_addr_partition,
-                                                                    existing_ip_addr_partition,
-                                                                    loadbalancer.project_id)
+                raise exceptions.ThunderInUseByExistingProjectError(
+                    config_ip_addr_partition, existing_ip_addr_partition, loadbalancer.project_id)
         return vthunder_config
 
 
@@ -173,15 +175,14 @@ class CheckExistingThunderToProjectMappedEntries(BaseDatabaseTask):
             if vthunder is None:
                 return
 
-            existing_ip_addr_partition = '{}:{}'.format(vthunder.ip_address,
-                                                        vthunder.partition_name)
-            config_ip_addr_partition = '{}:{}'.format(vthunder_config.ip_address,
-                                                      vthunder_config.partition_name)
+            existing_ip_addr_partition = '{}:{}'.format(
+                vthunder.ip_address, vthunder.partition_name)
+            config_ip_addr_partition = '{}:{}'.format(
+                vthunder_config.ip_address, vthunder_config.partition_name)
             if existing_ip_addr_partition == config_ip_addr_partition:
                 if vthunder.project_id != loadbalancer.project_id:
-                    raise exceptions.ProjectInUseByExistingThunderError(config_ip_addr_partition,
-                                                                        vthunder.project_id,
-                                                                        loadbalancer.project_id)
+                    raise exceptions.ProjectInUseByExistingThunderError(
+                        config_ip_addr_partition, vthunder.project_id, loadbalancer.project_id)
 
 
 class DeleteVThunderEntry(BaseDatabaseTask):
@@ -236,8 +237,11 @@ class GetComputeForProject(BaseDatabaseTask):
         if vthunder is None:
             vthunder = self.vthunder_repo.get_spare_vthunder(
                 db_apis.get_session())
-            self.vthunder_repo.update(db_apis.get_session(), vthunder.id,
-                                      status="USED_SPARE", updated_at=datetime.utcnow())
+            self.vthunder_repo.update(
+                db_apis.get_session(),
+                vthunder.id,
+                status="USED_SPARE",
+                updated_at=datetime.utcnow())
         amphora_id = vthunder.amphora_id
         self.amphora_repo.get(db_apis.get_session(), id=amphora_id)
         compute_id = vthunder.compute_id
@@ -282,29 +286,31 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
     def execute(self, loadbalancer, vthunder_config):
         hierarchical_mt = vthunder_config.hierarchical_multitenancy
         try:
-            vthunder = self.vthunder_repo.create(db_apis.get_session(),
-                                                 vthunder_id=uuidutils.generate_uuid(),
-                                                 device_name=vthunder_config.device_name,
-                                                 username=vthunder_config.username,
-                                                 password=vthunder_config.password,
-                                                 ip_address=vthunder_config.ip_address,
-                                                 undercloud=vthunder_config.undercloud,
-                                                 loadbalancer_id=loadbalancer.id,
-                                                 project_id=vthunder_config.project_id,
-                                                 axapi_version=vthunder_config.axapi_version,
-                                                 topology="STANDALONE",
-                                                 role="MASTER",
-                                                 status="ACTIVE",
-                                                 last_udp_update=datetime.utcnow(),
-                                                 created_at=datetime.utcnow(),
-                                                 updated_at=datetime.utcnow(),
-                                                 partition_name=vthunder_config.partition_name,
-                                                 hierarchical_multitenancy=hierarchical_mt)
+            vthunder = self.vthunder_repo.create(
+                db_apis.get_session(),
+                vthunder_id=uuidutils.generate_uuid(),
+                device_name=vthunder_config.device_name,
+                username=vthunder_config.username,
+                password=vthunder_config.password,
+                ip_address=vthunder_config.ip_address,
+                undercloud=vthunder_config.undercloud,
+                loadbalancer_id=loadbalancer.id,
+                project_id=vthunder_config.project_id,
+                axapi_version=vthunder_config.axapi_version,
+                topology="STANDALONE",
+                role="MASTER",
+                status="ACTIVE",
+                last_udp_update=datetime.utcnow(),
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+                partition_name=vthunder_config.partition_name,
+                hierarchical_multitenancy=hierarchical_mt)
             LOG.info("Successfully created vthunder entry in database.")
             return vthunder
         except Exception as e:
-            LOG.error('Failed to create vThunder entry in db for load balancer: %s.',
-                      loadbalancer.id)
+            LOG.error(
+                'Failed to create vThunder entry in db for load balancer: %s.',
+                loadbalancer.id)
             raise e
 
     def revert(self, result, loadbalancer, vthunder_config, *args, **kwargs):
@@ -313,12 +319,16 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
             # revert
             return
 
-        LOG.warning('Reverting create Rack VThunder in DB for load balancer: %s', loadbalancer.id)
+        LOG.warning(
+            'Reverting create Rack VThunder in DB for load balancer: %s',
+            loadbalancer.id)
         try:
             self.vthunder_repo.delete(
                 db_apis.get_session(), loadbalancer_id=loadbalancer.id)
         except Exception:
-            LOG.error("Failed to delete vThunder entry for load balancer: %s", loadbalancer.id)
+            LOG.error(
+                "Failed to delete vThunder entry for load balancer: %s",
+                loadbalancer.id)
 
 
 class CreateVThunderHealthEntry(BaseDatabaseTask):
@@ -345,9 +355,11 @@ class MarkVThunderStatusInDB(BaseDatabaseTask):
     def execute(self, vthunder, status):
         try:
             if vthunder:
-                self.vthunder_repo.update(db_apis.get_session(),
-                                          vthunder.id,
-                                          status=status, updated_at=datetime.utcnow())
+                self.vthunder_repo.update(
+                    db_apis.get_session(),
+                    vthunder.id,
+                    status=status,
+                    updated_at=datetime.utcnow())
         except (sqlalchemy.orm.exc.NoResultFound,
                 sqlalchemy.orm.exc.UnmappedInstanceError):
             LOG.debug('No existing amphora health record to mark busy '
@@ -387,7 +399,8 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
         try:
             project_id = lb_resource.project_id
             vthunder_conf = CONF.hardware_thunder.devices[project_id]
-            if vthunder_conf.hierarchical_multitenancy == 'enable' and CONF.a10_global.use_parent_partition:
+            if (vthunder_conf.hierarchical_multitenancy == 'enable' and
+                    CONF.a10_global.use_parent_partition):
                 partition_name = self.vthunder_repo.get_partition_for_project(
                     db_apis.get_session(), project_id=project_id)
                 project_ids = self.vthunder_repo.get_project_list_using_partition(
@@ -399,8 +412,10 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
                 db_apis.get_session(), project_ids=project_ids)
             return vrid_list
         except Exception as e:
-            LOG.exception("Failed to get VRID list for given project  %s due to %s",
-                          lb_resource.project_id, str(e))
+            LOG.exception(
+                "Failed to get VRID list for given project  %s due to %s",
+                lb_resource.project_id,
+                str(e))
             raise e
 
 
@@ -415,8 +430,10 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                 LOG.debug("Successfully deleted DB vrid from project %s",
                           lb_resource.project_id)
             except Exception as e:
-                LOG.error("Failed to delete VRID data for project %s due to %s",
-                          lb_resource.project_id, str(e))
+                LOG.error(
+                    "Failed to delete VRID data for project %s due to %s",
+                    lb_resource.project_id,
+                    str(e))
                 raise e
             return
         for vrid in vrid_list:
@@ -429,24 +446,31 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                         vrid_port_id=vrid.vrid_port_id,
                         vrid=vrid.vrid,
                         subnet_id=vrid.subnet_id)
-                    LOG.debug("Successfully updated DB vrid %s entry for loadbalancer resource %s",
-                              vrid.id, lb_resource.id)
+                    LOG.debug(
+                        "Successfully updated DB vrid %s entry for loadbalancer resource %s",
+                        vrid.id,
+                        lb_resource.id)
                 except Exception as e:
-                    LOG.error("Failed to update VRID data for VRID FIP %s due to %s",
-                              vrid.vrid_floating_ip, str(e))
+                    LOG.error(
+                        "Failed to update VRID data for VRID FIP %s due to %s",
+                        vrid.vrid_floating_ip,
+                        str(e))
                     raise e
 
             else:
                 try:
-                    self.vrid_repo.create(db_apis.get_session(),
-                                          project_id=vrid.project_id,
-                                          vrid_floating_ip=vrid.vrid_floating_ip,
-                                          vrid_port_id=vrid.vrid_port_id,
-                                          vrid=vrid.vrid,
-                                          subnet_id=vrid.subnet_id)
+                    self.vrid_repo.create(
+                        db_apis.get_session(),
+                        project_id=vrid.project_id,
+                        vrid_floating_ip=vrid.vrid_floating_ip,
+                        vrid_port_id=vrid.vrid_port_id,
+                        vrid=vrid.vrid,
+                        subnet_id=vrid.subnet_id)
                 except Exception as e:
-                    LOG.error("Failed to create VRID data for VRID FIP %s due to %s",
-                              vrid.vrid_floating_ip, str(e))
+                    LOG.error(
+                        "Failed to create VRID data for VRID FIP %s due to %s",
+                        vrid.vrid_floating_ip,
+                        str(e))
                     raise e
 
 
@@ -455,7 +479,8 @@ class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
         try:
             project_id = lb_resource.project_id
             vthunder_conf = CONF.hardware_thunder.devices[project_id]
-            if vthunder_conf.hierarchical_multitenancy == 'enable' and CONF.a10_global.use_parent_partition:
+            if (vthunder_conf.hierarchical_multitenancy == 'enable' and
+                    CONF.a10_global.use_parent_partition):
                 partition_name = self.vthunder_repo.get_partition_for_project(
                     db_apis.get_session(), project_id=project_id)
                 project_ids = self.vthunder_repo.get_project_list_using_partition(
@@ -477,7 +502,8 @@ class CountMembersInProjectBySubnet(BaseDatabaseTask):
         try:
             project_id = lb_resource.project_id
             vthunder_conf = CONF.hardware_thunder.devices[project_id]
-            if vthunder_conf.hierarchical_multitenancy == 'enable' and CONF.a10_global.use_parent_partition:
+            if (vthunder_conf.hierarchical_multitenancy == 'enable' and
+                    CONF.a10_global.use_parent_partition):
                 partition_name = self.vthunder_repo.get_partition_for_project(
                     db_apis.get_session(), project_id=project_id)
                 project_ids = self.vthunder_repo.get_project_list_using_partition(
@@ -509,8 +535,9 @@ class DeleteMultiVRIDEntry(BaseDatabaseTask):
     def execute(self, vrid_list):
         if vrid_list:
             try:
-                self.vrid_repo.delete_batch(db_apis.get_session(),
-                                            ids=[vrid.id for vrid in vrid_list])
+                self.vrid_repo.delete_batch(
+                    db_apis.get_session(), ids=[
+                        vrid.id for vrid in vrid_list])
             except Exception as e:
                 LOG.exception(
                     "Failed to delete VRID entry from vrid table: %s", str(e))
@@ -529,13 +556,15 @@ class CheckVLANCanBeDeletedParent(object):
         lbs = db_apis.get_session().query(self.loadbalancer_repo.model_class).filter(
             self.loadbalancer_repo.model_class.project_id == project_id).all()
         for lb in lbs:
-            vips = db_apis.get_session().query(self.vip_repo.model_class).filter(
+            vips = db_apis.get_session().query(
+                self.vip_repo.model_class).filter(
                 self.vip_repo.model_class.load_balancer_id == lb.id).all()
             for vip in vips:
                 if vip.subnet_id == subnet_id:
                     subnet_usage_count += 1
 
-        members = db_apis.get_session().query(self.member_repo.model_class).filter(
+        members = db_apis.get_session().query(
+            self.member_repo.model_class).filter(
             self.member_repo.model_class.project_id == project_id).all()
         for member in members:
             if member.subnet_id == subnet_id:
@@ -558,11 +587,14 @@ class CheckVipVLANCanBeDeleted(CheckVLANCanBeDeletedParent, BaseDatabaseTask):
                                       True)
 
 
-class CheckMemberVLANCanBeDeleted(CheckVLANCanBeDeletedParent, BaseDatabaseTask):
+class CheckMemberVLANCanBeDeleted(
+        CheckVLANCanBeDeletedParent,
+        BaseDatabaseTask):
     default_provides = a10constants.DELETE_VLAN
 
     def execute(self, member):
-        return self.is_vlan_deletable(member.project_id, member.subnet_id, False)
+        return self.is_vlan_deletable(
+            member.project_id, member.subnet_id, False)
 
 
 class MarkLBAndListenerActiveInDB(BaseDatabaseTask):
@@ -611,7 +643,9 @@ class CountMembersWithIP(BaseDatabaseTask):
             return self.member_repo.get_member_count_by_ip_address(
                 db_apis.get_session(), member.ip_address, member.project_id)
         except Exception as e:
-            LOG.exception("Failed to get count of members with given IP for a pool: %s", str(e))
+            LOG.exception(
+                "Failed to get count of members with given IP for a pool: %s",
+                str(e))
             raise e
 
 
@@ -634,7 +668,9 @@ class PoolCountforIP(BaseDatabaseTask):
             return self.member_repo.get_pool_count_by_ip(
                 db_apis.get_session(), member.ip_address, member.project_id)
         except Exception as e:
-            LOG.exception("Failed to get pool count with same IP address: %s", str(e))
+            LOG.exception(
+                "Failed to get pool count with same IP address: %s",
+                str(e))
             raise e
 
 
