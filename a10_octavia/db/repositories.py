@@ -303,8 +303,9 @@ class VThunderRepository(BaseRepository):
         return id_list
 
     def get_partition_for_project(self, session, project_id):
-        return session.query(self.model_class).filter(
-            self.model_class.project_id == project_id).first().partition_name
+        query = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).first()
+        return query.partition_name if query else None
 
     def get_project_list_using_partition(self, session, partition_name):
         return [col_project[0] for col_project in session.query(self.model_class).filter(

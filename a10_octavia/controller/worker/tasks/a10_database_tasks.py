@@ -398,22 +398,22 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
     def execute(self, lb_resource):
         try:
             project_id = lb_resource.project_id
-            vthunder_conf = CONF.hardware_thunder.devices[project_id]
-            if (vthunder_conf.hierarchical_multitenancy == 'enable' and
-                    CONF.a10_global.use_parent_partition):
-                partition_name = self.vthunder_repo.get_partition_for_project(
-                    db_apis.get_session(), project_id=project_id)
-                project_ids = self.vthunder_repo.get_project_list_using_partition(
-                    db_apis.get_session(), partition_name=partition_name)
+            vthunder_conf = CONF.hardware_thunder.devices.get(project_id)
+            if vthunder_conf:
+                if (vthunder_conf.hierarchical_multitenancy == 'enable' and
+                        CONF.a10_global.use_parent_partition):
+                    partition_name = self.vthunder_repo.get_partition_for_project(
+                        db_apis.get_session(), project_id=project_id)
+                    project_ids = self.vthunder_repo.get_project_list_using_partition(
+                        db_apis.get_session(), partition_name=partition_name)
 
-            else:
-                project_ids = [project_id]
-            vrid_list = self.vrid_repo.get_vrid_from_project_ids(
-                db_apis.get_session(), project_ids=project_ids)
-            return vrid_list
+                else:
+                    project_ids = [project_id]
+                vrid_list = self.vrid_repo.get_vrid_from_project_ids(
+                    db_apis.get_session(), project_ids=project_ids)
+                return vrid_list
         except Exception as e:
-            LOG.exception(
-                "Failed to get VRID list for given project  %s due to %s",
+            LOG.exception("Failed to get VRID list for given project  %s due to %s",
                 lb_resource.project_id,
                 str(e))
             raise e
@@ -478,13 +478,16 @@ class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
     def execute(self, lb_resource, subnet):
         try:
             project_id = lb_resource.project_id
-            vthunder_conf = CONF.hardware_thunder.devices[project_id]
-            if (vthunder_conf.hierarchical_multitenancy == 'enable' and
+            vthunder_conf = CONF.hardware_thunder.devices.get(project_id)
+            project_ids = []
+            if vthunder_conf:
+                if (vthunder_conf.hierarchical_multitenancy == 'enable' and
                     CONF.a10_global.use_parent_partition):
-                partition_name = self.vthunder_repo.get_partition_for_project(
-                    db_apis.get_session(), project_id=project_id)
-                project_ids = self.vthunder_repo.get_project_list_using_partition(
-                    db_apis.get_session(), partition_name=partition_name)
+                    partition_name = self.vthunder_repo.get_partition_for_project(
+                        db_apis.get_session(), project_id=project_id)
+                    if partition_name:
+                        project_ids = self.vthunder_repo.get_project_list_using_partition(
+                            db_apis.get_session(), partition_name=partition_name)
             else:
                 project_ids = [project_id]
 
@@ -493,7 +496,7 @@ class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
                 project_ids=project_ids, subnet_id=subnet.id)
         except Exception as e:
             LOG.exception("Failed to get LB count for subnet %s due to %s ",
-                          subnet.id, str(e))
+                subnet.id, str(e))
             raise e
 
 
@@ -501,21 +504,23 @@ class CountMembersInProjectBySubnet(BaseDatabaseTask):
     def execute(self, lb_resource, subnet):
         try:
             project_id = lb_resource.project_id
-            vthunder_conf = CONF.hardware_thunder.devices[project_id]
-            if (vthunder_conf.hierarchical_multitenancy == 'enable' and
-                    CONF.a10_global.use_parent_partition):
-                partition_name = self.vthunder_repo.get_partition_for_project(
-                    db_apis.get_session(), project_id=project_id)
-                project_ids = self.vthunder_repo.get_project_list_using_partition(
-                    db_apis.get_session(), partition_name=partition_name)
+            vthunder_conf = CONF.hardware_thunder.devices.get(project_id)
+            project_ids = []
+            if vthunder_conf:
+                if (vthunder_conf.hierarchical_multitenancy == 'enable' and
+                        CONF.a10_global.use_parent_partition):
+                    partition_name = self.vthunder_repo.get_partition_for_project(
+                        db_apis.get_session(), project_id=project_id)
+                    if partition_name:
+                        project_ids = self.vthunder_repo.get_project_list_using_partition(
+                            db_apis.get_session(), partition_name=partition_name)
             else:
                 project_ids = [project_id]
             return self.member_repo.get_member_count_by_subnet(
-                db_apis.get_session(),
-                project_ids=project_ids, subnet_id=subnet.id)
+                    db_apis.get_session(),
+                    project_ids=project_ids, subnet_id=subnet.id)
         except Exception as e:
-            LOG.exception(
-                "Failed to get LB member count for subnet %s due to %s",
+            LOG.exception("Failed to get LB member count for subnet %s due to %s",
                 subnet.id, str(e))
             raise e
 
