@@ -843,18 +843,13 @@ class DeleteVRIDPort(BaseNetworkTask):
     def execute(self, vthunder, vrid_list, subnet, lb_count, member_count):
         vrid = None
         vrid_floating_ip_list = []
-        if not lb_count:
-            lb_count = 0
-        if not member_count:
-            member_count = 0
         resource_count = lb_count + member_count
         if resource_count <= 1:
-            if vrid_list:
-                for vr in vrid_list:
-                    if vr.subnet_id == subnet.id:
-                        vrid = vr
-                    else:
-                        vrid_floating_ip_list.append(vr.vrid_floating_ip)
+            for vr in vrid_list:
+                if vr.subnet_id == subnet.id:
+                    vrid = vr
+                else:
+                    vrid_floating_ip_list.append(vr.vrid_floating_ip)
             if vrid:
                 try:
                     self.network_driver.delete_port(vrid.vrid_port_id)
