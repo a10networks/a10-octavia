@@ -174,6 +174,8 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
             protocol=mock.ANY,
             lb_method=mock_pool.axapi_client.slb.service_group.SOURCE_IP_HASH_ONLY,
             service_group_templates=mock.ANY,
+            hm_name=None,
+            mem_list=None,
             axapi_args=AXAPI_ARGS)
 
     def test_create_pool_with_protocol_proxy(self):

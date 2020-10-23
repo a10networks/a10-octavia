@@ -32,7 +32,7 @@ LOG = logging.getLogger(__name__)
 
 class PoolParent(object):
 
-    def set(self, set_method, pool, vthunder):
+    def set(self, set_method, pool, vthunder, **kwargs):
         axapi_args = {'service_group': utils.meta(pool, 'service_group', {})}
 
         device_templates = self.axapi_client.slb.template.templates.get()
@@ -70,6 +70,8 @@ class PoolParent(object):
                    protocol=protocol,
                    lb_method=lb_method,
                    service_group_templates=service_group_temp,
+                   mem_list=kwargs.get('mem_list'),
+                   hm_name=kwargs.get('health_monitor'),
                    axapi_args=axapi_args)
 
 
@@ -125,7 +127,12 @@ class PoolUpdate(PoolParent, task.Task):
     def execute(self, pool, vthunder, update_dict):
         pool.update(update_dict)
         try:
-            self.set(self.axapi_client.slb.service_group.replace, pool, vthunder)
+            service_group = self.axapi_client.slb.service_group.get(
+                pool.id)['service-group']
+            mem_list = service_group.get('member-list')
+            health_monitor = service_group.get('health-check')
+            self.set(self.axapi_client.slb.service_group.replace, pool, vthunder,
+                     mem_list=mem_list, health_monitor=health_monitor)
             LOG.debug("Successfully updated pool: %s", pool.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update pool: %s", pool.id)
