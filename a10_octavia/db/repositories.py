@@ -310,7 +310,9 @@ class VThunderRepository(BaseRepository):
     def get_project_list_using_partition(self, session, partition_name):
         list_projects = []
         queryset_vthunders = session.query(self.model_class.project_id.distinct()).filter(
-            self.model_class.partition_name == partition_name)
+            and_(self.model_class.partition_name == partition_name,
+                 or_(self.model_class.role == "STANDALONE",
+                     self.model_class.role == "MASTER")))
         if queryset_vthunders:
             list_projects = [col_project[0] for col_project in queryset_vthunders.values('project_id')]
         return list_projects

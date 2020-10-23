@@ -210,9 +210,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vthunder_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.get_vrid_from_project_ids.return_value = VRID
-        vrid = mock_vrid_entry.execute(MEMBER_1)
-        mock_vrid_entry.vthunder_repo.get_partition_for_project.assert_called_once_with(
-            mock.ANY, project_id=a10constants.MOCK_PROJECT_ID)
+        vrid = mock_vrid_entry.execute([a10constants.MOCK_PROJECT_ID])
         self.assertEqual(VRID, vrid)
 
     def test_get_vrid_for_project(self):
@@ -347,7 +345,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_subnets.member_repo.get_pool_count_subnet.return_value = 1
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet = mock.Mock()
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet.return_value = 0
-        subnet_list = mock_subnets.execute([MEMBER_1, MEMBER_2])
+        subnet_list = mock_subnets.execute(
+            [MEMBER_1, MEMBER_2], [a10constants.MOCK_PROJECT_ID])
         self.assertEqual(['mock-subnet-1', 'mock-subnet-2'], subnet_list)
 
     def test_get_subnet_for_deletion_with_multiple_pool_lb(self):
@@ -356,5 +355,15 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_subnets.member_repo.get_pool_count_subnet.return_value = 2
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet = mock.Mock()
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet.return_value = 2
-        subnet_list = mock_subnets.execute([MEMBER_1, MEMBER_2])
+        subnet_list = mock_subnets.execute(
+            [MEMBER_1, MEMBER_2], [a10constants.MOCK_PROJECT_ID])
         self.assertEqual([], subnet_list)
+
+    def test_get_projects_for_partition(self):
+        mock_get_projects = task.GetProjectsForPartition()
+        mock_get_projects.vthunder_repo = mock.Mock()
+        mock_get_projects.vthunder_repo.get_partition_for_project.\
+            return_value = "mock-partition-name"
+        mock_get_projects.execute(MEMBER_1)
+        mock_get_projects.vthunder_repo.get_project_list_using_partition.\
+            assert_called_once_with(mock.ANY, partition_name='mock-partition-name')
