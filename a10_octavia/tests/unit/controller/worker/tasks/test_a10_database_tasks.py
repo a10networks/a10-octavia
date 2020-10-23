@@ -58,9 +58,12 @@ MEMBER_1 = o_data_models.Member(id=uuidutils.generate_uuid(),
 MEMBER_2 = o_data_models.Member(id=uuidutils.generate_uuid(),
                                 project_id=a10constants.MOCK_PROJECT_ID,
                                 subnet_id=a10constants.MOCK_SUBNET_ID_2)
+LB_1 = o_data_models.LoadBalancer(id=uuidutils.generate_uuid(),
+                                  project_id=a10constants.MOCK_PROJECT_ID)
 
 POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID)
 SUBNET = n_data_models.Subnet(id=uuidutils.generate_uuid())
+SUBNET_1 = n_data_models.Subnet(id=a10constants.MOCK_SUBNET_ID)
 
 
 class TestA10DatabaseTasks(base.BaseTaskTestCase):
@@ -214,6 +217,69 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vthunder_repo.get_partition_for_project.assert_called_once_with(
             mock.ANY, project_id=a10constants.MOCK_PROJECT_ID)
         self.assertEqual(VRID, vrid)
+
+    def test_get_vrid_for_non_existing_project_id_in_config(self):
+        thunder = copy.deepcopy(HW_THUNDER)
+        thunder.hierarchical_multitenancy = 'enable'
+        thunder.vrid_floating_ip = VRID.vrid_floating_ip
+        hardware_device_conf = self._generate_hardware_device_conf(thunder)
+        self.conf.config(group=a10constants.HARDWARE_THUNDER_CONF_SECTION,
+                         devices=[hardware_device_conf])
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=True)
+        self.conf.conf.hardware_thunder.devices = {}
+        mock_vrid_entry = task.GetVRIDForLoadbalancerResource()
+        mock_vrid_entry.CONF = self.conf
+        mock_vrid_entry.vrid_repo = mock.Mock()
+        mock_vrid_entry.vthunder_repo = mock.Mock()
+        mock_vrid_entry.vrid_repo.get_vrid_from_project_ids.return_value = []
+        vrid = mock_vrid_entry.execute(MEMBER_1)
+        mock_vrid_entry.vthunder_repo.get_partition_for_project.assert_not_called()
+        mock_vrid_entry.vthunder_repo.get_project_list_using_partition.assert_not_called()
+        self.assertEqual([], vrid)
+
+    def test_get_count_lb_by_subnet_for_non_existing_project_id(self):
+        thunder = copy.deepcopy(HW_THUNDER)
+        thunder.hierarchical_multitenancy = 'enable'
+        thunder.vrid_floating_ip = VRID.vrid_floating_ip
+        hardware_device_conf = self._generate_hardware_device_conf(thunder)
+        self.conf.config(group=a10constants.HARDWARE_THUNDER_CONF_SECTION,
+                         devices=[hardware_device_conf])
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=True)
+        self.conf.conf.hardware_thunder.devices = {}
+        mock_lb_count = task.CountLoadbalancersInProjectBySubnet()
+        mock_lb_count.loadbalancer_repo = mock.Mock()
+        mock_lb_count.vthunder_repo = mock.Mock()
+        mock_lb_count.CONF = self.conf
+        mock_lb_count.loadbalancer_repo.get_lb_count_by_subnet.return_value = 0
+        count = mock_lb_count.execute(LB_1, SUBNET_1)
+        mock_lb_count.vthunder_repo.get_partition_for_project.assert_not_called()
+        mock_lb_count.vthunder_repo.get_project_list_using_partition.assert_not_called()
+        self.assertEqual(0, count)
+
+    def test_get_count_member_by_subnet_for_non_existing_project_id(self):
+        thunder = copy.deepcopy(HW_THUNDER)
+        thunder.hierarchical_multitenancy = 'enable'
+        thunder.vrid_floating_ip = VRID.vrid_floating_ip
+        hardware_device_conf = self._generate_hardware_device_conf(thunder)
+        self.conf.config(group=a10constants.HARDWARE_THUNDER_CONF_SECTION,
+                         devices=[hardware_device_conf])
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=True)
+        self.conf.conf.hardware_thunder.devices = {}
+        mock_member_count = task.CountMembersInProjectBySubnet()
+        mock_member_count.member_repo = mock.Mock()
+        mock_member_count.vthunder_repo = mock.Mock()
+        mock_member_count.CONF = self.conf
+        mock_member_count.member_repo.get_member_count_by_subnet.return_value = 0
+        count = mock_member_count.execute(MEMBER_1, SUBNET_1)
+        mock_member_count.vthunder_repo.get_partition_for_project.assert_not_called()
+        mock_member_count.vthunder_repo.get_project_list_using_partition.assert_not_called()
+        self.assertEqual(0, count)
 
     def test_get_vrid_for_project(self):
         thunder = copy.deepcopy(HW_THUNDER)

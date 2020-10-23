@@ -401,7 +401,7 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
             vthunder_conf = CONF.hardware_thunder.devices.get(project_id)
             project_ids = []
             if (vthunder_conf and vthunder_conf.hierarchical_multitenancy == 'enable' and
-                CONF.a10_global.use_parent_partition):
+                    CONF.a10_global.use_parent_partition):
                 partition_name = self.vthunder_repo.get_partition_for_project(
                     db_apis.get_session(), project_id=project_id)
                 project_ids = self.vthunder_repo.get_project_list_using_partition(
@@ -482,7 +482,7 @@ class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
             vthunder_conf = CONF.hardware_thunder.devices.get(project_id)
             project_ids = []
             if (vthunder_conf and vthunder_conf.hierarchical_multitenancy == 'enable' and
-                CONF.a10_global.use_parent_partition):
+                    CONF.a10_global.use_parent_partition):
                 partition_name = self.vthunder_repo.get_partition_for_project(
                     db_apis.get_session(), project_id=project_id)
                 project_ids = self.vthunder_repo.get_project_list_using_partition(
@@ -506,7 +506,7 @@ class CountMembersInProjectBySubnet(BaseDatabaseTask):
             vthunder_conf = CONF.hardware_thunder.devices.get(project_id)
             project_ids = []
             if (vthunder_conf and vthunder_conf.hierarchical_multitenancy == 'enable' and
-                CONF.a10_global.use_parent_partition):
+                    CONF.a10_global.use_parent_partition):
                 partition_name = self.vthunder_repo.get_partition_for_project(
                     db_apis.get_session(), project_id=project_id)
                 project_ids = self.vthunder_repo.get_project_list_using_partition(
