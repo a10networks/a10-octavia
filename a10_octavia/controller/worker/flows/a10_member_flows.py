@@ -269,21 +269,21 @@ class MemberFlows(object):
             rebind={a10constants.LB_RESOURCE: constants.MEMBER},
             provides=constants.SUBNET))
         delete_member_vrid_subflow.add(
+            a10_database_tasks.GetProjectsForPartition(
+                rebind={a10constants.LB_RESOURCE: constants.MEMBER},
+                provides=a10constants.PARTITION_PROJECT_LIST
+            ))
+        delete_member_vrid_subflow.add(
             a10_database_tasks.CountLoadbalancersInProjectBySubnet(
-                requires=constants.SUBNET,
-                rebind={
-                    a10constants.LB_RESOURCE: constants.MEMBER},
+                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
                 provides=a10constants.LB_COUNT))
         delete_member_vrid_subflow.add(
             a10_database_tasks.CountMembersInProjectBySubnet(
-                requires=constants.SUBNET,
-                rebind={
-                    a10constants.LB_RESOURCE: constants.MEMBER},
+                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
                 provides=a10constants.MEMBER_COUNT))
         delete_member_vrid_subflow.add(
             a10_database_tasks.GetVRIDForLoadbalancerResource(
-                rebind={
-                    a10constants.LB_RESOURCE: constants.MEMBER},
+                requires=a10constants.PARTITION_PROJECT_LIST,
                 provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(
             a10_network_tasks.DeleteVRIDPort(
@@ -304,13 +304,17 @@ class MemberFlows(object):
         delete_member_vrid_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBER_VRID_INTERNAL_SUBFLOW)
         delete_member_vrid_subflow.add(
+            a10_database_tasks.GetProjectsForPartition(
+                rebind={a10constants.LB_RESOURCE: constants.POOL},
+                provides=a10constants.PARTITION_PROJECT_LIST
+            ))
+        delete_member_vrid_subflow.add(
             a10_database_tasks.GetSubnetForDeletionInPool(
-                requires=a10constants.MEMBER_LIST,
+                requires=[a10constants.MEMBER_LIST, a10constants.PARTITION_PROJECT_LIST],
                 provides=a10constants.SUBNET_LIST))
         delete_member_vrid_subflow.add(
             a10_database_tasks.GetVRIDForLoadbalancerResource(
-                rebind={
-                    a10constants.LB_RESOURCE: constants.POOL},
+                requires=a10constants.PARTITION_PROJECT_LIST,
                 provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(
             a10_network_tasks.DeleteMultipleVRIDPort(
@@ -332,9 +336,13 @@ class MemberFlows(object):
                     a10constants.LB_RESOURCE: constants.MEMBER},
                 provides=constants.SUBNET))
         handle_vrid_for_member_subflow.add(
+            a10_database_tasks.GetProjectsForPartition(
+                rebind={a10constants.LB_RESOURCE: constants.MEMBER},
+                provides=a10constants.PARTITION_PROJECT_LIST
+            ))
+        handle_vrid_for_member_subflow.add(
             a10_database_tasks.GetVRIDForLoadbalancerResource(
-                rebind={
-                    a10constants.LB_RESOURCE: constants.MEMBER},
+                requires=a10constants.PARTITION_PROJECT_LIST,
                 provides=a10constants.VRID_LIST))
         handle_vrid_for_member_subflow.add(
             a10_network_tasks.HandleVRIDFloatingIP(

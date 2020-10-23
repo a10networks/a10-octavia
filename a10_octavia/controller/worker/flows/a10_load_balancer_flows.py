@@ -367,9 +367,13 @@ class LoadBalancerFlows(object):
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.SUBNET))
         handle_vrid_for_lb_subflow.add(
+            a10_database_tasks.GetProjectsForPartition(
+                rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+                provides=a10constants.PARTITION_PROJECT_LIST
+            ))
+        handle_vrid_for_lb_subflow.add(
             a10_database_tasks.GetVRIDForLoadbalancerResource(
-                rebind={
-                    a10constants.LB_RESOURCE: constants.LOADBALANCER},
+                requires=a10constants.PARTITION_PROJECT_LIST,
                 provides=a10constants.VRID_LIST))
         handle_vrid_for_lb_subflow.add(
             a10_network_tasks.HandleVRIDFloatingIP(
@@ -393,21 +397,21 @@ class LoadBalancerFlows(object):
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.SUBNET))
         delete_lb_vrid_subflow.add(
+            a10_database_tasks.GetProjectsForPartition(
+                rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+                provides=a10constants.PARTITION_PROJECT_LIST
+            ))
+        delete_lb_vrid_subflow.add(
             a10_database_tasks.CountLoadbalancersInProjectBySubnet(
-                requires=constants.SUBNET,
-                rebind={
-                    a10constants.LB_RESOURCE: constants.LOADBALANCER},
+                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
                 provides=a10constants.LB_COUNT))
         delete_lb_vrid_subflow.add(
             a10_database_tasks.CountMembersInProjectBySubnet(
-                requires=constants.SUBNET,
-                rebind={
-                    a10constants.LB_RESOURCE: constants.LOADBALANCER},
+                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
                 provides=a10constants.MEMBER_COUNT))
         delete_lb_vrid_subflow.add(
             a10_database_tasks.GetVRIDForLoadbalancerResource(
-                rebind={
-                    a10constants.LB_RESOURCE: constants.LOADBALANCER},
+                requires=a10constants.PARTITION_PROJECT_LIST,
                 provides=a10constants.VRID_LIST))
         delete_lb_vrid_subflow.add(
             a10_network_tasks.DeleteVRIDPort(

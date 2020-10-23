@@ -303,12 +303,17 @@ class VThunderRepository(BaseRepository):
         return id_list
 
     def get_partition_for_project(self, session, project_id):
-        return session.query(self.model_class).filter(
-            self.model_class.project_id == project_id).first().partition_name
+        vthunder_project = self.get_vthunder_by_project_id(session, project_id)
+        if vthunder_project:
+            return vthunder_project.partition_name
 
     def get_project_list_using_partition(self, session, partition_name):
-        return [col_project[0] for col_project in session.query(self.model_class).filter(
-            self.model_class.partition_name == partition_name).values('project_id')]
+        list_projects = []
+        queryset_vthunders = session.query(self.model_class.project_id.distinct()).filter(
+            self.model_class.partition_name == partition_name)
+        if queryset_vthunders:
+            list_projects = [col_project[0] for col_project in queryset_vthunders.values('project_id')]
+        return list_projects
 
 
 class LoadBalancerRepository(repo.LoadBalancerRepository):
@@ -377,9 +382,9 @@ class MemberRepository(repo.MemberRepository):
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count() 
 
-    def get_pool_count_subnet(self, session, project_id, subnet_id):
+    def get_pool_count_subnet(self, session, project_ids, subnet_id):
         return session.query(self.model_class.pool_id.distinct()).filter(
-            self.model_class.project_id == project_id).filter(
+            self.model_class.project_id.in_(project_ids)).filter(
             and_(self.model_class.subnet_id == subnet_id,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
