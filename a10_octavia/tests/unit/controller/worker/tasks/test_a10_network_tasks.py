@@ -27,7 +27,6 @@ from octavia.network import data_models as o_net_data_models
 
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
-from a10_octavia.common import exceptions
 from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
@@ -381,34 +380,6 @@ class TestNetworkTasks(base.BaseTaskTestCase):
                 a10constants.MOCK_VRID_FLOATING_IP_1], is_partition=True)
         self.network_driver_mock.delete_port.assert_called_with(
             a10constants.MOCK_VRRP_PORT_ID)
-
-    @mock.patch(
-        'a10_octavia.common.utils.check_ip_in_subnet_range',
-        return_value=False)
-    @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
-                return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
-    @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
-                return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
-    def test_HandleVRIDFloatingIP_raise_VRIDIPNotInSubentRangeError_conf_fip_out_of_range(
-            self, mock_patched_ip, mock_get_floating_ip, check_subnet):
-        vrid = copy.deepcopy(VRID_1)
-        vrid.vrid_floating_ip = a10constants.MOCK_VRID_FLOATING_IP_1
-        vrid.vrid = VRID_VALUE
-        vrid.vrid_port_id = a10constants.MOCK_VRRP_PORT_ID
-        member = copy.deepcopy(MEMBER)
-        member.subnet_id = a10constants.MOCK_SUBNET_ID
-        subnet = copy.deepcopy(SUBNET_1)
-        subnet.cidr = a10constants.MOCK_SUBNET_CIDR
-        mock_network_task = a10_network_tasks.HandleVRIDFloatingIP()
-        mock_network_task.axapi_client = self.client_mock
-        self.network_driver_mock.get_subnet.return_value = subnet
-        self.assertRaises(
-            exceptions.VRIDIPNotInSubentRangeError,
-            mock_network_task.execute,
-            VTHUNDER,
-            member,
-            [vrid],
-            subnet)
 
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value=a10constants.MOCK_VRID_PARTIAL_FLOATING_IP)

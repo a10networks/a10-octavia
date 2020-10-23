@@ -29,7 +29,6 @@ from octavia.network import data_models as n_data_models
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
-from a10_octavia.common import exceptions
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 
@@ -745,15 +744,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                         lb_resource.project_id)
                     conf_floating_ip = a10_utils.get_patched_ip_address(
                         conf_floating_ip, subnet.cidr)
-                    subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(
-                        subnet.cidr)
                     vrid.vrid = vrid_value
-                    if not a10_utils.check_ip_in_subnet_range(
-                            conf_floating_ip, subnet_ip, subnet_mask):
-                        msg = "Invalid VRID floating IP. IP out of subnet range: "
-                        msg += str(conf_floating_ip)
-                        raise exceptions.VRIDIPNotInSubentRangeError(msg)
-
                     if conf_floating_ip != vrid.vrid_floating_ip:
                         try:
                             # delete existing port associated to vrid in
@@ -862,8 +853,12 @@ class DeleteVRIDPort(BaseNetworkTask):
             if vrid:
                 try:
                     self.network_driver.delete_port(vrid.vrid_port_id)
-                    self.axapi_client.vrrpa.update(
-                        vrid.vrid, floating_ips=vrid_floating_ip_list)
+                    if not vthunder.partition_name or vthunder.partition_name == 'shared':
+                        self.axapi_client.vrrpa.update(
+                            vrid.vrid, floating_ips=vrid_floating_ip_list)
+                    else:
+                        self.axapi_client.vrrpa.update(
+                            vrid.vrid, floating_ips=vrid_floating_ip_list, is_partition=True)
                     LOG.info(
                         "VRID floating IP: %s deleted",
                         vrid.vrid_floating_ip)
@@ -888,8 +883,12 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
                         self.network_driver.delete_port(vrid.vrid_port_id)
                     else:
                         vrid_floating_ip_list.append(vrid.vrid_floating_ip)
-                self.axapi_client.vrrpa.update(
-                    vrid.vrid, floating_ips=vrid_floating_ip_list)
+                if not vthunder.partition_name or vthunder.partition_name == 'shared':
+                    self.axapi_client.vrrpa.update(
+                        vrid.vrid, floating_ips=vrid_floating_ip_list)
+                else:
+                    self.axapi_client.vrrpa.update(
+                        vrid.vrid, floating_ips=vrid_floating_ip_list, is_partition=True)
                 LOG.info("VRID floating IP: %s deleted", vrid_floating_ip_list)
                 return vrids
         except Exception as e:
