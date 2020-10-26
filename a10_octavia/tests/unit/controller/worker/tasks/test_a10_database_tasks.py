@@ -359,8 +359,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
             [MEMBER_1, MEMBER_2], [a10constants.MOCK_PROJECT_ID])
         self.assertEqual([], subnet_list)
 
-    def test_get_projects_for_partition(self):
-        mock_get_projects = task.GetProjectsForPartition()
+    def test_get_child_projects_for_partition(self):
+        mock_get_projects = task.GetChildProjectsOfParentPartition()
         mock_get_projects.vthunder_repo = mock.Mock()
         mock_get_projects.vthunder_repo.get_partition_for_project.\
             return_value = "mock-partition-name"

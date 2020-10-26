@@ -651,27 +651,14 @@ class GetSubnetForDeletionInPool(BaseDatabaseTask):
             raise e
 
 
-class GetProjectsForPartition(BaseDatabaseTask):
-    """
-    On the basis of whether multi-tenancy settings are enabled with use parent partition,
-    the list of projects using partition will be returned.
-    """
+class GetChildProjectsOfParentPartition(BaseDatabaseTask):
     def execute(self, lb_resource):
         try:
-            l2_project = []
             project_id = lb_resource.project_id
             partition_name = self.vthunder_repo.get_partition_for_project(
                 db_apis.get_session(), project_id=project_id)
-            if not partition_name:
-                # There is a case when error occured while creating LB causes vthunder
-                # entry to be removed, hence need to fetch partition name using parent project id
-                parent_project_id = utils.get_parent_project(project_id)
-                if parent_project_id:
-                    partition_name = parent_project_id[:14]
-                l2_project.append(project_id)
             partition_project_list = self.vthunder_repo.get_project_list_using_partition(
                 db_apis.get_session(), partition_name=partition_name)
-            partition_project_list.extend(l2_project)
             return partition_project_list
         except Exception as e:
             LOG.exception(
