@@ -44,7 +44,7 @@ class VRIDIPNotInSubentRangeError(base.NetworkException):
         msg = ('Invalid VRID floating IP specified. ' +
                'VRID IP {0} out of range ' +
                'for subnet {1}.').format(vrid_ip, subnet)
-        super(VRIDIPNotInSubentRangeError, self).__init__(msg=msg)
+        super(VRIDIPNotInSubentRangeError, self).__init__(msg)
 
 
 class MissingVlanIDConfigError(cfg.ConfigFileValueError):
