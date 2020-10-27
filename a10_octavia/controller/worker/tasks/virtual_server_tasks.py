@@ -29,7 +29,7 @@ LOG = logging.getLogger(__name__)
 
 class LoadBalancerParent(object):
 
-    def set(self, set_method, loadbalancer):
+    def set(self, set_method, loadbalancer, **kwargs):
         status = self.axapi_client.slb.UP
         if not loadbalancer.provisioning_status:
             status = self.axapi_client.slb.DOWN
@@ -50,6 +50,7 @@ class LoadBalancerParent(object):
             arp_disable=arp_disable,
             description=desc,
             status=status, vrid=vrid,
+            port_list=kwargs.get('port_list'),
             axapi_body=vip_meta)
 
 
@@ -98,7 +99,10 @@ class UpdateVirtualServerTask(LoadBalancerParent, task.Task):
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
         try:
-            self.set(self.axapi_client.slb.virtual_server.replace, loadbalancer)
+            port_list = self.axapi_client.slb.virtual_server.get(
+                loadbalancer.id)['virtual-server'].get('port-list')
+            self.set(self.axapi_client.slb.virtual_server.replace, loadbalancer,
+                     port_list=port_list)
             LOG.debug("Successfully updated load balancer: %s", loadbalancer.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update load balancer: %s", loadbalancer.id)

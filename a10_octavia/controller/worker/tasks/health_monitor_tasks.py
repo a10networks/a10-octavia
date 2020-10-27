@@ -59,7 +59,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
 
         try:
             self.axapi_client.slb.service_group.update(health_mon.pool_id,
-                                                       health_monitor=health_mon.id,
+                                                       hm_name=health_mon.id,
                                                        health_check_disable=0)
             LOG.debug("Successfully associated health monitor %s to pool %s",
                       health_mon.id, health_mon.pool_id)
