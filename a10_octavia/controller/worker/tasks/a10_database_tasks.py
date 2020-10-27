@@ -21,6 +21,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import uuidutils
 from taskflow import task
+from taskflow.types import failure
 
 from octavia.common import constants
 from octavia.db import api as db_apis
@@ -312,6 +313,23 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                 loadbalancer.id)
             raise e
 
+    def revert(self, result, loadbalancer, vthunder_config, *args, **kwargs):
+        if isinstance(result, failure.Failure):
+            # This task's execute failed, so nothing needed to be done to
+            # revert
+            return
+
+        LOG.warning(
+            'Reverting create Rack VThunder in DB for load balancer: %s',
+            loadbalancer.id)
+        try:
+            self.vthunder_repo.delete(
+                db_apis.get_session(), loadbalancer_id=loadbalancer.id)
+        except Exception:
+            LOG.error(
+                "Failed to delete vThunder entry for load balancer: %s",
+                loadbalancer.id)
+
 
 class CreateVThunderHealthEntry(BaseDatabaseTask):
     """ Create VThunder Health entry in DB """
@@ -383,8 +401,10 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
                 db_apis.get_session(), project_ids=partition_project_list)
             return vrid_list
         except Exception as e:
-            LOG.exception("Failed to get VRID list for given project list  %s due to %s",
-                          partition_project_list, str(e))
+            LOG.exception(
+                "Failed to get VRID list for given project list  %s due to %s",
+                partition_project_list,
+                str(e))
             raise e
 
 
