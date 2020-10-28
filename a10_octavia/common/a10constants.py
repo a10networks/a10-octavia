@@ -119,3 +119,5 @@ WRITE_MEM_FOR_LOCAL_PARTITION = 'write_memory_for_local_partition'
 
 MEMBER_LIST = 'member_list'
 SUBNET_LIST = 'subnet_list'
+
+PARTITION_PROJECT_LIST = 'partition_project_list'
