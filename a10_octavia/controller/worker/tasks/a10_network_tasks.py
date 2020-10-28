@@ -844,7 +844,7 @@ class DeleteVRIDPort(BaseNetworkTask):
         vrid = None
         vrid_floating_ip_list = []
         resource_count = lb_count + member_count
-        if resource_count <= 1:
+        if resource_count <= 1 and vthunder:
             for vr in vrid_list:
                 if vr.subnet_id == subnet.id:
                     vrid = vr
@@ -874,7 +874,7 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
     @axapi_client_decorator
     def execute(self, vthunder, vrid_list, subnet_list):
         try:
-            if subnet_list:
+            if subnet_list and vthunder and vrid_list:
                 vrids = []
                 vrid_floating_ip_list = []
                 for vrid in vrid_list:
