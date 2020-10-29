@@ -398,6 +398,7 @@ class LoadBalancerFlows(object):
             provides=constants.SUBNET))
         delete_lb_vrid_subflow.add(
             a10_database_tasks.GetChildProjectsOfParentPartition(
+                requires=[a10constants.VTHUNDER],
                 rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
                 provides=a10constants.PARTITION_PROJECT_LIST
             ))

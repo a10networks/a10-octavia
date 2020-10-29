@@ -396,16 +396,17 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
 class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
     def execute(self, partition_project_list):
-        try:
-            vrid_list = self.vrid_repo.get_vrid_from_project_ids(
-                db_apis.get_session(), project_ids=partition_project_list)
-            return vrid_list
-        except Exception as e:
-            LOG.exception(
-                "Failed to get VRID list for given project list  %s due to %s",
-                partition_project_list,
-                str(e))
-            raise e
+        if partition_project_list:
+            try:
+                vrid_list = self.vrid_repo.get_vrid_from_project_ids(
+                    db_apis.get_session(), project_ids=partition_project_list)
+                return vrid_list
+            except Exception as e:
+                LOG.exception(
+                    "Failed to get VRID list for given project list  %s due to %s",
+                    partition_project_list,
+                    str(e))
+                raise e
 
 
 class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
@@ -464,28 +465,34 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
 
 
 class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
+
     def execute(self, subnet, partition_project_list):
-        try:
-            return self.loadbalancer_repo.get_lb_count_by_subnet(
-                db_apis.get_session(),
-                project_ids=partition_project_list, subnet_id=subnet.id)
-        except Exception as e:
-            LOG.exception("Failed to get LB count for subnet %s due to %s ",
-                          subnet.id, str(e))
-            raise e
+        if partition_project_list:
+            try:
+                return self.loadbalancer_repo.get_lb_count_by_subnet(
+                    db_apis.get_session(),
+                    project_ids=partition_project_list, subnet_id=subnet.id)
+            except Exception as e:
+                LOG.exception("Failed to get LB count for subnet %s due to %s ",
+                              subnet.id, str(e))
+                raise e
+        return 0
 
 
 class CountMembersInProjectBySubnet(BaseDatabaseTask):
+
     def execute(self, subnet, partition_project_list):
-        try:
-            return self.member_repo.get_member_count_by_subnet(
-                db_apis.get_session(),
-                project_ids=partition_project_list, subnet_id=subnet.id)
-        except Exception as e:
-            LOG.exception(
-                "Failed to get LB member count for subnet %s due to %s",
-                subnet.id, str(e))
-            raise e
+        if partition_project_list:
+            try:
+                return self.member_repo.get_member_count_by_subnet(
+                    db_apis.get_session(),
+                    project_ids=partition_project_list, subnet_id=subnet.id)
+            except Exception as e:
+                LOG.exception(
+                    "Failed to get LB member count for subnet %s due to %s",
+                    subnet.id, str(e))
+                raise e
+        return 0
 
 
 class DeleteVRIDEntry(BaseDatabaseTask):
@@ -672,16 +679,16 @@ class GetSubnetForDeletionInPool(BaseDatabaseTask):
 
 
 class GetChildProjectsOfParentPartition(BaseDatabaseTask):
-    def execute(self, lb_resource):
-        try:
-            project_id = lb_resource.project_id
-            partition_name = self.vthunder_repo.get_partition_for_project(
-                db_apis.get_session(), project_id=project_id)
-            partition_project_list = self.vthunder_repo.get_project_list_using_partition(
-                db_apis.get_session(), partition_name=partition_name)
-            return partition_project_list
-        except Exception as e:
-            LOG.exception(
-                "Failed to fetch list of projects, if multi-tenancy and use parent partition "
-                "is enabled due to %s", str(e))
-            raise e
+
+    def execute(self, lb_resource, vthunder):
+        if vthunder:
+            try:
+                partition_project_list = self.vthunder_repo.get_project_list_using_partition(
+                    db_apis.get_session(),
+                    partition_name=vthunder.partition_name)
+                return partition_project_list
+            except Exception as e:
+                LOG.exception(
+                    "Failed to fetch list of projects, if multi-tenancy and use parent partition "
+                    "is enabled due to %s", str(e))
+                raise e
