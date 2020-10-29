@@ -838,7 +838,9 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
 
 class DeleteVRIDPort(BaseNetworkTask):
+
     """Delete VRID Port if the last resource associated with it is deleted"""
+
     @axapi_client_decorator
     def execute(self, vthunder, vrid_list, subnet, lb_count, member_count):
         vrid = None
