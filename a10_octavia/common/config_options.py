@@ -198,7 +198,9 @@ A10_HEALTH_MANAGER_OPTS = [
     cfg.IntOpt('heartbeat_interval',
                default=10,
                help=_('Sleep time between sending heartbeats.')),
-
+    cfg.StrOpt('post_data',
+               default=None,
+               help=_('HTTP Content for "--http-method POST" case.')),
 ]
 
 A10_CONTROLLER_WORKER_OPTS = [
