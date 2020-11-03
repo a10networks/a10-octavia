@@ -57,7 +57,8 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           HM.delay, HM.timeout,
                                                           HM.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
-                                                          expect_code=None, axapi_args=ARGS)
+                                                          expect_code=None, post_data=None,
+                                                          axapi_args=ARGS)
 
     def test_health_monitor_update_task(self):
         mock_hm = task.UpdateHealthMonitor()
@@ -70,7 +71,8 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           hm.delay, hm.timeout,
                                                           hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
-                                                          expect_code=None, axapi_args=ARGS)
+                                                          expect_code=None, post_data=None,
+                                                          axapi_args=ARGS)
 
     def test_health_monitor_delete_task(self):
         mock_hm = task.DeleteHealthMonitor()
