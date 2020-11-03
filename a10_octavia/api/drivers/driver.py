@@ -16,8 +16,13 @@ from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 
-from octavia.api.drivers import provider_base as driver_base
+# from octavia.api.drivers import provider_base as driver_base
 from octavia.common import constants
+from octavia_lib.api.drivers import exceptions
+from octavia_lib.api.drivers import provider_base as driver_base
+
+from a10_octavia.api.drivers import flavor_schema
+
 
 CONF = cfg.CONF
 CONF.import_group('oslo_messaging', 'octavia.common.config')
@@ -39,7 +44,8 @@ class A10ProviderDriver(driver_base.ProviderDriver):
     # Load Balancer
     def loadbalancer_create(self, loadbalancer):
         LOG.info('A10 provider load balancer loadbalancer: %s.', loadbalancer.__dict__)
-        payload = {constants.LOAD_BALANCER_ID: loadbalancer.loadbalancer_id}
+        payload = {constants.LOAD_BALANCER_ID: loadbalancer.loadbalancer_id,
+                   consts.FLAVOR: loadbalancer.flavor}
         self.client.cast({}, 'create_load_balancer', **payload)
 
     def loadbalancer_delete(self, loadbalancer, cascade=False):
@@ -209,3 +215,48 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.L7RULE_ID: l7rule_id,
                    constants.L7RULE_UPDATES: l7rule_dict}
         self.client.cast({}, 'update_l7rule', **payload)
+
+    # Flavor
+    def get_supported_flavor_metadata(self):
+        """Returns the valid flavor metadata keys and descriptions.
+        This extracts the valid flavor metadata keys and descriptions
+        from the JSON validation schema and returns it as a dictionary.
+        :return: Dictionary of flavor metadata keys and descriptions.
+        :raises DriverError: An unexpected error occurred.
+        """
+        try:
+            props = flavor_schema.SUPPORTED_FLAVOR_SCHEMA['properties']
+            return {k: v.get('description', '') for k, v in props.items()}
+        except Exception as e:
+            raise exceptions.DriverError(
+                user_fault_string='Failed to get the supported flavor '
+                                  'metadata due to: {}'.format(str(e)),
+                operator_fault_string='Failed to get the supported flavor '
+                                      'metadata due to: {}'.format(str(e)))
+
+    def validate_flavor(self, flavor_dict):
+        """Validates flavor profile data.
+        This will validate a flavor profile dataset against the flavor
+        settings the amphora driver supports.
+        :param flavor_dict: The flavor dictionary to validate.
+        :type flavor: dict
+        :return: None
+        :raises DriverError: An unexpected error occurred.
+        :raises UnsupportedOptionError: If the driver does not support
+          one of the flavor settings.
+        """
+        try:
+            validate(flavor_dict, flavor_schema.SUPPORTED_FLAVOR_SCHEMA)
+        except js_exceptions.ValidationError as e:
+            error_object = ''
+            if e.relative_path:
+                error_object = '{} '.format(e.relative_path[0])
+            raise exceptions.UnsupportedOptionError(
+                user_fault_string='{0}{1}'.format(error_object, e.message),
+                operator_fault_string=str(e))
+        except Exception as e:
+            raise exceptions.DriverError(
+                user_fault_string='Failed to validate the flavor metadata '
+                                  'due to: {}'.format(str(e)),
+                operator_fault_string='Failed to validate the flavor metadata '
+                                      'due to: {}'.format(str(e)))
