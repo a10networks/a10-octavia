@@ -18,7 +18,6 @@ from sqlalchemy.ext import orderinglist
 from sqlalchemy import orm
 from sqlalchemy.orm import validates
 from sqlalchemy.sql import func
-from sqlalchemy_utils.types.choice import ChoiceType
 
 from a10_octavia.common import data_models
 from a10_octavia.db import base_models
@@ -28,11 +27,6 @@ from octavia.i18n import _
 class VThunder(base_models.BASE):
     __data_model__ = data_models.VThunder
     __tablename__ = 'vthunders'
-
-    HIERARCHICAL_MT_TYPES = [
-        (u'enable', 1),
-        (u'disable', 0)
-    ]
 
     id = sa.Column(sa.Integer, primary_key=True)
     vthunder_id = sa.Column(sa.String(36), nullable=False)
@@ -53,7 +47,7 @@ class VThunder(base_models.BASE):
     created_at = sa.Column(u'created_at', sa.DateTime(), nullable=True)
     updated_at = sa.Column(u'updated_at', sa.DateTime(), nullable=True)
     partition_name = sa.Column(sa.String(14), nullable=True)
-    hierarchical_multitenancy = sa.Column(ChoiceType(HIERARCHICAL_MT_TYPES))
+    hierarchical_multitenancy = sa.Column(sa.String(7), nullable=False)
 
     @classmethod
     def find_by_loadbalancer_id(cls, loadbalancer_id, db_session=None):

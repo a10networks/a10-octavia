@@ -7,7 +7,6 @@ Create Date: 2020-08-10 19:11:58.780617
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy_utils.types.choice import ChoiceType
 
 from a10_octavia.db.models import VThunder
 
@@ -23,7 +22,8 @@ def upgrade():
         table_name='vthunders',
         column_name='hierarchical_multitenancy',
         nullable=False,
-        type_=ChoiceType(VThunder.HIERARCHICAL_MT_TYPES)
+        type_=sa.String(7),
+        server_default="disable"
     )
 
 
