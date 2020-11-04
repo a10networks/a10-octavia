@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from jsonschema import exceptions as js_exceptions
+from jsonschema import validate
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
@@ -45,7 +47,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
     def loadbalancer_create(self, loadbalancer):
         LOG.info('A10 provider load balancer loadbalancer: %s.', loadbalancer.__dict__)
         payload = {constants.LOAD_BALANCER_ID: loadbalancer.loadbalancer_id,
-                   consts.FLAVOR: loadbalancer.flavor}
+                   constants.FLAVOR: loadbalancer.flavor}
         self.client.cast({}, 'create_load_balancer', **payload)
 
     def loadbalancer_delete(self, loadbalancer, cascade=False):
@@ -218,12 +220,6 @@ class A10ProviderDriver(driver_base.ProviderDriver):
 
     # Flavor
     def get_supported_flavor_metadata(self):
-        """Returns the valid flavor metadata keys and descriptions.
-        This extracts the valid flavor metadata keys and descriptions
-        from the JSON validation schema and returns it as a dictionary.
-        :return: Dictionary of flavor metadata keys and descriptions.
-        :raises DriverError: An unexpected error occurred.
-        """
         try:
             props = flavor_schema.SUPPORTED_FLAVOR_SCHEMA['properties']
             return {k: v.get('description', '') for k, v in props.items()}
@@ -235,16 +231,6 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                                       'metadata due to: {}'.format(str(e)))
 
     def validate_flavor(self, flavor_dict):
-        """Validates flavor profile data.
-        This will validate a flavor profile dataset against the flavor
-        settings the amphora driver supports.
-        :param flavor_dict: The flavor dictionary to validate.
-        :type flavor: dict
-        :return: None
-        :raises DriverError: An unexpected error occurred.
-        :raises UnsupportedOptionError: If the driver does not support
-          one of the flavor settings.
-        """
         try:
             validate(flavor_dict, flavor_schema.SUPPORTED_FLAVOR_SCHEMA)
         except js_exceptions.ValidationError as e:

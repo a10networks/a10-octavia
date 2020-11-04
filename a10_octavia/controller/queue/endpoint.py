@@ -40,9 +40,9 @@ class Endpoint(object):
             invoke_on_load=True
         ).driver
 
-    def create_load_balancer(self, context, load_balancer_id):
+    def create_load_balancer(self, context, load_balancer_id, flavor=None):
         LOG.info('Creating load balancer \'%s\'...', load_balancer_id)
-        self.worker.create_load_balancer(load_balancer_id)
+        self.worker.create_load_balancer(load_balancer_id, flavor)
 
     def update_load_balancer(self, context, load_balancer_id,
                              load_balancer_updates):
