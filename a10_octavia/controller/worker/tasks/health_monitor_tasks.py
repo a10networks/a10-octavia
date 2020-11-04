@@ -44,7 +44,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
         args = utils.meta(health_mon, 'hm', {})
 
         try:
-            post_data = CONF.a10_health_manager.post_data
+            post_data = CONF.health_monitor.post_data
             self.axapi_client.slb.hm.create(health_mon.id,
                                             openstack_mappings.hm_type(self.axapi_client,
                                                                        health_mon.type),
@@ -124,7 +124,7 @@ class UpdateHealthMonitor(task.Task):
             expect_code = health_mon.expected_codes
         args = utils.meta(health_mon, 'hm', {})
         try:
-            post_data = CONF.a10_health_manager.post_data
+            post_data = CONF.health_monitor.post_data
             self.axapi_client.slb.hm.update(
                 health_mon.id,
                 openstack_mappings.hm_type(self.axapi_client, health_mon.type),
