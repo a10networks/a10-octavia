@@ -1,4 +1,4 @@
-"""create amphora_meta table
+"""create required tables
 
 Revision ID: f7017d3417ce
 Revises: 05b1446c7f20
