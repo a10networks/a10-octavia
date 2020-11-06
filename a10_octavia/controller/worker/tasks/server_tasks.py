@@ -127,7 +127,7 @@ class MemberUpdate(task.Task):
     """Task to update member"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder):
+    def execute(self, member, vthunder, pool):
         server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         server_args = utils.meta(member, 'server', {})
         server_args['conn-limit'] = CONF.server.conn_limit
@@ -151,6 +151,15 @@ class MemberUpdate(task.Task):
             LOG.debug("Successfully updated member: %s", member.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update member: %s", member.id)
+            raise e
+        try:
+            self.axapi_client.slb.service_group.member.create(
+                pool.id, server_name, member.protocol_port)
+            LOG.debug("Successfully associated member %s to pool %s",
+                      member.id, pool.id)
+        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+            LOG.exception("Failed to associate member %s to pool %s",
+                          member.id, pool.id)
             raise e
 
 
