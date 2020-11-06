@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
+
 from oslo_config import cfg
 from oslo_log import log as logging
 from requests import exceptions
@@ -32,11 +34,14 @@ class MemberCreate(task.Task):
     """Task to create a member and associate to pool"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool, member_count_ip):
+    def execute(self, member, vthunder, pool, member_count_ip, flavor=None):
         server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         server_args = utils.meta(member, 'server', {})
         server_args['conn-limit'] = CONF.server.conn_limit
         server_args['conn-resume'] = CONF.server.conn_resume
+        # overwrite options from flavor
+        if flavor:
+            self.handle_flavor_options(server_args, json.loads(flavor.flavor_data))
         server_args = {'server': server_args}
 
         server_temp = {}
@@ -75,6 +80,13 @@ class MemberCreate(task.Task):
             LOG.exception("Failed to associate member %s to pool %s",
                           member.id, pool.id)
             raise e
+
+    def handle_flavor_options(self, server_args, flavor_data):
+        if flavor_data['server']:
+            if flavor_data['server']['conn_limit']:
+                server_args['conn-limit'] = flavor_data['server']['conn_limit']
+            if flavor_data['server']['conn_resume']:
+                server_args['conn-resume'] = flavor_data['server']['conn_resume']
 
     @axapi_client_decorator
     def revert(self, member, vthunder, pool, member_count_ip, *args, **kwargs):

@@ -221,8 +221,17 @@ class A10ProviderDriver(driver_base.ProviderDriver):
     # Flavor
     def get_supported_flavor_metadata(self):
         try:
-            props = flavor_schema.SUPPORTED_FLAVOR_SCHEMA['properties']
-            return {k: v.get('description', '') for k, v in props.items()}
+            dict = {}
+            path = 'listener'
+            props = flavor_schema.SUPPORTED_FLAVOR_SCHEMA['properties'][path]['properties']
+            for k, v in props.items():
+                dict[path + '.' + k] = v.get('description', '')
+
+            path = 'server'
+            props = flavor_schema.SUPPORTED_FLAVOR_SCHEMA['properties'][path]['properties']
+            for k, v in props.items():
+                dict[path + '.' + k] = v.get('description', '')
+            return dict
         except Exception as e:
             raise exceptions.DriverError(
                 user_fault_string='Failed to get the supported flavor '

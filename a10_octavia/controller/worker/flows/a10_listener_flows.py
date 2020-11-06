@@ -153,7 +153,8 @@ class ListenerFlows(object):
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
             provides=constants.FLAVOR))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
-            requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER, constants.FLAVOR]))
+            requires=[constants.LOADBALANCER, constants.LISTENER,
+                      a10constants.VTHUNDER, constants.FLAVOR]))
         create_listener_flow.add(a10_database_tasks.
                                  MarkLBAndListenerActiveInDB(
                                      requires=[constants.LOADBALANCER,
@@ -163,7 +164,7 @@ class ListenerFlows(object):
         return create_listener_flow
 
     def get_ssl_certificate_create_flow(self):
-        create_ssl_cert_flow=linear_flow.Flow(
+        create_ssl_cert_flow = linear_flow.Flow(
             a10constants.CREATE_SSL_CERT_FLOW)
         create_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
             requires=[constants.LOADBALANCER, constants.LISTENER],
@@ -177,7 +178,7 @@ class ListenerFlows(object):
         return create_ssl_cert_flow
 
     def get_ssl_certificate_delete_flow(self):
-        delete_ssl_cert_flow=linear_flow.Flow(
+        delete_ssl_cert_flow = linear_flow.Flow(
             a10constants.DELETE_SSL_CERT_FLOW)
         delete_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
             requires=[constants.LOADBALANCER, constants.LISTENER],
@@ -191,7 +192,7 @@ class ListenerFlows(object):
         return delete_ssl_cert_flow
 
     def get_ssl_certificate_update_flow(self):
-        update_ssl_cert_flow=linear_flow.Flow(
+        update_ssl_cert_flow = linear_flow.Flow(
             a10constants.DELETE_SSL_CERT_FLOW)
         update_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
             requires=[constants.LOADBALANCER, constants.LISTENER],
