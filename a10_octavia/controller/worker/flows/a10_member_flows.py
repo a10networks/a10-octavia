@@ -378,7 +378,7 @@ class MemberFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_member_flow.add(server_tasks.MemberUpdate(
-            requires=(constants.MEMBER, a10constants.VTHUNDER)))
+            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
         update_member_flow.add(database_tasks.UpdateMemberInDB(
             requires=[constants.MEMBER, constants.UPDATE_DICT]))
         update_member_flow.add(database_tasks.MarkMemberActiveInDB(
@@ -415,7 +415,7 @@ class MemberFlows(object):
         # Handle VRID settings
         update_member_flow.add(self.handle_vrid_for_member_subflow())
         update_member_flow.add(server_tasks.MemberUpdate(
-            requires=(constants.MEMBER, a10constants.VTHUNDER)))
+            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
         update_member_flow.add(database_tasks.UpdateMemberInDB(
             requires=[constants.MEMBER, constants.UPDATE_DICT]))
         if CONF.a10_global.network_type == 'vlan':
