@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
+
 import acos_client.errors as acos_errors
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -30,7 +32,7 @@ LOG = logging.getLogger(__name__)
 
 class ListenersParent(object):
 
-    def set(self, set_method, loadbalancer, listener, vthunder, ssl_template=None):
+    def set(self, set_method, loadbalancer, listener, vthunder, flavor=None, ssl_template=None):
         listener.load_balancer = loadbalancer
         listener.protocol = openstack_mappings.virtual_port_protocol(
             self.axapi_client, listener.protocol).lower()
@@ -66,57 +68,62 @@ class ListenersParent(object):
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         device_templates = self.axapi_client.slb.template.templates.get()
 
-        vport_templates = {}
-        template_vport = CONF.listener.template_virtual_port
-        if template_vport and template_vport.lower() != 'none':
-            template_key = 'template-virtual-port'
-            if vthunder.partition_name != "shared":
-                if CONF.a10_global.use_shared_for_template_lookup:
-                    template_key = utils.shared_template_modifier(template_key,
-                                                                  template_vport,
-                                                                  device_templates)
-            vport_templates[template_key] = template_vport
-
+        #vport_templates = {}
+        #template_vport = CONF.listener.template_virtual_port
+        #if template_vport and template_vport.lower() != 'none':
+        #    template_key = 'template-virtual-port'
+        #    if vthunder.partition_name != "shared":
+        #        if CONF.a10_global.use_shared_for_template_lookup:
+        #            template_key = utils.shared_template_modifier(template_key,
+        #                                                          template_vport,
+        #                                                          device_templates)
+        #    vport_templates[template_key] = template_vport
+        #
         template_args = {}
         if listener.protocol == 'https' and listener.tls_certificate_id:
             # Adding TERMINATED_HTTPS SSL cert, created in previous task
             template_args["template_client_ssl"] = listener.id
+        #
+        #elif listener.protocol.upper() in a10constants.HTTP_TYPE:
+        #    template_http = CONF.listener.template_http
+        #    if template_http and template_http.lower() != 'none':
+        #        template_key = 'template-http'
+        #        if vthunder.partition_name != "shared":
+        #            if CONF.a10_global.use_shared_for_template_lookup:
+        #                template_key = utils.shared_template_modifier(template_key,
+        #                                                              template_http,
+        #                                                              device_templates)
+        #        vport_templates[template_key] = template_http
+        #    if ha_conn_mirror is not None:
+        #        ha_conn_mirror = None
+        #        LOG.warning("'ha_conn_mirror' is not allowed for HTTP "
+        #                    "or TERMINATED_HTTPS listeners.")
+        
+        #elif listener.protocol == 'tcp':
+        #    template_tcp = CONF.listener.template_tcp
+        #    if template_tcp and template_tcp.lower() != 'none':
+        #        template_key = 'template-tcp'
+        #        if vthunder.partition_name != "shared":
+        #            if CONF.a10_global.use_shared_for_template_lookup:
+        #                template_key = utils.shared_template_modifier(template_key,
+        #                                                              template_tcp,
+        #                                                              device_templates)
+        #        vport_templates[template_key] = template_tcp
 
-        elif listener.protocol.upper() in a10constants.HTTP_TYPE:
-            template_http = CONF.listener.template_http
-            if template_http and template_http.lower() != 'none':
-                template_key = 'template-http'
-                if vthunder.partition_name != "shared":
-                    if CONF.a10_global.use_shared_for_template_lookup:
-                        template_key = utils.shared_template_modifier(template_key,
-                                                                      template_http,
-                                                                      device_templates)
-                vport_templates[template_key] = template_http
-            if ha_conn_mirror is not None:
-                ha_conn_mirror = None
-                LOG.warning("'ha_conn_mirror' is not allowed for HTTP "
-                            "or TERMINATED_HTTPS listeners.")
+        #template_policy = CONF.listener.template_policy
+        #if template_policy and template_policy.lower() != 'none':
+        #    template_key = 'template-policy'
+        #    if vthunder.partition_name != "shared":
+        #        if CONF.a10_global.use_shared_for_template_lookup:
+        #            template_key = utils.shared_template_modifier(template_key,
+        #                                                          template_policy,
+        #                                                          device_templates)
+        #    vport_templates[template_key] = template_policy
 
-        elif listener.protocol == 'tcp':
-            template_tcp = CONF.listener.template_tcp
-            if template_tcp and template_tcp.lower() != 'none':
-                template_key = 'template-tcp'
-                if vthunder.partition_name != "shared":
-                    if CONF.a10_global.use_shared_for_template_lookup:
-                        template_key = utils.shared_template_modifier(template_key,
-                                                                      template_tcp,
-                                                                      device_templates)
-                vport_templates[template_key] = template_tcp
-
-        template_policy = CONF.listener.template_policy
-        if template_policy and template_policy.lower() != 'none':
-            template_key = 'template-policy'
-            if vthunder.partition_name != "shared":
-                if CONF.a10_global.use_shared_for_template_lookup:
-                    template_key = utils.shared_template_modifier(template_key,
-                                                                  template_policy,
-                                                                  device_templates)
-            vport_templates[template_key] = template_policy
+        vport_templates = {}
+        if flavor:
+            vport_templates = self.handle_flavor_templates(
+                    listener, json.loads(flavor.flavor_data), device_templates)
 
         set_method(loadbalancer.id,
                    listener.id,
@@ -132,15 +139,33 @@ class ListenersParent(object):
                    virtual_port_templates=vport_templates,
                    **template_args)
 
+    def handle_flavor_templates(self, listener, flavor_data, device_templates):
+        # TODO: Handle partition logic, regex here
+        # POC grade code, scale it to include all template + shared templates + updates
+        vport_templates = {}
+        if listener.protocol == 'tcp' and flavor_data['listener']:
+            vport_templates['template-tcp'] = flavor_data['listener'].get('tcp_template')
+        if listener.protocol == 'http':
+            if "http_template_regex" in flavor_data['listener']:
+                if listener.name and listener.name.split(".")[-1]:
+                    extension = listener.name.split(".")[-1]
+                    for template in device_templates['template']['http-list']:
+                        if extension == template["name"].split(".")[-1]:
+                            vport_templates['template-http'] = template["name"]
+                            break
+            if 'http_template' in flavor_data['listener']:
+                vport_templates['template-http'] = flavor_data['listener'].get('http_template')
+        return vport_templates
+
 
 class ListenerCreate(ListenersParent, task.Task):
     """Task to create listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder):
+    def execute(self, loadbalancer, listener, vthunder, flavor):
         try:
             self.set(self.axapi_client.slb.virtual_server.vport.create,
-                     loadbalancer, listener, vthunder)
+                     loadbalancer, listener, vthunder, flavor)
             LOG.debug("Successfully created listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to create listener: %s", listener.id)

@@ -274,7 +274,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-    def create_load_balancer(self, load_balancer_id):
+    def create_load_balancer(self, load_balancer_id, flavor=None):
         """Function to create load balancer for A10 provider"""
 
         lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
@@ -286,7 +286,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         store = {constants.LOADBALANCER_ID: load_balancer_id,
                  constants.VIP: lb.vip,
                  constants.BUILD_TYPE_PRIORITY:
-                 constants.LB_CREATE_NORMAL_PRIORITY}
+                 constants.LB_CREATE_NORMAL_PRIORITY,
+                 constants.FLAVOR: flavor}
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
 

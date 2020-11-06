@@ -48,6 +48,8 @@ class BaseDatabaseTask(task.Task):
         self.loadbalancer_repo = a10_repo.LoadBalancerRepository()
         self.vip_repo = repo.VipRepository()
         self.listener_repo = repo.ListenerRepository()
+        self.flavor_repo = repo.FlavorRepository()
+        self.flavor_profile_repo = repo.FlavorProfileRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -692,3 +694,17 @@ class GetChildProjectsOfParentPartition(BaseDatabaseTask):
                     "Failed to fetch list of projects, if multi-tenancy and use parent partition "
                     "is enabled due to %s", str(e))
                 raise e
+
+
+class GetFlavorObject(BaseDatabaseTask):
+
+    def execute(self, lb_resource):
+        if lb_resource.load_balancer and lb_resource.load_balancer.flavor_id:
+            flavor = self.flavor_repo.get(
+                db_apis.get_session(),
+                id=lb_resource.load_balancer.flavor_id)
+            if flavor and flavor.flavor_profile_id:
+                flavor_profile = self.flavor_profile_repo.get(
+                        db_apis.get_session(),
+                        id=flavor.flavor_profile_id)
+                return flavor_profile
