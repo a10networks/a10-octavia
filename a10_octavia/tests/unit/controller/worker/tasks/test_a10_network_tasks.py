@@ -38,8 +38,7 @@ PORT = o_net_data_models.Port()
 VRID = data_models.VRID()
 VRID_VALUE = 0
 SUBNET_1 = o_net_data_models.Subnet(id=a10constants.MOCK_SUBNET_ID)
-VRID_1 = data_models.VRID(id=a10constants.MOCK_VRID_ID,
-                          subnet_id=a10constants.MOCK_SUBNET_ID)
+VRID_1 = data_models.VRID(id=1, subnet_id=a10constants.MOCK_SUBNET_ID)
 
 
 class MockIP(object):

@@ -17,7 +17,7 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('vthunders', sa.Column('hierarchical_multitenancy', sa.Boolean(), default=False, nullable=True))
+    op.add_column('vthunders', sa.Column('hierarchical_multitenancy', sa.String(7), default=None, nullable=True))
 
 def downgrade():
     op.drop_column('vthunders', 'hierarchical_multitenancy')
