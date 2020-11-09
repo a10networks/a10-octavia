@@ -145,21 +145,14 @@ class MemberUpdate(task.Task):
             status = True
 
         try:
+            port_list = self.axapi_client.slb.server.get(server_name)['server'].get('port-list')
             self.axapi_client.slb.server.replace(server_name, member.ip_address, status=status,
                                                  server_templates=server_temp,
-                                                 axapi_args=server_args)
+                                                 axapi_args=server_args,
+                                                 port_list=port_list)
             LOG.debug("Successfully updated member: %s", member.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update member: %s", member.id)
-            raise e
-        try:
-            self.axapi_client.slb.service_group.member.create(
-                pool.id, server_name, member.protocol_port)
-            LOG.debug("Successfully associated member %s to pool %s",
-                      member.id, pool.id)
-        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
-            LOG.exception("Failed to associate member %s to pool %s",
-                          member.id, pool.id)
             raise e
 
 
