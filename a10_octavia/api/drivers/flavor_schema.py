@@ -55,5 +55,29 @@ SUPPORTED_FLAVOR_SCHEMA = {
                 }
             }
         },
+        "listener-list": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "regex": {
+                        "type": "string",
+                    },
+                    "listener": {
+                        "type": "object",
+                        "properties": {
+                            "tcp_template": {
+                                "type": "string",
+                                "description": "TCP Template name for TCP listener"
+                            },
+                            "http_template": {
+                                "type": "string",
+                                "description": "HTTP Template name for HTTP listener"
+                            },
+                        }
+                    },
+                }
+            }
+        },
     }
 }
