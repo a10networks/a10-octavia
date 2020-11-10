@@ -2,7 +2,7 @@
 
 Revision ID: b63ad99c9123
 Revises: 05b1446c7f20
-Create Date: 2020-11-10 05:14:02.658156
+Create Date: 2020-11-10 11:49:01.817832
 
 """
 from alembic import op
@@ -40,12 +40,6 @@ def upgrade():
                     sa.Column('hierarchical_multitenancy', sa.String(length=7), nullable=False),
                     sa.PrimaryKeyConstraint('id')
                     )
-    op.create_table('thunder',
-                    sa.Column('id', sa.String(length=36), nullable=False),
-                    sa.Column('vcs_device_id', sa.String(length=1), nullable=False),
-                    sa.Column('management_ip_address', sa.String(length=64), nullable=False),
-                    sa.PrimaryKeyConstraint('id')
-                    )
     op.create_table('thunder_cluster',
                     sa.Column('id', sa.String(length=36), nullable=False),
                     sa.Column('username', sa.String(length=1024), nullable=False),
@@ -73,6 +67,14 @@ def upgrade():
                     sa.ForeignKeyConstraint(['thunder_cluster_id'], ['thunder_cluster.id'], ),
                     sa.PrimaryKeyConstraint('id')
                     )
+    op.create_table('thunder',
+                    sa.Column('id', sa.String(length=36), nullable=False),
+                    sa.Column('vcs_device_id', sa.String(length=1), nullable=False),
+                    sa.Column('management_ip_address', sa.String(length=64), nullable=False),
+                    sa.Column('cluster_id', sa.String(length=36), nullable=True),
+                    sa.ForeignKeyConstraint(['cluster_id'], ['thunder_cluster.id'], ),
+                    sa.PrimaryKeyConstraint('id')
+                    )
     op.create_table('role',
                     sa.Column('id', sa.String(length=36), nullable=False),
                     sa.Column('role', sa.String(length=36), nullable=False),
@@ -97,10 +99,10 @@ def upgrade():
 def downgrade():
     op.drop_table('ve_interface_cluster')
     op.drop_table('role')
+    op.drop_table('thunder')
     op.drop_table('project')
     op.drop_table('trunk_interface')
     op.drop_table('thunder_cluster')
-    op.drop_table('thunder')
     op.drop_table('partitions')
     op.drop_table('ethernet_interface')
     op.drop_table('amphora_meta')

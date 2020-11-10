@@ -82,6 +82,7 @@ class Thunder(base_models.BASE):
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
     vcs_device_id = sa.Column(sa.String(1), nullable=False)
     management_ip_address = sa.Column(sa.String(64), nullable=False)
+    cluster_id = sa.Column(sa.String(36), sa.ForeignKey('thunder_cluster.id'))
 
 
 class Role(base_models.BASE):
