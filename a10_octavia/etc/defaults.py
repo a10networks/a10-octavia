@@ -4,4 +4,5 @@ GLOBAL_DEFAULTS = {
     "member_name_use_uuid": False,
     "keystone_auth_url": None,
     "keystone_version": 2,
+    "a10_database_connection": None
 }

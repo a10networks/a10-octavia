@@ -22,9 +22,9 @@ fileConfig(config.config_file_name)
 # target_metadata = mymodel.Base.metadata
 target_metadata = base_models.BASE.metadata
 
-if getattr(config, 'connection', None) is None:
+if getattr(config, 'connection_url', None) is None:
     a10_cfg = a10_config.A10Config()
-    config.set_main_option("sqlalchemy.url", a10_cfg.get('database_connection'))
+    config.set_main_option("sqlalchemy.url", a10_cfg.get('a10_database_connection'))
 
 
 # other values from the config, defined by the needs of env.py,

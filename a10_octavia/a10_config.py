@@ -76,6 +76,7 @@ class A10Config(object):
             self._config = blank_config
 
         self._config.octavia_conf_dir = '/etc/octavia/'
+        self._config.a10_octavia_conf_dir = '/etc/a10'
         self._load_config()
 
     def get_conf(self):
@@ -113,8 +114,28 @@ class A10Config(object):
         if self._config.database_connection is None:
             self._config.database_connection = self._get_octavia_db_string()
 
+        if self._config.a10_database_connection is None:
+            self._config.a10_database_connection = self._get_a10_octavia_db_string()
+
         if self._config.keystone_auth_url is None:
             self._config.keystone_auth_url = self.get_octavia_conf('keystone_authtoken', 'auth_uri')
+
+    def get_a10_octavia_conf(self, section, option):
+        a10_octavia_conf_dir = os.environ.get(
+            'A10_OCTAVIA_CONF_DIR', self._config.a10_octavia_conf_dir)
+        a10_octavia_conf = '%s/a10-octavia.conf' % a10_octavia_conf_dir
+
+        if os.path.exists(a10_octavia_conf):
+            LOG.debug("found a10-octavia.conf file in /etc")
+            n = ini.ConfigParser()
+            n.read(a10_octavia_conf)
+            try:
+                return n.get(section, option)
+            except (ini.NoSectionError, ini.NoOptionError):
+                pass
+        else:
+            raise Exception('FatalError: a10 Octavia config directory could not be found.')
+            LOG.error("A10Config could not find %s", self._config_path)
 
     def get_octavia_conf(self, section, option):
         octavia_conf_dir = os.environ.get('OCTAVIA_CONF_DIR', self._config.octavia_conf_dir)
@@ -131,6 +152,15 @@ class A10Config(object):
         else:
             raise Exception('FatalError: Octavia config directoty could not be found.')
             LOG.error("A10Config could not find %s", self._config_path)
+
+    def _get_a10_octavia_db_string(self):
+        db_connection_url = self.get_a10_octavia_conf('a10_database', 'connection_url')
+
+        if db_connection_url is None:
+            raise exceptions.NoDatabaseURL()
+
+        LOG.debug("Using %s as db connect string", db_connection_url)
+        return db_connection_url
 
     def _get_octavia_db_string(self):
         db_connection_url = self.get_octavia_conf('database', 'connection')
