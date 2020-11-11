@@ -20,9 +20,13 @@ down_revision = '896487fad87d'
 branch_labels = None
 depends_on = None
 
-bind = op.get_bind()
-session = sessionmaker(bind=bind)
-sess = session()
+try:
+    bind = op.get_bind()
+except NameError:
+    pass
+else:
+    session = sessionmaker(bind=bind)
+    sess = session()
 
 
 def upgrade():
@@ -45,7 +49,10 @@ def upgrade():
                 undercloud=_row[8]
             ))
             thunder.append(Thunder(
-                cluster_id=thunder_cluster_id
+                id=uuidutils.generate_uuid(),
+                cluster_id=thunder_cluster_id,
+                vcs_device_id="",
+                management_ip_address=""
             ))
         sess.add_all(thunder)
         sess.add_all(thunder_cluster)

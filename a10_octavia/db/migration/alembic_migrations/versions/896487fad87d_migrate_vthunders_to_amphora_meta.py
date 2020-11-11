@@ -19,10 +19,13 @@ down_revision = 'b63ad99c9123'
 branch_labels = None
 depends_on = None
 
-
-bind = op.get_bind()
-session = sessionmaker(bind=bind)
-sess = session()
+try:
+    bind = op.get_bind()
+except NameError:
+    pass
+else:
+    session = sessionmaker(bind=bind)
+    sess = session()
 
 
 def upgrade():
