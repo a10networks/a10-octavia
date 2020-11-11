@@ -2,7 +2,7 @@
 
 Revision ID: b63ad99c9123
 Revises: 05b1446c7f20
-Create Date: 2020-11-10 11:49:01.817832
+Create Date: 2020-11-11 07:58:21.175398
 
 """
 from alembic import op
@@ -18,9 +18,9 @@ depends_on = None
 
 def upgrade():
     op.create_table('amphora_meta',
-                    sa.Column('id', sa.String(length=36), nullable=False),
                     sa.Column('created_at', sa.DateTime(), nullable=True),
                     sa.Column('updated_at', sa.DateTime(), nullable=True),
+                    sa.Column('id', sa.String(length=36), nullable=False),
                     sa.Column('last_udp_update', sa.DateTime(), nullable=False),
                     sa.Column('status', sa.String(length=36), nullable=False),
                     sa.PrimaryKeyConstraint('id')
@@ -41,6 +41,8 @@ def upgrade():
                     sa.PrimaryKeyConstraint('id')
                     )
     op.create_table('thunder_cluster',
+                    sa.Column('created_at', sa.DateTime(), nullable=True),
+                    sa.Column('updated_at', sa.DateTime(), nullable=True),
                     sa.Column('id', sa.String(length=36), nullable=False),
                     sa.Column('username', sa.String(length=1024), nullable=False),
                     sa.Column('password', sa.String(length=50), nullable=False),
@@ -60,6 +62,8 @@ def upgrade():
                     sa.PrimaryKeyConstraint('interface_num')
                     )
     op.create_table('project',
+                    sa.Column('created_at', sa.DateTime(), nullable=True),
+                    sa.Column('updated_at', sa.DateTime(), nullable=True),
                     sa.Column('id', sa.String(length=36), nullable=False),
                     sa.Column('partition_id', sa.String(length=36), nullable=True),
                     sa.Column('thunder_cluster_id', sa.String(length=36), nullable=True),
@@ -68,6 +72,8 @@ def upgrade():
                     sa.PrimaryKeyConstraint('id')
                     )
     op.create_table('thunder',
+                    sa.Column('created_at', sa.DateTime(), nullable=True),
+                    sa.Column('updated_at', sa.DateTime(), nullable=True),
                     sa.Column('id', sa.String(length=36), nullable=False),
                     sa.Column('vcs_device_id', sa.String(length=1), nullable=False),
                     sa.Column('management_ip_address', sa.String(length=64), nullable=False),

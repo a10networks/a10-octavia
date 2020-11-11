@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 from oslo_db.sqlalchemy import models
 import sqlalchemy as sa
 from sqlalchemy.ext import orderinglist
@@ -22,6 +23,11 @@ from sqlalchemy.sql import func
 from a10_octavia.common import data_models
 from a10_octavia.db import base_models
 from octavia.i18n import _
+
+
+class TimeStampData:
+    created_at = sa.Column(sa.DateTime, default=datetime.datetime.utcnow)
+    updated_at = sa.Column(sa.DateTime, onupdate=datetime.datetime.utcnow)
 
 
 class VThunder(base_models.BASE):
@@ -66,17 +72,15 @@ class VRID(base_models.BASE):
     subnet_id = sa.Column(sa.String(36), nullable=False)
 
 
-class Amphora_Meta(base_models.BASE):
+class Amphora_Meta(base_models.BASE, TimeStampData):
     __tablename__ = 'amphora_meta'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
-    created_at = sa.Column(u'created_at', sa.DateTime(), nullable=True)
-    updated_at = sa.Column(u'updated_at', sa.DateTime(), nullable=True)
     last_udp_update = sa.Column(u'last_udp_update', sa.DateTime(), nullable=False)
     status = sa.Column('status', sa.String(36), default='ACTIVE', nullable=False)
 
 
-class Thunder(base_models.BASE):
+class Thunder(base_models.BASE, TimeStampData):
     __tablename__ = 'thunder'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
@@ -93,7 +97,7 @@ class Role(base_models.BASE):
     thunder_id = sa.Column(sa.String(36), sa.ForeignKey('thunder.id'))
 
 
-class Thunder_Cluster(base_models.BASE):
+class Thunder_Cluster(base_models.BASE, TimeStampData):
     __tablename__ = 'thunder_cluster'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
@@ -113,7 +117,7 @@ class Partitions(base_models.BASE):
     hierarchical_multitenancy = sa.Column(sa.String(7), nullable=False)
 
 
-class Project(base_models.BASE):
+class Project(base_models.BASE, TimeStampData):
     __tablename__ = 'project'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
