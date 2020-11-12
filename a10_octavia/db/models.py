@@ -30,7 +30,7 @@ class TimeStampData:
     updated_at = sa.Column(sa.DateTime, onupdate=datetime.datetime.utcnow)
 
 
-class VThunder(base_models.BASE):
+class VThunder(base_models.BASE, TimeStampData):
     __data_model__ = data_models.VThunder
     __tablename__ = 'vthunders'
 
@@ -50,8 +50,6 @@ class VThunder(base_models.BASE):
     role = sa.Column(sa.String(50))
     last_udp_update = sa.Column(u'last_udp_update', sa.DateTime(), nullable=True)
     status = sa.Column('status', sa.String(36), default='ACTIVE', nullable=False)
-    created_at = sa.Column(u'created_at', sa.DateTime(), nullable=True)
-    updated_at = sa.Column(u'updated_at', sa.DateTime(), nullable=True)
     partition_name = sa.Column(sa.String(14), nullable=True)
     hierarchical_multitenancy = sa.Column(sa.String(7), default=None, nullable=True)
 
@@ -60,7 +58,7 @@ class VThunder(base_models.BASE):
         return cls.find_by_attribute('loadbalancer_id', loadbalancer_id, db_session)
 
 
-class VRID(base_models.BASE):
+class VRID(base_models.BASE, TimeStampData):
     __data_model__ = data_models.VRID
     __tablename__ = 'vrid'
 
@@ -89,11 +87,11 @@ class Thunder(base_models.BASE, TimeStampData):
     cluster_id = sa.Column(sa.String(36), sa.ForeignKey('thunder_cluster.id'))
 
 
-class Role(base_models.BASE):
+class Role(base_models.BASE, TimeStampData):
     __tablename__ = 'role'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
-    role = sa.Column(sa.String(36), nullable=False)
+    state = sa.Column(sa.String(36), nullable=False)
     thunder_id = sa.Column(sa.String(36), sa.ForeignKey('thunder.id'))
 
 
@@ -109,11 +107,11 @@ class Thunder_Cluster(base_models.BASE, TimeStampData):
     undercloud = sa.Column(sa.Boolean(), default=False, nullable=False)
 
 
-class Partitions(base_models.BASE):
+class Partitions(base_models.BASE, TimeStampData):
     __tablename__ = 'partitions'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
-    partition_name = sa.Column(sa.String(14), nullable=True)
+    name = sa.Column(sa.String(14), nullable=True)
     hierarchical_multitenancy = sa.Column(sa.String(7), nullable=False)
 
 
@@ -125,7 +123,7 @@ class Project(base_models.BASE, TimeStampData):
     thunder_cluster_id = sa.Column(sa.String(36), sa.ForeignKey('thunder_cluster.id'))
 
 
-class Ethernet_Interface(base_models.BASE):
+class Ethernet_Interface(base_models.BASE, TimeStampData):
     __tablename__ = 'ethernet_interface'
 
     interface_num = sa.Column(sa.Integer, primary_key=True, nullable=False)
@@ -133,10 +131,9 @@ class Ethernet_Interface(base_models.BASE):
     subnet_id = sa.Column(sa.String(36), nullable=False)
     ve_ip_address = sa.Column(sa.String(64), nullable=False)
     port_id = sa.Column(sa.String(36), nullable=False)
-    state = sa.Column(sa.String(36), nullable=False)
 
 
-class Trunk_Interface(base_models.BASE):
+class Trunk_Interface(base_models.BASE, TimeStampData):
     __tablename__ = 'trunk_interface'
 
     interface_num = sa.Column(sa.Integer, primary_key=True, nullable=False)
@@ -144,11 +141,10 @@ class Trunk_Interface(base_models.BASE):
     subnet_id = sa.Column(sa.String(36), nullable=False)
     ve_ip_address = sa.Column(sa.String(64), nullable=False)
     port_id = sa.Column(sa.String(36), nullable=False)
-    state = sa.Column(sa.String(36), nullable=False)
 
 
-class VE_Interface_Cluster(base_models.BASE):
-    __tablename__ = 've_interface_cluster'
+class Device_Network_Cluster(base_models.BASE, TimeStampData):
+    __tablename__ = 'device_network_cluster'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
     thunder_id = sa.Column(sa.String(36), sa.ForeignKey('thunder.id'))
