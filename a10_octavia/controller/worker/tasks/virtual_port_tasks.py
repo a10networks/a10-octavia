@@ -150,7 +150,7 @@ class ListenersParent(object):
 
         if 'listener' in flavor_item:
             if listener.protocol == 'tcp':
-                vport_templates['template-tcp'] = flavor_item['listener'].get('tcp_template')
+                vport_templates['template-tcp'] = flavor_item['listener'].get('template_tcp')
             if listener.protocol == 'http':
                 if "http_template_regex" in flavor_item['listener']:
                     if listener.name and listener.name.split(".")[-1]:
@@ -159,8 +159,8 @@ class ListenersParent(object):
                             if extension == template["name"].split(".")[-1]:
                                 vport_templates['template-http'] = template["name"]
                                 break
-                if 'http_template' in flavor_item['listener']:
-                    vport_templates['template-http'] = flavor_item['listener'].get('http_template')
+                if 'template_http' in flavor_item['listener']:
+                    vport_templates['template-http'] = flavor_item['listener'].get('template_http')
         return vport_templates
 
 

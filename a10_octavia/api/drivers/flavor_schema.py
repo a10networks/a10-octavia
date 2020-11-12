@@ -20,14 +20,51 @@ SUPPORTED_FLAVOR_SCHEMA = {
     "type": "object",
     "additionalProperties": True,
     "properties": {
+        "slb": {
+            "type": "object",
+            "properties": {
+                "name-expressions": {
+                    "type": "array",
+                    "description": "Specify name expression to match loadbalancers "
+                                   "and options that will apply to the slb",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "regex": {
+                                "type": "string",
+                            },
+                            "json": {
+                                "type": "object",
+                            },
+                        }
+                    }
+                },
+            }
+        },
         "listener": {
             "type": "object",
             "properties": {
-                "tcp_template": {
+                "name-expressions": {
+                    "type": "array",
+                    "description": "Specify name expression to match listeners "
+                                   "and options that will apply to the vport",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "regex": {
+                                "type": "string",
+                            },
+                            "json": {
+                                "type": "object",
+                            },
+                        }
+                    }
+                },
+                "template_tcp": {
                     "type": "string",
                     "description": "TCP Template name for TCP listener"
                 },
-                "http_template": {
+                "template_http": {
                     "type": "string",
                     "description": "HTTP Template name for HTTP listener"
                 },
@@ -37,9 +74,46 @@ SUPPORTED_FLAVOR_SCHEMA = {
                 }
             }
         },
+        "service_group": {
+            "type": "object",
+            "properties": {
+                "name-expressions": {
+                    "type": "array",
+                    "description": "Specify name expression to match pools "
+                                   "and options that will apply to the service-group",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "regex": {
+                                "type": "string",
+                            },
+                            "json": {
+                                "type": "object",
+                            },
+                        }
+                    }
+                },
+            }
+        },
         "server": {
             "type": "object",
             "properties": {
+                "name-expressions": {
+                    "type": "array",
+                    "description": "Specify name expression to match members "
+                                   "and options that will apply to the server",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "regex": {
+                                "type": "string",
+                            },
+                            "json": {
+                                "type": "object",
+                            },
+                        }
+                    }
+                },
                 "conn_limit": {
                     "type": "integer",
                     "minimum": 1,
@@ -55,28 +129,25 @@ SUPPORTED_FLAVOR_SCHEMA = {
                 }
             }
         },
-        "listener-list": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "regex": {
-                        "type": "string",
-                    },
-                    "listener": {
+        "health_monitor": {
+            "type": "object",
+            "properties": {
+                "name-expressions": {
+                    "type": "array",
+                    "description": "Specify name expression to match healthmonitor"
+                                   " and options that will apply to the health monitor",
+                    "items": {
                         "type": "object",
                         "properties": {
-                            "tcp_template": {
+                            "regex": {
                                 "type": "string",
-                                "description": "TCP Template name for TCP listener"
                             },
-                            "http_template": {
-                                "type": "string",
-                                "description": "HTTP Template name for HTTP listener"
+                            "json": {
+                                "type": "object",
                             },
                         }
-                    },
-                }
+                    }
+                },
             }
         },
     }
