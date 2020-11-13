@@ -41,7 +41,7 @@ class MemberCreate(task.Task):
         server_args['conn-resume'] = CONF.server.conn_resume
         # overwrite options from flavor
         if flavor:
-            self.handle_flavor_options(server_args, json.loads(flavor.flavor_data))
+            self.handle_flavor_options(member, server_args, json.loads(flavor.flavor_data))
         server_args = {'server': server_args}
 
         server_temp = {}
@@ -81,12 +81,19 @@ class MemberCreate(task.Task):
                           member.id, pool.id)
             raise e
 
-    def handle_flavor_options(self, server_args, flavor_data):
-        if flavor_data['server']:
-            if flavor_data['server']['conn_limit']:
-                server_args['conn-limit'] = flavor_data['server']['conn_limit']
-            if flavor_data['server']['conn_resume']:
-                server_args['conn-resume'] = flavor_data['server']['conn_resume']
+    def handle_flavor_options(self, member, server_args, flavor_data):
+        if 'server' in flavor_data:
+            server_flavor = flavor_data['server']
+            if 'name-expressions' in server_flavor:
+                for flavor in server_flavor['name-expressions']:
+                    if flavor['regex'] in member.name:
+                        json_value = flavor['json']
+                        server_args.update(json_value)
+                        return
+            if 'conn_limit' in server_flavor:
+                server_args['conn-limit'] = server_flavor['conn_limit']
+            if 'conn_resume' in server_flavor:
+                server_args['conn-resume'] = server_flavor['conn_resume']
 
     @axapi_client_decorator
     def revert(self, member, vthunder, pool, member_count_ip, *args, **kwargs):
