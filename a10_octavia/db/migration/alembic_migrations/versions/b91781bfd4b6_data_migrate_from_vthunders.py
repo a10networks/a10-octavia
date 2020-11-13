@@ -5,14 +5,16 @@ Revises: b63ad99c9123
 Create Date: 2020-11-10 19:43:14.075829
 
 """
-from alembic import op
 import sqlalchemy as sa
-
-from sqlalchemy.orm import sessionmaker
+from alembic import op
 from oslo_utils import uuidutils
+from sqlalchemy.orm import sessionmaker
 
 from a10_octavia import a10_config
-from a10_octavia.db.models import Amphora_Meta, Partitions, Thunder_Cluster
+from a10_octavia.db.models import Amphora_Meta
+from a10_octavia.db.models import Partitions
+from a10_octavia.db.models import Thunder_Cluster
+from a10_octavia.db.models import Topology
 
 # revision identifiers, used by Alembic.
 revision = 'b91781bfd4b6'
@@ -39,13 +41,18 @@ def upgrade():
         partitions = []
         amphora_meta = []
         for _row in results:
+            try:
+                topology = getattr(Topology, _row[12]).value
+            except AttributeError:
+                topology = Topology.STANDALONE.value
+
             thunder_cluster.append(Thunder_Cluster(
                 id=_row[1],
                 username=_row[5],
                 password=_row[6],
                 cluster_name=_row[3],
                 cluster_ip_address=_row[4],
-                topology=_row[12],
+                topology=topology,
                 undercloud=_row[8]
             ))
             partition_id = uuidutils.generate_uuid()
