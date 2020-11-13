@@ -1,7 +1,7 @@
 """migrate_old_vthunder_to_thunder_thunder_cluster
 
 Revision ID: b91781bfd4b6
-Revises: 896487fad87d
+Revises: b63ad99c9123
 Create Date: 2020-11-10 19:43:14.075829
 
 """
@@ -12,11 +12,11 @@ from sqlalchemy.orm import sessionmaker
 from oslo_utils import uuidutils
 
 from a10_octavia import a10_config
-from a10_octavia.db.models import Partitions, Project, Thunder_Cluster
+from a10_octavia.db.models import Amphora_Meta, Partitions, Thunder_Cluster
 
 # revision identifiers, used by Alembic.
 revision = 'b91781bfd4b6'
-down_revision = '896487fad87d'
+down_revision = 'b63ad99c9123'
 branch_labels = None
 depends_on = None
 
@@ -37,7 +37,7 @@ def upgrade():
         results = con.execute('select * from vthunders')
         thunder_cluster = []
         partitions = []
-        project = []
+        amphora_meta = []
         for _row in results:
             thunder_cluster.append(Thunder_Cluster(
                 id=_row[1],
@@ -54,20 +54,20 @@ def upgrade():
                                          hierarchical_multitenancy=_row[19],
                                          created_at=_row[16],
                                          updated_at=_row[17]))
-            project.append(Project(id=_row[10],
-                                   partition_id=partition_id,
-                                   thunder_cluster_id=_row[1],
-                                   created_at=_row[16],
-                                   updated_at=_row[17]))
+            amphora_meta.append(Amphora_Meta(id=_row[2],
+                                             last_udp_update=_row[14],
+                                             status=_row[15],
+                                             created_at=_row[16],
+                                             updated_at=_row[17]))
         sess.add_all(thunder_cluster)
         sess.add_all(partitions)
-        sess.add_all(project)
+        sess.add_all(amphora_meta)
         sess.commit()
     sess.close()
 
 
 def downgrade():
-    sess.query(Project).filter().delete()
+    sess.query(Amphora_Meta).filter().delete()
     sess.query(Partitions).filter().delete()
     sess.query(Thunder_Cluster).filter().delete()
     sess.commit()

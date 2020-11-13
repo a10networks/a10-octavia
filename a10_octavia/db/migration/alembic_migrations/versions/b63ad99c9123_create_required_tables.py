@@ -69,8 +69,8 @@ def upgrade():
                     sa.Column('id', sa.String(length=36), nullable=False),
                     sa.Column('created_at', sa.DateTime(), nullable=True),
                     sa.Column('updated_at', sa.DateTime(), nullable=True),
-                    sa.Column('partition_id', sa.String(length=36), nullable=True),
-                    sa.Column('thunder_cluster_id', sa.String(length=36), nullable=True),
+                    sa.Column('partition_id', sa.String(length=36), nullable=False),
+                    sa.Column('thunder_cluster_id', sa.String(length=36), nullable=False),
                     sa.ForeignKeyConstraint(['partition_id'], ['partitions.id'], ),
                     sa.ForeignKeyConstraint(['thunder_cluster_id'], ['thunder_cluster.id'], ),
                     sa.PrimaryKeyConstraint('id')
