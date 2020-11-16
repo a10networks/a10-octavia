@@ -705,6 +705,20 @@ class GetFlavorObject(BaseDatabaseTask):
                 id=lb_resource.load_balancer.flavor_id)
             if flavor and flavor.flavor_profile_id:
                 flavor_profile = self.flavor_profile_repo.get(
-                        db_apis.get_session(),
-                        id=flavor.flavor_profile_id)
+                    db_apis.get_session(),
+                    id=flavor.flavor_profile_id)
+                return flavor_profile
+
+
+class GetFlavorObjectFromLoadBalancer(BaseDatabaseTask):
+
+    def execute(self, loadbalancer):
+        if loadbalancer.flavor_id:
+            flavor = self.flavor_repo.get(
+                db_apis.get_session(),
+                id=loadbalancer.flavor_id)
+            if flavor and flavor.flavor_profile_id:
+                flavor_profile = self.flavor_profile_repo.get(
+                    db_apis.get_session(),
+                    id=flavor.flavor_profile_id)
                 return flavor_profile
