@@ -82,6 +82,7 @@ class Amphora_Meta(base_models.BASE, TimeStampData):
 
 
 class Thunder(base_models.BASE, TimeStampData):
+    __data_model__ = data_models.Thunder
     __tablename__ = 'thunder'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
@@ -111,6 +112,7 @@ class Thunder_Cluster(base_models.BASE, TimeStampData):
 
 
 class Partitions(base_models.BASE, TimeStampData):
+    __data_model__ = data_models.Partition
     __tablename__ = 'partitions'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)

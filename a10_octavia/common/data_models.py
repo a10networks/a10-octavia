@@ -132,3 +132,19 @@ class AmphoraMeta(A10OctaviaDataModel):
         self.updated_at = updated_at
         self.last_udp_update = last_udp_update
         self.status = status
+
+
+class Partition(A10OctaviaDataModel):
+    def __init__(self, id=None, name=None, hierarchical_multitenancy=None):
+        self.id = id
+        self.name = name
+        self.hierarchical_multitenancy = hierarchical_multitenancy
+
+
+class Thunder(A10OctaviaDataModel):
+    def __init__(self, id=None, vcs_device_id=None,
+                 management_ip_address=None, cluster_id=None):
+        self.id = id
+        self.vcs_device_id = vcs_device_id
+        self.management_ip_address = management_ip_address
+        self.cluster_id = cluster_id
