@@ -17,128 +17,34 @@ from datetime import datetime
 import re
 import six
 from sqlalchemy.orm import collections
+from octavia.common import data_models
 
 
-class BaseDataModel(object):
-    def to_dict(self, calling_classes=None, recurse=False, **kwargs):
-        """Converts a data model to a dictionary."""
-        calling_classes = calling_classes or []
-        ret = {}
-        for attr in self.__dict__:
-            if attr.startswith('_') or not kwargs.get(attr, True):
-                continue
-            value = self.__dict__[attr]
-
-            if recurse:
-                if isinstance(getattr(self, attr), list):
-                    ret[attr] = []
-                    for item in value:
-                        if isinstance(item, BaseDataModel):
-                            if type(self) not in calling_classes:
-                                ret[attr].append(
-                                    item.to_dict(calling_classes=(
-                                        calling_classes + [type(self)])))
-                            else:
-                                ret[attr] = None
-                        else:
-                            ret[attr] = item
-                elif isinstance(getattr(self, attr), BaseDataModel):
-                    if type(self) not in calling_classes:
-                        ret[attr] = value.to_dict(
-                            calling_classes=calling_classes + [type(self)])
-                    else:
-                        ret[attr] = None
-                elif six.PY2 and isinstance(value, six.text_type):
-                    ret[attr.encode('utf8')] = value.encode('utf8')
-                else:
-                    ret[attr] = value
-            else:
-                if isinstance(getattr(self, attr), (BaseDataModel, list)):
-                    ret[attr] = None
-                else:
-                    ret[attr] = value
-
-        return ret
-
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self.to_dict() == other.to_dict()
-        return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    @classmethod
-    def from_dict(cls, dict):
-        return cls(**dict)
-
-    @classmethod
-    def _name(cls):
-        """Returns class name in a more human readable form."""
-        # Split the class name up by capitalized words
-        return ' '.join(re.findall('[A-Z][^A-Z]*', cls.__name__))
+class A10OctaviaDataModel(data_models.BaseDataModel):
 
     def _get_unique_key(self, obj=None):
         """Returns a unique key for passed object for data model building."""
         obj = obj or self
         # First handle all objects with their own ID, then handle subordinate
         # objects.
-        if obj.__class__.__name__ in ['VThunder']:
+        if obj.__class__.__name__ in ['VThunder', 'AmphoraMeta', 'Partitions', 'ThunderCluster',
+                                      'Thunder', 'DeviceNetworkCluster', 'Project']:
             return obj.__class__.__name__ + obj.id
+        if obj.__class__.__name__ in ['TrunkInterface', 'EthernetInterface']:
+            return obj.__class__.__name__ + obj.interface_num
         else:
             raise NotImplementedError
 
-    def _find_in_graph(self, key, _visited_nodes=None):
-        """Locates an object with the given unique key in the current
 
-        object graph and returns a reference to it.
-        """
-        _visited_nodes = _visited_nodes or []
-        mykey = self._get_unique_key()
-        if mykey in _visited_nodes:
-            # Seen this node already, don't traverse further
-            return None
-        elif mykey == key:
-            return self
-        else:
-            _visited_nodes.append(mykey)
-            attr_names = [attr_name for attr_name in dir(self)
-                          if not attr_name.startswith('_')]
-            for attr_name in attr_names:
-                attr = getattr(self, attr_name)
-                if isinstance(attr, BaseDataModel):
-                    result = attr._find_in_graph(
-                        key, _visited_nodes=_visited_nodes)
-                    if result is not None:
-                        return result
-                elif isinstance(attr, (collections.InstrumentedList, list)):
-                    for item in attr:
-                        if isinstance(item, BaseDataModel):
-                            result = item._find_in_graph(
-                                key, _visited_nodes=_visited_nodes)
-                            if result is not None:
-                                return result
-        # If we are here we didn't find it.
-        return None
-
-    def update(self, update_dict):
-        """Generic update method which works for simple,
-
-        non-relational attributes.
-        """
-        for key, value in update_dict.items():
-            setattr(self, key, value)
-
-
-class Thunder(BaseDataModel):
+class ThunderCluster(A10OctaviaDataModel):
 
     def __init__(self, id=None, vthunder_id=None, amphora_id=None,
                  device_name=None, ip_address=None, username=None,
                  password=None, axapi_version=None, undercloud=None,
                  loadbalancer_id=None, project_id=None, compute_id=None,
-                 topology="STANDALONE", role="MASTER", last_udp_update=None, status="ACTIVE",
-                 created_at=datetime.utcnow(), updated_at=datetime.utcnow(),
-                 partition_name="shared", hierarchical_multitenancy="disable",
+                 topology=None, role=None, last_udp_update=None, status=None,
+                 created_at=None, updated_at=None,
+                 partition_name=None, hierarchical_multitenancy=None,
                  vrid_floating_ip=None, device_network_map=None):
         self.id = id
         self.vthunder_id = vthunder_id
@@ -164,17 +70,17 @@ class Thunder(BaseDataModel):
         self.device_network_map = device_network_map or []
 
 
-class HardwareThunder(Thunder):
+class HardwareThunder(ThunderCluster):
     def __init__(self, **kwargs):
-        Thunder.__init__(self, **kwargs)
+        ThunderCluster.__init__(self, **kwargs)
 
 
-class VThunder(Thunder):
+class VThunder(ThunderCluster):
     def __init__(self, **kwargs):
-        Thunder.__init__(self, **kwargs)
+        ThunderCluster.__init__(self, **kwargs)
 
 
-class Certificate(BaseDataModel):
+class Certificate(A10OctaviaDataModel):
 
     def __init__(self, cert_filename=None, cert_content=None, key_filename=None,
                  key_content=None, key_pass=None, template_name=None):
@@ -186,7 +92,7 @@ class Certificate(BaseDataModel):
         self.template_name = template_name
 
 
-class VRID(BaseDataModel):
+class VRID(A10OctaviaDataModel):
 
     def __init__(self, id=None, project_id=None, vrid=None, vrid_port_id=None,
                  vrid_floating_ip=None, subnet_id=None):
@@ -198,7 +104,7 @@ class VRID(BaseDataModel):
         self.subnet_id = subnet_id
 
 
-class Interface(BaseDataModel):
+class Interface(A10OctaviaDataModel):
 
     def __init__(self, interface_num=None, tags=None, ve_ips=None):
         self.interface_num = interface_num
@@ -206,7 +112,7 @@ class Interface(BaseDataModel):
         self.ve_ips = ve_ips or []
 
 
-class DeviceNetworkMap(BaseDataModel):
+class DeviceNetworkMap(A10OctaviaDataModel):
 
     def __init__(self, vcs_device_id=None, mgmt_ip_address=None, ethernet_interfaces=None,
                  trunk_interfaces=None):
@@ -215,3 +121,14 @@ class DeviceNetworkMap(BaseDataModel):
         self.ethernet_interfaces = ethernet_interfaces or []
         self.trunk_interfaces = trunk_interfaces or []
         self.state = 'Unknown'
+
+
+class AmphoraMeta(A10OctaviaDataModel):
+
+    def __init__(self, id=None, created_at=None, updated_at=None,
+                 last_udp_update=None, status=None):
+        self.id = id
+        self.created_at = created_at
+        self.updated_at = updated_at
+        self.last_udp_update = last_udp_update
+        self.status = status
