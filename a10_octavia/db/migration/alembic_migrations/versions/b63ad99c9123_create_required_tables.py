@@ -5,9 +5,11 @@ Revises: 05b1446c7f20
 Create Date: 2020-11-12 11:59:15.173270
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
+from sqlalchemy_utils.types.choice import ChoiceType
 
+from a10_octavia.db.models import Topology
 
 # revision identifiers, used by Alembic.
 revision = 'b63ad99c9123'
@@ -53,6 +55,8 @@ def upgrade():
                     sa.Column('cluster_ip_address', sa.String(length=64), nullable=False),
                     sa.Column('topology', sa.String(length=50), nullable=True),
                     sa.Column('undercloud', sa.Boolean(), nullable=False),
+                    sa.Column('topology', ChoiceType(Topology, impl=sa.Integer()),
+                              default=Topology.STANDALONE.value),
                     sa.PrimaryKeyConstraint('id')
                     )
     op.create_table('trunk_interface',
@@ -69,8 +73,8 @@ def upgrade():
                     sa.Column('id', sa.String(length=36), nullable=False),
                     sa.Column('created_at', sa.DateTime(), nullable=True),
                     sa.Column('updated_at', sa.DateTime(), nullable=True),
-                    sa.Column('partition_id', sa.String(length=36), nullable=True),
-                    sa.Column('thunder_cluster_id', sa.String(length=36), nullable=True),
+                    sa.Column('partition_id', sa.String(length=36), nullable=False),
+                    sa.Column('thunder_cluster_id', sa.String(length=36), nullable=False),
                     sa.ForeignKeyConstraint(['partition_id'], ['partitions.id'], ),
                     sa.ForeignKeyConstraint(['thunder_cluster_id'], ['thunder_cluster.id'], ),
                     sa.PrimaryKeyConstraint('id')
@@ -93,10 +97,10 @@ def upgrade():
                     sa.Column('ethernet_interface_num', sa.Integer(), nullable=True),
                     sa.Column('trunk_interface_num', sa.Integer(), nullable=True),
                     sa.ForeignKeyConstraint(['ethernet_interface_num'], [
-                                            'ethernet_interface.interface_num'], ),
+                        'ethernet_interface.interface_num'], ),
                     sa.ForeignKeyConstraint(['thunder_id'], ['thunder.id'], ),
                     sa.ForeignKeyConstraint(['trunk_interface_num'], [
-                                            'trunk_interface.interface_num'], ),
+                        'trunk_interface.interface_num'], ),
                     sa.PrimaryKeyConstraint('id')
                     )
     op.create_table('role',

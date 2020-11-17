@@ -13,21 +13,24 @@
 #    under the License.
 
 import datetime
-from oslo_db.sqlalchemy import models
+from enum import Enum
+
 import sqlalchemy as sa
-from sqlalchemy.ext import orderinglist
-from sqlalchemy import orm
-from sqlalchemy.orm import validates
-from sqlalchemy.sql import func
+from sqlalchemy_utils import ChoiceType
 
 from a10_octavia.common import data_models
 from a10_octavia.db import base_models
-from octavia.i18n import _
 
 
 class TimeStampData:
     created_at = sa.Column(sa.DateTime, default=datetime.datetime.utcnow)
     updated_at = sa.Column(sa.DateTime, onupdate=datetime.datetime.utcnow)
+
+
+class Topology(Enum):
+    ACTIVE = 1
+    STANDBY = 2
+    STANDALONE = 3
 
 
 class VThunder(base_models.BASE, TimeStampData):
@@ -103,8 +106,8 @@ class Thunder_Cluster(base_models.BASE, TimeStampData):
     password = sa.Column(sa.String(50), nullable=False)
     cluster_name = sa.Column(sa.String(1024), nullable=False)
     cluster_ip_address = sa.Column(sa.String(64), nullable=False)
-    topology = sa.Column(sa.String(50))
     undercloud = sa.Column(sa.Boolean(), default=False, nullable=False)
+    topology = sa.Column(ChoiceType(Topology, impl=sa.Integer()), default=Topology.STANDALONE.value)
 
 
 class Partitions(base_models.BASE, TimeStampData):
