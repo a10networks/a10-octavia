@@ -6,8 +6,8 @@ Create Date: 2020-11-12 11:59:15.173270
 
 """
 import sqlalchemy as sa
-import sqlalchemy_utils
 from alembic import op
+from sqlalchemy_utils.types.choice import ChoiceType
 
 from a10_octavia.db.models import Topology
 
@@ -55,7 +55,7 @@ def upgrade():
                     sa.Column('cluster_ip_address', sa.String(length=64), nullable=False),
                     sa.Column('topology', sa.String(length=50), nullable=True),
                     sa.Column('undercloud', sa.Boolean(), nullable=False),
-                    sa.Column('topology', sqlalchemy_utils.types.choice.ChoiceType(Topology, impl=sa.Integer()),
+                    sa.Column('topology', ChoiceType(Topology, impl=sa.Integer()),
                               default=Topology.STANDALONE.value),
                     sa.PrimaryKeyConstraint('id')
                     )
