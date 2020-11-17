@@ -95,6 +95,8 @@ class MemberCreate(task.Task):
             if 'conn_resume' in server_flavor:
                 server_args['conn-resume'] = server_flavor['conn_resume']
 
+        return server_args
+
     @axapi_client_decorator
     def revert(self, member, vthunder, pool, member_count_ip, *args, **kwargs):
         if member_count_ip > 1:

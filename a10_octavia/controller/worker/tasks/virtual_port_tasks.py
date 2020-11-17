@@ -137,31 +137,6 @@ class ListenersParent(object):
                    virtual_port_templates=vport_templates,
                    **template_args)
 
-    def handle_flavor_templates(self, listener, flavor_data, device_templates):
-        # TODO(http_template_regex): Handle partition logic, regex here
-        # POC grade code, scale it to include all template + shared templates + updates
-        vport_templates = {}
-        flavor_item = flavor_data
-        if 'listener-list' in flavor_data:
-            for flavor1 in flavor_item['listener-list']:
-                if flavor1['regex'] in listener.name:
-                    flavor_item = flavor1
-                    break
-
-        if 'listener' in flavor_item:
-            if listener.protocol == 'tcp':
-                vport_templates['template-tcp'] = flavor_item['listener'].get('template_tcp')
-            if listener.protocol == 'http':
-                if "http_template_regex" in flavor_item['listener']:
-                    if listener.name and listener.name.split(".")[-1]:
-                        extension = listener.name.split(".")[-1]
-                        for template in device_templates['template']['http-list']:
-                            if extension == template["name"].split(".")[-1]:
-                                vport_templates['template-http'] = template["name"]
-                                break
-                if 'template_http' in flavor_item['listener']:
-                    vport_templates['template-http'] = flavor_item['listener'].get('template_http')
-        return vport_templates
 
 
 class ListenerCreate(ListenersParent, task.Task):

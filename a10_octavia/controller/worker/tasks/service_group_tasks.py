@@ -74,7 +74,6 @@ class PoolParent(object):
                    hm_name=kwargs.get('health_monitor'),
                    axapi_args=axapi_args)
 
-
 class PoolCreate(PoolParent, task.Task):
     """Task to create pool"""
 
