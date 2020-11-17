@@ -20,7 +20,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
     "type": "object",
     "additionalProperties": True,
     "properties": {
-        "slb": {
+        "virtual-server": {
             "type": "object",
             "properties": {
                 "name-expressions": {
@@ -41,7 +41,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
                 },
             }
         },
-        "listener": {
+        "virtual-port": {
             "type": "object",
             "properties": {
                 "name-expressions": {
@@ -74,7 +74,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
                 }
             }
         },
-        "service_group": {
+        "service-group": {
             "type": "object",
             "properties": {
                 "name-expressions": {
@@ -129,7 +129,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
                 }
             }
         },
-        "health_monitor": {
+        "health-monitor": {
             "type": "object",
             "properties": {
                 "name-expressions": {
