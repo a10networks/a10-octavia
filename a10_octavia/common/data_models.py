@@ -23,10 +23,10 @@ class A10OctaviaDataModel(data_models.BaseDataModel):
         obj = obj or self
         # First handle all objects with their own ID, then handle subordinate
         # objects.
-        if obj.__class__.__name__ in ['VThunder', 'AmphoraMeta', 'Partitions', 'ThunderCluster',
-                                      'Thunder', 'DeviceNetworkCluster', 'Project']:
+        if obj.__class__.__name__ in ['ThunderV1', 'AmphoraMeta', 'Partitions', 'ThunderCluster',
+                                      'Thunder', 'DeviceNetworkCluster', 'VRID']:
             return obj.__class__.__name__ + obj.id
-        if obj.__class__.__name__ in ['TrunkInterface', 'EthernetInterface']:
+        if obj.__class__.__name__ in ['Interface', 'TrunkInterface', 'EthernetInterface']:
             return obj.__class__.__name__ + obj.interface_num
         else:
             raise NotImplementedError
@@ -100,7 +100,7 @@ class VRID(A10OctaviaDataModel):
         self.subnet_id = subnet_id
 
 
-class Interface(A10OctaviaDataModel):
+class InterfaceV1(A10OctaviaDataModel):
 
     def __init__(self, interface_num=None, tags=None, ve_ips=None):
         self.interface_num = interface_num
@@ -117,6 +117,43 @@ class DeviceNetworkMap(A10OctaviaDataModel):
         self.ethernet_interfaces = ethernet_interfaces or []
         self.trunk_interfaces = trunk_interfaces or []
         self.state = 'Unknown'
+
+
+class DeviceNetworkCluster(A10OctaviaDataModel):
+
+    def __init__(self, id=None, thunder_id=None, ethernet_interface_num=None,
+                 trunk_interface_num=None, created_at=None, updated_at=None):
+        self.id = id
+        self.thunder_id = thunder_id
+        self.ethernet_interface_num = ethernet_interface_num
+        self.trunk_interface_num = trunk_interface_num
+        self.created_at = created_at
+        self.updated_at = updated_at
+
+
+class Interface(A10OctaviaDataModel):
+
+    def __init__(self, interface_num=None, subnet_id=None, vlan_id=None,
+                 ve_ip_address=None, port_id=None, created_at=None, updated_at=None):
+        self.interface_num = interface_num
+        self.subnet_id = subnet_id
+        self.vlan_id = vlan_id
+        self.ve_ip_address = ve_ip_address
+        self.port_id = port_id
+        self.created_at = created_at
+        self.updated_at = updated_at
+
+
+class EthernetInterface(Interface):
+
+    def __init__(self, **kwargs):
+        Interface.__init__(self, **kwargs)
+
+
+class TrunkInterface(Interface):
+
+    def __init__(self, **kwargs):
+        Interface.__init__(self, **kwargs)
 
 
 class ThunderCluster(A10OctaviaDataModel):
@@ -146,16 +183,21 @@ class AmphoraMeta(A10OctaviaDataModel):
 
 
 class Partitions(A10OctaviaDataModel):
-    def __init__(self, id=None, name=None, hierarchical_multitenancy=None):
+    def __init__(self, id=None, name=None, hierarchical_multitenancy=None,
+                 created_at=None, updated_at=None):
         self.id = id
         self.name = name
         self.hierarchical_multitenancy = hierarchical_multitenancy
+        self.created_at = created_at
+        self.updated_at = updated_at
 
 
 class Thunder(A10OctaviaDataModel):
-    def __init__(self, id=None, vcs_device_id=None,
+    def __init__(self, id=None, vcs_device_id=None, created_at=None, updated_at=None,
                  management_ip_address=None, cluster_id=None):
         self.id = id
         self.vcs_device_id = vcs_device_id
         self.management_ip_address = management_ip_address
         self.cluster_id = cluster_id
+        self.created_at = created_at
+        self.updated_at = updated_at
