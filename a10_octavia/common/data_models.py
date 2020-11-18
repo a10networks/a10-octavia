@@ -121,7 +121,7 @@ class DeviceNetworkMap(A10OctaviaDataModel):
 
 class ThunderCluster(A10OctaviaDataModel):
 
-    def __init__(self, id=None, created_at=None, updated_at=None, username=None, password=None 
+    def __init__(self, id=None, created_at=None, updated_at=None, username=None, password=None,
                  cluster_name=None, cluster_ip_address=None, undercloud=None, topology=None):
         self.id = id
         self.created_at = created_at
