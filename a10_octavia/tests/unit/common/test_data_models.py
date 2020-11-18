@@ -27,6 +27,7 @@ class TestDataModels(base.BaseTaskTestCase):
 
         super(TestDataModels, self).setUp()
         self.AMP_ID = uuidutils.generate_uuid()
+        self.THUDER_CLUSTER_ID = uuidutils.generate_uuid()
         self.CREATED_AT = datetime.datetime.now()
         self.UPDATED_AT = datetime.datetime.utcnow()
         self.LAST_UDP_UPDATE = datetime.datetime.utcnow()
@@ -39,13 +40,25 @@ class TestDataModels(base.BaseTaskTestCase):
             status="ACTIVE"
         )
 
+        self.THUNDER_CLUSTER_obj = data_models.ThunderCluster(
+            id=self.THUDER_CLUSTER_ID,
+            created_at=self.CREATED_AT,
+            updated_at=self.UPDATED_AT,
+            username="USER1",
+            password="pwd",
+            cluster_name="cluster1",
+            cluster_ip_address="192.0.2.10",
+            undercloud=False,
+            topology="STANDALONE"
+        )
+
     def test_AmphoraMeta_update(self):
 
         new_id = uuidutils.generate_uuid()
         new_created_at = self.CREATED_AT + datetime.timedelta(minutes=5)
         new_updated_at = self.UPDATED_AT + datetime.timedelta(minutes=10)
         new_last_udp_update = self.LAST_UDP_UPDATE + datetime.timedelta(minutes=5)
-        new_status = "ERROR"
+        new_status = "STANDBY"
 
         update_dict = {
             'id': new_id,
@@ -68,3 +81,45 @@ class TestDataModels(base.BaseTaskTestCase):
         test_Amp_obj.update(update_dict)
 
         self.assertEqual(reference_Amp_obj, test_Amp_obj)
+
+    def test_ThunderCluster_update(self):
+
+        new_id = uuidutils.generate_uuid()
+        new_created_at = self.CREATED_AT + datetime.timedelta(minutes=5)
+        new_updated_at = self.UPDATED_AT + datetime.timedelta(minutes=10)
+        new_username = "USER2"
+        new_password = "pwd2"
+        new_cluster_name = "cluster2"
+        new_cluster_ip_address = "10.10.10.10"
+        new_undercloud = False
+        new_topology = "STANDALONE"
+
+        update_dict = {
+            'id': new_id,
+            'created_at': new_created_at,
+            'updated_at': new_updated_at,
+            'username': new_username,
+            'password': new_password,
+            'cluster_name': new_cluster_name,
+            'cluster_ip_address': new_cluster_ip_address,
+            'undercloud': new_undercloud,
+            'topology': new_topology
+        }
+
+        test_Thunder_Cluster_obj = copy.deepcopy(self.THUNDER_CLUSTER_obj)
+
+        reference_Thunder_Cluster_obj = data_models.ThunderCluster(
+            id=new_id,
+            created_at=new_created_at,
+            updated_at=new_updated_at,
+            username=new_username,
+            password=new_password,
+            cluster_name=new_cluster_name,
+            cluster_ip_address=new_cluster_ip_address,
+            undercloud=new_undercloud,
+            topology=new_topology
+        )
+
+        test_Thunder_Cluster_obj.update(update_dict)
+
+        self.assertEqual(reference_Thunder_Cluster_obj, test_Thunder_Cluster_obj)
