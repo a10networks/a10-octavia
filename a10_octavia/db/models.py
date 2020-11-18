@@ -74,6 +74,7 @@ class VRID(base_models.BASE, TimeStampData):
 
 
 class Amphora_Meta(base_models.BASE, TimeStampData):
+    __data_model__ = data_models.AmphoraMeta
     __tablename__ = 'amphora_meta'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
@@ -100,6 +101,7 @@ class Role(base_models.BASE, TimeStampData):
 
 
 class Thunder_Cluster(base_models.BASE, TimeStampData):
+    __data_model__ = data_models.ThunderCluster
     __tablename__ = 'thunder_cluster'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
@@ -112,7 +114,7 @@ class Thunder_Cluster(base_models.BASE, TimeStampData):
 
 
 class Partitions(base_models.BASE, TimeStampData):
-    __data_model__ = data_models.Partition
+    __data_model__ = data_models.Partitions
     __tablename__ = 'partitions'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)

@@ -13,10 +13,6 @@
 #    under the License.
 
 
-from datetime import datetime
-import re
-import six
-from sqlalchemy.orm import collections
 from octavia.common import data_models
 
 
@@ -36,7 +32,7 @@ class A10OctaviaDataModel(data_models.BaseDataModel):
             raise NotImplementedError
 
 
-class ThunderCluster(A10OctaviaDataModel):
+class ThunderV1(A10OctaviaDataModel):
 
     def __init__(self, id=None, vthunder_id=None, amphora_id=None,
                  device_name=None, ip_address=None, username=None,
@@ -70,14 +66,14 @@ class ThunderCluster(A10OctaviaDataModel):
         self.device_network_map = device_network_map or []
 
 
-class HardwareThunder(ThunderCluster):
+class HardwareThunder(ThunderV1):
     def __init__(self, **kwargs):
-        ThunderCluster.__init__(self, **kwargs)
+        ThunderV1.__init__(self, **kwargs)
 
 
-class VThunder(ThunderCluster):
+class VThunder(ThunderV1):
     def __init__(self, **kwargs):
-        ThunderCluster.__init__(self, **kwargs)
+        ThunderV1.__init__(self, **kwargs)
 
 
 class Certificate(A10OctaviaDataModel):
@@ -123,6 +119,21 @@ class DeviceNetworkMap(A10OctaviaDataModel):
         self.state = 'Unknown'
 
 
+class ThunderCluster(A10OctaviaDataModel):
+
+    def __init__(self, id=None, created_at=None, updated_at=None, username=None, password=None 
+                 cluster_name=None, cluster_ip_address=None, undercloud=None, topology=None):
+        self.id = id
+        self.created_at = created_at
+        self.updated_at = updated_at
+        self.username = username
+        self.password = password
+        self.cluster_name = cluster_name
+        self.cluster_ip_address = cluster_ip_address
+        self.undercloud = undercloud
+        self.topology = topology
+
+
 class AmphoraMeta(A10OctaviaDataModel):
 
     def __init__(self, id=None, created_at=None, updated_at=None,
@@ -134,7 +145,7 @@ class AmphoraMeta(A10OctaviaDataModel):
         self.status = status
 
 
-class Partition(A10OctaviaDataModel):
+class Partitions(A10OctaviaDataModel):
     def __init__(self, id=None, name=None, hierarchical_multitenancy=None):
         self.id = id
         self.name = name

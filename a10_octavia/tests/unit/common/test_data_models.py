@@ -14,11 +14,9 @@
 
 import copy
 import datetime
-import random
 
 from oslo_utils import uuidutils
 
-from octavia.common import constants
 from a10_octavia.common import data_models
 from a10_octavia.tests.unit import base
 
