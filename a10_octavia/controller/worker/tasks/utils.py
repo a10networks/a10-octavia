@@ -14,6 +14,7 @@
 
 import json
 import logging
+import re
 
 from oslo_config import cfg
 
@@ -73,3 +74,11 @@ def shared_template_modifier(template_type, template_name, device_templates):
     else:
         template_type = "{0}-shared".format(template_type)
     return template_type
+
+
+def parse_name_expressions(self, name, name_expressions):
+    flavor_data = {}
+    for expression in name_expressions:
+        if re.search(expression['regex'], name):
+            flavor_data.update(expression['json'])
+    return flavor_data
