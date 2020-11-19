@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
+
 from oslo_config import cfg
 from oslo_log import log as logging
 from requests.exceptions import ConnectionError
@@ -32,7 +34,7 @@ LOG = logging.getLogger(__name__)
 
 class PoolParent(object):
 
-    def set(self, set_method, pool, vthunder, **kwargs):
+    def set(self, set_method, pool, vthunder, flavor=None, **kwargs):
         axapi_args = {'service_group': utils.meta(pool, 'service_group', {})}
 
         device_templates = self.axapi_client.slb.template.templates.get()
@@ -66,6 +68,11 @@ class PoolParent(object):
             self.axapi_client, pool.protocol)
         lb_method = openstack_mappings.service_group_lb_method(
             self.axapi_client, pool.lb_algorithm)
+
+        # Handle options from flavor
+        if flavor:
+            self.handle_flavor_options(pool, axapi_args, json.loads(flavor.flavor_data))
+
         set_method(pool.id,
                    protocol=protocol,
                    lb_method=lb_method,
@@ -74,12 +81,21 @@ class PoolParent(object):
                    hm_name=kwargs.get('health_monitor'),
                    axapi_args=axapi_args)
 
+    def handle_flavor_options(self, pool, axapi_args, flavor_data):
+        if 'service_group' in flavor_data:
+            pool_flavor = flavor_data['service_group']
+            if 'name-expressions' in pool_flavor:
+                for flavor in pool_flavor['name-expressions']:
+                    if flavor['regex'] in pool.name:
+                        json_value = flavor['json']
+                        axapi_args['service_group'].update(json_value)
+                        return
 
 class PoolCreate(PoolParent, task.Task):
     """Task to create pool"""
 
     @axapi_client_decorator
-    def execute(self, pool, vthunder):
+    def execute(self, pool, vthunder, flavor=None):
         try:
             if pool.protocol == constants.PROTOCOL_PROXY:
                 raise exceptions.ProviderUnsupportedOptionError(
@@ -87,7 +103,7 @@ class PoolCreate(PoolParent, task.Task):
                     user_msg=("A pool with protocol PROXY is not supported by A10 provider."
                               "Failed to create pool {0}").format(pool.id))
 
-            self.set(self.axapi_client.slb.service_group.create, pool, vthunder)
+            self.set(self.axapi_client.slb.service_group.create, pool, vthunder, flavor=flavor)
             LOG.debug("Successfully created pool: %s", pool.id)
             return pool
         except (acos_errors.ACOSException, ConnectionError) as e:
