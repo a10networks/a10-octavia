@@ -20,7 +20,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
     "type": "object",
     "additionalProperties": True,
     "properties": {
-        "slb": {
+        "virtual-server": {
             "type": "object",
             "properties": {
                 "name-expressions": {
@@ -41,7 +41,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
                 },
             }
         },
-        "listener": {
+        "virtual-port": {
             "type": "object",
             "properties": {
                 "name-expressions": {
@@ -60,21 +60,21 @@ SUPPORTED_FLAVOR_SCHEMA = {
                         }
                     }
                 },
-                "template_tcp": {
+                "template-tcp": {
                     "type": "string",
                     "description": "TCP Template name for TCP listener"
                 },
-                "template_http": {
+                "template-http": {
                     "type": "string",
                     "description": "HTTP Template name for HTTP listener"
                 },
-                "http_template_regex": {
-                    "type": "boolean",
-                    "description": "use http template with regex"
-                }
+                "template-virtual-port": {
+                    "type": "string",
+                    "description": "Virtual Port Template for listener"
+                },
             }
         },
-        "service_group": {
+        "service-group": {
             "type": "object",
             "properties": {
                 "name-expressions": {
@@ -129,7 +129,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
                 }
             }
         },
-        "health_monitor": {
+        "health-monitor": {
             "type": "object",
             "properties": {
                 "name-expressions": {
