@@ -37,12 +37,16 @@ class ListenersParent(object):
         listener.protocol = openstack_mappings.virtual_port_protocol(
             self.axapi_client, listener.protocol).lower()
 
-        ipinip = CONF.listener.ipinip
-        use_rcv_hop = CONF.listener.use_rcv_hop_for_resp
-        ha_conn_mirror = CONF.listener.ha_conn_mirror
+        config_data = {
+            'ipinip': CONF.listener.ipinip,
+            'use_rcv_hop': CONF.listener.use_rcv_hop_for_resp,
+            'ha_conn_mirror': CONF.listener.ha_conn_mirror
+        }
+
         status = self.axapi_client.slb.UP
         if not listener.enabled:
             status = self.axapi_client.slb.DOWN
+        config_data['status'] = status
 
         conn_limit = CONF.listener.conn_limit
         if listener.connection_limit != -1:
@@ -52,6 +56,7 @@ class ListenersParent(object):
                         '(configuration setting: conn-limit) is out of '
                         'bounds with value {0}. Please set to between '
                         '1-64000000. Defaulting to 64000000'.format(conn_limit))
+        config_data['conn_limit'] = conn_limit
 
         no_dest_nat = CONF.listener.no_dest_nat
         if no_dest_nat and (
@@ -60,68 +65,73 @@ class ListenersParent(object):
             LOG.warning("'no_dest_nat' is not allowed for HTTP," +
                         "HTTPS or TERMINATED_HTTPS listener.")
             no_dest_nat = False
+        config_data['no_dest_nat'] = no_dest_nat
 
         autosnat = CONF.listener.autosnat
         if autosnat and no_dest_nat:
             raise exceptions.SNATConfigurationError()
+        config_data['autosnat'] = autosnat
 
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         device_templates = self.axapi_client.slb.template.templates.get()
-
-        template_args = {}
         vport_templates = {}
-        if flavor:
-            vport_templates = self.handle_flavor_templates(
-                listener, json.loads(flavor.flavor_data), device_templates)
-
-        if not vport_templates:
-            template_vport = CONF.listener.template_virtual_port
-            if template_vport and template_vport.lower() != 'none':
-                template_key = 'template-virtual-port'
+        template_vport = CONF.listener.template_virtual_port
+        if template_vport and template_vport.lower() != 'none':
+            template_key = 'template-virtual-port'
+            if vthunder.partition_name != "shared":
+                if CONF.a10_global.use_shared_for_template_lookup:
+                    template_key = utils.shared_template_modifier(template_key,
+                                                                  template_vport,
+                                                                  device_templates)
+            vport_templates[template_key] = template_vport
+        
+        template_args = {}
+        if listener.protocol == 'https' and listener.tls_certificate_id:
+            # Adding TERMINATED_HTTPS SSL cert, created in previous task
+            template_args["template_client_ssl"] = listener.id
+        elif listener.protocol.upper() in a10constants.HTTP_TYPE:
+            template_http = CONF.listener.template_http
+            if template_http and template_http.lower() != 'none':
+                template_key = 'template-http'
                 if vthunder.partition_name != "shared":
                     if CONF.a10_global.use_shared_for_template_lookup:
                         template_key = utils.shared_template_modifier(template_key,
-                                                                      template_vport,
+                                                                      template_http,
                                                                       device_templates)
-                vport_templates[template_key] = template_vport
-            if listener.protocol == 'https' and listener.tls_certificate_id:
-                # Adding TERMINATED_HTTPS SSL cert, created in previous task
-                template_args["template_client_ssl"] = listener.id
-            elif listener.protocol.upper() in a10constants.HTTP_TYPE:
-                template_http = CONF.listener.template_http
-                if template_http and template_http.lower() != 'none':
-                    template_key = 'template-http'
-                    if vthunder.partition_name != "shared":
-                        if CONF.a10_global.use_shared_for_template_lookup:
-                            template_key = utils.shared_template_modifier(template_key,
-                                                                          template_http,
-                                                                          device_templates)
-                    vport_templates[template_key] = template_http
-                if ha_conn_mirror is not None:
-                    ha_conn_mirror = None
-                    LOG.warning("'ha_conn_mirror' is not allowed for HTTP "
-                                "or TERMINATED_HTTPS listeners.")
-
-            elif listener.protocol == 'tcp':
-                template_tcp = CONF.listener.template_tcp
-                if template_tcp and template_tcp.lower() != 'none':
-                    template_key = 'template-tcp'
-                    if vthunder.partition_name != "shared":
-                        if CONF.a10_global.use_shared_for_template_lookup:
-                            template_key = utils.shared_template_modifier(template_key,
-                                                                          template_tcp,
-                                                                          device_templates)
-                    vport_templates[template_key] = template_tcp
-
-            template_policy = CONF.listener.template_policy
-            if template_policy and template_policy.lower() != 'none':
-                template_key = 'template-policy'
+                vport_templates[template_key] = template_http
+            if ha_conn_mirror is not None:
+                ha_conn_mirror = None
+                LOG.warning("'ha_conn_mirror' is not allowed for HTTP "
+                            "or TERMINATED_HTTPS listeners.")
+        elif listener.protocol == 'tcp':
+            template_tcp = CONF.listener.template_tcp
+            if template_tcp and template_tcp.lower() != 'none':
+                template_key = 'template-tcp'
                 if vthunder.partition_name != "shared":
                     if CONF.a10_global.use_shared_for_template_lookup:
                         template_key = utils.shared_template_modifier(template_key,
-                                                                      template_policy,
+                                                                      template_tcp,
                                                                       device_templates)
-                vport_templates[template_key] = template_policy
+                vport_templates[template_key] = template_tcp
+
+        template_policy = CONF.listener.template_policy
+        if template_policy and template_policy.lower() != 'none':
+            template_key = 'template-policy'
+            if vthunder.partition_name != "shared":
+                if CONF.a10_global.use_shared_for_template_lookup:
+                    template_key = utils.shared_template_modifier(template_key,
+                                                                  template_policy,
+                                                                  device_templates)
+            vport_templates[template_key] = template_policy
+
+        virtual_port_flavor = flavor.get('virtual-port')
+        if virtual_port_flavor:
+            name_exprs = virtual_port_flavor.get('name-expressions')
+            parsed_exprs = utils.parse_name_expressions(
+                loadbalancer.name, name_exprs)
+            del virtual_port_flavor['name-expressions']
+            config_data.update(virtual_port_flavor)
+            config_data.update(parsed_exprs)
 
         set_method(loadbalancer.id,
                    listener.id,
@@ -129,39 +139,10 @@ class ListenersParent(object):
                    listener.protocol_port,
                    listener.default_pool_id,
                    s_pers_name=s_pers, c_pers_name=c_pers,
-                   status=status, no_dest_nat=no_dest_nat,
-                   autosnat=autosnat, ipinip=ipinip,
-                   ha_conn_mirror=ha_conn_mirror,
-                   use_rcv_hop=use_rcv_hop,
-                   conn_limit=conn_limit,
                    virtual_port_templates=vport_templates,
+                   **config_data,
                    **template_args)
 
-    def handle_flavor_templates(self, listener, flavor_data, device_templates):
-        # TODO(http_template_regex): Handle partition logic, regex here
-        # POC grade code, scale it to include all template + shared templates + updates
-        vport_templates = {}
-        flavor_item = flavor_data
-        if 'listener-list' in flavor_data:
-            for flavor1 in flavor_item['listener-list']:
-                if flavor1['regex'] in listener.name:
-                    flavor_item = flavor1
-                    break
-
-        if 'listener' in flavor_item:
-            if listener.protocol == 'tcp':
-                vport_templates['template-tcp'] = flavor_item['listener'].get('template_tcp')
-            if listener.protocol == 'http':
-                if "http_template_regex" in flavor_item['listener']:
-                    if listener.name and listener.name.split(".")[-1]:
-                        extension = listener.name.split(".")[-1]
-                        for template in device_templates['template']['http-list']:
-                            if extension == template["name"].split(".")[-1]:
-                                vport_templates['template-http'] = template["name"]
-                                break
-                if 'template_http' in flavor_item['listener']:
-                    vport_templates['template-http'] = flavor_item['listener'].get('template_http')
-        return vport_templates
 
 
 class ListenerCreate(ListenersParent, task.Task):
