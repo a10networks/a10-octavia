@@ -60,18 +60,18 @@ SUPPORTED_FLAVOR_SCHEMA = {
                         }
                     }
                 },
-                "template_tcp": {
+                "template-tcp": {
                     "type": "string",
                     "description": "TCP Template name for TCP listener"
                 },
-                "template_http": {
+                "template-http": {
                     "type": "string",
                     "description": "HTTP Template name for HTTP listener"
                 },
-                "http_template_regex": {
-                    "type": "boolean",
-                    "description": "use http template with regex"
-                }
+                "template-virtual-port": {
+                    "type": "string",
+                    "description": "Virtual Port Template for listener"
+                },
             }
         },
         "service-group": {
