@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+* Added method to handle flavor options to virtual server task
+* Removed handle flavors method as new logic has been devised
+* Renamed schema objects to better match their usage
+* Added recursive search for flavor id to general task
+* Added GetFlavorObject to call relevant create flows
 * name expression support for member
 * remove not related changes
 * Feature/flavor support for server option
