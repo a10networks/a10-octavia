@@ -12,9 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
-import re
-
 import acos_client.errors as acos_errors
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -31,16 +28,6 @@ LOG = logging.getLogger(__name__)
 
 
 class LoadBalancerParent(object):
-
-    def _handle_flavor_options(self, loadbalancer, virtual_server_flavor):
-        flavor_data = copy.deepcopy(virtual_server_flavor)
-        del flavor_data['name-expression']
-
-        name_expressions = virtual_server_flavor.get('name-expression')
-        for expression in name_expressions:
-            if expressions['regex'] == loadbalancer.name:
-                flavor_data.update(expressions['json'])
-        return flavor_data
 
     def set(self, set_method, loadbalancer, flavor=None, **kwargs):
         config_data = {
@@ -66,10 +53,11 @@ class LoadBalancerParent(object):
 
         virtual_server_flavor = flavor.get('virtual-server')
         if virtual_server_flavor:
-            flavor_data = self._handle_flavor_options(loadbalancer, virtual_server_flavor)
-            config_data.update(flavor_data)
+            name_exprs = virtual_server_flavor.get('name-expressions')
+            config_data.update(utils.parse_name_expressions(
+                loadbalancer.name, name_exprs)
 
-        set_method(loadbalancer.id, loadbalancer.vip.ip_address, **config_kwargs)
+        set_method(loadbalancer.id, loadbalancer.vip.ip_address, **config_data)
 
 
 class CreateVirtualServerTask(LoadBalancerParent, task.Task):
