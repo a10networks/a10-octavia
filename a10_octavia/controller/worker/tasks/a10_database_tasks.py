@@ -14,6 +14,7 @@
 
 
 from datetime import datetime
+import json
 import sqlalchemy
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -707,13 +708,12 @@ class GetFlavorObject(BaseDatabaseTask):
             return self._flavor_search(lb_resource.load_balancer)
         return None
 
-
     def execute(self, lb_resource):
         flavor_id = self._flavor_search(lb_resource)
         if flavor_id:
-            flavor = self.flavor_repo.get( db_apis.get_session(), id=flavor_id)
+            flavor = self.flavor_repo.get(db_apis.get_session(), id=flavor_id)
             if flavor and flavor.flavor_profile_id:
                 flavor_profile = self.flavor_profile_repo.get(
                     db_apis.get_session(),
                     id=flavor.flavor_profile_id)
-                return flavor_profile
+                return json.loads(flavor_profile.flavor_data)

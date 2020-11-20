@@ -34,7 +34,7 @@ from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 
 VTHUNDER = data_models.VThunder()
-POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID)
+POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID, name="sg1")
 AXAPI_ARGS = {'service_group': utils.meta(POOL, 'service_group', {})}
 
 
@@ -154,6 +154,32 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         self.assertIn('template-policy', kwargs['service_group_templates'])
         self.assertEqual(kwargs['service_group_templates']
                          ['template-policy'], 'my_policy_template_other')
+
+    @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
+    @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
+    def test_PoolCreate_execute_create_with_flavor(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        service_group_task = task.PoolCreate()
+        service_group_task.axapi_client = self.client_mock
+        flavor = {"service-group": {"health-check-disable": 1}}
+        expect_axapi = {"service_group": {"health-check-disable": 1}}
+        service_group_task.execute(POOL, vthunder, flavor=flavor)
+        args, kwargs = self.client_mock.slb.service_group.create.call_args
+        self.assertEqual(kwargs['axapi_args'], expect_axapi)
+
+    @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
+    @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
+    def test_PoolCreate_execute_create_with_flavor_regex(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        service_group_task = task.PoolCreate()
+        service_group_task.axapi_client = self.client_mock
+        flavor = {}
+        regex = {"name-expressions": [{"regex": "sg1", "json": {"health-check-disable": 1}}]}
+        flavor["service-group"] = regex
+        expect_axapi = {"service_group": {"health-check-disable": 1}}
+        service_group_task.execute(POOL, vthunder, flavor=flavor)
+        args, kwargs = self.client_mock.slb.service_group.create.call_args
+        self.assertEqual(kwargs['axapi_args'], expect_axapi)
 
     def test_revert_pool_create_task(self):
         mock_pool = task.PoolCreate()
