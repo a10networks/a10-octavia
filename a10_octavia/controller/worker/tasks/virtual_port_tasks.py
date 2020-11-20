@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 import acos_client.errors as acos_errors
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -84,7 +82,7 @@ class ListenersParent(object):
                                                                   template_vport,
                                                                   device_templates)
             vport_templates[template_key] = template_vport
-        
+
         template_args = {}
         if listener.protocol == 'https' and listener.tls_certificate_id:
             # Adding TERMINATED_HTTPS SSL cert, created in previous task
@@ -99,10 +97,12 @@ class ListenersParent(object):
                                                                       template_http,
                                                                       device_templates)
                 vport_templates[template_key] = template_http
+            """
             if ha_conn_mirror is not None:
                 ha_conn_mirror = None
                 LOG.warning("'ha_conn_mirror' is not allowed for HTTP "
                             "or TERMINATED_HTTPS listeners.")
+            """
         elif listener.protocol == 'tcp':
             template_tcp = CONF.listener.template_tcp
             if template_tcp and template_tcp.lower() != 'none':
@@ -124,14 +124,16 @@ class ListenersParent(object):
                                                                   device_templates)
             vport_templates[template_key] = template_policy
 
-        virtual_port_flavor = flavor.get('virtual-port')
-        if virtual_port_flavor:
-            name_exprs = virtual_port_flavor.get('name-expressions')
-            parsed_exprs = utils.parse_name_expressions(
-                loadbalancer.name, name_exprs)
-            del virtual_port_flavor['name-expressions']
-            config_data.update(virtual_port_flavor)
-            config_data.update(parsed_exprs)
+        if flavor:
+            virtual_port_flavor = flavor.get('virtual-port')
+            if virtual_port_flavor:
+                name_exprs = virtual_port_flavor.get('name-expressions')
+                parsed_exprs = utils.parse_name_expressions(
+                    loadbalancer.name, name_exprs)
+                del virtual_port_flavor['name-expressions']
+                config_data.update(virtual_port_flavor)
+                config_data.update(parsed_exprs)
+        template_args.update(config_data)
 
         set_method(loadbalancer.id,
                    listener.id,
@@ -140,9 +142,7 @@ class ListenersParent(object):
                    listener.default_pool_id,
                    s_pers_name=s_pers, c_pers_name=c_pers,
                    virtual_port_templates=vport_templates,
-                   **config_data,
                    **template_args)
-
 
 
 class ListenerCreate(ListenersParent, task.Task):

@@ -55,7 +55,7 @@ class LoadBalancerParent(object):
         if virtual_server_flavor:
             name_exprs = virtual_server_flavor.get('name-expressions')
             config_data.update(utils.parse_name_expressions(
-                loadbalancer.name, name_exprs)
+                loadbalancer.name, name_exprs))
 
         set_method(loadbalancer.id, loadbalancer.vip.ip_address, **config_data)
 
@@ -64,7 +64,7 @@ class CreateVirtualServerTask(LoadBalancerParent, task.Task):
     """Task to create a virtual server"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, vthunder, flavor):
+    def execute(self, loadbalancer, vthunder, flavor=None):
         try:
             self.set(self.axapi_client.slb.virtual_server.create, loadbalancer, flavor)
             LOG.debug("Successfully created load balancer: %s", loadbalancer.id)
@@ -73,7 +73,7 @@ class CreateVirtualServerTask(LoadBalancerParent, task.Task):
             raise e
 
     @axapi_client_decorator
-    def revert(self, loadbalancer, vthunder, flavor, *args, **kwargs):
+    def revert(self, loadbalancer, vthunder, flavor=None, *args, **kwargs):
         try:
             LOG.warning("Reverting creation of load balancer: %s", loadbalancer.id)
             self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
