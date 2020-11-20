@@ -74,6 +74,7 @@ class VRID(base_models.BASE, TimeStampData):
 
 
 class Amphora_Meta(base_models.BASE, TimeStampData):
+    __data_model__ = data_models.AmphoraMeta
     __tablename__ = 'amphora_meta'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
@@ -82,6 +83,7 @@ class Amphora_Meta(base_models.BASE, TimeStampData):
 
 
 class Thunder(base_models.BASE, TimeStampData):
+    __data_model__ = data_models.Thunder
     __tablename__ = 'thunder'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
@@ -99,6 +101,7 @@ class Role(base_models.BASE, TimeStampData):
 
 
 class Thunder_Cluster(base_models.BASE, TimeStampData):
+    __data_model__ = data_models.ThunderCluster
     __tablename__ = 'thunder_cluster'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
@@ -111,6 +114,7 @@ class Thunder_Cluster(base_models.BASE, TimeStampData):
 
 
 class Partitions(base_models.BASE, TimeStampData):
+    __data_model__ = data_models.Partitions
     __tablename__ = 'partitions'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
@@ -127,6 +131,7 @@ class Project(base_models.BASE, TimeStampData):
 
 
 class Ethernet_Interface(base_models.BASE, TimeStampData):
+    __data_model__ = data_models.EthernetInterface
     __tablename__ = 'ethernet_interface'
 
     interface_num = sa.Column(sa.Integer, primary_key=True, nullable=False)
@@ -137,6 +142,7 @@ class Ethernet_Interface(base_models.BASE, TimeStampData):
 
 
 class Trunk_Interface(base_models.BASE, TimeStampData):
+    __data_model__ = data_models.TrunkInterface
     __tablename__ = 'trunk_interface'
 
     interface_num = sa.Column(sa.Integer, primary_key=True, nullable=False)
@@ -147,6 +153,7 @@ class Trunk_Interface(base_models.BASE, TimeStampData):
 
 
 class Device_Network_Cluster(base_models.BASE, TimeStampData):
+    __data_model__ = data_models.DeviceNetworkCluster
     __tablename__ = 'device_network_cluster'
 
     id = sa.Column(sa.String(36), primary_key=True, nullable=False)
