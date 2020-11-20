@@ -76,9 +76,10 @@ def shared_template_modifier(template_type, template_name, device_templates):
     return template_type
 
 
-def parse_name_expressions(self, name, name_expressions):
+def parse_name_expressions(name, name_expressions):
     flavor_data = {}
-    for expression in name_expressions:
-        if re.search(expression['regex'], name):
-            flavor_data.update(expression['json'])
+    if name_expressions:
+        for expression in name_expressions:
+            if re.search(expression['regex'], name):
+                flavor_data.update(expression['json'])
     return flavor_data

@@ -114,14 +114,14 @@ SUPPORTED_FLAVOR_SCHEMA = {
                         }
                     }
                 },
-                "conn_limit": {
+                "conn-limit": {
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 64000000,
                     "default": 64000000,
                     "description": "Connection Limit"
                 },
-                "conn_resume": {
+                "conn-resume": {
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 1000000,

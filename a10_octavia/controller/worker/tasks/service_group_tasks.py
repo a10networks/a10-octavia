@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 from oslo_config import cfg
 from oslo_log import log as logging
 from requests.exceptions import ConnectionError
@@ -71,7 +69,13 @@ class PoolParent(object):
 
         # Handle options from flavor
         if flavor:
-            self.handle_flavor_options(pool, axapi_args, json.loads(flavor.flavor_data))
+            pool_flavor = flavor.get('service-group')
+            if pool_flavor:
+                name_exprs = pool_flavor.get('name-expressions')
+                parsed_exprs = utils.parse_name_expressions(pool.name, name_exprs)
+                pool_flavor.pop('name-expressions', None)
+                axapi_args['service_group'].update(pool_flavor)
+                axapi_args['service_group'].update(parsed_exprs)
 
         set_method(pool.id,
                    protocol=protocol,
@@ -81,15 +85,6 @@ class PoolParent(object):
                    hm_name=kwargs.get('health_monitor'),
                    axapi_args=axapi_args)
 
-    def handle_flavor_options(self, pool, axapi_args, flavor_data):
-        if 'service_group' in flavor_data:
-            pool_flavor = flavor_data['service_group']
-            if 'name-expressions' in pool_flavor:
-                for flavor in pool_flavor['name-expressions']:
-                    if flavor['regex'] in pool.name:
-                        json_value = flavor['json']
-                        axapi_args['service_group'].update(json_value)
-                        return
 
 class PoolCreate(PoolParent, task.Task):
     """Task to create pool"""
@@ -103,7 +98,7 @@ class PoolCreate(PoolParent, task.Task):
                     user_msg=("A pool with protocol PROXY is not supported by A10 provider."
                               "Failed to create pool {0}").format(pool.id))
 
-            self.set(self.axapi_client.slb.service_group.create, pool, vthunder, flavor=flavor)
+            self.set(self.axapi_client.slb.service_group.create, pool, vthunder, flavor)
             LOG.debug("Successfully created pool: %s", pool.id)
             return pool
         except (acos_errors.ACOSException, ConnectionError) as e:
@@ -111,7 +106,7 @@ class PoolCreate(PoolParent, task.Task):
             raise e
 
     @axapi_client_decorator
-    def revert(self, pool, vthunder, *args, **kwargs):
+    def revert(self, pool, vthunder, flavor=None, *args, **kwargs):
         LOG.warning("Reverting creation of pool: %s", pool.id)
         try:
             self.axapi_client.slb.service_group.delete(pool.id)
