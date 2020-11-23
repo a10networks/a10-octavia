@@ -80,6 +80,7 @@ def parse_name_expressions(name, name_expressions):
     flavor_data = {}
     if name_expressions:
         for expression in name_expressions:
-            if re.search(expression['regex'], name):
-                flavor_data.update(expression['json'])
+            if 'regex' in expression:
+                if re.search(expression['regex'], name):
+                    flavor_data.update(expression['json'])
     return flavor_data
