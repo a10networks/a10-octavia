@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import imp
 try:
     from unittest import mock
@@ -20,15 +21,19 @@ except ImportError:
 
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
+from oslo_config import cfg
+from oslo_config import fixture as oslo_fixture
 
 from a10_octavia.common.data_models import VThunder
 import a10_octavia.controller.worker.tasks.virtual_server_tasks as task
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 
-AMPHORA = o_data_models.Amphora(id=t_constants.MOCK_AMP_ID1)
 VTHUNDER = VThunder()
-LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID, amphorae=[AMPHORA])
+AMPHORA = o_data_models.Amphora(id=t_constants.MOCK_AMP_ID1)
+VIP = o_data_models.Vip(ip_address="1.1.1.1")
+LOADBALANCER = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
+                                          amphorae=[AMPHORA], vip=VIP)
 
 
 class TestHandlerVirtualServerTasks(BaseTaskTestCase):
@@ -36,10 +41,50 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
     def setUp(self):
         super(TestHandlerVirtualServerTasks, self).setUp()
         imp.reload(task)
+        self.client_mock = mock.Mock()
+        self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
 
-    def test_revert_create_virtual_server_task(self):
-        client_mock = mock.Mock()
+    def tearDown(self):
+        super(TestHandlerVirtualServerTasks, self).tearDown()
+        self.conf.reset()
+
+    def test_CreateVirtualServerTask_revert(self):
         mock_load_balancer = task.CreateVirtualServerTask()
-        mock_load_balancer.axapi_client = client_mock
-        mock_load_balancer.revert(LB, VTHUNDER)
-        client_mock.slb.virtual_server.delete.assert_called_with(LB.id)
+        mock_load_balancer.axapi_client = self.client_mock
+        mock_load_balancer.revert(LOADBALANCER, VTHUNDER)
+        client_mock.slb.virtual_server.delete.assert_called_with(LOADBALANCER.id)
+
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.parse_name_expressions')
+    def test_CreateVirtualServerTask_execute_create_with_flavor(self, mock_parse_name_expr):
+        expected_args = {"arp_disable": 1}
+        flavor = {"virtual-server": {"arp_disable": 1}}
+
+        vthunder = copy.deepcopy(VTHUNDER)
+        virtual_server_task = task.CreateVirtualServerTask()
+        virtual_server_task.axapi_client = self.client_mock
+        virtual_server_task.execute(LOADBALANCER, vthunder, flavor=flavor)
+        args, kwargs = self.client_mock.slb.virtual_server.create.call_args
+        self.assertEqual(kwargs['arp_disable'], expected_args)
+
+    def test_CreateVirtualServerTask_execute_create_with_flavor_regex(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        service_group_task = task.PoolCreate()
+        service_group_task.axapi_client = self.client_mock
+        flavor = {}
+        regex = {"name-expressions": [{"regex": "sg1", "json": {"health_check_disable": 1}}]}
+        flavor["service-group"] = regex
+        expect_axapi = {"service_group": {"health-check-disable": 1}}
+        service_group_task.execute(POOL, vthunder, flavor=flavor)
+        args, kwargs = self.client_mock.slb.service_group.create.call_args
+        self.assertEqual(kwargs['axapi_args'], expect_axapi)
+
+    def test_CreateVirtualServerTask_execute_flavor_override_config(self):
+        expected_args = {"arp-disable": 1}
+
+        vthunder = copy.deepcopy(VTHUNDER)
+        service_group_task = task.CreateVirtualServerTask()
+        service_group_task.axapi_client = self.client_mock
+        flavor = {"virtual-server": {"arp-disable": 1}}
+        virtual_server_task.execute(LOADBALANCER, vthunder, flavor=flavor)
+        args, kwargs = self.client_mock.slb.virtual_server.create.call_args
+        self.assertEqual(kwargs['axapi_args'], expect_axapi)
