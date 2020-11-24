@@ -54,8 +54,11 @@ class LoadBalancerParent(object):
         virtual_server_flavor = flavor.get('virtual_server')
         if virtual_server_flavor:
             name_exprs = virtual_server_flavor.get('name_expressions')
+            if name_exprs:
+                del virtual_server_flavor['name_expressions']
+            config_args.update(virtual_server_flavor)
             config_args.update(utils.parse_name_expressions(
-                loadbalancer.name, name_exprs))
+                    loadbalancer.name, name_exprs))
 
         set_method(loadbalancer.id, loadbalancer.vip.ip_address, **config_args)
 
