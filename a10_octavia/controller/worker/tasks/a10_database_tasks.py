@@ -708,13 +708,13 @@ class GetFlavorObject(BaseDatabaseTask):
             return self._flavor_search(lb_resource.load_balancer)
         return None
 
-    def _parse_data(self, flavor_data):
+    def _format_keys(self, flavor_data):
         if type(flavor_data) is list:
             for item in flavor_data:
-                return [self._parse_data(item)]
+                return [self._format_keys(item)]
         elif type(flavor_data) is dict:
             for k, v in flavor_data.items():
-                return {k.replace('-', '_'): self._parse_data(v)}
+                return {k.replace('-', '_'): self._format_keys(v)}
         else:
             return flavor_data
 
@@ -727,4 +727,4 @@ class GetFlavorObject(BaseDatabaseTask):
                     db_apis.get_session(),
                     id=flavor.flavor_profile_id)
                 flavor_data = json.loads(flavor_profile.flavor_data)
-                return self._parse_data(flavor_data)
+                return self._format_keys(flavor_data)

@@ -1,6 +1,15 @@
 CHANGES
 =======
 
+* Alterted vs task and tests to work with new flavor parsing
+* Added method to convert dashes to underscores in flavor for easy parsing
+* fix tox checks errors
+* flavor and name-expr logic to service-gourp and server
+* merge changes
+* flavor and name expression support for pool
+* Started refactor of virtual server and virtual port tasks to include flavor data
+* Added utility to parse name expressions
+* Refactored template schema to match api naming
 * Added method to handle flavor options to virtual server task
 * Removed handle flavors method as new logic has been devised
 * Renamed schema objects to better match their usage
