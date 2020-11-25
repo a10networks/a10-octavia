@@ -62,19 +62,21 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         virtual_server_task = task.CreateVirtualServerTask()
         virtual_server_task.axapi_client = self.client_mock
-        virtual_server_task.execute(LOADBALANCER, vthunder, flavor=flavor)
+        virtual_server_task.execute(LOADBALANCER, vthunder, flavor_data=flavor)
         args, kwargs = self.client_mock.slb.virtual_server.create.call_args
         self.assertEqual(kwargs['arp_disable'], 1)
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.parse_name_expressions',
                 mock.MagicMock())
     def test_CreateVirtualServerTask_execute_flavor_override_config(self):
+        self.conf.config(group=a10constants.VIRTUAL_SERVER_CONFG_SECTION,
+                         arp_disable=False)
         flavor = {"virtual_server": {"arp_disable": 1}}
 
         vthunder = copy.deepcopy(VTHUNDER)
         virtual_server_task = task.CreateVirtualServerTask()
         virtual_server_task.axapi_client = self.client_mock
-        virtual_server_task.execute(LOADBALANCER, vthunder, flavor=flavor)
+        virtual_server_task.execute(LOADBALANCER, vthunder, flavor_data=flavor)
         args, kwargs = self.client_mock.slb.virtual_server.create.call_args
         self.assertEqual(kwargs['arp_disable'], 1)
 
@@ -85,7 +87,7 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         virtual_server_task = task.CreateVirtualServerTask()
         virtual_server_task.axapi_client = self.client_mock
-        virtual_server_task.execute(LOADBALANCER, vthunder, flavor={})
+        virtual_server_task.execute(LOADBALANCER, vthunder, flavor_data={})
         args, kwargs = self.client_mock.slb.virtual_server.create.call_args
         self.assertEqual(kwargs['arp_disable'], 0)
 
@@ -97,6 +99,6 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         virtual_server_task = task.CreateVirtualServerTask()
         virtual_server_task.axapi_client = self.client_mock
-        virtual_server_task.execute(LOADBALANCER, vthunder, flavor=flavor)
+        virtual_server_task.execute(LOADBALANCER, vthunder, flavor_data=flavor)
         args, kwargs = self.client_mock.slb.virtual_server.create.call_args
         self.assertEqual(kwargs['arp_disable'], 0)
