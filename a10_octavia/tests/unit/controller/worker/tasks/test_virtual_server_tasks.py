@@ -55,7 +55,7 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
         self.client_mock.slb.virtual_server.delete.assert_called_with(LOADBALANCER.id)
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.parse_name_expressions',
-        mock.MagicMock())
+                mock.MagicMock())
     def test_CreateVirtualServerTask_execute_create_with_flavor(self):
         flavor = {"virtual_server": {"arp_disable": 1}}
 
@@ -67,7 +67,7 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
         self.assertEqual(kwargs['arp_disable'], 1)
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.parse_name_expressions',
-        mock.MagicMock())
+                mock.MagicMock())
     def test_CreateVirtualServerTask_execute_flavor_override_config(self):
         flavor = {"virtual_server": {"arp_disable": 1}}
 
@@ -93,7 +93,6 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
     def test_CreateVirtualServerTask_execute_name_expr_override_flavor(self, mock_name_expr):
         flavor = {"virtual_server": {"arp_disable": 1}}
         mock_name_expr.return_value = {"arp_disable": 0}
-        expected_args = {"arp-disable": 0}
 
         vthunder = copy.deepcopy(VTHUNDER)
         virtual_server_task = task.CreateVirtualServerTask()

@@ -375,7 +375,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_get_projects.execute(MEMBER_1, vthunder)
         mock_get_projects.vthunder_repo.get_project_list_using_partition.\
             assert_called_once_with(mock.ANY, partition_name='mock-partition-name')
-    
+
     def test_flavor_search_loadbalancer_find_flavor(self):
         flavor_task = task.GetFlavorObject()
         found_id = flavor_task._flavor_search(LB)
@@ -417,11 +417,12 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
                 }]
             }
         }
-        name_expr = {"name-expressions": [{
+        name_expr = {
+            "name-expressions": [{
                 "regex": "sg1",
                 "json": {"health-check-disable": 1}
-            }
-        ]}
+            }]
+        }
         flavor = {"service-group": name_expr}
         flavor_task = task.GetFlavorObject()
         formated_flavor = flavor_task._format_keys(flavor)
@@ -437,11 +438,12 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
                 "strict_select": 0
             }
         }
-        name_expr = {"name-expressions": [{
+        name_expr = {
+            "name-expressions": [{
                 "regex": "sg1",
                 "json": {"health-check-disable": 1}
-            }
-        ]}
+            }]
+        }
         flavor = {"service-group": {"strict-select": 0}}
         flavor['service-group'].update(name_expr)
         flavor_task = task.GetFlavorObject()
@@ -479,7 +481,10 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         flavor_task._format_keys.return_value = {}
         flavor_task.flavor_repo = mock.Mock()
         flavor_task.flavor_repo.get.return_value = FLAVOR
+
+        flavor_prof = copy.deepcopy(FLAVOR_PROFILE)
+        flavor_prof.flavor_data = "{}"
         flavor_task.flavor_profile_repo = mock.Mock()
-        flavor_task.flavor_profile_repo.return_value = FLAVOR_PROFILE
+        flavor_task.flavor_profile_repo.get.return_value = flavor_prof
         ret_val = flavor_task.execute(LB)
         self.assertEqual(ret_val, {})
