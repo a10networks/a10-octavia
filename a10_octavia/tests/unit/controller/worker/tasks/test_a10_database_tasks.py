@@ -45,21 +45,29 @@ HW_THUNDER = data_models.HardwareThunder(
     password="abc",
     ip_address="10.10.10.10",
     partition_name="shared")
-LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
+LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
+                                flavor_id=a10constants.MOCK_FLAVOR_ID)
 FIXED_IP = n_data_models.FixedIP(ip_address='10.10.10.10')
 PORT = n_data_models.Port(id=uuidutils.generate_uuid(), fixed_ips=[FIXED_IP])
 VRID = data_models.VRID(id=uuidutils.generate_uuid(), vrid=0,
                         project_id=a10constants.MOCK_PROJECT_ID,
                         vrid_port_id=uuidutils.generate_uuid(),
                         vrid_floating_ip='10.0.12.32')
+LISTENER = o_data_models.Listener(id=a10constants.MOCK_LISTENER_ID, load_balancer=LB)
+POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID, load_balancer=LB)
+HM = o_data_models.HealthMonitor(id=a10constants, pool=POOL)
 MEMBER_1 = o_data_models.Member(id=uuidutils.generate_uuid(),
                                 project_id=a10constants.MOCK_PROJECT_ID,
-                                subnet_id=a10constants.MOCK_SUBNET_ID)
+                                subnet_id=a10constants.MOCK_SUBNET_ID,
+                                pool=POOL)
 MEMBER_2 = o_data_models.Member(id=uuidutils.generate_uuid(),
                                 project_id=a10constants.MOCK_PROJECT_ID,
-                                subnet_id=a10constants.MOCK_SUBNET_ID_2)
-
-POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID)
+                                subnet_id=a10constants.MOCK_SUBNET_ID_2,
+                                pool=POOL)
+FLAVOR_PROFILE = o_data_models.FlavorProfile(id=a10constants.MOCK_FLAVOR_PROF_ID,
+                                             flavor_data={})
+FLAVOR = o_data_models.Flavor(id=a10constants.MOCK_FLAVOR_ID,
+                              flavor_profile_id=a10constants.MOCK_FLAVOR_PROF_ID)
 SUBNET = n_data_models.Subnet(id=uuidutils.generate_uuid())
 
 
@@ -367,3 +375,116 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_get_projects.execute(MEMBER_1, vthunder)
         mock_get_projects.vthunder_repo.get_project_list_using_partition.\
             assert_called_once_with(mock.ANY, partition_name='mock-partition-name')
+
+    def test_flavor_search_loadbalancer_find_flavor(self):
+        flavor_task = task.GetFlavorData()
+        found_id = flavor_task._flavor_search(LB)
+        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
+
+    def test_flavor_search_listener_find_flavor(self):
+        flavor_task = task.GetFlavorData()
+        found_id = flavor_task._flavor_search(LB)
+        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
+
+    def test_flavor_search_pool_find_flavor(self):
+        flavor_task = task.GetFlavorData()
+        found_id = flavor_task._flavor_search(POOL)
+        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
+
+    def test_flavor_search_member_find_flavor(self):
+        flavor_task = task.GetFlavorData()
+        found_id = flavor_task._flavor_search(MEMBER_1)
+        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
+
+    def test_flavor_search_health_monitor_find_flavor(self):
+        flavor_task = task.GetFlavorData()
+        found_id = flavor_task._flavor_search(HM)
+        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
+
+    def test_GetFlavorData_format_flavor_keys(self):
+        expected = {"virtual_server": {"arp_disable": 1}}
+        flavor = {"virtual-server": {"arp-disable": 1}}
+        flavor_task = task.GetFlavorData()
+        formated_flavor = flavor_task._format_keys(flavor)
+        self.assertEqual(formated_flavor, expected)
+
+    def test_GetFlavorData_format_flavor_list_keys(self):
+        expected = {
+            "service_group": {
+                "name_expressions": [{
+                    "regex": "sg1",
+                    "json": {"health_check_disable": 1}
+                }]
+            }
+        }
+        name_expr = {
+            "name-expressions": [{
+                "regex": "sg1",
+                "json": {"health-check-disable": 1}
+            }]
+        }
+        flavor = {"service-group": name_expr}
+        flavor_task = task.GetFlavorData()
+        formated_flavor = flavor_task._format_keys(flavor)
+        self.assertEqual(formated_flavor, expected)
+
+    def test_GetFlavorData_format_flavor_multi_val(self):
+        expected = {
+            "service_group": {
+                "name_expressions": [{
+                    "regex": "sg1",
+                    "json": {"health_check_disable": 1}
+                }],
+                "strict_select": 0
+            }
+        }
+        name_expr = {
+            "name-expressions": [{
+                "regex": "sg1",
+                "json": {"health-check-disable": 1}
+            }]
+        }
+        flavor = {"service-group": {"strict-select": 0}}
+        flavor['service-group'].update(name_expr)
+        flavor_task = task.GetFlavorData()
+        formated_flavor = flavor_task._format_keys(flavor)
+        self.assertEqual(formated_flavor, expected)
+
+    def test_GetFlavorData_execute_no_flavor_id(self):
+        flavor_task = task.GetFlavorData()
+        flavor_task._flavor_search = mock.Mock(return_value=None)
+        ret_val = flavor_task.execute(LB)
+        self.assertEqual(ret_val, None)
+
+    def test_GetFlavorData_execute_no_flavor_or_profile(self):
+        flavor_task = task.GetFlavorData()
+        flavor_task.flavor_repo = mock.Mock()
+        flavor_task.flavor_repo.get.return_value = None
+        flavor_task._flavor_search = mock.Mock(
+            return_value=a10constants.MOCK_FLAVOR_ID)
+        ret_val = flavor_task.execute(LB)
+        self.assertEqual(ret_val, None)
+
+        flavor_task.flavor_repo.reset_mock()
+        flavor_task.flavor_repo = mock.Mock()
+        flavor = copy.deepcopy(FLAVOR)
+        flavor.flavor_profile_id = None
+        flavor_task.flavor_repo.get.return_value = flavor
+        ret_val = flavor_task.execute(LB)
+        self.assertEqual(ret_val, None)
+
+    def test_GetFlavorData_execute_return_flavor(self):
+        flavor_task = task.GetFlavorData()
+        flavor_task._flavor_search = mock.Mock(
+            return_value=a10constants.MOCK_FLAVOR_ID)
+        flavor_task._format_keys = mock.Mock()
+        flavor_task._format_keys.return_value = {}
+        flavor_task.flavor_repo = mock.Mock()
+        flavor_task.flavor_repo.get.return_value = FLAVOR
+
+        flavor_prof = copy.deepcopy(FLAVOR_PROFILE)
+        flavor_prof.flavor_data = "{}"
+        flavor_task.flavor_profile_repo = mock.Mock()
+        flavor_task.flavor_profile_repo.get.return_value = flavor_prof
+        ret_val = flavor_task.execute(LB)
+        self.assertEqual(ret_val, {})
