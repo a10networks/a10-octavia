@@ -377,38 +377,38 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
             assert_called_once_with(mock.ANY, partition_name='mock-partition-name')
 
     def test_flavor_search_loadbalancer_find_flavor(self):
-        flavor_task = task.GetFlavorObject()
+        flavor_task = task.GetFlavorData()
         found_id = flavor_task._flavor_search(LB)
         self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
 
     def test_flavor_search_listener_find_flavor(self):
-        flavor_task = task.GetFlavorObject()
+        flavor_task = task.GetFlavorData()
         found_id = flavor_task._flavor_search(LB)
         self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
 
     def test_flavor_search_pool_find_flavor(self):
-        flavor_task = task.GetFlavorObject()
+        flavor_task = task.GetFlavorData()
         found_id = flavor_task._flavor_search(POOL)
         self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
 
     def test_flavor_search_member_find_flavor(self):
-        flavor_task = task.GetFlavorObject()
+        flavor_task = task.GetFlavorData()
         found_id = flavor_task._flavor_search(MEMBER_1)
         self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
 
     def test_flavor_search_health_monitor_find_flavor(self):
-        flavor_task = task.GetFlavorObject()
+        flavor_task = task.GetFlavorData()
         found_id = flavor_task._flavor_search(HM)
         self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
 
-    def test_GetFlavorObject_format_flavor_keys(self):
+    def test_GetFlavorData_format_flavor_keys(self):
         expected = {"virtual_server": {"arp_disable": 1}}
         flavor = {"virtual-server": {"arp-disable": 1}}
-        flavor_task = task.GetFlavorObject()
+        flavor_task = task.GetFlavorData()
         formated_flavor = flavor_task._format_keys(flavor)
         self.assertEqual(formated_flavor, expected)
 
-    def test_GetFlavorObject_format_flavor_list_keys(self):
+    def test_GetFlavorData_format_flavor_list_keys(self):
         expected = {
             "service_group": {
                 "name_expressions": [{
@@ -424,11 +424,11 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
             }]
         }
         flavor = {"service-group": name_expr}
-        flavor_task = task.GetFlavorObject()
+        flavor_task = task.GetFlavorData()
         formated_flavor = flavor_task._format_keys(flavor)
         self.assertEqual(formated_flavor, expected)
 
-    def test_GetFlavorObject_format_flavor_multi_val(self):
+    def test_GetFlavorData_format_flavor_multi_val(self):
         expected = {
             "service_group": {
                 "name_expressions": [{
@@ -446,18 +446,18 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         }
         flavor = {"service-group": {"strict-select": 0}}
         flavor['service-group'].update(name_expr)
-        flavor_task = task.GetFlavorObject()
+        flavor_task = task.GetFlavorData()
         formated_flavor = flavor_task._format_keys(flavor)
         self.assertEqual(formated_flavor, expected)
 
-    def test_GetFlavorObject_execute_no_flavor_id(self):
-        flavor_task = task.GetFlavorObject()
+    def test_GetFlavorData_execute_no_flavor_id(self):
+        flavor_task = task.GetFlavorData()
         flavor_task._flavor_search = mock.Mock(return_value=None)
         ret_val = flavor_task.execute(LB)
         self.assertEqual(ret_val, None)
 
-    def test_GetFlavorObject_execute_no_flavor_or_profile(self):
-        flavor_task = task.GetFlavorObject()
+    def test_GetFlavorData_execute_no_flavor_or_profile(self):
+        flavor_task = task.GetFlavorData()
         flavor_task.flavor_repo = mock.Mock()
         flavor_task.flavor_repo.get.return_value = None
         flavor_task._flavor_search = mock.Mock(
@@ -473,8 +473,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         ret_val = flavor_task.execute(LB)
         self.assertEqual(ret_val, None)
 
-    def test_GetFlavorObject_execute_return_flavor(self):
-        flavor_task = task.GetFlavorObject()
+    def test_GetFlavorData_execute_return_flavor(self):
+        flavor_task = task.GetFlavorData()
         flavor_task._flavor_search = mock.Mock(
             return_value=a10constants.MOCK_FLAVOR_ID)
         flavor_task._format_keys = mock.Mock()

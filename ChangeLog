@@ -1,6 +1,11 @@
 CHANGES
 =======
 
+* Fixed positive testcase for GetFlavorObject execute method
+* Added tests for GetFlavorObject execute method
+* Added skeleton for db tasks
+* Added test harness for flavor and name expr behaviors
+* Refactored parsed\_data method name to format\_keys to better match usage
 * Alterted vs task and tests to work with new flavor parsing
 * Added method to convert dashes to underscores in flavor for easy parsing
 * fix tox checks errors

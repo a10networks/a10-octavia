@@ -697,7 +697,7 @@ class GetChildProjectsOfParentPartition(BaseDatabaseTask):
                 raise e
 
 
-class GetFlavorObject(BaseDatabaseTask):
+class GetFlavorData(BaseDatabaseTask):
 
     def _flavor_search(self, lb_resource):
         if hasattr(lb_resource, 'flavor_id'):
