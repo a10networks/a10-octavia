@@ -710,11 +710,15 @@ class GetFlavorObject(BaseDatabaseTask):
 
     def _format_keys(self, flavor_data):
         if type(flavor_data) is list:
+            item_list = []
             for item in flavor_data:
-                return [self._format_keys(item)]
+                item_list.append(self._format_keys(item))
+            return item_list
         elif type(flavor_data) is dict:
+            item_dict = {}
             for k, v in flavor_data.items():
-                return {k.replace('-', '_'): self._format_keys(v)}
+                item_dict[k.replace('-', '_')] = self._format_keys(v)
+            return item_dict
         else:
             return flavor_data
 
