@@ -35,18 +35,18 @@ class MemberCreate(task.Task):
     def execute(self, member, vthunder, pool, member_count_ip, flavor=None):
         server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         server_args = utils.meta(member, 'server', {})
-        server_args['conn-limit'] = CONF.server.conn_limit
-        server_args['conn-resume'] = CONF.server.conn_resume
+        server_args = utils.dash_to_underscore(server_args)
+        server_args['conn_limit'] = CONF.server.conn_limit
+        server_args['conn_resume'] = CONF.server.conn_resume
         # overwrite options from flavor
         if flavor:
             server_flavor = flavor.get('server')
             if server_flavor:
-                name_exprs = server_flavor.get('name-expressions')
+                name_exprs = server_flavor.get('name_expressions')
                 parsed_exprs = utils.parse_name_expressions(member.name, name_exprs)
-                server_flavor.pop('name-expressions', None)
+                server_flavor.pop('name_expressions', None)
                 server_args.update(server_flavor)
                 server_args.update(parsed_exprs)
-        server_args = {'server': server_args}
 
         server_temp = {}
         template_server = CONF.server.template_server
@@ -65,12 +65,12 @@ class MemberCreate(task.Task):
             try:
                 self.axapi_client.slb.server.create(server_name, member.ip_address, status=status,
                                                     server_templates=server_temp,
-                                                    axapi_args=server_args)
+                                                    **server_args)
                 LOG.debug("Successfully created member: %s", member.id)
             except (acos_errors.Exists, acos_errors.AddressSpecifiedIsInUse):
                 self.axapi_client.slb.server.update(server_name, member.ip_address, status=status,
                                                     server_templates=server_temp,
-                                                    axapi_args=server_args)
+                                                    **server_args)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to create member: %s", member.id)
             raise e
