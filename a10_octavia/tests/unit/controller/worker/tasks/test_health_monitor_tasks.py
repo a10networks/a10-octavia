@@ -37,6 +37,44 @@ HM = o_data_models.HealthMonitor(id=a10constants.MOCK_HM_ID,
 ARGS = utils.meta(HM, 'hm', {})
 LISTENERS = [o_data_models.Listener(id=a10constants.MOCK_LISTENER_ID, protocol_port=mock.ANY)]
 
+FLAVOR = {
+    "health-monitor": {
+        "monitor": {
+            "retry": 5,
+            "method": {
+                "http": {
+                    "http-response-code": "201"
+                }
+            }
+        },
+        "name-expressions": [
+            {
+                "regex": "hm1",
+                "json": {
+                    "monitor": {
+                        "timeout": 8,
+                        "method": {
+                            "http": {
+                                "http-host": "my.test.com"
+                            }
+                        }
+                    }
+                }
+            }
+        ]
+    }
+}
+
+FLAVOR_ARGS = {
+    'monitor': {
+        'retry': 5,
+        'method': {
+            'http': {'http-response-code': '201', 'http-host': 'my.test.com'}
+        },
+        'timeout': 8
+    }
+}
+
 
 class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
 
@@ -58,6 +96,19 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           HM.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
                                                           expect_code=None, axapi_args=ARGS)
+
+    def test_health_monitor_create_with_falvor_task(self):
+        mock_hm = task.CreateAndAssociateHealthMonitor()
+        mock_hm.axapi_client = self.client_mock
+        HM.delay = 30
+        HM.name = "hm1"
+        mock_hm.execute(LISTENERS, HM, VTHUNDER, FLAVOR)
+        self.client_mock.slb.hm.create.assert_called_with(a10constants.MOCK_HM_ID,
+                                                          self.client_mock.slb.hm.TCP,
+                                                          HM.delay, HM.timeout,
+                                                          HM.rise_threshold, method=None,
+                                                          port=mock.ANY, url=None,
+                                                          expect_code=None, axapi_args=FLAVOR_ARGS)
 
     def test_health_monitor_update_task(self):
         mock_hm = task.UpdateHealthMonitor()

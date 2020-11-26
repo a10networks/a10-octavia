@@ -43,8 +43,12 @@ class HealthMonitorFlows(object):
         create_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        create_hm_flow.add(a10_database_tasks.GetFlavorObject(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR))
         create_hm_flow.add(health_monitor_tasks.CreateAndAssociateHealthMonitor(
-            requires=[constants.LISTENERS, constants.HEALTH_MON, a10constants.VTHUNDER]))
+            requires=[constants.LISTENERS, constants.HEALTH_MON, a10constants.VTHUNDER,
+                      constants.FLAVOR]))
         create_hm_flow.add(database_tasks.MarkHealthMonitorActiveInDB(
             requires=constants.HEALTH_MON))
         create_hm_flow.add(database_tasks.MarkPoolActiveInDB(

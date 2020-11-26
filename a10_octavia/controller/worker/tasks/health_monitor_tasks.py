@@ -14,6 +14,7 @@
 
 
 from acos_client import errors as acos_errors
+from acos_client.v21 import axapi_http as axapi_v21
 from oslo_config import cfg
 from oslo_log import log as logging
 from requests.exceptions import ConnectionError
@@ -32,7 +33,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
     """Task to create a healthmonitor and associate it with provided pool."""
 
     @axapi_client_decorator
-    def execute(self, listeners, health_mon, vthunder):
+    def execute(self, listeners, health_mon, vthunder, flavor=None):
         method = None
         url = None
         expect_code = None
@@ -42,6 +43,16 @@ class CreateAndAssociateHealthMonitor(task.Task):
             url = health_mon.url_path
             expect_code = health_mon.expected_codes
         args = utils.meta(health_mon, 'hm', {})
+
+        # overwrite options from flavor
+        if flavor:
+            flavors = flavor.get('health-monitor')
+            if flavors:
+                name_exprs = flavors.get('name-expressions')
+                parsed_exprs = utils.parse_name_expressions(health_mon.name, name_exprs)
+                flavors.pop('name-expressions', None)
+                args = axapi_v21.merge_dicts(args, flavors)
+                args = axapi_v21.merge_dicts(args, parsed_exprs)
 
         try:
             self.axapi_client.slb.hm.create(health_mon.id,
@@ -109,7 +120,7 @@ class UpdateHealthMonitor(task.Task):
     """Task to update Health Monitor"""
 
     @axapi_client_decorator
-    def execute(self, listeners, health_mon, vthunder, update_dict):
+    def execute(self, listeners, health_mon, vthunder, update_dict, flavor=None):
         """ Execute update health monitor """
         # TODO(hthompson6) Length of name of healthmonitor for older vThunder devices
         health_mon.update(update_dict)
