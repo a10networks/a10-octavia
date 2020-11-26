@@ -51,7 +51,7 @@ class PoolFlows(object):
         create_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_pool_flow.add(a10_database_tasks.GetFlavorObject(
+        create_pool_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.POOL},
             provides=constants.FLAVOR))
         create_pool = service_group_tasks.PoolCreate(
