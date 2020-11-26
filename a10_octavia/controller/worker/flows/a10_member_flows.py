@@ -459,7 +459,7 @@ class MemberFlows(object):
                           a10constants.VTHUNDER]))
         create_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP))
-        create_member_flow.add(a10_database_tasks.GetFlavorObject(
+        create_member_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
         create_member_flow.add(server_tasks.MemberCreate(
