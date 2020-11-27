@@ -51,14 +51,17 @@ class LoadBalancerParent(object):
             desc = '"{}"'.format(desc)
         config_args['description'] = desc
 
-        virtual_server_flavor = flavor_data.get('virtual_server')
-        if virtual_server_flavor:
-            name_exprs = virtual_server_flavor.get('name_expressions')
-            if name_exprs:
-                del virtual_server_flavor['name_expressions']
-            config_args.update(virtual_server_flavor)
-            config_args.update(utils.parse_name_expressions(
-                loadbalancer.name, name_exprs))
+        vip_args = {}
+        if flavor_data:
+            virtual_server_flavor = flavor_data.get('virtual_server')
+            if virtual_server_flavor:
+                name_exprs = virtual_server_flavor.get('name_expressions')
+                if name_exprs:
+                    del virtual_server_flavor['name_expressions']
+                virtual_server_flavor.update(utils.parse_name_expressions(
+                    loadbalancer.name, name_exprs))
+                vip_args = {'virtual_server': virtual_server_flavor}
+                config_args.update(vip_args)
 
         set_method(loadbalancer.id, loadbalancer.vip.ip_address, **config_args)
 

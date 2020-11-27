@@ -64,7 +64,7 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
         virtual_server_task.axapi_client = self.client_mock
         virtual_server_task.execute(LOADBALANCER, vthunder, flavor_data=flavor)
         args, kwargs = self.client_mock.slb.virtual_server.create.call_args
-        self.assertEqual(kwargs['arp_disable'], 1)
+        self.assertEqual(kwargs['virtual_server']['arp_disable'], 1)
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.parse_name_expressions',
                 mock.MagicMock())
@@ -78,7 +78,7 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
         virtual_server_task.axapi_client = self.client_mock
         virtual_server_task.execute(LOADBALANCER, vthunder, flavor_data=flavor)
         args, kwargs = self.client_mock.slb.virtual_server.create.call_args
-        self.assertEqual(kwargs['arp_disable'], 1)
+        self.assertEqual(kwargs['virtual_server']['arp_disable'], 1)
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.parse_name_expressions')
     def test_CreateVirtualServerTask_execute_create_with_flavor_regex(self, mock_name_expr):
