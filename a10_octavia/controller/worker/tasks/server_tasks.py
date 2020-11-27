@@ -47,6 +47,7 @@ class MemberCreate(task.Task):
                 server_flavor.pop('name_expressions', None)
                 server_args.update(server_flavor)
                 server_args.update(parsed_exprs)
+        server_args = {'server': server_args}
 
         server_temp = {}
         template_server = CONF.server.template_server

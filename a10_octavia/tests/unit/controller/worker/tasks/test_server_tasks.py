@@ -40,7 +40,7 @@ MEMBER = o_data_models.Member(
     id=a10constants.MOCK_MEMBER_ID, protocol_port=t_constants.MOCK_PORT_ID,
     project_id=t_constants.MOCK_PROJECT_ID, ip_address=t_constants.MOCK_IP_ADDRESS)
 
-KEY_ARGS = utils.meta(MEMBER, 'server', {'conn_resume': None, 'conn_limit': 64000000})
+KEY_ARGS = {'server': utils.meta(MEMBER, 'server', {'conn_resume': None, 'conn_limit': 64000000})}
 SERVER_NAME = '{}_{}'.format(MEMBER.project_id[:5],
                              MEMBER.ip_address.replace('.', '_'))
 
@@ -95,7 +95,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         mock_create_member = task.MemberCreate()
         member_port_count_ip = 1
         flavor = {"server": {"conn_limit": 65535, "conn_resume": 5000}}
-        expect_key_args = {'conn_limit': 65535, 'conn_resume': 5000}
+        expect_key_args = {"server": {'conn_limit': 65535, 'conn_resume': 5000}}
         mock_create_member.CONF = self.conf
         mock_create_member.axapi_client = self.client_mock
         mock_create_member.execute(MEMBER, VTHUNDER, POOL,
@@ -110,7 +110,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         flavor = {}
         regex = {"name_expressions": [{"regex": "srv1", "json": {"conn_limit": 800}}]}
         flavor['server'] = regex
-        expect_key_args = {'conn_limit': 800, 'conn_resume': None}
+        expect_key_args = {"server": {'conn_limit': 800, 'conn_resume': None}}
         mock_create_member.CONF = self.conf
         member_obj = o_data_models.Member(
             id=a10constants.MOCK_MEMBER_ID, protocol_port=t_constants.MOCK_PORT_ID,
@@ -128,7 +128,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         mock_create_member = task.MemberCreate()
         member_port_count_ip = 1
         flavor = {"server": {"conn_limit": 65535, "conn_resume": 5000}}
-        expect_key_args = {'conn_limit': 65535, 'conn_resume': 5000}
+        expect_key_args = {"server": {'conn_limit': 65535, 'conn_resume': 5000}}
         mock_create_member.CONF = self.conf
         mock_create_member.axapi_client = self.client_mock
         mock_create_member.execute(MEMBER, VTHUNDER, POOL,
