@@ -33,7 +33,7 @@ LOG = logging.getLogger(__name__)
 class PoolParent(object):
 
     def set(self, set_method, pool, vthunder, flavor=None, **kwargs):
-        axapi_args = {'service_group': utils.meta(pool, 'service_group', {})}
+        pool_args = {'service_group': utils.meta(pool, 'service_group', {})}
 
         device_templates = self.axapi_client.slb.template.templates.get()
 
@@ -69,13 +69,13 @@ class PoolParent(object):
 
         # Handle options from flavor
         if flavor:
-            pool_flavor = flavor.get('service-group')
+            pool_flavor = flavor.get('service_group')
             if pool_flavor:
-                name_exprs = pool_flavor.get('name-expressions')
+                name_exprs = pool_flavor.get('name_expressions')
                 parsed_exprs = utils.parse_name_expressions(pool.name, name_exprs)
-                pool_flavor.pop('name-expressions', None)
-                axapi_args['service_group'].update(pool_flavor)
-                axapi_args['service_group'].update(parsed_exprs)
+                pool_flavor.pop('name_expressions', None)
+                pool_args['service_group'].update(pool_flavor)
+                pool_args['service_group'].update(parsed_exprs)
 
         set_method(pool.id,
                    protocol=protocol,
@@ -83,7 +83,7 @@ class PoolParent(object):
                    service_group_templates=service_group_temp,
                    mem_list=kwargs.get('mem_list'),
                    hm_name=kwargs.get('health_monitor'),
-                   axapi_args=axapi_args)
+                   **pool_args)
 
 
 class PoolCreate(PoolParent, task.Task):
