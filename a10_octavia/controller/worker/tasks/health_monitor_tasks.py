@@ -43,14 +43,15 @@ class CreateAndAssociateHealthMonitor(task.Task):
             url = health_mon.url_path
             expect_code = health_mon.expected_codes
         args = utils.meta(health_mon, 'hm', {})
+        args = utils.dash_to_underscore(args)
 
         # overwrite options from flavor
         if flavor:
-            flavors = flavor.get('health-monitor')
+            flavors = flavor.get('health_monitor')
             if flavors:
-                name_exprs = flavors.get('name-expressions')
+                name_exprs = flavors.get('name_expressions')
                 parsed_exprs = utils.parse_name_expressions(health_mon.name, name_exprs)
-                flavors.pop('name-expressions', None)
+                flavors.pop('name_expressions', None)
                 args = axapi_v21.merge_dicts(args, flavors)
                 args = axapi_v21.merge_dicts(args, parsed_exprs)
 
@@ -61,7 +62,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
                                             health_mon.delay, health_mon.timeout,
                                             health_mon.rise_threshold, method=method,
                                             port=listeners[0].protocol_port, url=url,
-                                            expect_code=expect_code, axapi_args=args)
+                                            expect_code=expect_code, **args)
             LOG.debug("Successfully created health monitor: %s", health_mon.id)
 
         except (acos_errors.ACOSException, ConnectionError) as e:

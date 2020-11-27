@@ -124,16 +124,18 @@ class ListenersParent(object):
                                                                   device_templates)
             vport_templates[template_key] = template_policy
 
+        vport_args = {}
         if flavor:
-            virtual_port_flavor = flavor.get('virtual-port')
+            virtual_port_flavor = flavor.get('virtual_port')
             if virtual_port_flavor:
-                name_exprs = virtual_port_flavor.get('name-expressions')
+                name_exprs = virtual_port_flavor.get('name_expressions')
                 parsed_exprs = utils.parse_name_expressions(
-                    loadbalancer.name, name_exprs)
-                del virtual_port_flavor['name-expressions']
-                config_data.update(virtual_port_flavor)
-                config_data.update(parsed_exprs)
-        template_args.update(config_data)
+                    listener.name, name_exprs)
+                virtual_port_flavor.pop('name_expressions', None)
+                virtual_port_flavor.update(parsed_exprs)
+                vport_args = {'virtual_port': virtual_port_flavor}
+        config_data.update(template_args)
+        config_data.update(vport_args)
 
         set_method(loadbalancer.id,
                    listener.id,
@@ -142,7 +144,7 @@ class ListenersParent(object):
                    listener.default_pool_id,
                    s_pers_name=s_pers, c_pers_name=c_pers,
                    virtual_port_templates=vport_templates,
-                   **template_args)
+                   **config_data)
 
 
 class ListenerCreate(ListenersParent, task.Task):

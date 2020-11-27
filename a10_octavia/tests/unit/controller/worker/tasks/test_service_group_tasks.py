@@ -161,11 +161,11 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         service_group_task = task.PoolCreate()
         service_group_task.axapi_client = self.client_mock
-        flavor = {"service-group": {"health-check-disable": 1}}
-        expect_axapi = {"service_group": {"health-check-disable": 1}}
+        flavor = {"service_group": {"health_check_disable": 1}}
+        expect_kwargs = {"health_check_disable": 1}
         service_group_task.execute(POOL, vthunder, flavor=flavor)
         args, kwargs = self.client_mock.slb.service_group.create.call_args
-        self.assertEqual(kwargs['axapi_args'], expect_axapi)
+        self.assertEqual(kwargs['service_group'], expect_kwargs)
 
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
@@ -174,12 +174,12 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         service_group_task = task.PoolCreate()
         service_group_task.axapi_client = self.client_mock
         flavor = {}
-        regex = {"name-expressions": [{"regex": "sg1", "json": {"health-check-disable": 1}}]}
-        flavor["service-group"] = regex
-        expect_axapi = {"service_group": {"health-check-disable": 1}}
+        regex = {"name_expressions": [{"regex": "sg1", "json": {"health_check_disable": 1}}]}
+        flavor["service_group"] = regex
+        expect_kwargs = {"health_check_disable": 1}
         service_group_task.execute(POOL, vthunder, flavor=flavor)
         args, kwargs = self.client_mock.slb.service_group.create.call_args
-        self.assertEqual(kwargs['axapi_args'], expect_axapi)
+        self.assertEqual(kwargs['service_group'], expect_kwargs)
 
     def test_revert_pool_create_task(self):
         mock_pool = task.PoolCreate()
@@ -202,7 +202,7 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
             service_group_templates=mock.ANY,
             hm_name=None,
             mem_list=None,
-            axapi_args=AXAPI_ARGS)
+            **AXAPI_ARGS)
 
     def test_create_pool_with_protocol_proxy(self):
         mock_pool = task.PoolCreate()

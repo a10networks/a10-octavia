@@ -43,7 +43,7 @@ class HealthMonitorFlows(object):
         create_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        create_hm_flow.add(a10_database_tasks.GetFlavorObject(
+        create_hm_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
         create_hm_flow.add(health_monitor_tasks.CreateAndAssociateHealthMonitor(
