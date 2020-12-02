@@ -276,8 +276,12 @@ class LoadBalancerFlows(object):
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         # post_create_lb_flow.add(handle_vrid_for_loadbalancer_subflow())
         update_LB_flow.add(self.handle_vrid_for_loadbalancer_subflow())
+        update_LB_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR_DATA))
         update_LB_flow.add(virtual_server_tasks.UpdateVirtualServerTask(
-            requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                      constants.FLAVOR_DATA)))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         if CONF.a10_global.network_type == 'vlan':
