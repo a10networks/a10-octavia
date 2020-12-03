@@ -147,8 +147,12 @@ class PoolFlows(object):
         update_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        update_pool_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.POOL},
+            provides=constants.FLAVOR))
         update_pool = service_group_tasks.PoolUpdate(
-            requires=[constants.POOL, a10constants.VTHUNDER, constants.UPDATE_DICT],
+            requires=[constants.POOL, a10constants.VTHUNDER,
+                      constants.UPDATE_DICT, constants.FLAVOR],
             provides=constants.POOL)
         update_pool_flow.add(*self._get_sess_pers_subflow(update_pool))
         update_pool_flow.add(virtual_port_tasks.ListenerUpdateForPool(

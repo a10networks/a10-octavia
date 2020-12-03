@@ -179,11 +179,11 @@ class ListenerUpdate(ListenersParent, task.Task):
     """Task to update listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder):
+    def execute(self, loadbalancer, listener, vthunder, flavor=None):
         try:
             if listener:
                 self.set(self.axapi_client.slb.virtual_server.vport.replace,
-                         loadbalancer, listener, vthunder)
+                         loadbalancer, listener, vthunder, flavor)
                 LOG.debug("Successfully updated listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update listener: %s", listener.id)

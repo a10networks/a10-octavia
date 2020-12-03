@@ -37,35 +37,16 @@ HM = o_data_models.HealthMonitor(id=a10constants.MOCK_HM_ID,
 ARGS = utils.meta(HM, 'hm', {})
 LISTENERS = [o_data_models.Listener(id=a10constants.MOCK_LISTENER_ID, protocol_port=mock.ANY)]
 
-FLAVOR = {
-    "health_monitor": {
-        "monitor": {
-            "retry": 5,
-            "method": {
-                "http": {
-                    "http_response_code": "201"
-                }
-            }
+FLAVOR_ARGS = {
+    'monitor': {
+        'retry': 5,
+        'method': {
+            'http': {'http_response_code': '201'}
         },
-        "name_expressions": [
-            {
-                "regex": "hm1",
-                "json": {
-                    "monitor": {
-                        "timeout": 8,
-                        "method": {
-                            "http": {
-                                "http_host": "my.test.com"
-                            }
-                        }
-                    }
-                }
-            }
-        ]
     }
 }
 
-FLAVOR_ARGS = {
+FLAVOR_WITH_REGEX_ARGS = {
     'monitor': {
         'retry': 5,
         'method': {
@@ -97,18 +78,113 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           port=mock.ANY, url=None,
                                                           expect_code=None, **ARGS)
 
-    def test_health_monitor_create_with_falvor_task(self):
+    def test_health_monitor_create_with_flavor_task(self):
+        flavor = {
+            "health_monitor": {
+                "monitor": {
+                    "retry": 5,
+                    "method": {
+                        "http": {
+                            "http_response_code": "201"
+                        }
+                    }
+                }
+            }
+        }
         mock_hm = task.CreateAndAssociateHealthMonitor()
         mock_hm.axapi_client = self.client_mock
         HM.delay = 30
         HM.name = "hm1"
-        mock_hm.execute(LISTENERS, HM, VTHUNDER, FLAVOR)
+        mock_hm.execute(LISTENERS, HM, VTHUNDER, flavor)
         self.client_mock.slb.hm.create.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
                                                           HM.delay, HM.timeout,
                                                           HM.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
                                                           expect_code=None, **FLAVOR_ARGS)
+
+    def test_health_monitor_create_with_flavor_regex_task(self):
+        flavor = {
+            "health_monitor": {
+                "monitor": {
+                    "retry": 5,
+                    "method": {
+                        "http": {
+                            "http_response_code": "201"
+                        }
+                    }
+                },
+                "name_expressions": [
+                    {
+                        "regex": "hm1",
+                        "json": {
+                            "monitor": {
+                                "timeout": 8,
+                                "method": {
+                                    "http": {
+                                        "http_host": "my.test.com"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+        mock_hm = task.CreateAndAssociateHealthMonitor()
+        mock_hm.axapi_client = self.client_mock
+        HM.delay = 30
+        HM.name = "hm1"
+        mock_hm.execute(LISTENERS, HM, VTHUNDER, flavor)
+        self.client_mock.slb.hm.create.assert_called_with(a10constants.MOCK_HM_ID,
+                                                          self.client_mock.slb.hm.TCP,
+                                                          HM.delay, HM.timeout,
+                                                          HM.rise_threshold, method=None,
+                                                          port=mock.ANY, url=None,
+                                                          expect_code=None,
+                                                          **FLAVOR_WITH_REGEX_ARGS)
+
+    def test_health_monitor_create_with_regex_overwrite_flavor_task(self):
+        flavor = {
+            "health_monitor": {
+                "monitor": {
+                    "retry": 5,
+                    "timeout": 90,
+                    "method": {
+                        "http": {
+                            "http_response_code": "201"
+                        }
+                    }
+                },
+                "name_expressions": [
+                    {
+                        "regex": "hm1",
+                        "json": {
+                            "monitor": {
+                                "timeout": 8,
+                                "method": {
+                                    "http": {
+                                        "http_host": "my.test.com"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+        mock_hm = task.CreateAndAssociateHealthMonitor()
+        mock_hm.axapi_client = self.client_mock
+        HM.delay = 30
+        HM.name = "hm1"
+        mock_hm.execute(LISTENERS, HM, VTHUNDER, flavor)
+        self.client_mock.slb.hm.create.assert_called_with(a10constants.MOCK_HM_ID,
+                                                          self.client_mock.slb.hm.TCP,
+                                                          HM.delay, HM.timeout,
+                                                          HM.rise_threshold, method=None,
+                                                          port=mock.ANY, url=None,
+                                                          expect_code=None,
+                                                          **FLAVOR_WITH_REGEX_ARGS)
 
     def test_health_monitor_update_task(self):
         mock_hm = task.UpdateHealthMonitor()
@@ -121,7 +197,118 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           hm.delay, hm.timeout,
                                                           hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
-                                                          expect_code=None, axapi_args=ARGS)
+                                                          expect_code=None, **ARGS)
+
+    def test_health_monitor_update_with_flavor_task(self):
+        flavor = {
+            "health_monitor": {
+                "monitor": {
+                    "retry": 5,
+                    "method": {
+                        "http": {
+                            "http_response_code": "201"
+                        }
+                    }
+                }
+            }
+        }
+        update_dict = {}
+        mock_hm = task.UpdateHealthMonitor()
+        mock_hm.axapi_client = self.client_mock
+        HM.delay = 30
+        HM.name = "hm1"
+        mock_hm.execute(LISTENERS, HM, VTHUNDER, update_dict, flavor=flavor)
+        self.client_mock.slb.hm.update.assert_called_with(a10constants.MOCK_HM_ID,
+                                                          self.client_mock.slb.hm.TCP,
+                                                          HM.delay, HM.timeout,
+                                                          HM.rise_threshold, method=None,
+                                                          port=mock.ANY, url=None,
+                                                          expect_code=None, **FLAVOR_ARGS)
+
+    def test_health_monitor_update_with_flavor_regex_task(self):
+        flavor = {
+            "health_monitor": {
+                "monitor": {
+                    "retry": 5,
+                    "method": {
+                        "http": {
+                            "http_response_code": "201"
+                        }
+                    }
+                },
+                "name_expressions": [
+                    {
+                        "regex": "hm1",
+                        "json": {
+                            "monitor": {
+                                "timeout": 8,
+                                "method": {
+                                    "http": {
+                                        "http_host": "my.test.com"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+        update_dict = {}
+        mock_hm = task.UpdateHealthMonitor()
+        mock_hm.axapi_client = self.client_mock
+        HM.delay = 30
+        HM.name = "hm1"
+        mock_hm.execute(LISTENERS, HM, VTHUNDER, update_dict, flavor=flavor)
+        self.client_mock.slb.hm.update.assert_called_with(a10constants.MOCK_HM_ID,
+                                                          self.client_mock.slb.hm.TCP,
+                                                          HM.delay, HM.timeout,
+                                                          HM.rise_threshold, method=None,
+                                                          port=mock.ANY, url=None,
+                                                          expect_code=None,
+                                                          **FLAVOR_WITH_REGEX_ARGS)
+
+    def test_health_monitor_update_with_regex_overwrite_flavor_task(self):
+        flavor = {
+            "health_monitor": {
+                "monitor": {
+                    "retry": 5,
+                    "timeout": 90,
+                    "method": {
+                        "http": {
+                            "http_response_code": "201"
+                        }
+                    }
+                },
+                "name_expressions": [
+                    {
+                        "regex": "hm1",
+                        "json": {
+                            "monitor": {
+                                "timeout": 8,
+                                "method": {
+                                    "http": {
+                                        "http_host": "my.test.com"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+        update_dict = {}
+        mock_hm = task.UpdateHealthMonitor()
+        mock_hm.axapi_client = self.client_mock
+        HM.delay = 30
+        HM.name = "hm1"
+        mock_hm.execute(LISTENERS, HM, VTHUNDER, update_dict, flavor=flavor)
+        self.client_mock.slb.hm.update.assert_called_with(a10constants.MOCK_HM_ID,
+                                                          self.client_mock.slb.hm.TCP,
+                                                          HM.delay, HM.timeout,
+                                                          HM.rise_threshold, method=None,
+                                                          port=mock.ANY, url=None,
+                                                          expect_code=None,
+                                                          **FLAVOR_WITH_REGEX_ARGS)
 
     def test_health_monitor_delete_task(self):
         mock_hm = task.DeleteHealthMonitor()

@@ -135,7 +135,7 @@ class PoolUpdate(PoolParent, task.Task):
     """Task to update pool"""
 
     @axapi_client_decorator
-    def execute(self, pool, vthunder, update_dict):
+    def execute(self, pool, vthunder, update_dict, flavor=None):
         pool.update(update_dict)
         try:
             service_group = self.axapi_client.slb.service_group.get(
@@ -143,7 +143,7 @@ class PoolUpdate(PoolParent, task.Task):
             mem_list = service_group.get('member-list')
             health_monitor = service_group.get('health-check')
             self.set(self.axapi_client.slb.service_group.replace, pool, vthunder,
-                     mem_list=mem_list, health_monitor=health_monitor)
+                     mem_list=mem_list, health_monitor=health_monitor, flavor=flavor)
             LOG.debug("Successfully updated pool: %s", pool.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update pool: %s", pool.id)

@@ -51,7 +51,7 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         self.conf.reset()
 
     def _mock_listener(self, protocol, conn_limit):
-        listener = o_data_models.Listener(id=a10constants.MOCK_LISTENER_ID)
+        listener = o_data_models.Listener(id=a10constants.MOCK_LISTENER_ID, name="vport1")
         listener.protocol = protocol
         listener.connection_limit = conn_limit
         return listener
@@ -184,6 +184,73 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         self.assertIn('use_rcv_hop', kwargs)
         self.assertTrue(kwargs.get('use_rcv_hop'))
 
+    def test_create_http_virtual_port_with_flavor(self):
+        listener = self._mock_listener('HTTP', 1000)
+        flavor = {"virtual_port": {"support_http2": 1}}
+
+        listener_task = task.ListenerCreate()
+        listener_task.axapi_client = self.client_mock
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER, flavor)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn('support_http2', kwargs['virtual_port'])
+        self.assertEqual(kwargs['virtual_port'].get('support_http2'), 1)
+
+    def test_create_http_virtual_port_with_flavor_regex(self):
+        listener = self._mock_listener('HTTP', 1000)
+        regex = {"regex": "vport1", "json": {"support_http2": 1}}
+        flavor = {"virtual_port": {}}
+        flavor['virtual_port']['name_expressions'] = [regex]
+
+        listener_task = task.ListenerCreate()
+        listener_task.axapi_client = self.client_mock
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER, flavor)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn('support_http2', kwargs['virtual_port'])
+        self.assertEqual(kwargs['virtual_port'].get('support_http2'), 1)
+
+    def test_create_http_virtual_port_regex_over_flavor(self):
+        listener = self._mock_listener('HTTP', 1000)
+        regex = {"regex": "vport1", "json": {"support_http2": 1}}
+        flavor = {"virtual_port": {"support_http2": 0}}
+        flavor['virtual_port']['name_expressions'] = [regex]
+
+        listener_task = task.ListenerCreate()
+        listener_task.axapi_client = self.client_mock
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER, flavor)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn('support_http2', kwargs['virtual_port'])
+        self.assertEqual(kwargs['virtual_port'].get('support_http2'), 1)
+
+    def test_create_http_virtual_port_flavor_over_config(self):
+        listener = self._mock_listener('HTTP', 1000)
+        flavor = {"virtual_port": {"conn_limit": 300}}
+
+        listener_task = task.ListenerCreate()
+        listener_task.axapi_client = self.client_mock
+        self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
+                         conn_limit=200)
+        listener_task.CONF = self.conf
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER, flavor)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn('conn_limit', kwargs['virtual_port'])
+        self.assertEqual(kwargs['virtual_port'].get('conn_limit'), 300)
+
     def test_update_http_virtual_port_use_rcv_hop(self):
         listener = self._mock_listener('HTTP', 1000)
 
@@ -200,6 +267,73 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
         self.assertIn('use_rcv_hop', kwargs)
         self.assertFalse(kwargs.get('use_rcv_hop'))
+
+    def test_update_http_virtual_port_with_flavor(self):
+        listener = self._mock_listener('HTTP', 1000)
+        flavor = {"virtual_port": {"support_http2": 1}}
+
+        listener_task = task.ListenerUpdate()
+        listener_task.axapi_client = self.client_mock
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER, flavor)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
+        self.assertIn('support_http2', kwargs['virtual_port'])
+        self.assertEqual(kwargs['virtual_port'].get('support_http2'), 1)
+
+    def test_update_http_virtual_port_with_flavor_regex(self):
+        listener = self._mock_listener('HTTP', 1000)
+        regex = {"regex": "vport1", "json": {"support_http2": 1}}
+        flavor = {"virtual_port": {}}
+        flavor['virtual_port']['name_expressions'] = [regex]
+
+        listener_task = task.ListenerUpdate()
+        listener_task.axapi_client = self.client_mock
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER, flavor)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
+        self.assertIn('support_http2', kwargs['virtual_port'])
+        self.assertEqual(kwargs['virtual_port'].get('support_http2'), 1)
+
+    def test_update_http_virtual_port_regex_over_flavor(self):
+        listener = self._mock_listener('HTTP', 1000)
+        regex = {"regex": "vport1", "json": {"support_http2": 1}}
+        flavor = {"virtual_port": {"support_http2": 0}}
+        flavor['virtual_port']['name_expressions'] = [regex]
+
+        listener_task = task.ListenerUpdate()
+        listener_task.axapi_client = self.client_mock
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER, flavor)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
+        self.assertIn('support_http2', kwargs['virtual_port'])
+        self.assertEqual(kwargs['virtual_port'].get('support_http2'), 1)
+
+    def test_update_http_virtual_port_flavor_over_config(self):
+        listener = self._mock_listener('HTTP', 1000)
+        flavor = {"virtual_port": {"conn_limit": 300}}
+
+        listener_task = task.ListenerUpdate()
+        listener_task.axapi_client = self.client_mock
+        self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
+                         conn_limit=200)
+        listener_task.CONF = self.conf
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER, flavor)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
+        self.assertIn('conn_limit', kwargs['virtual_port'])
+        self.assertEqual(kwargs['virtual_port'].get('conn_limit'), 300)
 
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
     def test_listener_update_for_pool_with_http_protocol(self, mock_protocol):
