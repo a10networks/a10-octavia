@@ -169,11 +169,39 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
 
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
     @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
+    def test_PoolCreate_execute_create_with_flavor_over_conf(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        service_group_task = task.PoolCreate()
+        service_group_task.axapi_client = self.client_mock
+        conf = {'template_server': 'my_server_template'}
+        self.conf.config(group=a10constants.SERVICE_GROUP_CONF_SECTION, **conf)
+        flavor = {"service_group": {"template_server": 'tmpl1'}}
+        expect_kwargs = {"template_server": 'tmpl1'}
+        service_group_task.execute(POOL, vthunder, flavor=flavor)
+        args, kwargs = self.client_mock.slb.service_group.create.call_args
+        self.assertEqual(kwargs['service_group'], expect_kwargs)
+
+    @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
+    @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
     def test_PoolCreate_execute_create_with_flavor_regex(self):
         vthunder = copy.deepcopy(VTHUNDER)
         service_group_task = task.PoolCreate()
         service_group_task.axapi_client = self.client_mock
         flavor = {}
+        regex = {"name_expressions": [{"regex": "sg1", "json": {"health_check_disable": 1}}]}
+        flavor["service_group"] = regex
+        expect_kwargs = {"health_check_disable": 1}
+        service_group_task.execute(POOL, vthunder, flavor=flavor)
+        args, kwargs = self.client_mock.slb.service_group.create.call_args
+        self.assertEqual(kwargs['service_group'], expect_kwargs)
+
+    @mock.patch('a10_octavia.common.openstack_mappings.service_group_protocol', mock.Mock())
+    @mock.patch('a10_octavia.common.openstack_mappings.service_group_lb_method', mock.Mock())
+    def test_PoolCreate_execute_create_with_regex_over_regex(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        service_group_task = task.PoolCreate()
+        service_group_task.axapi_client = self.client_mock
+        flavor = {"service_group": {"health_check_disable": 0}}
         regex = {"name_expressions": [{"regex": "sg1", "json": {"health_check_disable": 1}}]}
         flavor["service_group"] = regex
         expect_kwargs = {"health_check_disable": 1}
