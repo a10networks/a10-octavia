@@ -48,6 +48,9 @@ class VThunder(base_models.BASE):
     updated_at = sa.Column(u'updated_at', sa.DateTime(), nullable=True)
     partition_name = sa.Column(sa.String(14), nullable=True)
     hierarchical_multitenancy = sa.Column(sa.String(7), nullable=False)
+    write_memory = sa.Column(sa.Boolean(), nullable=False)
+    protocol = sa.Column(sa.String(32), nullable=False)
+    port = sa.Column(sa.Integer, nullable=False)
 
     @classmethod
     def find_by_loadbalancer_id(cls, loadbalancer_id, db_session=None):
