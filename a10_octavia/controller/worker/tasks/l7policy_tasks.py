@@ -60,7 +60,7 @@ class L7PolicyParent(object):
             aflex_scripts.append({"aflex": filename})
         else:
             aflex_scripts = [{"aflex": filename}]
-        kargs["aflex-scripts"] = aflex_scripts
+        kargs["aflex_scripts"] = aflex_scripts
 
         try:
             self.axapi_client.slb.virtual_server.vport.update(
@@ -134,7 +134,7 @@ class DeleteL7Policy(task.Task):
             for aflex in aflex_scripts:
                 if aflex['aflex'] != l7policy.id:
                     new_aflex_scripts.append(aflex)
-        kargs["aflex-scripts"] = new_aflex_scripts
+        kargs["aflex_scripts"] = new_aflex_scripts
 
         try:
             self.axapi_client.slb.virtual_server.vport.update(

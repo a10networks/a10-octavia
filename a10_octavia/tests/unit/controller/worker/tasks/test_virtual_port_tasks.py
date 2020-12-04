@@ -196,8 +196,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
             listener_task.execute(LB, listener, VTHUNDER, flavor)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
-        self.assertIn('support_http2', kwargs['virtual_port'])
-        self.assertEqual(kwargs['virtual_port'].get('support_http2'), 1)
+        self.assertIn('support_http2', kwargs['port'])
+        self.assertEqual(kwargs['port'].get('support_http2'), 1)
 
     def test_create_http_virtual_port_with_flavor_regex(self):
         listener = self._mock_listener('HTTP', 1000)
@@ -213,8 +213,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
             listener_task.execute(LB, listener, VTHUNDER, flavor)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
-        self.assertIn('support_http2', kwargs['virtual_port'])
-        self.assertEqual(kwargs['virtual_port'].get('support_http2'), 1)
+        self.assertIn('support_http2', kwargs['port'])
+        self.assertEqual(kwargs['port'].get('support_http2'), 1)
 
     def test_create_http_virtual_port_regex_over_flavor(self):
         listener = self._mock_listener('HTTP', 1000)
@@ -230,8 +230,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
             listener_task.execute(LB, listener, VTHUNDER, flavor)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
-        self.assertIn('support_http2', kwargs['virtual_port'])
-        self.assertEqual(kwargs['virtual_port'].get('support_http2'), 1)
+        self.assertIn('support_http2', kwargs['port'])
+        self.assertEqual(kwargs['port'].get('support_http2'), 1)
 
     def test_create_http_virtual_port_flavor_over_config(self):
         listener = self._mock_listener('HTTP', 1000)
@@ -248,8 +248,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
             listener_task.execute(LB, listener, VTHUNDER, flavor)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
-        self.assertIn('conn_limit', kwargs['virtual_port'])
-        self.assertEqual(kwargs['virtual_port'].get('conn_limit'), 300)
+        self.assertIn('conn_limit', kwargs['port'])
+        self.assertEqual(kwargs['port'].get('conn_limit'), 300)
 
     def test_update_http_virtual_port_use_rcv_hop(self):
         listener = self._mock_listener('HTTP', 1000)
@@ -280,8 +280,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
             listener_task.execute(LB, listener, VTHUNDER, flavor)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
-        self.assertIn('support_http2', kwargs['virtual_port'])
-        self.assertEqual(kwargs['virtual_port'].get('support_http2'), 1)
+        self.assertIn('support_http2', kwargs['port'])
+        self.assertEqual(kwargs['port'].get('support_http2'), 1)
 
     def test_update_http_virtual_port_with_flavor_regex(self):
         listener = self._mock_listener('HTTP', 1000)
@@ -297,8 +297,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
             listener_task.execute(LB, listener, VTHUNDER, flavor)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
-        self.assertIn('support_http2', kwargs['virtual_port'])
-        self.assertEqual(kwargs['virtual_port'].get('support_http2'), 1)
+        self.assertIn('support_http2', kwargs['port'])
+        self.assertEqual(kwargs['port'].get('support_http2'), 1)
 
     def test_update_http_virtual_port_regex_over_flavor(self):
         listener = self._mock_listener('HTTP', 1000)
@@ -314,8 +314,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
             listener_task.execute(LB, listener, VTHUNDER, flavor)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
-        self.assertIn('support_http2', kwargs['virtual_port'])
-        self.assertEqual(kwargs['virtual_port'].get('support_http2'), 1)
+        self.assertIn('support_http2', kwargs['port'])
+        self.assertEqual(kwargs['port'].get('support_http2'), 1)
 
     def test_update_http_virtual_port_flavor_over_config(self):
         listener = self._mock_listener('HTTP', 1000)
@@ -332,8 +332,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
             listener_task.execute(LB, listener, VTHUNDER, flavor)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
-        self.assertIn('conn_limit', kwargs['virtual_port'])
-        self.assertEqual(kwargs['virtual_port'].get('conn_limit'), 300)
+        self.assertIn('conn_limit', kwargs['port'])
+        self.assertEqual(kwargs['port'].get('conn_limit'), 300)
 
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
     def test_listener_update_for_pool_with_http_protocol(self, mock_protocol):

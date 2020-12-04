@@ -133,7 +133,7 @@ class ListenersParent(object):
                     listener.name, name_exprs)
                 virtual_port_flavor.pop('name_expressions', None)
                 virtual_port_flavor.update(parsed_exprs)
-                vport_args = {'virtual_port': virtual_port_flavor}
+                vport_args = {'port': virtual_port_flavor}
         config_data.update(template_args)
         config_data.update(vport_args)
 
