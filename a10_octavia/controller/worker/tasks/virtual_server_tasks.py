@@ -34,7 +34,7 @@ class LoadBalancerParent(object):
             'arp_disable': CONF.slb.arp_disable,
             'port_list': kwargs.get('port_list'),
             'vrid': CONF.slb.default_virtual_server_vrid,
-            'axapi_body': utils.meta(loadbalancer, 'virtual_server', {})
+            'virtual_server': utils.meta(loadbalancer, 'virtual_server', {})
         }
 
         status = self.axapi_client.slb.UP
@@ -51,7 +51,6 @@ class LoadBalancerParent(object):
             desc = '"{}"'.format(desc)
         config_args['description'] = desc
 
-        vip_args = {}
         if flavor_data:
             virtual_server_flavor = flavor_data.get('virtual_server')
             if virtual_server_flavor:
@@ -60,8 +59,7 @@ class LoadBalancerParent(object):
                     del virtual_server_flavor['name_expressions']
                 virtual_server_flavor.update(utils.parse_name_expressions(
                     loadbalancer.name, name_exprs))
-                vip_args = {'virtual_server': virtual_server_flavor}
-                config_args.update(vip_args)
+                config_args['virtual_server'].update(virtual_server_flavor)
 
         set_method(loadbalancer.id, loadbalancer.vip.ip_address, **config_args)
 
