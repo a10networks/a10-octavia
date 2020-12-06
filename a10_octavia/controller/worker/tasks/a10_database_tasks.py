@@ -182,7 +182,7 @@ class CheckExistingThunderToProjectMappedEntries(BaseDatabaseTask):
                 vthunder_config.ip_address, vthunder_config.partition_name)
             if existing_ip_addr_partition == config_ip_addr_partition:
                 if loadbalancer.project_id not in (vthunder.project_id,
-                    utils.get_parent_project(vthunder.project_id)):
+                                                   utils.get_parent_project(vthunder.project_id)):
                     raise exceptions.ProjectInUseByExistingThunderError(
                         config_ip_addr_partition, vthunder.project_id, loadbalancer.project_id)
 
