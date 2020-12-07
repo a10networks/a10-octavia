@@ -81,7 +81,7 @@ class MemberCreate(task.Task):
                 self.axapi_client, pool.protocol)
             self.axapi_client.slb.server.port.create(server_name, member.protocol_port, protocol,
                                                      weight=member.weight)
-        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError):
             LOG.exception("Failed add port in member %s", member.id)
             # no raise, it will still work even no port. but options for port will missing
 
@@ -193,7 +193,7 @@ class MemberUpdate(task.Task):
                 self.axapi_client, pool.protocol)
             self.axapi_client.slb.server.port.update(server_name, member.protocol_port, protocol,
                                                      weight=member.weight)
-        except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
+        except (acos_errors.ACOSException, exceptions.ConnectionError):
             LOG.exception("Failed add port in member %s", member.id)
             # no raise, it will still work even no port. but options for port will missing
 
