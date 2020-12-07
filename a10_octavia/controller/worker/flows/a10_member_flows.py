@@ -378,7 +378,7 @@ class MemberFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_member_flow.add(server_tasks.MemberUpdate(
-            requires=(constants.MEMBER, a10constants.VTHUNDER)))
+            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
         update_member_flow.add(database_tasks.UpdateMemberInDB(
             requires=[constants.MEMBER, constants.UPDATE_DICT]))
         update_member_flow.add(database_tasks.MarkMemberActiveInDB(
@@ -419,7 +419,7 @@ class MemberFlows(object):
             provides=constants.FLAVOR))
         update_member_flow.add(server_tasks.MemberUpdate(
             requires=(constants.MEMBER, a10constants.VTHUNDER,
-                      constants.FLAVOR)))
+                      constants.POOL, constants.FLAVOR)))
         update_member_flow.add(database_tasks.UpdateMemberInDB(
             requires=[constants.MEMBER, constants.UPDATE_DICT]))
         if CONF.a10_global.network_type == 'vlan':
