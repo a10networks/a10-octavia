@@ -149,6 +149,14 @@ A10_HARDWARE_THUNDER_OPTS = [
                                help=_('List of all device configuration'))
 ]
 
+A10_DATABASE_OPTS = [
+    cfg.StrOpt('neutron_connection_url',
+               default='',
+               help=_('Specify the neutron Database connection url along with'
+                      'username and password to connect. Eg - '
+                      'mysql+pymysql://<username>:<password>@<host>:<port>/neutron'))
+]
+
 A10_HEALTH_MANAGER_OPTS = [
     cfg.IPOpt('udp_server_ip_address',
               help=_('Server IP address that sends udp packets for '
@@ -332,6 +340,7 @@ cfg.CONF.register_opts(A10_LISTENER_OPTS, group='listener')
 cfg.CONF.register_opts(A10_SERVICE_GROUP_OPTS, group='service_group')
 cfg.CONF.register_opts(A10_SERVER_OPTS, group='server')
 cfg.CONF.register_opts(A10_HARDWARE_THUNDER_OPTS, group='hardware_thunder')
+cfg.CONF.register_opts(A10_DATABASE_OPTS, group='a10_database')
 
 
 # Ensure that the control exchange is set correctly
