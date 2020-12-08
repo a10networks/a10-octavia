@@ -68,6 +68,8 @@ class CreateVThunderEntry(BaseDatabaseTask):
         username = CONF.vthunder.default_vthunder_username
         password = CONF.vthunder.default_vthunder_password
         axapi_version = CONF.vthunder.default_axapi_version
+        protocol = CONF.vthunder.default_vthunder_protocol
+        port = CONF.vthunder.default_vthunder_port
 
         if role == constants.ROLE_MASTER:
             topology = "ACTIVE_STANDBY"
@@ -93,7 +95,10 @@ class CreateVThunderEntry(BaseDatabaseTask):
             last_udp_update=datetime.utcnow(),
             status=status,
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow())
+            updated_at=datetime.utcnow(),
+            write_memory=True,
+            protocol=protocol,
+            port=port)
 
         LOG.info("Successfully created vthunder entry in database.")
 
@@ -285,6 +290,11 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
 
     def execute(self, loadbalancer, vthunder_config):
         hierarchical_mt = vthunder_config.hierarchical_multitenancy
+        if not vthunder_config.protocol:
+            vthunder_config.protocol = CONF.vthunder.default_vthunder_protocol
+        if not vthunder_config.port:
+            vthunder_config.port = CONF.vthunder.default_vthunder_port
+
         try:
             vthunder = self.vthunder_repo.create(
                 db_apis.get_session(),
@@ -304,7 +314,10 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
                 partition_name=vthunder_config.partition_name,
-                hierarchical_multitenancy=hierarchical_mt)
+                hierarchical_multitenancy=hierarchical_mt,
+                write_memory=True,
+                protocol=vthunder_config.protocol,
+                port=vthunder_config.port)
             LOG.info("Successfully created vthunder entry in database.")
             return vthunder
         except Exception as e:
