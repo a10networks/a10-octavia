@@ -9,9 +9,12 @@ from alembic import op
 import sqlalchemy as sa
 from oslo_utils import uuidutils
 from sqlalchemy.orm import sessionmaker
+from oslo_config import cfg
 
 from a10_octavia import a10_config
 from a10_octavia.db.models import VThunder
+
+CONF = cfg.CONF
 
 # revision identifiers, used by Alembic.
 revision = '4fa8c3867dcb'
@@ -29,17 +32,18 @@ else:
 
 
 def upgrade():
-    # a10_cfg = a10_config.A10Config()
-    # db_str = a10_cfg.get('a10_database_connection')
+    a10_cfg = a10_config.A10Config()
+    db_str = a10_cfg.get('neutron_database_connection')
     db_engine = sa.create_engine(db_str)
     with db_engine.connect() as con:
         results = con.execute('select * from a10_device_instances')
         vthunders = []
         for _row in results:
             nova_instance_id = _row[17]
-            if nova_instance_id not None:
+            if nova_instance_id is not None:
                 undercloud = False
-            vthunders.append(VThunder(device_name=_row[4],
+            vthunders.append(VThunder(vthunder_id=_row[0],
+                                      device_name=_row[4],
                                       ip_address=_row[18],
                                       username=_row[5],
                                       password=_row[6],
@@ -52,8 +56,8 @@ def upgrade():
                                       protocol=_row[8],
                                       port=_row[9],
                                       undercloud=undercloud))
-        sess.add_all(vthunders)
-        sess.commit()
+    sess.add_all(vthunders)
+    sess.commit()
     sess.close()
 
 
