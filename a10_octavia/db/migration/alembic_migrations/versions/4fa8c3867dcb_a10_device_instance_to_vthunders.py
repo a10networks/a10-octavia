@@ -9,12 +9,10 @@ from alembic import op
 import sqlalchemy as sa
 from oslo_utils import uuidutils
 from sqlalchemy.orm import sessionmaker
-from oslo_config import cfg
 
 from a10_octavia import a10_config
 from a10_octavia.db.models import VThunder
 
-CONF = cfg.CONF
 
 # revision identifiers, used by Alembic.
 revision = '4fa8c3867dcb'
@@ -59,8 +57,8 @@ def upgrade():
                                       protocol=_row[8],
                                       port=_row[9],
                                       undercloud=undercloud))
-    sess.add_all(vthunders)
-    sess.commit()
+        sess.add_all(vthunders)
+        sess.commit()
     sess.close()
 
 
