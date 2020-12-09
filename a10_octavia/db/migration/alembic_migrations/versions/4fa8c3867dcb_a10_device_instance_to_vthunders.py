@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 
 from a10_octavia import a10_config
 from a10_octavia.db.models import VThunder
+from alembic import context
 
 
 # revision identifiers, used by Alembic.
@@ -30,8 +31,10 @@ else:
 
 
 def upgrade():
-    a10_cfg = a10_config.A10Config()
-    db_str = a10_cfg.get('neutron_database_connection')
+    db_str = context.get_x_argument(as_dictionary=True).get('dbname')
+    if not db_str:
+        a10_cfg = a10_config.A10Config()
+        db_str = a10_cfg.get('neutron_database_connection')
     db_engine = sa.create_engine(db_str)
     with db_engine.connect() as con:
         results = con.execute('select * from a10_device_instances')
