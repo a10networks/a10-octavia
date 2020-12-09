@@ -23,7 +23,7 @@ target_metadata = None
 
 if getattr(config, 'connection', None) is None:
     a10_cfg = a10_config.A10Config()
-    config.set_main_option("sqlalchemy.url", a10_cfg.get('neutron_database_connection'))
+    config.set_main_option("sqlalchemy.url", a10_cfg.get('database_connection'))
 
 
 # other values from the config, defined by the needs of env.py,

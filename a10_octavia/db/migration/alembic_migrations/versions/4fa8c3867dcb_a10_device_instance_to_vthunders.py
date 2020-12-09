@@ -42,6 +42,8 @@ def upgrade():
             nova_instance_id = _row[17]
             if nova_instance_id is not None:
                 undercloud = False
+            else:
+                undercloud = True
             vthunders.append(VThunder(vthunder_id=_row[0],
                                       device_name=_row[4],
                                       ip_address=_row[18],
@@ -49,6 +51,7 @@ def upgrade():
                                       password=_row[6],
                                       axapi_version=_row[7],
                                       project_id=_row[3],
+                                      topology="STANDALONE",
                                       created_at=_row[1],
                                       updated_at=_row[2],
                                       partition_name=_row[12],
