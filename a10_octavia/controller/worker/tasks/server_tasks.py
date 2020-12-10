@@ -180,8 +180,10 @@ class MemberUpdate(task.Task):
             status = True
 
         try:
+            port_list = self.axapi_client.slb.server.get(server_name)['server'].get('port-list')
             self.axapi_client.slb.server.replace(server_name, member.ip_address, status=status,
-                                                 server_templates=server_temp, port_list=port_list,
+                                                 server_templates=server_temp,
+                                                 port_list=port_list,
                                                  **server_args)
             LOG.debug("Successfully updated member: %s", member.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:

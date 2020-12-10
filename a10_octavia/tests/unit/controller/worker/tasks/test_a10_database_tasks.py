@@ -49,7 +49,7 @@ LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
                                 flavor_id=a10constants.MOCK_FLAVOR_ID)
 FIXED_IP = n_data_models.FixedIP(ip_address='10.10.10.10')
 PORT = n_data_models.Port(id=uuidutils.generate_uuid(), fixed_ips=[FIXED_IP])
-VRID = data_models.VRID(id=uuidutils.generate_uuid(), vrid=0,
+VRID = data_models.VRID(id=1, vrid=0,
                         project_id=a10constants.MOCK_PROJECT_ID,
                         vrid_port_id=uuidutils.generate_uuid(),
                         vrid_floating_ip='10.0.12.32')
@@ -310,7 +310,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo.delete.assert_not_called()
 
     def test_delete_vrid_entry_with_multi_vrids(self):
-        VRID_1 = data_models.VRID(id=uuidutils.generate_uuid())
+        VRID_1 = data_models.VRID(id=2)
         mock_vrid_entry = task.DeleteMultiVRIDEntry()
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.execute([VRID, VRID_1])

@@ -20,7 +20,10 @@ except ImportError:
     import mock
 
 from octavia.common import data_models as o_data_models
+from oslo_config import cfg
+from oslo_config import fixture as oslo_fixture
 
+from a10_octavia.common import config_options
 from a10_octavia.common.data_models import VThunder
 from a10_octavia.controller.worker.tasks import health_monitor_tasks as task
 from a10_octavia.controller.worker.tasks import utils
@@ -62,6 +65,9 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
     def setUp(self):
         super(TestHandlerHealthMonitorTasks, self).setUp()
         imp.reload(task)
+        self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
+        self.conf.register_opts(config_options.A10_HEALTH_MONITOR_OPTS,
+                                group=a10constants.HEALTH_MONITOR_SECTION)
         self.client_mock = mock.Mock()
 
     def tearDown(self):
@@ -76,8 +82,19 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           HM.delay, HM.timeout,
                                                           HM.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
-                                                          expect_code=None, **ARGS)
-
+                                                          expect_code=None, post_data=None,
+                                                          **ARGS)
+        self.conf.config(group=a10constants.HEALTH_MONITOR_SECTION,
+                         post_data='abc=1')
+        mock_hm.execute(LISTENERS, HM, VTHUNDER)
+        self.client_mock.slb.hm.create.assert_called_with(a10constants.MOCK_HM_ID,
+                                                          self.client_mock.slb.hm.TCP,
+                                                          HM.delay, HM.timeout,
+                                                          HM.rise_threshold, method=None,
+                                                          port=mock.ANY, url=None,
+                                                          expect_code=None, post_data='abc=1',
+                                                          **ARGS)
+        
     def test_health_monitor_create_with_flavor_task(self):
         flavor = {
             "health_monitor": {
@@ -197,7 +214,18 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           hm.delay, hm.timeout,
                                                           hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
-                                                          expect_code=None, **ARGS)
+                                                          expect_code=None, post_data=None,
+                                                          **ARGS)
+        self.conf.config(group=a10constants.HEALTH_MONITOR_SECTION,
+                         post_data='abc=1')
+        mock_hm.execute(LISTENERS, hm, VTHUNDER, update_dict)
+        self.client_mock.slb.hm.update.assert_called_with(a10constants.MOCK_HM_ID,
+                                                          self.client_mock.slb.hm.TCP,
+                                                          hm.delay, hm.timeout,
+                                                          hm.rise_threshold, method=None,
+                                                          port=mock.ANY, url=None,
+                                                          expect_code=None, post_data='abc=1',
+                                                          **ARGS)
 
     def test_health_monitor_update_with_flavor_task(self):
         flavor = {

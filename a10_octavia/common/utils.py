@@ -118,7 +118,9 @@ def convert_to_hardware_thunder_conf(hardware_list):
 def get_parent_project_list():
     parent_project_list = []
     for project_id in CONF.hardware_thunder.devices:
-        parent_project_list.append(get_parent_project(project_id))
+        parent_project_id = get_parent_project(project_id)
+        if parent_project_id != 'default':
+            parent_project_list.append(parent_project_id)
     return parent_project_list
 
 
@@ -127,8 +129,7 @@ def get_parent_project(project_id):
     key_client = keystone_client.Client(session=key_session)
     try:
         project = key_client.projects.get(project_id)
-        if project.parent_id != 'default':
-            return project.parent_id
+        return project.parent_id
     except keystone_exception.NotFound:
         return None
 
