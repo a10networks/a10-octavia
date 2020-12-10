@@ -69,7 +69,7 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
     @mock.patch('a10_octavia.controller.worker.tasks.utils.parse_name_expressions',
                 mock.MagicMock())
     def test_CreateVirtualServerTask_execute_flavor_override_config(self):
-        self.conf.config(group=a10constants.VIRTUAL_SERVER_CONFG_SECTION,
+        self.conf.config(group=a10constants.VIRTUAL_SERVER_CONFIG_SECTION,
                          arp_disable=False)
         flavor = {"virtual_server": {"arp_disable": 1}}
 

@@ -18,7 +18,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 
-# from octavia.api.drivers import provider_base as driver_base
 from octavia.common import constants
 from octavia_lib.api.drivers import exceptions
 from octavia_lib.api.drivers import provider_base as driver_base
