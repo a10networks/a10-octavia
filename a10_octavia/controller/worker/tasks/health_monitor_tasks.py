@@ -56,13 +56,15 @@ class CreateAndAssociateHealthMonitor(task.Task):
                 args = axapi_v21.merge_dicts(args, parsed_exprs)
 
         try:
+            post_data = CONF.health_monitor.post_data
             self.axapi_client.slb.hm.create(health_mon.id,
                                             openstack_mappings.hm_type(self.axapi_client,
                                                                        health_mon.type),
                                             health_mon.delay, health_mon.timeout,
                                             health_mon.rise_threshold, method=method,
                                             port=listeners[0].protocol_port, url=url,
-                                            expect_code=expect_code, **args)
+                                            expect_code=expect_code, post_data=post_data,
+                                            **args)
             LOG.debug("Successfully created health monitor: %s", health_mon.id)
 
         except (acos_errors.ACOSException, ConnectionError) as e:
@@ -146,11 +148,12 @@ class UpdateHealthMonitor(task.Task):
                 args = axapi_v21.merge_dicts(args, parsed_exprs)
 
         try:
+            post_data = CONF.health_monitor.post_data
             self.axapi_client.slb.hm.update(
                 health_mon.id,
                 openstack_mappings.hm_type(self.axapi_client, health_mon.type),
                 health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
-                method=method, url=url, expect_code=expect_code,
+                method=method, url=url, expect_code=expect_code, post_data=post_data,
                 port=listeners[0].protocol_port, **args)
             LOG.debug("Successfully updated health monitor: %s", health_mon.id)
         except (acos_errors.ACOSException, ConnectionError) as e:

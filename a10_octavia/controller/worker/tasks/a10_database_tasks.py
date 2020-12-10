@@ -125,7 +125,8 @@ class CheckExistingProjectToThunderMappedEntries(BaseDatabaseTask):
                 parent_project_id = utils.get_parent_project(
                     vthunder_config.project_id)
                 if parent_project_id:
-                    vthunder_config.partition_name = parent_project_id[:14]
+                    if parent_project_id != 'default':
+                        vthunder_config.partition_name = parent_project_id[:14]
                 else:
                     LOG.error(
                         "The parent project for project %s does not exist. ",
@@ -183,7 +184,8 @@ class CheckExistingThunderToProjectMappedEntries(BaseDatabaseTask):
             config_ip_addr_partition = '{}:{}'.format(
                 vthunder_config.ip_address, vthunder_config.partition_name)
             if existing_ip_addr_partition == config_ip_addr_partition:
-                if vthunder.project_id != loadbalancer.project_id:
+                if loadbalancer.project_id not in (vthunder.project_id,
+                                                   utils.get_parent_project(vthunder.project_id)):
                     raise exceptions.ProjectInUseByExistingThunderError(
                         config_ip_addr_partition, vthunder.project_id, loadbalancer.project_id)
 

@@ -16,7 +16,6 @@ import acos_client.errors as acos_errors
 import copy
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_utils import uuidutils
 from requests import exceptions as req_exceptions
 import six
 from taskflow import task
@@ -705,7 +704,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             else:
                 vrid_list.append(
                     data_models.VRID(
-                        id=uuidutils.generate_uuid(),
                         vrid=vrid_value,
                         project_id=lb_resource.project_id,
                         vrid_port_id=None,
