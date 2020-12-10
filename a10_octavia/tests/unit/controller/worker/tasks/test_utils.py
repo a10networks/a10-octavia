@@ -27,6 +27,56 @@ NAME_EXPRESSIONS = [
     }
 ]
 
+DASH_FLAVOR = {
+    "virtual-server": {
+        "port-number": 80,
+        "name-expressions": [
+            {
+                "regex": "vip1-test",
+                "json": {
+                    "arp-disable": 0,
+                    "extended-stats": 0,
+                }
+            },
+            {
+                "regex": "vip2-test",
+                "json": {
+                    "arp-disable": 1,
+                    "extended-stats": 1,
+                }
+            }
+        ]
+    },
+    "virtual-port": {
+        "support-http2": 0
+    },
+}
+
+UNDERSCORE_FLAVOR = {
+    "virtual_server": {
+        "port_number": 80,
+        "name_expressions": [
+            {
+                "regex": "vip1-test",
+                "json": {
+                    "arp_disable": 0,
+                    "extended_stats": 0,
+                }
+            },
+            {
+                "regex": "vip2-test",
+                "json": {
+                    "arp_disable": 1,
+                    "extended_stats": 1,
+                }
+            }
+        ]
+    },
+    "virtual_port": {
+        "support_http2": 0
+    },
+}
+
 
 class TestUtils(base.TestCase):
 
@@ -64,3 +114,7 @@ class TestUtils(base.TestCase):
         expect_result = {"support_http2": 1}
         obj_flavor = utils.parse_name_expressions("vport1", NAME_EXPRESSIONS)
         self.assertEqual(expect_result, obj_flavor)
+
+    def test_dash_to_underscore(self):
+        obj_flavor = utils.dash_to_underscore(DASH_FLAVOR)
+        self.assertEqual(UNDERSCORE_FLAVOR, obj_flavor)
