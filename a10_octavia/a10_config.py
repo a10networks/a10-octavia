@@ -166,7 +166,7 @@ class A10Config(object):
         db_connection_url = self.get_a10_octavia_conf('a10_database', 'neutron_connection_url')
 
         if db_connection_url is None:
-            raise exceptions.NoDatabaseURL()
+            return
 
         LOG.debug("Using %s as db connect string", db_connection_url)
         return db_connection_url
