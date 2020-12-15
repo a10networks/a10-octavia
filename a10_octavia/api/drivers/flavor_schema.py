@@ -22,11 +22,12 @@ SUPPORTED_FLAVOR_SCHEMA = {
     "properties": {
         "virtual-server": {
             "type": "object",
+            "description": "Specify axapi that will apply to the slb virtual-server",
             "properties": {
                 "name-expressions": {
                     "type": "array",
                     "description": "Specify name expression to match loadbalancers "
-                                   "and options that will apply to the slb",
+                                   "and axapi that will apply to the slb virtual-server",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -43,11 +44,12 @@ SUPPORTED_FLAVOR_SCHEMA = {
         },
         "virtual-port": {
             "type": "object",
+            "description": "Specify axapi that will apply to the vport",
             "properties": {
                 "name-expressions": {
                     "type": "array",
                     "description": "Specify name expression to match listeners "
-                                   "and options that will apply to the vport",
+                                   "and axapi that will apply to the vport",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -62,25 +64,23 @@ SUPPORTED_FLAVOR_SCHEMA = {
                 },
                 "template-tcp": {
                     "type": "string",
-                    "description": "TCP Template name for TCP listener"
                 },
                 "template-http": {
                     "type": "string",
-                    "description": "HTTP Template name for HTTP listener"
                 },
                 "template-virtual-port": {
                     "type": "string",
-                    "description": "Virtual Port Template for listener"
                 },
             }
         },
         "service-group": {
             "type": "object",
+            "description": "Specify axapi that will apply to the service-group",
             "properties": {
                 "name-expressions": {
                     "type": "array",
                     "description": "Specify name expression to match pools "
-                                   "and options that will apply to the service-group",
+                                   "and axapi that will apply to the service-group",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -97,11 +97,12 @@ SUPPORTED_FLAVOR_SCHEMA = {
         },
         "server": {
             "type": "object",
+            "description": "Specify axapi that will apply to the server",
             "properties": {
                 "name-expressions": {
                     "type": "array",
                     "description": "Specify name expression to match members "
-                                   "and options that will apply to the server",
+                                   "and axapi that will apply to the server",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -119,23 +120,22 @@ SUPPORTED_FLAVOR_SCHEMA = {
                     "minimum": 1,
                     "maximum": 64000000,
                     "default": 64000000,
-                    "description": "Connection Limit"
                 },
                 "conn-resume": {
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 1000000,
-                    "description": "Connection Resume"
                 }
             }
         },
         "health-monitor": {
             "type": "object",
+            "description": "Specify axapi that will apply to the health monitor",
             "properties": {
                 "name-expressions": {
                     "type": "array",
                     "description": "Specify name expression to match healthmonitor"
-                                   " and options that will apply to the health monitor",
+                                   "and axapi that will apply to the health monitor",
                     "items": {
                         "type": "object",
                         "properties": {
