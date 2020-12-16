@@ -134,7 +134,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
             "properties": {
                 "name-expressions": {
                     "type": "array",
-                    "description": "Specify name expression to match healthmonitor"
+                    "description": "Specify name expression to match healthmonitor "
                                    "and axapi that will apply to the health monitor",
                     "items": {
                         "type": "object",
