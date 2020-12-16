@@ -150,5 +150,35 @@ SUPPORTED_FLAVOR_SCHEMA = {
                 },
             }
         },
+        "nat-pool": {
+            "type": "object",
+            "description": "Specify axapi of default nat pool for loadbalancer",
+            "properties": {
+                "pool-name": {
+                    "type": "string",
+                },
+                "start-address": {
+                    "type": "string",
+                },
+                "end-address": {
+                    "type": "string",
+                },
+                "netmask": {
+                    "type": "string",
+                }
+            }
+        },
+        "nat-pool-list": {
+            "type": "array",
+            "description": "Specify axapi of nat pools for loadbalancer",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "pool-name": {
+                        "type": "string",
+                    }
+                }
+            }
+        },
     }
 }

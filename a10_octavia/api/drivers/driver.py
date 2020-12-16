@@ -241,6 +241,18 @@ class A10ProviderDriver(driver_base.ProviderDriver):
     def validate_flavor(self, flavor_dict):
         try:
             validate(flavor_dict, flavor_schema.SUPPORTED_FLAVOR_SCHEMA)
+
+            # validate nat-pool and nat-pool-list keys
+            if 'nat-pool' in flavor_dict:
+                nat = flavor_dict['nat-pool']
+                if (('pool-name' not in nat or 'start-address' not in nat or
+                     'end-address' not in nat or 'netmask' not in nat)):
+                    raise Exception('nat-pool manditory key missing')
+            if 'nat-pool-list' in flavor_dict:
+                for nat in flavor_dict['nat-pool-list']:
+                    if (('pool-name' not in nat or 'start-address' not in nat or
+                         'end-address' not in nat or 'netmask' not in nat)):
+                        raise Exception('nat-pool-list entry manditory key missing')
         except js_exceptions.ValidationError as e:
             error_object = ''
             if e.relative_path:
