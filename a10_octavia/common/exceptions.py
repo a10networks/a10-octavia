@@ -205,3 +205,11 @@ class SharedPartitionTemplateNotSupported(acos_errors.FeatureNotSupported):
         msg = ('Shared partition template lookup for [{0}] is not supported'
                ' on template `{1}`').format(resource, template_key)
         super(SharedPartitionTemplateNotSupported, self).__init__(code=505, msg=msg)
+
+
+class NLbaasDBError(exceptions.OctaviaException):
+
+    def __init__(self, error):
+        msg = 'Issue in connecting/performing operation on ' \
+              'neutron lbaas DB due to {}'.format(error)
+        super(NLbaasDBError, self).__init__(msg)
