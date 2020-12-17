@@ -224,12 +224,12 @@ class A10ProviderDriver(driver_base.ProviderDriver):
             for obj in flavor_schema.SUPPORTED_FLAVOR_SCHEMA['properties']:
                 obj_v = flavor_schema.SUPPORTED_FLAVOR_SCHEMA['properties'][obj]
                 if 'description' in obj_v:
-                    dict[obj] = obj_v.get('description', '')
+                    dict[obj] = obj_v.get('description')
                 if 'properties' in obj_v:
                     props = obj_v['properties']
                     for k, v in props.items():
                         if 'description' in v:
-                            dict[obj + '.' + k] = v.get('description', '')
+                            dict[obj + '.' + k] = v.get('description')
             return dict
         except Exception as e:
             raise exceptions.DriverError(
