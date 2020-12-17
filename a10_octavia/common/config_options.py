@@ -48,9 +48,6 @@ A10_GLOBAL_OPTS = [
     cfg.BoolOpt('use_shared_for_template_lookup',
                 default=False,
                 help=_('Use shared for template')),
-    cfg.BoolOpt('use_regex_template_lookup',
-                default=False,
-                help=_('Use Regex for template lookup')),
 ]
 
 A10_VTHUNDER_OPTS = [
