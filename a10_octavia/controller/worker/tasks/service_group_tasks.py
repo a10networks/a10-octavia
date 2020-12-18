@@ -32,8 +32,8 @@ LOG = logging.getLogger(__name__)
 
 class PoolParent(object):
 
-    def set(self, set_method, pool, vthunder, **kwargs):
-        axapi_args = {'service_group': utils.meta(pool, 'service_group', {})}
+    def set(self, set_method, pool, vthunder, flavor=None, **kwargs):
+        pool_args = {'service_group': utils.meta(pool, 'service_group', {})}
 
         device_templates = self.axapi_client.slb.template.templates.get()
 
@@ -66,20 +66,31 @@ class PoolParent(object):
             self.axapi_client, pool.protocol)
         lb_method = openstack_mappings.service_group_lb_method(
             self.axapi_client, pool.lb_algorithm)
+
+        # Handle options from flavor
+        if flavor:
+            pool_flavor = flavor.get('service_group')
+            if pool_flavor:
+                name_exprs = pool_flavor.get('name_expressions')
+                parsed_exprs = utils.parse_name_expressions(pool.name, name_exprs)
+                pool_flavor.pop('name_expressions', None)
+                pool_args['service_group'].update(pool_flavor)
+                pool_args['service_group'].update(parsed_exprs)
+
         set_method(pool.id,
                    protocol=protocol,
                    lb_method=lb_method,
                    service_group_templates=service_group_temp,
                    mem_list=kwargs.get('mem_list'),
                    hm_name=kwargs.get('health_monitor'),
-                   axapi_args=axapi_args)
+                   **pool_args)
 
 
 class PoolCreate(PoolParent, task.Task):
     """Task to create pool"""
 
     @axapi_client_decorator
-    def execute(self, pool, vthunder):
+    def execute(self, pool, vthunder, flavor=None):
         try:
             if pool.protocol == constants.PROTOCOL_PROXY:
                 raise exceptions.ProviderUnsupportedOptionError(
@@ -87,7 +98,7 @@ class PoolCreate(PoolParent, task.Task):
                     user_msg=("A pool with protocol PROXY is not supported by A10 provider."
                               "Failed to create pool {0}").format(pool.id))
 
-            self.set(self.axapi_client.slb.service_group.create, pool, vthunder)
+            self.set(self.axapi_client.slb.service_group.create, pool, vthunder, flavor)
             LOG.debug("Successfully created pool: %s", pool.id)
             return pool
         except (acos_errors.ACOSException, ConnectionError) as e:
@@ -95,7 +106,7 @@ class PoolCreate(PoolParent, task.Task):
             raise e
 
     @axapi_client_decorator
-    def revert(self, pool, vthunder, *args, **kwargs):
+    def revert(self, pool, vthunder, flavor=None, *args, **kwargs):
         LOG.warning("Reverting creation of pool: %s", pool.id)
         try:
             self.axapi_client.slb.service_group.delete(pool.id)
@@ -124,7 +135,7 @@ class PoolUpdate(PoolParent, task.Task):
     """Task to update pool"""
 
     @axapi_client_decorator
-    def execute(self, pool, vthunder, update_dict):
+    def execute(self, pool, vthunder, update_dict, flavor=None):
         pool.update(update_dict)
         try:
             service_group = self.axapi_client.slb.service_group.get(
@@ -132,7 +143,7 @@ class PoolUpdate(PoolParent, task.Task):
             mem_list = service_group.get('member-list')
             health_monitor = service_group.get('health-check')
             self.set(self.axapi_client.slb.service_group.replace, pool, vthunder,
-                     mem_list=mem_list, health_monitor=health_monitor)
+                     mem_list=mem_list, health_monitor=health_monitor, flavor=flavor)
             LOG.debug("Successfully updated pool: %s", pool.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update pool: %s", pool.id)

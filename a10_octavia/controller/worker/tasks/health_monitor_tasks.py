@@ -14,6 +14,7 @@
 
 
 from acos_client import errors as acos_errors
+from acos_client.v21 import axapi_http as axapi_v21
 from oslo_config import cfg
 from oslo_log import log as logging
 from requests.exceptions import ConnectionError
@@ -32,7 +33,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
     """Task to create a healthmonitor and associate it with provided pool."""
 
     @axapi_client_decorator
-    def execute(self, listeners, health_mon, vthunder):
+    def execute(self, listeners, health_mon, vthunder, flavor=None):
         method = None
         url = None
         expect_code = None
@@ -42,6 +43,17 @@ class CreateAndAssociateHealthMonitor(task.Task):
             url = health_mon.url_path
             expect_code = health_mon.expected_codes
         args = utils.meta(health_mon, 'hm', {})
+        args = utils.dash_to_underscore(args)
+
+        # overwrite options from flavor
+        if flavor:
+            flavors = flavor.get('health_monitor')
+            if flavors:
+                name_exprs = flavors.get('name_expressions')
+                parsed_exprs = utils.parse_name_expressions(health_mon.name, name_exprs)
+                flavors.pop('name_expressions', None)
+                args = axapi_v21.merge_dicts(args, flavors)
+                args = axapi_v21.merge_dicts(args, parsed_exprs)
 
         try:
             post_data = CONF.health_monitor.post_data
@@ -51,8 +63,8 @@ class CreateAndAssociateHealthMonitor(task.Task):
                                             health_mon.delay, health_mon.timeout,
                                             health_mon.rise_threshold, method=method,
                                             port=listeners[0].protocol_port, url=url,
-                                            expect_code=expect_code, axapi_args=args,
-                                            post_data=post_data)
+                                            expect_code=expect_code, post_data=post_data,
+                                            **args)
             LOG.debug("Successfully created health monitor: %s", health_mon.id)
 
         except (acos_errors.ACOSException, ConnectionError) as e:
@@ -90,7 +102,7 @@ class DeleteHealthMonitor(task.Task):
     def execute(self, health_mon, vthunder):
         try:
             self.axapi_client.slb.service_group.update(health_mon.pool_id,
-                                                       health_check=None)
+                                                       hm_delete=True)
             LOG.debug("Successfully dissociated health monitor %s from pool %s",
                       health_mon.id, health_mon.pool_id)
         except (acos_errors.ACOSException, ConnectionError) as e:
@@ -111,7 +123,7 @@ class UpdateHealthMonitor(task.Task):
     """Task to update Health Monitor"""
 
     @axapi_client_decorator
-    def execute(self, listeners, health_mon, vthunder, update_dict):
+    def execute(self, listeners, health_mon, vthunder, update_dict, flavor=None):
         """ Execute update health monitor """
         # TODO(hthompson6) Length of name of healthmonitor for older vThunder devices
         health_mon.update(update_dict)
@@ -123,6 +135,18 @@ class UpdateHealthMonitor(task.Task):
             url = health_mon.url_path
             expect_code = health_mon.expected_codes
         args = utils.meta(health_mon, 'hm', {})
+        args = utils.dash_to_underscore(args)
+
+        # overwrite options from flavor
+        if flavor:
+            flavors = flavor.get('health_monitor')
+            if flavors:
+                name_exprs = flavors.get('name_expressions')
+                parsed_exprs = utils.parse_name_expressions(health_mon.name, name_exprs)
+                flavors.pop('name_expressions', None)
+                args = axapi_v21.merge_dicts(args, flavors)
+                args = axapi_v21.merge_dicts(args, parsed_exprs)
+
         try:
             post_data = CONF.health_monitor.post_data
             self.axapi_client.slb.hm.update(
@@ -130,7 +154,7 @@ class UpdateHealthMonitor(task.Task):
                 openstack_mappings.hm_type(self.axapi_client, health_mon.type),
                 health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
                 method=method, url=url, expect_code=expect_code, post_data=post_data,
-                port=listeners[0].protocol_port, axapi_args=args)
+                port=listeners[0].protocol_port, **args)
             LOG.debug("Successfully updated health monitor: %s", health_mon.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update health monitor: %s", health_mon.id)

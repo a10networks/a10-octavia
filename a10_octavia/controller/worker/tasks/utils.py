@@ -14,6 +14,7 @@
 
 import json
 import logging
+import re
 
 from oslo_config import cfg
 
@@ -73,3 +74,28 @@ def shared_template_modifier(template_type, template_name, device_templates):
     else:
         template_type = "{0}-shared".format(template_type)
     return template_type
+
+
+def parse_name_expressions(name, name_expressions):
+    flavor_data = {}
+    if name_expressions:
+        for expression in name_expressions:
+            if 'regex' in expression:
+                if re.search(expression['regex'], name):
+                    flavor_data.update(expression['json'])
+    return flavor_data
+
+
+def dash_to_underscore(my_dict):
+    if type(my_dict) is list:
+        item_list = []
+        for item in my_dict:
+            item_list.append(dash_to_underscore(item))
+        return item_list
+    elif type(my_dict) is dict:
+        item_dict = {}
+        for k, v in my_dict.items():
+            item_dict[k.replace('-', '_')] = dash_to_underscore(v)
+        return item_dict
+    else:
+        return my_dict
