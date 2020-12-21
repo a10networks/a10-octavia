@@ -215,3 +215,14 @@ class DeviceNetworkMap(BaseDataModel):
         self.ethernet_interfaces = ethernet_interfaces or []
         self.trunk_interfaces = trunk_interfaces or []
         self.state = 'Unknown'
+
+
+class NATPool(BaseDataModel):
+    def __init__(self, id = None, name = None, subnet_id = None, start_ip_address = None,
+                 end_ip_address = None, member_ref_count = None):
+        self.id = id
+        self.name = name
+        self.subnet_id = subnet_id
+        self.start_ip_address = start_ip_address
+        self.end_ip_address = end_ip_address
+        self.member_ref_count = member_ref_count
