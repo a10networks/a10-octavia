@@ -20,7 +20,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 from octavia.db import api as db_api
-from octavia.db import repositories as repo
 
 from a10_octavia.controller.worker import controller_worker as cw
 from a10_octavia.db import repositories as a10repo
@@ -31,7 +30,6 @@ CONF = cfg.CONF
 
 class SpareAmphora(object):
     def __init__(self):
-        self.amp_repo = repo.AmphoraRepository()
         self.vthunder_repo = a10repo.VThunderRepository()
         self.cw = cw.A10ControllerWorker()
 
@@ -96,3 +94,21 @@ class DatabaseCleanup(object):
             LOG.info('Attempting to delete load balancer id : %s', lb_id)
             self.lb_repo.delete(session, id=lb_id)
             LOG.info('Deleted load balancer id : %s', lb_id)
+
+
+class WriteMemory(object):
+    def __init__(self):
+        self.thunder_repo = a10repo.VThunderRepository()
+        self.cw = cw.A10ControllerWorker()
+
+    def perform_memory_writes(self):
+        exp_age = datetime.timedelta(seconds=CONF.a10_house_keeping.write_mem_expiry_time)
+        session = db_api.get_session()
+        thunders = self.thunder_repo.get_write_memory_eligible_thunders(session, exp_age=exp_age)
+        thunder_ids = [thunder.vthunder_id for thunder in thunders]
+        if thunders:
+            LOG.info("Write Memory for Thunder ids: %s", thunder_ids)
+            self.cw.perform_write_memory(thunders)
+            LOG.info("Finished write memory for {} vthunders...".format(len(thunders)))
+        else:
+            LOG.warning("All thunders are in cool down period......")
