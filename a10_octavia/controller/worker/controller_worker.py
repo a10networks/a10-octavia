@@ -54,7 +54,6 @@ LOG = logging.getLogger(__name__)
 class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
     def __init__(self):
-        super(A10ControllerWorker, self).__init__()
         self._lb_repo = repo.LoadBalancerRepository()
         self._listener_repo = repo.ListenerRepository()
         self._pool_repo = repo.PoolRepository()
@@ -72,6 +71,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._vthunder_flows = vthunder_flows.VThunderFlows()
         self._vthunder_repo = a10repo.VThunderRepository()
         self._exclude_result_logging_tasks = ()
+        super(A10ControllerWorker, self).__init__()
 
     def create_amphora(self):
         """Creates an Amphora.
