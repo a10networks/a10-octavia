@@ -105,6 +105,7 @@ DELETE_HEALTH_MONITOR_SUBFLOW_WITH_POOL_DELETE_FLOW = 'delete-health-monitor-sub
 DELETE_MEMBERS_SUBFLOW_WITH_POOL_DELETE_FLOW = 'delete-members-subflow-with-pool-delete-flow'
 HANDLE_VRID_MEMBER_SUBFLOW = 'handle-vrid-member-subflow'
 SPARE_VTHUNDER_CREATE = 'spare-vthunder-create'
+WRITE_MEMORY_THUNDER_FLOW = 'write-memory-thunder-flow'
 LB_TO_VTHUNDER_SUBFLOW = 'lb-to-vthunder-subflow'
 VRID_LIST = 'vrid_list'
 RESOURCE_COUNT = 'resource_count'
