@@ -34,6 +34,7 @@ spare_amp_thread_event = threading.Event()
 db_cleanup_thread_event = threading.Event()
 write_memory_thread_event = threading.Event()
 
+
 def spare_amphora_check():
     """Initiates spare amp check with respect to configured interval."""
 
@@ -72,6 +73,7 @@ def db_cleanup():
                      'is restarting: {}'.format(e))
         db_cleanup_thread_event.wait(interval)
 
+
 def write_memory():
     """Performs write memory for all thunders"""
     if not CONF.a10_house_keeping.disable_write_memory:
@@ -84,10 +86,11 @@ def write_memory():
                 write_memory_perform.perform_memory_writes()
             except Exception as e:
                 LOG.exception('write memory caught the following exception and '
-                         ' is restarting: {}'.format(e))
+                              ' is restarting: {}'.format(e))
             write_memory_thread_event.wait(interval)
     else:
         LOG.warning("Write memory flag is disabled...")
+
 
 def _mutate_config(*args, **kwargs):
     LOG.info("Housekeeping recieved HUP signal, mutating config.")
@@ -112,7 +115,7 @@ def main():
     db_cleanup_thread.daemon = True
     db_cleanup_thread.start()
 
-    #Thread to perform write memory
+    # Thread to perform write memory
     write_memory_thread = threading.Thread(target=write_memory)
     write_memory_thread.daemon = True
     write_memory_thread.start()
