@@ -771,10 +771,15 @@ class WriteMemory(VThunderBaseTask):
         try:
             if vthunder:
                 if vthunder.partition_name != "shared" and not write_mem_shared_part:
+                    LOG.info("Performing write memory for thunder - {}:{}"
+                             .format(vthunder.ip_address, vthunder.partition_name))
                     self.axapi_client.system.action.write_memory(
                         partition="specified",
                         specified_partition=vthunder.partition_name)
                 else:
+                    LOG.info("Performing write memory for thunder - {}:{}"
+                             .format(vthunder.ip_address, "shared"))
                     self.axapi_client.system.action.write_memory(partition="shared")
         except (acos_errors.ACOSException, req_exceptions.ConnectionError):
-            LOG.warning("Failed to write memory on thunder device: %s", vthunder.ip_address)
+            LOG.warning("Failed to write memory on thunder device: %s.... skipping",
+                        vthunder.ip_address)
