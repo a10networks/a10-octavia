@@ -183,6 +183,14 @@ class BaseRepository(object):
 class VThunderRepository(BaseRepository):
     model_class = models.VThunder
 
+    def get_write_memory_eligible_thunders(self, session, exp_age):
+        expiry_time = datetime.datetime.utcnow() - exp_age
+        query = session.query(self.model_class).filter(
+            self.model_class.updated_at < expiry_time).filter(
+            self.model_class.status == 'ACTIVE')
+        query = query.options(noload('*'))
+        return query.all()
+
     def get_stale_vthunders(self, session, initial_setup_wait_time, failover_wait_time):
         model = session.query(self.model_class).filter(
             self.model_class.created_at < initial_setup_wait_time).filter(
@@ -375,7 +383,7 @@ class MemberRepository(repo.MemberRepository):
             self.model_class.project_id == project_id).filter(
             and_(self.model_class.ip_address == ip_address,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
-                     self.model_class.provisioning_status == consts.ACTIVE))).count() 
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
 
     def get_pool_count_subnet(self, session, project_ids, subnet_id):
         return session.query(self.model_class.pool_id.distinct()).filter(
