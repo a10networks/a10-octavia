@@ -748,5 +748,5 @@ class UpdateVThunderUpdatedAt(BaseDatabaseTask):
                     vthunder.id,
                     updated_at=datetime.utcnow())
         except Exception as e:
-            LOG.exception('Failed to set updated_at field for thunder: %s'
-                          ', skipping.', vthunder.id)
+            LOG.exception('Failed to set updated_at field for thunder due to: {}'
+                          ', skipping.'.format(str(e)))

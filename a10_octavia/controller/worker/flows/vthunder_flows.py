@@ -17,7 +17,6 @@ import logging
 from oslo_config import cfg
 from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
-from taskflow.patterns import unordered_flow
 
 from octavia.common import constants
 from octavia.controller.worker.tasks import database_tasks
@@ -400,7 +399,6 @@ class VThunderFlows(object):
                 rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
                 name='{flow}-{id}'.format(
                     id=vthunder.vthunder_id,
-                    flow='UpdateVThunderUpdatedAt-' + a10constants.WRITE_MEMORY_THUNDER_FLOW)
-                ))
+                    flow='UpdateVThunderUpdatedAt-' + a10constants.WRITE_MEMORY_THUNDER_FLOW)))
         store.update(vthunder_store)
         return write_memory_flow
