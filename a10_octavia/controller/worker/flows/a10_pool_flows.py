@@ -27,7 +27,6 @@ from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import persist_tasks
 from a10_octavia.controller.worker.tasks import service_group_tasks
 from a10_octavia.controller.worker.tasks import virtual_port_tasks
-from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 
 class PoolFlows(object):

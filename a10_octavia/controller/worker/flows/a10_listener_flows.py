@@ -25,7 +25,6 @@ from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.controller.worker.tasks import cert_tasks
 from a10_octavia.controller.worker.tasks import virtual_port_tasks
-from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 
 class ListenerFlows(object):

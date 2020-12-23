@@ -23,7 +23,6 @@ from octavia.controller.worker.tasks import model_tasks
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import health_monitor_tasks
-from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 
 class HealthMonitorFlows(object):
