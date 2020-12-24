@@ -81,7 +81,7 @@ def write_memory():
         write_memory_perform = house_keeping.WriteMemory()
         LOG.info("Write Memory interval set to %s seconds", interval)
         while not write_memory_thread_event.is_set():
-            LOG.info("Initiating the write memory operation for all thunders......")
+            LOG.info("Initiating the write memory operation for all thunders...")
             try:
                 write_memory_perform.perform_memory_writes()
             except Exception as e:

@@ -23,7 +23,6 @@ from octavia.controller.worker.tasks import model_tasks
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import health_monitor_tasks
-from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 
 class HealthMonitorFlows(object):
@@ -55,12 +54,8 @@ class HealthMonitorFlows(object):
             requires=constants.POOL))
         create_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        create_hm_flow.add(vthunder_tasks.WriteMemory(
-            name=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION,
+        create_hm_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=(a10constants.VTHUNDER)))
-        create_hm_flow.add(vthunder_tasks.WriteMemory(
-            name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
-            requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
         return create_hm_flow
 
     def get_delete_health_monitor_flow(self):
@@ -94,12 +89,8 @@ class HealthMonitorFlows(object):
             requires=constants.POOL))
         delete_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        delete_hm_flow.add(vthunder_tasks.WriteMemory(
-            name=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION,
+        delete_hm_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=(a10constants.VTHUNDER)))
-        delete_hm_flow.add(vthunder_tasks.WriteMemory(
-            name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
-            requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
         return delete_hm_flow
 
     def get_delete_health_monitor_vthunder_subflow(self):
@@ -139,10 +130,6 @@ class HealthMonitorFlows(object):
             requires=constants.POOL))
         update_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        update_hm_flow.add(vthunder_tasks.WriteMemory(
-            name=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION,
+        update_hm_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=(a10constants.VTHUNDER)))
-        update_hm_flow.add(vthunder_tasks.WriteMemory(
-            name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
-            requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
         return update_hm_flow

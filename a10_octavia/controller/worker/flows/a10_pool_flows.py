@@ -27,7 +27,6 @@ from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import persist_tasks
 from a10_octavia.controller.worker.tasks import service_group_tasks
 from a10_octavia.controller.worker.tasks import virtual_port_tasks
-from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 
 class PoolFlows(object):
@@ -64,7 +63,7 @@ class PoolFlows(object):
             requires=constants.POOL))
         create_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        create_pool_flow.add(vthunder_tasks.WriteMemory(
+        create_pool_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
 
         return create_pool_flow
@@ -104,7 +103,7 @@ class PoolFlows(object):
             requires=[constants.POOL, constants.POOL_CHILD_COUNT]))
         delete_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        delete_pool_flow.add(vthunder_tasks.WriteMemory(
+        delete_pool_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
 
         return delete_pool_flow
@@ -163,7 +162,7 @@ class PoolFlows(object):
             requires=constants.POOL))
         update_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        update_pool_flow.add(vthunder_tasks.WriteMemory(
+        update_pool_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
 
         return update_pool_flow

@@ -892,3 +892,19 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
     def _get_db_obj_until_pending_update(self, repo, id):
         return repo.get(db_apis.get_session(), id=id)
+
+    def perform_write_memory(self, thunders):
+        """Perform write memory operations for a thunders
+
+        :param thunders: group of thunder objects
+        :returns: None
+        """
+        store = {a10constants.WRITE_MEM_SHARED_PART: True}
+
+        write_mem_tf = self._taskflow_load(self._vthunder_flows.get_write_memory_flow(thunders,
+                                                                                      store),
+                                           store=store)
+
+        with tf_logging.DynamicLoggingListener(write_mem_tf,
+                                               log=LOG):
+            write_mem_tf.run()
