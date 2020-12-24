@@ -102,13 +102,14 @@ class WriteMemory(object):
         self.cw = cw.A10ControllerWorker()
 
     def perform_memory_writes(self):
-        exp_age = datetime.timedelta(seconds=CONF.a10_house_keeping.write_mem_expiry_time)
+        write_interval = datetime.timedelta(seconds=CONF.a10_house_keeping.write_mem_interval)
         session = db_api.get_session()
-        thunders = self.thunder_repo.get_write_memory_eligible_thunders(session, exp_age=exp_age)
-        thunder_ids = [thunder.vthunder_id for thunder in thunders]
+        thunders = self.thunder_repo.get_write_memory_eligible_thunders(session,
+                                                                        exp_age=write_interval)
+        thunder_ids = [str(thunder.vthunder_id) for thunder in thunders]
         if thunders:
             LOG.info("Write Memory for Thunder ids: %s", thunder_ids)
             self.cw.perform_write_memory(thunders)
             LOG.info("Finished write memory for {} vthunders...".format(len(thunders)))
         else:
-            LOG.warning("All thunders are in cool down period......")
+            LOG.warning("All thunders are in cool down period...")

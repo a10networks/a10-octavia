@@ -291,11 +291,7 @@ A10_HOUSE_KEEPING_OPTS = [
                help=_('Write Memory interval in seconds')),
     cfg.BoolOpt('disable_write_memory',
                 default=False,
-                help=_('Set this flag to disable write memory on all thunders')),
-    cfg.IntOpt('write_mem_expiry_time',
-               default=3600,
-               help=_('Interval(seconds) window after which thunders needs'
-                      ' Write Memory operation'))
+                help=_('Set this flag to disable write memory on all thunders'))
 ]
 
 A10_NOVA_OPTS = [

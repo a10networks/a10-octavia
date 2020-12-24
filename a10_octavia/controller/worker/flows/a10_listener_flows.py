@@ -47,6 +47,9 @@ class ListenerFlows(object):
                                  MarkLBAndListenerActiveInDB(
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENER]))
+        if CONF.a10_house_keeping.disable_write_memory:
+            create_listener_flow.add(vthunder_tasks.WriteMemory(
+                requires=a10constants.VTHUNDER))
         create_listener_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_listener_flow
@@ -90,6 +93,9 @@ class ListenerFlows(object):
             requires=constants.LISTENER))
         delete_listener_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
+        if CONF.a10_house_keeping.disable_write_memory:
+            delete_listener_flow.add(vthunder_tasks.WriteMemory(
+                requires=a10constants.VTHUNDER))
         delete_listener_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return delete_listener_flow
@@ -112,6 +118,9 @@ class ListenerFlows(object):
             requires=constants.LISTENER))
         delete_listener_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
+        if CONF.a10_house_keeping.disable_write_memory:
+            delete_listener_flow.add(vthunder_tasks.WriteMemory(
+                requires=a10constants.VTHUNDER))
         delete_listener_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return delete_listener_flow
@@ -138,6 +147,9 @@ class ListenerFlows(object):
                                  MarkLBAndListenerActiveInDB(
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENER]))
+        if CONF.a10_house_keeping.disable_write_memory:
+            update_listener_flow.add(vthunder_tasks.WriteMemory(
+                requires=a10constants.VTHUNDER))
         update_listener_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return update_listener_flow
@@ -162,6 +174,9 @@ class ListenerFlows(object):
                                  MarkLBAndListenerActiveInDB(
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENER]))
+        if CONF.a10_house_keeping.disable_write_memory:
+            create_listener_flow.add(vthunder_tasks.WriteMemory(
+                requires=a10constants.VTHUNDER))
         create_listener_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_listener_flow

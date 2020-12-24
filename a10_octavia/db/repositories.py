@@ -186,7 +186,7 @@ class VThunderRepository(BaseRepository):
     def get_write_memory_eligible_thunders(self, session, exp_age):
         expiry_time = datetime.datetime.utcnow() - exp_age
         query = session.query(self.model_class).filter(
-            self.model_class.updated_at < expiry_time).filter(
+            self.model_class.updated_at > expiry_time).filter(
             self.model_class.status == 'ACTIVE')
         query = query.options(noload('*'))
         return query.all()
