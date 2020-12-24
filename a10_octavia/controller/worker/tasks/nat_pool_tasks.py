@@ -13,7 +13,6 @@
 #    under the License.
 
 from oslo_log import log as logging
-from requests import exceptions
 from taskflow import task
 
 import acos_client.errors as acos_errors
