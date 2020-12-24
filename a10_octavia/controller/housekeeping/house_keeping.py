@@ -104,7 +104,7 @@ class WriteMemory(object):
     def perform_memory_writes(self):
         write_interval = datetime.timedelta(seconds=CONF.a10_house_keeping.write_mem_interval)
         thunders = self.thunder_repo.get_recently_updated_thunders(db_api.get_session(),
-                                                                        exp_age=write_interval)
+                                                                   exp_age=write_interval)
         thunder_ids = [str(thunder.vthunder_id) for thunder in thunders]
         if thunders:
             LOG.info("Write Memory for Thunder ids: %s", thunder_ids)

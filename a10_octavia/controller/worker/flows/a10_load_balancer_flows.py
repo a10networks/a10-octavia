@@ -299,6 +299,10 @@ class LoadBalancerFlows(object):
         if CONF.a10_house_keeping.disable_write_memory:
             update_LB_flow.add(vthunder_tasks.WriteMemory(
                 requires=a10constants.VTHUNDER))
+        update_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
+            name="pending_update_to_active",
+            requires=a10constants.VTHUNDER,
+            inject={"status": constants.ACTIVE}))
         update_LB_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return update_LB_flow
