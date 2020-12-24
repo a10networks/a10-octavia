@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
@@ -22,6 +24,9 @@ from octavia.controller.worker.tasks import model_tasks
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import l7rule_tasks
+from a10_octavia.controller.worker.tasks import vthunder_tasks
+
+CONF = cfg.CONF
 
 
 class L7RuleFlows(object):

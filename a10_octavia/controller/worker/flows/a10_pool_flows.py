@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_config import cfg
+
 from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 
@@ -27,6 +29,9 @@ from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import persist_tasks
 from a10_octavia.controller.worker.tasks import service_group_tasks
 from a10_octavia.controller.worker.tasks import virtual_port_tasks
+from a10_octavia.controller.worker.tasks import vthunder_tasks
+
+CONF = cfg.CONF
 
 
 class PoolFlows(object):
