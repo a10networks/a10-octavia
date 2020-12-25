@@ -205,3 +205,12 @@ class SharedPartitionTemplateNotSupported(acos_errors.FeatureNotSupported):
         msg = ('Shared partition template lookup for [{0}] is not supported'
                ' on template `{1}`').format(resource, template_key)
         super(SharedPartitionTemplateNotSupported, self).__init__(code=505, msg=msg)
+
+
+class PortIdMissing(keystone_exceptions.Error):
+    """Occurs if no port_id when creating nat_pool table entry"""
+
+    def __init__(self):
+        msg = ('Unexpected condition, port_id is missing while creating '
+               'entry for nat_pool table. ')
+        super(PortIdMissing, self).__init__(message=msg)
