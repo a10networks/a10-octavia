@@ -64,3 +64,15 @@ class VRID(base_models.BASE):
     vrid_port_id = sa.Column(sa.String(36), nullable=False)
     vrid_floating_ip = sa.Column(sa.String(40))
     subnet_id = sa.Column(sa.String(36), nullable=False)
+
+
+class NATPool(base_models.BASE):
+    __data_model__ = data_models.NATPool
+    __tablename__ = 'nat_pool'
+    id = sa.Column(sa.String(64), primary_key=True)
+    name = sa.Column(sa.String(36), nullable=False, primary_key=True)
+    subnet_id = sa.Column(sa.String(64), nullable=False, primary_key=True)
+    start_address = sa.Column('start_address', sa.String(64), nullable=False)
+    end_address = sa.Column('end_address', sa.String(64), nullable=False)
+    member_ref_count = sa.Column(sa.Integer, default=0)
+    port_id = sa.Column(sa.String(64), nullable=False)

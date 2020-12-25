@@ -51,6 +51,7 @@ class BaseDatabaseTask(task.Task):
         self.listener_repo = repo.ListenerRepository()
         self.flavor_repo = repo.FlavorRepository()
         self.flavor_profile_repo = repo.FlavorProfileRepository()
+        self.nat_pool_repo = a10_repo.NatPoolRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -734,3 +735,51 @@ class GetFlavorData(BaseDatabaseTask):
                     id=flavor.flavor_profile_id)
                 flavor_data = json.loads(flavor_profile.flavor_data)
                 return self._format_keys(flavor_data)
+
+
+class GetNatPoolEntry(BaseDatabaseTask):
+    def execute(self, member, nat_flavor=None):
+        if nat_flavor and 'pool_name' in nat_flavor:
+            return self.nat_pool_repo.get(db_apis.get_session(), name=nat_flavor['pool_name'],
+                                          subnet_id=member.subnet_id)
+        return
+
+
+class UpdateNatPoolDB(BaseDatabaseTask):
+    def execute(self, member, nat_flavor=None, nat_pool=None, subnet_port=None):
+        if nat_flavor is None:
+            return
+
+        if nat_pool is None:
+            if subnet_port is None:
+                raise exceptions.PortIdMissing()
+
+            id = uuidutils.generate_uuid()
+            pool_name = nat_flavor['pool_name']
+            subnet_id = member.subnet_id
+            start_address = nat_flavor['start_address']
+            end_address = nat_flavor['end_address']
+            port_id = subnet_port.id
+            self.nat_pool_repo.create(
+                db_apis.get_session(), id=id, name=pool_name, subnet_id=subnet_id,
+                start_address=start_address, end_address=end_address,
+                member_ref_count=1, port_id=port_id)
+            LOG.info("Successfully created nat pool entry in database.")
+        else:
+            ref = nat_pool.member_ref_count + 1
+            self.nat_pool_repo.update(
+                db_apis.get_session(), nat_pool.id, member_ref_count=ref)
+
+
+class DeleteNatPoolEntry(BaseDatabaseTask):
+    def execute(self, nat_pool=None):
+        if nat_pool is None:
+            return
+
+        if nat_pool.member_ref_count > 1:
+            ref = nat_pool.member_ref_count - 1
+            self.nat_pool_repo.update(
+                db_apis.get_session(), nat_pool.id, member_ref_count=ref)
+        else:
+            self.nat_pool_repo.delete(db_apis.get_session(), id=nat_pool.id)
+            LOG.info("Successfully deleted nat pool entry in database.")

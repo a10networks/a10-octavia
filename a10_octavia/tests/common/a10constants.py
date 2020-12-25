@@ -37,6 +37,7 @@ MOCK_VRID_FULL_FLOATING_IP = '10.10.10.45'
 MOCK_SUBNET_CIDR = '10.10.10.0/24'
 MOCK_SUBNET_ID = 'mock-subnet-1'
 MOCK_VRRP_PORT_ID = 'mock-vrrp-port-id'
+MOCK_PORT_ID = 'mock-port-id'
 
 SERVICE_GROUP_CONF_SECTION = 'service_group'
 LISTENER_CONF_SECTION = 'listener'

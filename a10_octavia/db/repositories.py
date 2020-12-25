@@ -383,3 +383,6 @@ class MemberRepository(repo.MemberRepository):
             and_(self.model_class.subnet_id == subnet_id,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
+
+class NatPoolRepository(BaseRepository):
+    model_class = models.NATPool
