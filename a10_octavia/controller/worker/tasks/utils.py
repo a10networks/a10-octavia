@@ -99,3 +99,19 @@ def dash_to_underscore(my_dict):
         return item_dict
     else:
         return my_dict
+
+
+def ip_str_to_int(ip_str):
+    octets = ip_str.split('.')
+    ip_int = 0
+    for i in range(0, len(octets)):
+        ip_int = ip_int * 256 + int(octets[i], 10)
+    return ip_int
+
+
+def ip_int_to_str(ip_int):
+    octet_list = []
+    while ip_int > 0:
+        octet_list.insert(0, (ip_int % 256))
+        ip_int = ip_int // 256
+    return '.'.join(map(str, octet_list))

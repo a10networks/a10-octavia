@@ -20,6 +20,7 @@ from taskflow import task
 import acos_client.errors as acos_errors
 
 from a10_octavia.common import openstack_mappings
+from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -28,7 +29,20 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class MemberCreate(task.Task):
+class MemberBaseTask(task.Task):
+
+    def __init__(self, **kwargs):
+        super(MemberBaseTask, self).__init__(**kwargs)
+        self._network_driver = None
+
+    @property
+    def network_driver(self):
+        if self._network_driver is None:
+            self._network_driver = a10_utils.get_network_driver()
+        return self._network_driver
+
+
+class MemberCreate(MemberBaseTask):
     """Task to create a member and associate to pool"""
 
     @axapi_client_decorator
@@ -47,6 +61,23 @@ class MemberCreate(task.Task):
                 server_flavor.pop('name_expressions', None)
                 server_args.update(server_flavor)
                 server_args.update(parsed_exprs)
+
+            # Get nat-pool used by listener and reserve address from subnet
+            pool_flavor = flavor.get('nat_pool')
+            pools_flavor = flavor.get('nat_pool_list')
+            if pool_flavor or pools_flavor:
+                for listener in pool.listeners:
+                    vport = self.axapi_client.slb.virtual_server.vport.get(pool.load_balancer.id,
+                                                                           listener.id,
+                                                                           listener.protocol,
+                                                                           listener.protocol_port)
+                    if vport and 'port' in vport and 'pool' in vport['port']:
+                        if pool_flavor and vport['port']['pool'] == pool_flavor['pool_name']:
+                            self.reserve_subnet_address(member, pool_flavor)
+                        for flavor in (pools_flavor or []):
+                            if vport['port']['pool'] == flavor['pool_name']:
+                                self.reserve_subnet_address(member, flavor)
+
         server_args = {'server': server_args}
 
         server_temp = {}
@@ -110,12 +141,39 @@ class MemberCreate(task.Task):
             LOG.exception("Failed to revert creation of member %s for pool %s due to %s",
                           member.id, pool.id, str(e))
 
+    def reserve_subnet_address(self, member, flavor):
+        # check database see if already exist
+        db_entry = None
+        if db_entry:
+            # increase ref-cnt
+            LOG.debug("TODO")
+        else:
+            try:
+                # address revervation
+                addr_list = []
+                start = utils.ip_str_to_int(flavor['start_address'])
+                end = utils.ip_str_to_int(flavor['end_address'])
+                while start <= end:
+                    addr_list.append(utils.ip_int_to_str(start))
+                    start += 1
+                port = self.network_driver.reserve_subnet_addresses(member.subnet_id, addr_list)
+                LOG.debug("Successfully allocate addresses for nat pool %s on port %s",
+                          flavor['pool_name'], port.id)
 
-class MemberDelete(task.Task):
+                # create entry in db
+                # port_id = port.id
+            except Exception as e:
+                LOG.exception("Failed to reserver addresses in NAT pool %s from subnet %s",
+                              flavor['pool_name'], member.subnet_id)
+                raise e
+
+
+class MemberDelete(MemberBaseTask):
     """Task to delete member"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool, member_count_ip, member_count_ip_port_protocol):
+    def execute(self, member, vthunder, pool, member_count_ip, member_count_ip_port_protocol,
+                flavor=None):
         server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         try:
             self.axapi_client.slb.service_group.member.delete(
@@ -141,8 +199,38 @@ class MemberDelete(task.Task):
             LOG.exception("Failed to delete member/port: %s", member.id)
             raise e
 
+        if flavor:
+            pool_flavor = flavor.get('nat_pool')
+            pools_flavor = flavor.get('nat_pool_list')
+            if pool_flavor or pools_flavor:
+                for listener in pool.listeners:
+                    vport = self.axapi_client.slb.virtual_server.vport.get(pool.load_balancer.id,
+                                                                           listener.id,
+                                                                           listener.protocol,
+                                                                           listener.protocol_port)
+                    if vport and 'port' in vport and 'pool' in vport['port']:
+                        if pool_flavor and vport['port']['pool'] == pool_flavor['pool_name']:
+                            self.release_subnet_address(member, pool_flavor)
+                        for flavor in (pools_flavor or []):
+                            if vport['port']['pool'] == flavor['pool_name']:
+                                self.release_subnet_address(member, flavor)
 
-class MemberUpdate(task.Task):
+    def release_subnet_address(self, member, flavor):
+        # lookup db
+        """
+        db_entry = None
+        if db_entry:
+            if db_entry.member_ref_cnt == 1:
+                # delete port
+                self.network_driver.delete_port(db_entry.port_id)
+
+                # delete entry in db
+            else:
+                # reduce ref-cnt
+        """
+
+
+class MemberUpdate(MemberBaseTask):
     """Task to update member"""
 
     @axapi_client_decorator
@@ -200,7 +288,7 @@ class MemberUpdate(task.Task):
             # no raise, it will still work even no port. but options for port will missing
 
 
-class MemberDeletePool(task.Task):
+class MemberDeletePool(MemberBaseTask):
     """Task to delete member"""
 
     @axapi_client_decorator
