@@ -29,7 +29,20 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class MemberCreate(task.Task):
+class MemberBaseTask(task.Task):
+
+    def __init__(self, **kwargs):
+        super(MemberBaseTask, self).__init__(**kwargs)
+        self._network_driver = None
+
+    @property
+    def network_driver(self):
+        if self._network_driver is None:
+            self._network_driver = a10_utils.get_network_driver()
+        return self._network_driver
+
+
+class MemberCreate(MemberBaseTask):
     """Task to create a member and associate to pool"""
 
     @axapi_client_decorator
@@ -128,7 +141,6 @@ class MemberCreate(task.Task):
             LOG.exception("Failed to revert creation of member %s for pool %s due to %s",
                           member.id, pool.id, str(e))
 
-    @axapi_client_decorator
     def reserve_subnet_address(self, member, flavor):
         # check database see if already exist
         db_entry = None
@@ -144,8 +156,7 @@ class MemberCreate(task.Task):
                 while start <= end:
                     addr_list.append(utils.ip_int_to_str(start))
                     start += 1
-                network_driver = a10_utils.get_network_driver()
-                port = network_driver.reserve_subnet_addresses(member.subnet_id, addr_list)
+                port = self.network_driver.reserve_subnet_addresses(member.subnet_id, addr_list)
                 LOG.debug("Successfully allocate addresses for nat pool %s on port %s",
                           flavor['pool_name'], port.id)
 
@@ -157,7 +168,7 @@ class MemberCreate(task.Task):
                 raise e
 
 
-class MemberDelete(task.Task):
+class MemberDelete(MemberBaseTask):
     """Task to delete member"""
 
     @axapi_client_decorator
@@ -204,17 +215,14 @@ class MemberDelete(task.Task):
                             if vport['port']['pool'] == flavor['pool_name']:
                                 self.release_subnet_address(member, flavor)
 
-    @axapi_client_decorator
     def release_subnet_address(self, member, flavor):
         # lookup db
-        network_driver = a10_utils.get_network_driver()
-        network_driver.delete_port("b639ecab-aa06-426b-beaa-be703b77ad24")
         """
         db_entry = None
         if db_entry:
             if db_entry.member_ref_cnt == 1:
                 # delete port
-                self.network_driver.delete_port("6331f6d5-3855-4cba-b52c-a254c18e6ee5")
+                self.network_driver.delete_port(db_entry.port_id)
 
                 # delete entry in db
             else:
@@ -222,7 +230,7 @@ class MemberDelete(task.Task):
         """
 
 
-class MemberUpdate(task.Task):
+class MemberUpdate(MemberBaseTask):
     """Task to update member"""
 
     @axapi_client_decorator
@@ -280,7 +288,7 @@ class MemberUpdate(task.Task):
             # no raise, it will still work even no port. but options for port will missing
 
 
-class MemberDeletePool(task.Task):
+class MemberDeletePool(MemberBaseTask):
     """Task to delete member"""
 
     @axapi_client_decorator
