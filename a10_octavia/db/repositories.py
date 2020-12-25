@@ -386,12 +386,3 @@ class MemberRepository(repo.MemberRepository):
 
 class NatPoolRepository(BaseRepository):
     model_class = models.NATPool
-
-    """
-    def get_nat_pool(self, session, name, subnet_id):
-        model = session.query(self.model_class).filter(self.model_class.name == name).filter(
-            self.model_class.subnet_id == subnet_id).first()
-        if model is None:
-            return None
-        return model.to_data_model()
-    """
