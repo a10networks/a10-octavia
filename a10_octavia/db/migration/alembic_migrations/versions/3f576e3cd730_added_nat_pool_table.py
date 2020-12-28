@@ -19,7 +19,7 @@ depends_on = None
 def upgrade():
     op.create_table('nat_pool',
     sa.Column('id', sa.String(length=64), nullable=False),
-    sa.Column('name', sa.String(length=36), nullable=False),
+    sa.Column('name', sa.String(length=64), nullable=False),
     sa.Column('subnet_id', sa.String(length=64), nullable=False),
     sa.Column('start_address', sa.String(length=64), nullable=False),
     sa.Column('end_address', sa.String(length=64), nullable=False),

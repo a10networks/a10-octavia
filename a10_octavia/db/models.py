@@ -73,7 +73,7 @@ class NATPool(base_models.BASE):
         sa.UniqueConstraint('name', 'subnet_id', name='unique_name_subnet_id'),
     )
     id = sa.Column(sa.String(64), primary_key=True)
-    name = sa.Column(sa.String(36), nullable=False)
+    name = sa.Column(sa.String(64), nullable=False)
     subnet_id = sa.Column(sa.String(64), nullable=False)
     start_address = sa.Column('start_address', sa.String(64), nullable=False)
     end_address = sa.Column('end_address', sa.String(64), nullable=False)
