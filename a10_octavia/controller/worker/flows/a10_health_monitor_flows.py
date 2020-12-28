@@ -13,8 +13,6 @@
 #    under the License.
 
 
-from oslo_config import cfg
-
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
@@ -26,8 +24,6 @@ from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import health_monitor_tasks
 from a10_octavia.controller.worker.tasks import vthunder_tasks
-
-CONF = cfg.CONF
 
 
 class HealthMonitorFlows(object):
