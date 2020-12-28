@@ -29,24 +29,49 @@ class NatPoolCreate(task.Task):
     def execute(self, loadbalancer, vthunder, flavor_data=None):
         device_pool = None
         if flavor_data:
+            natpool_flavor_list = flavor_data.get('nat_pool_list')
             natpool_flavor = flavor_data.get('nat_pool')
+            if natpool_flavor_list:
+                for i in range(len(natpool_flavor_list)):
+                    if self.axapi_client.nat.pool.exists(natpool_flavor_list[i]['pool_name']):
+                        device_pool = self.axapi_client.nat.pool.get(
+                            natpool_flavor_list[i]['pool_name'])
+                    if not (device_pool and
+                            (device_pool['pool']['start-address'] ==
+                                natpool_flavor_list[i]['start_address'] and
+                                device_pool['pool']['end-address'] ==
+                                natpool_flavor_list[i]['end_address'])):
+                        pool_name = natpool_flavor_list[i]['pool_name']
+                        start_address = natpool_flavor_list[i]['start_address']
+                        end_address = natpool_flavor_list[i]['end_address']
+                        netmask = natpool_flavor_list[i]['netmask']
+                        gateway = natpool_flavor_list[i]['gateway']
+                        try:
+                            self.axapi_client.nat.pool.create(
+                                pool_name, start_address, end_address, netmask, gateway=gateway)
+                        except(acos_errors.Exists) as e:
+                            LOG.exception(
+                                "The specified nat-pool already exists on thunder")
+                            raise e
+                    else:
+                        continue
             if natpool_flavor:
                 if self.axapi_client.nat.pool.exists(natpool_flavor['pool_name']):
-                    device_pool = self.axapi_client.nat.pool.get(natpool_flavor['pool_name'])
+                    device_pool = self.axapi_client.nat.pool.get(
+                        natpool_flavor['pool_name'])
                 if (device_pool and
-                        (device_pool['pool']['start-address'] == natpool_flavor['start_address']
-                            and device_pool['pool']['end-address'] == natpool_flavor['end_address']
-                         )):
+                    (device_pool['pool']['start-address'] == natpool_flavor['start_address']
+                        and device_pool['pool']['end-address'] == natpool_flavor['end_address']
+                     )):
                     return
-                else:
-                    pool_name = natpool_flavor['pool_name']
-                    start_address = natpool_flavor['start_address']
-                    end_address = natpool_flavor['end_address']
-                    netmask = natpool_flavor['netmask']
-                    gateway = natpool_flavor['gateway']
-                    try:
-                        self.axapi_client.nat.pool.create(
-                            pool_name, start_address, end_address, netmask, gateway=gateway)
-                    except(acos_errors.Exists) as e:
-                        LOG.exception("The nat-pool already exists on thunder")
-                        raise e
+                pool_name = natpool_flavor['pool_name']
+                start_address = natpool_flavor['start_address']
+                end_address = natpool_flavor['end_address']
+                netmask = natpool_flavor['netmask']
+                gateway = natpool_flavor['gateway']
+                try:
+                    self.axapi_client.nat.pool.create(
+                        pool_name, start_address, end_address, netmask, gateway=gateway)
+                except(acos_errors.Exists) as e:
+                    LOG.exception("The specified nat-pool already exists on thunder")
+                    raise e
