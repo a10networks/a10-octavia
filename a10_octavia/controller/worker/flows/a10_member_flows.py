@@ -157,7 +157,7 @@ class MemberFlows(object):
         delete_member_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         delete_member_flow.add(vthunder_tasks.WriteMemory(
-        requires=a10constants.VTHUNDER))
+            requires=a10constants.VTHUNDER))
         delete_member_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return delete_member_flow
