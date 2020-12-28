@@ -105,10 +105,17 @@ class WriteMemory(object):
         write_interval = datetime.timedelta(seconds=CONF.a10_house_keeping.write_mem_interval)
         thunders = self.thunder_repo.get_recently_updated_thunders(db_api.get_session(),
                                                                    exp_age=write_interval)
-        thunder_ids = [str(thunder.vthunder_id) for thunder in thunders]
-        if thunders:
-            LOG.info("Write Memory for Thunder ids: %s", thunder_ids)
-            self.cw.perform_write_memory(thunders)
-            LOG.info("Finished write memory for {} thunders...".format(len(thunders)))
+        ip_partition_list = set()
+        thunder_list = []
+        for thunder in thunders:
+            ip_partition = str(thunder.ip_address) + ":" + str(thunder.partition_name)
+            if ip_partition not in ip_partition_list:
+                ip_partition_list.add(ip_partition)
+                thunder_list.append(thunder)
+
+        if thunder_list:
+            LOG.info("Write Memory for Thunders : %s", [ip_partition_list])
+            self.cw.perform_write_memory(thunder_list)
+            LOG.info("Finished write memory for {} thunders...".format(len(thunder_list)))
         else:
-            LOG.warning("All thunders are in cool down period...")
+            LOG.warning("No thunders found that are recently updated and needs write memory...")
