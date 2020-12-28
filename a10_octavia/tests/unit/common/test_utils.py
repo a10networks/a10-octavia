@@ -216,7 +216,7 @@ class TestUtils(base.BaseTaskTestCase):
         client_mock = mock.Mock()
         client_mock.projects.get.return_value = FakeProject()
         mock_key_client.return_value = client_mock
-        self.assertIsNone(utils.get_parent_project(a10constants.MOCK_CHILD_PROJECT_ID))
+        self.assertEqual(utils.get_parent_project(a10constants.MOCK_CHILD_PROJECT_ID), 'default')
 
     def test_get_net_info_from_cidr_valid(self):
         self.assertEqual(utils.get_net_info_from_cidr('10.10.10.1/32'),
