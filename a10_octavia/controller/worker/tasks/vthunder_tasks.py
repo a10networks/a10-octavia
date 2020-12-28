@@ -12,6 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
+from datetime import datetime
+
 import acos_client
 from acos_client import errors as acos_errors
 try:
@@ -784,3 +787,7 @@ class WriteMemory(VThunderBaseTask):
             except (acos_errors.ACOSException, req_exceptions.ConnectionError):
                 LOG.warning("Failed to write memory on thunder device: %s.... skipping",
                             vthunder.ip_address)
+                if not CONF.a10_house_keeping.disable_write_memory:
+                    self.vthunder_repo.update(db_apis.get_session(),
+                                              vthunder.id,
+                                              updated_at=datetime.utcnow())
