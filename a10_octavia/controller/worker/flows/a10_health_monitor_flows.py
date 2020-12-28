@@ -59,13 +59,12 @@ class HealthMonitorFlows(object):
             requires=constants.POOL))
         create_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        if CONF.a10_house_keeping.disable_write_memory:
-            create_hm_flow.add(vthunder_tasks.WriteMemory(
-                name=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION,
-                requires=(a10constants.VTHUNDER)))
-            create_hm_flow.add(vthunder_tasks.WriteMemory(
-                name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
-                requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
+        create_hm_flow.add(vthunder_tasks.WriteMemory(
+            name=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION,
+            requires=(a10constants.VTHUNDER)))
+        create_hm_flow.add(vthunder_tasks.WriteMemory(
+            name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
+            requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
         create_hm_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=(a10constants.VTHUNDER)))
         return create_hm_flow
@@ -101,13 +100,12 @@ class HealthMonitorFlows(object):
             requires=constants.POOL))
         delete_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        if CONF.a10_house_keeping.disable_write_memory:
-            delete_hm_flow.add(vthunder_tasks.WriteMemory(
-                name=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION,
-                requires=(a10constants.VTHUNDER)))
-            delete_hm_flow.add(vthunder_tasks.WriteMemory(
-                name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
-                requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
+        delete_hm_flow.add(vthunder_tasks.WriteMemory(
+            name=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION,
+            requires=(a10constants.VTHUNDER)))
+        delete_hm_flow.add(vthunder_tasks.WriteMemory(
+            name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
+            requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
         delete_hm_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=(a10constants.VTHUNDER)))
         return delete_hm_flow
@@ -149,13 +147,12 @@ class HealthMonitorFlows(object):
             requires=constants.POOL))
         update_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
-        if CONF.a10_house_keeping.disable_write_memory:
-            update_hm_flow.add(vthunder_tasks.WriteMemory(
-                name=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION,
-                requires=(a10constants.VTHUNDER)))
-            update_hm_flow.add(vthunder_tasks.WriteMemory(
-                name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
-                requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
+        update_hm_flow.add(vthunder_tasks.WriteMemory(
+            name=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION,
+            requires=(a10constants.VTHUNDER)))
+        update_hm_flow.add(vthunder_tasks.WriteMemory(
+            name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
+            requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
         update_hm_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=(a10constants.VTHUNDER)))
         return update_hm_flow

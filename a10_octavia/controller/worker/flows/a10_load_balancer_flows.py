@@ -77,9 +77,8 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
             requires=(constants.LOADBALANCER,
                            a10constants.VTHUNDER)))
-        if CONF.a10_house_keeping.disable_write_memory:
-            lb_create_flow.add(vthunder_tasks.WriteMemory(
-                requires=a10constants.VTHUNDER))
+        lb_create_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         lb_create_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return lb_create_flow
@@ -196,9 +195,8 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.DecrementLoadBalancerQuota(
             requires=constants.LOADBALANCER))
-        if CONF.a10_house_keeping.disable_write_memory:
-            delete_LB_flow.add(vthunder_tasks.WriteMemory(
-                requires=a10constants.VTHUNDER))
+        delete_LB_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return (delete_LB_flow, store)
@@ -296,9 +294,8 @@ class LoadBalancerFlows(object):
                           a10constants.VTHUNDER]))
         update_LB_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
-        if CONF.a10_house_keeping.disable_write_memory:
-            update_LB_flow.add(vthunder_tasks.WriteMemory(
-                requires=a10constants.VTHUNDER))
+        update_LB_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         update_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name="pending_update_to_active",
             requires=a10constants.VTHUNDER,
@@ -348,9 +345,8 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
                       constants.FLAVOR_DATA),
             provides=a10constants.STATUS))
-        if CONF.a10_house_keeping.disable_write_memory:
-            lb_create_flow.add(vthunder_tasks.WriteMemory(
-                requires=a10constants.VTHUNDER))
+        lb_create_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         lb_create_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return lb_create_flow
