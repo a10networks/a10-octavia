@@ -18,13 +18,15 @@ depends_on = None
 
 def upgrade():
     op.create_table('nat_pool',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=1024), nullable=False),
-    sa.Column('subnet_id', sa.String(length=36), nullable=False),
-    sa.Column('start_ip_address', sa.String(length=64), nullable=False),
-    sa.Column('end_ip_address', sa.String(length=64), nullable=False),
+    sa.Column('id', sa.String(length=64), nullable=False),
+    sa.Column('name', sa.String(length=36), nullable=False),
+    sa.Column('subnet_id', sa.String(length=64), nullable=False),
+    sa.Column('start_address', sa.String(length=64), nullable=False),
+    sa.Column('end_address', sa.String(length=64), nullable=False),
     sa.Column('member_ref_count', sa.Integer(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
+    sa.Column('port_id', sa.String(length=64), nullable=False),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('name', 'subnet_id', name='unique_name_subnet_id')
     )
 
 
