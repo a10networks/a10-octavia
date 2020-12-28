@@ -32,7 +32,8 @@ class A10Base(models.ModelBase):
         # objects.
         if obj.__class__.__name__ in ['Member', 'Pool', 'LoadBalancer',
                                       'Listener', 'Amphora', 'L7Policy',
-                                      'L7Rule', 'VThunder', 'VRID']:
+                                      'L7Rule', 'VThunder', 'VRID',
+                                      'NATPool']:
             return obj.__class__.__name__ + str(obj.id)
         elif obj.__class__.__name__ in ['SessionPersistence', 'HealthMonitor']:
             return obj.__class__.__name__ + obj.pool_id

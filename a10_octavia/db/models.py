@@ -69,9 +69,10 @@ class VRID(base_models.BASE):
 class NATPool(base_models.BASE):
     __data_model__ = data_models.NATPool
     __tablename__ = 'nat_pool'
-    id = sa.Column(sa.Integer, primary_key=True)
-    name = sa.Column(sa.String(1024), nullable=False)
-    subnet_id = sa.Column(sa.String(36), nullable=False)
-    start_ip_address = sa.Column('start_ip_address', sa.String(64), nullable=False)
-    end_ip_address = sa.Column('end_ip_address', sa.String(64), nullable=False)
+    id = sa.Column(sa.String(64), primary_key=True)
+    name = sa.Column(sa.String(36), nullable=False, primary_key=True)
+    subnet_id = sa.Column(sa.String(64), nullable=False, primary_key=True)
+    start_address = sa.Column('start_address', sa.String(64), nullable=False)
+    end_address = sa.Column('end_address', sa.String(64), nullable=False)
     member_ref_count = sa.Column(sa.Integer, default=0)
+    port_id = sa.Column(sa.String(64), nullable=False)

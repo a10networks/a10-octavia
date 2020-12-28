@@ -218,11 +218,12 @@ class DeviceNetworkMap(BaseDataModel):
 
 
 class NATPool(BaseDataModel):
-    def __init__(self, id=None, name=None, subnet_id=None, start_ip_address=None,
-                 end_ip_address=None, member_ref_count=None):
+    def __init__(self, id=None, name=None, subnet_id=None, start_address=None,
+                 end_address=None, member_ref_count=None, port_id=None):
         self.id = id
         self.name = name
         self.subnet_id = subnet_id
-        self.start_ip_address = start_ip_address
-        self.end_ip_address = end_ip_address
+        self.start_address = start_address
+        self.end_address = end_address
         self.member_ref_count = member_ref_count
+        self.port_id = port_id
