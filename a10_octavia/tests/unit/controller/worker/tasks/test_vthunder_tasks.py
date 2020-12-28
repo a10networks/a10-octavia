@@ -514,6 +514,17 @@ class TestVThunderTasks(base.BaseTaskTestCase):
             partition='specified',
             specified_partition='testPartition')
 
+    def test_WriteMemory_execute_not_called(self):
+        self.conf.register_opts(config_options.A10_HOUSE_KEEPING_OPTS,
+                                group=a10constants.A10_HOUSE_KEEPING)
+        self.conf.config(group=a10constants.A10_HOUSE_KEEPING,
+                         disable_write_memory=False)
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_task = task.WriteMemory()
+        mock_task.axapi_client = self.client_mock
+        mock_task.execute(mock_thunder)
+        self.client_mock.system.action.write_memory.assert_not_called()
+
     def test_WriteMemory_execute_delete_flow_after_error_no_fail(self):
         self.conf.register_opts(config_options.A10_HOUSE_KEEPING_OPTS,
                                 group=a10constants.A10_HOUSE_KEEPING)
