@@ -51,6 +51,7 @@ class TestHandlerNatPoolTasks(base.BaseTaskTestCase):
         mock_nat_pool_task = task.NatPoolCreate()
         mock_nat_pool_task.axapi_client = self.client_mock
         self.client_mock.nat.pool.exists.return_value = False
+        self.client_mock.nat.pool.try_get.return_value = None
         mock_nat_pool_task.execute(LB, vthunder, flavor_data=flavor)
         args, kwargs = self.client_mock.nat.pool.create.call_args
         self.assertIn('172.16.1.101', args)
@@ -71,7 +72,7 @@ class TestHandlerNatPoolTasks(base.BaseTaskTestCase):
         mock_nat_pool_task = task.NatPoolCreate()
         mock_nat_pool_task.axapi_client = self.client_mock
         self.client_mock.nat.pool.exists.return_value = True
-        self.client_mock.nat.pool.get.return_value = device_pool
+        self.client_mock.nat.pool.try_get.return_value = device_pool
         mock_nat_pool_task.execute(LB, vthunder, flavor_data=flavor)
         self.client_mock.nat.pool.create.not_called()
 
@@ -87,6 +88,7 @@ class TestHandlerNatPoolTasks(base.BaseTaskTestCase):
         mock_nat_pool_task = task.NatPoolCreate()
         mock_nat_pool_task.axapi_client = self.client_mock
         self.client_mock.nat.pool.exists.return_value = False
+        self.client_mock.nat.pool.try_get.return_value = None
         mock_nat_pool_task.execute(LB, vthunder, flavor_data=flavor)
         args, kwargs = self.client_mock.nat.pool.create.call_args
         self.assertIn('pooln2', args)
@@ -110,6 +112,6 @@ class TestHandlerNatPoolTasks(base.BaseTaskTestCase):
         mock_nat_pool_task = task.NatPoolCreate()
         mock_nat_pool_task.axapi_client = self.client_mock
         self.client_mock.nat.pool.exists.return_value = True
-        self.client_mock.nat.pool.get.return_value = device_pool
+        self.client_mock.nat.pool.try_get.return_value = device_pool
         mock_nat_pool_task.execute(LB, vthunder, flavor_data=flavor)
         self.client_mock.nat.pool.create.not_called()
