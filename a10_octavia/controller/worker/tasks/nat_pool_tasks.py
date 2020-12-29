@@ -50,8 +50,9 @@ class NatPoolCreate(task.Task):
                             self.axapi_client.nat.pool.create(
                                 pool_name, start_address, end_address, netmask, gateway=gateway)
                         except(acos_errors.Exists) as e:
-                            LOG.exception(
-                                "The specified nat-pool already exists on thunder")
+                            LOG.exception("Nat-pool with name %s already exists on partition %s of "
+                                          "thunder device %s",
+                                          pool_name, vthunder.partition_name, vthunder.ip_address)
                             raise e
                     else:
                         continue
@@ -73,5 +74,7 @@ class NatPoolCreate(task.Task):
                     self.axapi_client.nat.pool.create(
                         pool_name, start_address, end_address, netmask, gateway=gateway)
                 except(acos_errors.Exists) as e:
-                    LOG.exception("The specified nat-pool already exists on thunder")
+                    LOG.exception("Nat-pool with name %s already exists on partition %s of "
+                                  "thunder device %s",
+                                  pool_name, vthunder.partition_name, vthunder.ip_address)
                     raise e
