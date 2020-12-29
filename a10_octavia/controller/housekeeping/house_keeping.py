@@ -110,8 +110,8 @@ class WriteMemory(object):
 
         write_interval = datetime.timedelta(seconds=CONF.a10_house_keeping.write_mem_interval)
         expiry_time = datetime.datetime.utcnow() - write_interval
-
         if prev_run_time and prev_run_time < expiry_time:
+            LOG.debug("Previous write memory thread ran at %s: ", str(prev_run_time))
             expiry_time = prev_run_time
         thunders = self.thunder_repo.get_recently_updated_thunders(db_api.get_session(),
                                                                    expiry_time=expiry_time)
@@ -128,7 +128,7 @@ class WriteMemory(object):
         if thunder_list:
             LOG.info("Write Memory for Thunders : %s", list(ip_partition_list))
             self.cw.perform_write_memory(thunder_list)
-            LOG.info("Finished write memory for {} thunders...".format(len(thunder_list)))
+            LOG.info("Finished running write memory for {} thunders...".format(len(thunder_list)))
         else:
             LOG.warning("No thunders found that are recently updated."
                         " Not performing write memory...")

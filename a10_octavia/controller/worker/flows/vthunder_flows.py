@@ -380,14 +380,14 @@ class VThunderFlows(object):
         vthunder_store = {}
         for vthunder in thunders:
             vthunder_store[vthunder.vthunder_id] = vthunder
-            write_memory_flow.add(vthunder_tasks.WriteMemory(
+            write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
                 requires=a10constants.VTHUNDER,
                 rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
                 name='{flow}-{partition}-{id}'.format(
                     id=vthunder.vthunder_id,
                     flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
                     partition=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION)))
-            write_memory_flow.add(vthunder_tasks.WriteMemory(
+            write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
                 requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART),
                 rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
                 name='{flow}-{partition}-{id}'.format(
