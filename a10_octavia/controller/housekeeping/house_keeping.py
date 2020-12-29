@@ -97,14 +97,24 @@ class DatabaseCleanup(object):
 
 
 class WriteMemory(object):
+
+    global prev_run_time
+    prev_run_time = None
+
     def __init__(self):
         self.thunder_repo = a10repo.VThunderRepository()
         self.cw = cw.A10ControllerWorker()
 
     def perform_memory_writes(self):
+        global prev_run_time
+
         write_interval = datetime.timedelta(seconds=CONF.a10_house_keeping.write_mem_interval)
+        expiry_time = datetime.datetime.utcnow() - write_interval
+
+        if prev_run_time and prev_run_time < expiry_time:
+            expiry_time = prev_run_time
         thunders = self.thunder_repo.get_recently_updated_thunders(db_api.get_session(),
-                                                                   exp_age=write_interval)
+                                                                   expiry_time=expiry_time)
         ip_partition_list = set()
         thunder_list = []
         for thunder in thunders:
@@ -113,9 +123,12 @@ class WriteMemory(object):
                 ip_partition_list.add(ip_partition)
                 thunder_list.append(thunder)
 
+        prev_run_time = datetime.datetime.utcnow()
+
         if thunder_list:
-            LOG.info("Write Memory for Thunders : %s", [ip_partition_list])
+            LOG.info("Write Memory for Thunders : %s", list(ip_partition_list))
             self.cw.perform_write_memory(thunder_list)
             LOG.info("Finished write memory for {} thunders...".format(len(thunder_list)))
         else:
-            LOG.warning("No thunders found that are recently updated and needs write memory...")
+            LOG.warning("No thunders found that are recently updated."
+                        " Not performing write memory...")

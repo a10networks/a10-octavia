@@ -82,6 +82,8 @@ def write_memory():
         LOG.info("Write Memory interval set to %s seconds", interval)
         while not write_memory_thread_event.is_set():
             LOG.info("Initiating the write memory operation for all thunders...")
+            timestamp = datetime.datetime.utcnow()
+            LOG.debug("Starting write memory thread ar %s", str(timestamp))
             try:
                 write_memory_perform.perform_memory_writes()
             except Exception as e:
@@ -102,8 +104,8 @@ def main():
 
     gmr.TextGuruMeditation.setup_autorun(version)
 
-    timestamp = str(datetime.datetime.utcnow())
-    LOG.info("Starting house keeping at %s", timestamp)
+    timestamp = datetime.datetime.utcnow()
+    LOG.info("Starting house keeping at %s", str(timestamp))
 
     # Thread to perform spare amphora check
     spare_amp_thread = threading.Thread(target=spare_amphora_check)

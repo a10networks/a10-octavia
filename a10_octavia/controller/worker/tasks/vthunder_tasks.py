@@ -787,6 +787,8 @@ class WriteMemory(VThunderBaseTask):
             except (acos_errors.ACOSException, req_exceptions.ConnectionError):
                 LOG.warning("Failed to write memory on thunder device: %s.... skipping",
                             vthunder.ip_address)
+                # Set updated_at of thunder to retry write memory
+                # for failed thunder via housekeeper
                 if not CONF.a10_house_keeping.disable_write_memory:
                     self.vthunder_repo.update(db_apis.get_session(),
                                               vthunder.id,
