@@ -59,3 +59,6 @@ HEALTH_MONITOR_SECTION = 'health_monitor'
 MOCK_SERVICE_GROUP_PROTOCOL = "HTTP"
 MOCK_POOL_ID_2 = "mock-pool-2"
 MOCK_SUBNET_ID_2 = "mock-subnet-2"
+
+MOCK_L7POLICY_ID = "mock-l7-policy-1"
+MOCK_L7RULE_ID = "mock-l7-rule-1"
