@@ -30,7 +30,7 @@ LOG = logging.getLogger(__name__)
 
 class ListenersParent(object):
 
-    def set(self, set_method, loadbalancer, listener, vthunder, flavor=None, ssl_template=None):
+    def set(self, set_method, loadbalancer, listener, vthunder, flavor_data=None, ssl_template=None):
         listener.load_balancer = loadbalancer
         listener.protocol = openstack_mappings.virtual_port_protocol(
             self.axapi_client, listener.protocol).lower()
@@ -125,8 +125,8 @@ class ListenersParent(object):
             vport_templates[template_key] = template_policy
 
         vport_args = {}
-        if flavor:
-            virtual_port_flavor = flavor.get('virtual_port')
+        if flavor_data:
+            virtual_port_flavor = flavor_data.get('virtual_port')
             if virtual_port_flavor:
                 name_exprs = virtual_port_flavor.get('name_expressions')
                 parsed_exprs = utils.parse_name_expressions(
@@ -151,10 +151,10 @@ class ListenerCreate(ListenersParent, task.Task):
     """Task to create listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder, flavor=None):
+    def execute(self, loadbalancer, listener, vthunder, flavor_data=None):
         try:
             self.set(self.axapi_client.slb.virtual_server.vport.create,
-                     loadbalancer, listener, vthunder, flavor)
+                     loadbalancer, listener, vthunder, flavor_data)
             LOG.debug("Successfully created listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to create listener: %s", listener.id)
