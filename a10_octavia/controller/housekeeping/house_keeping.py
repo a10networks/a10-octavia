@@ -109,9 +109,10 @@ class WriteMemory(object):
         global prev_run_time
 
         write_interval = datetime.timedelta(seconds=CONF.a10_house_keeping.write_mem_interval)
-        expiry_time = datetime.datetime.utcnow() - write_interval
-        if prev_run_time and prev_run_time < expiry_time:
-            LOG.debug("Previous write memory thread ran at %s: ", str(prev_run_time))
+        curr_time_stamp = datetime.datetime.utcnow()
+        expiry_time = curr_time_stamp - write_interval
+        if (prev_run_time and int(prev_run_time.strftime("%s")) < int(expiry_time.strftime("%s"))):
+            LOG.debug("Previous write memory thread ran at %s: ", str(prev_run_time)) 
             expiry_time = prev_run_time
         thunders = self.thunder_repo.get_recently_updated_thunders(db_api.get_session(),
                                                                    expiry_time=expiry_time)
@@ -123,7 +124,7 @@ class WriteMemory(object):
                 ip_partition_list.add(ip_partition)
                 thunder_list.append(thunder)
 
-        prev_run_time = datetime.datetime.utcnow()
+        prev_run_time = curr_time_stamp
 
         if thunder_list:
             LOG.info("Write Memory for Thunders : %s", list(ip_partition_list))
