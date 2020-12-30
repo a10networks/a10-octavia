@@ -164,6 +164,14 @@ class LoadBalancerFlows(object):
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
             requires=constants.LOADBALANCER))
+        delete_LB_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR_DATA))
+        delete_LB_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
+            requires=constants.LOADBALANCER, provides=a10constants.LB_COUNT))
+        delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
+            requires=(constants.LOADBALANCER,
+                      a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
