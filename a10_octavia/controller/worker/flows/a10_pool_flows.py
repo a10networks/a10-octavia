@@ -67,7 +67,7 @@ class PoolFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_pool_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        create_pool_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        create_pool_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
 
         return create_pool_flow
@@ -109,7 +109,7 @@ class PoolFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         delete_pool_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        delete_pool_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        delete_pool_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
 
         return delete_pool_flow
@@ -170,7 +170,7 @@ class PoolFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_pool_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        update_pool_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        update_pool_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
 
         return update_pool_flow

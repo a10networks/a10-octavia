@@ -61,7 +61,7 @@ class HealthMonitorFlows(object):
         create_hm_flow.add(vthunder_tasks.WriteMemory(
             name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
             requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
-        create_hm_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        create_hm_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=(a10constants.VTHUNDER)))
         return create_hm_flow
 
@@ -102,7 +102,7 @@ class HealthMonitorFlows(object):
         delete_hm_flow.add(vthunder_tasks.WriteMemory(
             name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
             requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
-        delete_hm_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        delete_hm_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=(a10constants.VTHUNDER)))
         return delete_hm_flow
 
@@ -149,6 +149,6 @@ class HealthMonitorFlows(object):
         update_hm_flow.add(vthunder_tasks.WriteMemory(
             name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
             requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
-        update_hm_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        update_hm_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=(a10constants.VTHUNDER)))
         return update_hm_flow

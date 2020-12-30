@@ -109,7 +109,7 @@ class MemberFlows(object):
                                              constants.LISTENERS)))
         create_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        create_member_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        create_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_member_flow
 
@@ -158,7 +158,7 @@ class MemberFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         delete_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        delete_member_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        delete_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return delete_member_flow
 
@@ -219,7 +219,7 @@ class MemberFlows(object):
                       constants.LISTENERS]))
         delete_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        delete_member_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        delete_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return delete_member_flow
 
@@ -397,7 +397,7 @@ class MemberFlows(object):
                                              constants.LISTENERS]))
         update_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        update_member_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        update_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return update_member_flow
 
@@ -443,7 +443,7 @@ class MemberFlows(object):
                                              constants.LISTENERS]))
         update_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        update_member_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        update_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return update_member_flow
 
@@ -489,6 +489,6 @@ class MemberFlows(object):
                                              constants.LISTENERS)))
         create_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        create_member_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        create_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_member_flow

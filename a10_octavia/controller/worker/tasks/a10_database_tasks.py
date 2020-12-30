@@ -736,7 +736,7 @@ class GetFlavorData(BaseDatabaseTask):
                 return self._format_keys(flavor_data)
 
 
-class UpdateVThunderUpdatedAt(BaseDatabaseTask):
+class SetThunderUpdatedAt(BaseDatabaseTask):
 
     def execute(self, vthunder):
         try:

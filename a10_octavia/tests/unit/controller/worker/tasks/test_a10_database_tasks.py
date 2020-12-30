@@ -489,8 +489,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         ret_val = flavor_task.execute(LB)
         self.assertEqual(ret_val, {})
 
-    def test_UpdateVThunderUpdatedAt_execute_update(self):
-        db_task = task.UpdateVThunderUpdatedAt()
+    def test_SetThunderUpdatedAt_execute_update(self):
+        db_task = task.SetThunderUpdatedAt()
         vthunder = copy.deepcopy(VTHUNDER)
         db_task.vthunder_repo.update = mock.Mock()
         db_task.execute(vthunder)

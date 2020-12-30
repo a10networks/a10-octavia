@@ -51,7 +51,7 @@ class ListenerFlows(object):
                                                constants.LISTENER]))
         create_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        create_listener_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        create_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 
@@ -96,7 +96,7 @@ class ListenerFlows(object):
             requires=constants.LOADBALANCER))
         delete_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        delete_listener_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        delete_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
@@ -120,7 +120,7 @@ class ListenerFlows(object):
             requires=constants.LOADBALANCER))
         delete_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        delete_listener_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        delete_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
@@ -148,7 +148,7 @@ class ListenerFlows(object):
                                                constants.LISTENER]))
         update_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        update_listener_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        update_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return update_listener_flow
 
@@ -174,7 +174,7 @@ class ListenerFlows(object):
                                                constants.LISTENER]))
         create_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        create_listener_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        create_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 

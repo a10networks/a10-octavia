@@ -79,7 +79,7 @@ class LoadBalancerFlows(object):
                            a10constants.VTHUNDER)))
         lb_create_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        lb_create_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        lb_create_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return lb_create_flow
 
@@ -197,7 +197,7 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        delete_LB_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return (delete_LB_flow, store)
 
@@ -300,7 +300,7 @@ class LoadBalancerFlows(object):
             name="pending_update_to_active",
             requires=a10constants.VTHUNDER,
             inject={"status": constants.ACTIVE}))
-        update_LB_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        update_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return update_LB_flow
 
@@ -347,7 +347,7 @@ class LoadBalancerFlows(object):
             provides=a10constants.STATUS))
         lb_create_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        lb_create_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        lb_create_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return lb_create_flow
 

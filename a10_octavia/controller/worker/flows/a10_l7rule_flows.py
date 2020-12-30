@@ -52,7 +52,7 @@ class L7RuleFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_l7rule_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        create_l7rule_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        create_l7rule_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_l7rule_flow
 
@@ -81,7 +81,7 @@ class L7RuleFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         delete_l7rule_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        delete_l7rule_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        delete_l7rule_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return delete_l7rule_flow
 
@@ -116,6 +116,6 @@ class L7RuleFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_l7rule_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
-        update_l7rule_flow.add(a10_database_tasks.UpdateVThunderUpdatedAt(
+        update_l7rule_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return update_l7rule_flow
