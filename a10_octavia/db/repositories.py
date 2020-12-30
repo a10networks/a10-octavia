@@ -320,6 +320,13 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
 
+    def get_lb_count_by_flavor(self, session, project_id, flavor_id):
+        return session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+                self.model_class.flavor_id == flavor_id,
+                or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                    self.model_class.provisioning_status == consts.ACTIVE)).count()
+
 
 class VRIDRepository(BaseRepository):
     model_class = models.VRID
@@ -375,7 +382,7 @@ class MemberRepository(repo.MemberRepository):
             self.model_class.project_id == project_id).filter(
             and_(self.model_class.ip_address == ip_address,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
-                     self.model_class.provisioning_status == consts.ACTIVE))).count() 
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
 
     def get_pool_count_subnet(self, session, project_ids, subnet_id):
         return session.query(self.model_class.pool_id.distinct()).filter(

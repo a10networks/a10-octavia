@@ -734,3 +734,16 @@ class GetFlavorData(BaseDatabaseTask):
                     id=flavor.flavor_profile_id)
                 flavor_data = json.loads(flavor_profile.flavor_data)
                 return self._format_keys(flavor_data)
+
+
+class CountLoadbalancersWithFlavor(BaseDatabaseTask):
+    def execute(self, loadbalancer):
+        try:
+            return self.loadbalancer_repo.get_lb_count_by_flavor(
+                db_apis.get_session(),
+                loadbalancer.project_id, loadbalancer.flavor_id)
+        except Exception as e:
+            LOG.exception("Failed to get LB count for flavor %s due to %s ",
+                          loadbalancer.flavor_id, str(e))
+            raise e
+        return 0
