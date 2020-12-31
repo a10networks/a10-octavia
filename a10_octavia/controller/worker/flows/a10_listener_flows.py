@@ -130,10 +130,10 @@ class ListenerFlows(object):
         update_listener_flow.add(self.handle_ssl_cert_flow(flow_type='update'))
         update_listener_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
-            provides=constants.FLAVOR))
+            provides=constants.FLAVOR_DATA))
         update_listener_flow.add(virtual_port_tasks.ListenerUpdate(
             requires=[constants.LOADBALANCER, constants.LISTENER,
-                      a10constants.VTHUNDER, constants.FLAVOR]))
+                      a10constants.VTHUNDER, constants.FLAVOR_DATA]))
         update_listener_flow.add(database_tasks.UpdateListenerInDB(
             requires=[constants.LISTENER, constants.UPDATE_DICT]))
         update_listener_flow.add(a10_database_tasks.

@@ -85,7 +85,6 @@ class NatPoolDelete(task.Task):
 
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder, lb_count, flavor_data=None):
-        device_pool = None
         if lb_count <= 1:
             if flavor_data:
                 natpool_flavor_list = flavor_data.get('nat_pool_list')
