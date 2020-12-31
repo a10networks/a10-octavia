@@ -15,7 +15,7 @@
 
 TYPE_DICT = {
     "HOST_NAME": "HTTP::host",
-    "PATH": "HTTP::uri",
+    "PATH": "HTTP::path",
     "FILE_TYPE": "HTTP::uri endswith",
     "HEADER": "HTTP::header",
     "COOKIE": "HTTP::cookie"
@@ -76,9 +76,9 @@ class PolicyUtil(object):
         # rule string static - required for file type rules only
         if l7rule.type == "FILE_TYPE":
             if l7rule.compare_type == "REGEX":
-                ruleString = "([HTTP::uri] matches_regex"
+                ruleString = "([HTTP::path] matches_regex"
             else:
-                ruleString = "([HTTP::uri] ends_with"
+                ruleString = "([HTTP::path] ends_with"
 
         # value
         value_string = l7rule.value
