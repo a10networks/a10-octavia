@@ -110,7 +110,7 @@ class NatPoolDelete(task.Task):
                         self.axapi_client.nat.pool.delete(pool_name)
                     except(acos_errors.ACOSException) as e:
                         LOG.exception("Failed to delete Nat-pool with name %s due to %s",
-                                    pool_name, str(e))
+                                      pool_name, str(e))
         else:
             LOG.warning("Cannot delete Nat-pool(s) in flavor %s as "
                         "they are in use by another loadbalancer(s)", loadbalancer.flavor_id)

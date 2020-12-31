@@ -30,7 +30,8 @@ LOG = logging.getLogger(__name__)
 
 class ListenersParent(object):
 
-    def set(self, set_method, loadbalancer, listener, vthunder, flavor_data=None, ssl_template=None):
+    def set(self, set_method, loadbalancer, listener, vthunder,
+            flavor_data=None, ssl_template=None):
         listener.load_balancer = loadbalancer
         listener.protocol = openstack_mappings.virtual_port_protocol(
             self.axapi_client, listener.protocol).lower()
