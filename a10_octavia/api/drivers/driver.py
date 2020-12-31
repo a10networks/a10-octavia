@@ -241,6 +241,30 @@ class A10ProviderDriver(driver_base.ProviderDriver):
     def validate_flavor(self, flavor_dict):
         try:
             validate(flavor_dict, flavor_schema.SUPPORTED_FLAVOR_SCHEMA)
+
+            # validate flavor for slb objects
+            # Didn't use loop here in case we may need different checks for objects in the future
+            if 'virtual-server' in flavor_dict:
+                flavor = flavor_dict['virtual-server']
+                if 'name' in flavor:
+                    raise Exception('axapi key \'name\' is not allowed')
+            if 'virtual-port' in flavor_dict:
+                flavor = flavor_dict['virtual-port']
+                if 'name' in flavor:
+                    raise Exception('axapi key \'name\' is not allowed')
+            if 'service-group' in flavor_dict:
+                flavor = flavor_dict['service-group']
+                if 'name' in flavor:
+                    raise Exception('axapi key \'name\' is not allowed')
+            if 'server' in flavor_dict:
+                flavor = flavor_dict['server']
+                if 'name' in flavor:
+                    raise Exception('axapi key \'name\' is not allowed')
+            if 'health-monitor' in flavor_dict:
+                flavor = flavor_dict['health-monitor']
+                if 'name' in flavor:
+                    raise Exception('axapi key \'name\' is not allowed')
+
         except js_exceptions.ValidationError as e:
             error_object = ''
             if e.relative_path:
