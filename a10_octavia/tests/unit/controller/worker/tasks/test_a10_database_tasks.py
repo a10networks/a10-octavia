@@ -488,3 +488,10 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         flavor_task.flavor_profile_repo.get.return_value = flavor_prof
         ret_val = flavor_task.execute(LB)
         self.assertEqual(ret_val, {})
+
+    def test_lb_count_according_to_flavor(self):
+        mock_count_lb = task.CountLoadbalancersWithFlavor()
+        mock_count_lb.loadbalancer_repo.get_lb_count_by_flavor = mock.Mock()
+        mock_count_lb.loadbalancer_repo.get_lb_count_by_flavor.return_value = 2
+        lb_count = mock_count_lb.execute(LB)
+        self.assertEqual(2, lb_count)

@@ -113,3 +113,45 @@ class TestHandlerNatPoolTasks(base.BaseTaskTestCase):
         self.client_mock.nat.pool.get.return_value = device_pool
         mock_nat_pool_task.execute(LB, vthunder, flavor_data=flavor)
         self.client_mock.nat.pool.create.not_called()
+
+    def test_delete_nat_pool_when_only_one_virtual_server_uses_it(self):
+        flavor = {u'nat_pool': {u'start_address': u'172.16.1.101', u'end_address': u'172.16.1.108',
+                                u'netmask': u'/24', u'gateway': u'172.16.1.1',
+                                u'pool_name': u'pool1'}}
+
+        vthunder = copy.deepcopy(VTHUNDER)
+        mock_nat_pool_task = task.NatPoolDelete()
+        lb_count = 1
+        mock_nat_pool_task.axapi_client = self.client_mock
+        mock_nat_pool_task.execute(LB, vthunder, lb_count, flavor_data=flavor)
+        args, kwargs = self.client_mock.nat.pool.delete.call_args
+        self.assertIn('pool1', args)
+
+    def test_delete_nat_pool_when_multiple_virtual_servers_use_it(self):
+        flavor = {u'nat_pool': {u'start_address': u'172.16.1.101', u'end_address': u'172.16.1.108',
+                                u'netmask': u'/24', u'gateway': u'172.16.1.1',
+                                u'pool_name': u'pool1'}}
+
+        vthunder = copy.deepcopy(VTHUNDER)
+        mock_nat_pool_task = task.NatPoolDelete()
+        lb_count = 2
+        mock_nat_pool_task.axapi_client = self.client_mock
+        task_path = "a10_octavia.controller.worker.tasks.nat_pool_tasks"
+        log_message = str("Cannot delete Nat-pool(s) in flavor None as they are in use by "
+                          "another loadbalancer(s)")
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
+        with self.assertLogs(task_path, level='WARN') as cm:
+            mock_nat_pool_task.execute(LB, vthunder, lb_count, flavor_data=flavor)
+            self.assertEqual(expected_log, cm.output)
+
+    def test_delete_nat_pool_when_virtual_port_uses_it(self):
+        flavor = {u'nat_pool': {u'start_address': u'172.16.1.101', u'end_address': u'172.16.1.108',
+                                u'netmask': u'/24', u'gateway': u'172.16.1.1',
+                                u'pool_name': u'pool1'}}
+
+        vthunder = copy.deepcopy(VTHUNDER)
+        mock_nat_pool_task = task.NatPoolDelete()
+        lb_count = 1
+        mock_nat_pool_task.axapi_client = self.client_mock
+        mock_nat_pool_task.execute(LB, vthunder, lb_count, flavor_data=flavor)
+        self.client_mock.nat.pool.delete.not_called()
