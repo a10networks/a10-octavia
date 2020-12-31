@@ -7,6 +7,7 @@ from sqlalchemy import pool
 
 from alembic import context
 from a10_octavia import a10_config
+from a10_octavia.db import base_models
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -18,8 +19,8 @@ fileConfig(config.config_file_name)
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = None
+target_metadata = base_models.BASE.metadata
+# target_metadata = None
 
 if getattr(config, 'connection', None) is None:
     a10_cfg = a10_config.A10Config()

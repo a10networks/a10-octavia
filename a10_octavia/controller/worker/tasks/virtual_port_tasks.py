@@ -134,6 +134,14 @@ class ListenersParent(object):
                 virtual_port_flavor.pop('name_expressions', None)
                 virtual_port_flavor.update(parsed_exprs)
                 vport_args = {'port': virtual_port_flavor}
+
+            # use default nat-pool pool if pool is not specified
+            if 'port' not in vport_args or 'pool' not in vport_args['port']:
+                pool_flavor = flavor.get('nat_pool')
+                if pool_flavor and 'pool_name' in pool_flavor:
+                    pool_arg = {}
+                    pool_arg['pool'] = pool_flavor['pool_name']
+                    vport_args['port'] = pool_arg
         config_data.update(template_args)
         config_data.update(vport_args)
 

@@ -33,9 +33,8 @@ class NatPoolCreate(task.Task):
             natpool_flavor = flavor_data.get('nat_pool')
             if natpool_flavor_list:
                 for i in range(len(natpool_flavor_list)):
-                    if self.axapi_client.nat.pool.exists(natpool_flavor_list[i]['pool_name']):
-                        device_pool = self.axapi_client.nat.pool.get(
-                            natpool_flavor_list[i]['pool_name'])
+                    device_pool = self.axapi_client.nat.pool.try_get(
+                        natpool_flavor_list[i]['pool_name'])
                     if not (device_pool and
                             (device_pool['pool']['start-address'] ==
                                 natpool_flavor_list[i]['start_address'] and
@@ -54,12 +53,15 @@ class NatPoolCreate(task.Task):
                                           "thunder device %s",
                                           pool_name, vthunder.partition_name, vthunder.ip_address)
                             raise e
+                        except Exception as e:
+                            LOG.exception("Failed to create nat-pool with name %s on partition %s"
+                                          " of thunder device %s",
+                                          pool_name, vthunder.partition_name, vthunder.ip_address)
+                            raise e
                     else:
                         continue
             if natpool_flavor:
-                if self.axapi_client.nat.pool.exists(natpool_flavor['pool_name']):
-                    device_pool = self.axapi_client.nat.pool.get(
-                        natpool_flavor['pool_name'])
+                device_pool = self.axapi_client.nat.pool.try_get(natpool_flavor['pool_name'])
                 if (device_pool and
                     (device_pool['pool']['start-address'] == natpool_flavor['start_address']
                         and device_pool['pool']['end-address'] == natpool_flavor['end_address']
@@ -75,6 +77,11 @@ class NatPoolCreate(task.Task):
                         pool_name, start_address, end_address, netmask, gateway=gateway)
                 except(acos_errors.Exists) as e:
                     LOG.exception("Nat-pool with name %s already exists on partition %s of "
+                                  "thunder device %s",
+                                  pool_name, vthunder.partition_name, vthunder.ip_address)
+                    raise e
+                except Exception as e:
+                    LOG.exception("Failed to create nat-pool with name %s on partition %s of "
                                   "thunder device %s",
                                   pool_name, vthunder.partition_name, vthunder.ip_address)
                     raise e
