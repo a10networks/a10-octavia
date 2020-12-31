@@ -773,7 +773,7 @@ class WriteMemory(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder, write_mem_shared_part=False):
-        if CONF.a10_house_keeping.disable_write_memory:
+        if CONF.a10_house_keeping.use_periodic_write_memory == 'disable':
             try:
                 if vthunder:
                     if vthunder.partition_name != "shared" and not write_mem_shared_part:

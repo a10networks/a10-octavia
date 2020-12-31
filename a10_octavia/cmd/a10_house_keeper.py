@@ -76,7 +76,7 @@ def db_cleanup():
 
 def write_memory():
     """Performs write memory for all thunders"""
-    if not CONF.a10_house_keeping.disable_write_memory:
+    if CONF.a10_house_keeping.use_periodic_write_memory == 'enable':
         interval = CONF.a10_house_keeping.write_mem_interval
         write_memory_perform = house_keeping.WriteMemory()
         LOG.info("Write Memory interval set to %s seconds", interval)

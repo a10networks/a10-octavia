@@ -493,7 +493,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.conf.register_opts(config_options.A10_HOUSE_KEEPING_OPTS,
                                 group=a10constants.A10_HOUSE_KEEPING)
         self.conf.config(group=a10constants.A10_HOUSE_KEEPING,
-                         disable_write_memory=True)
+                         use_periodic_write_memory='disable')
         mock_thunder = copy.deepcopy(VTHUNDER)
         mock_task = task.WriteMemory()
         mock_task.axapi_client = self.client_mock
@@ -504,7 +504,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.conf.register_opts(config_options.A10_HOUSE_KEEPING_OPTS,
                                 group=a10constants.A10_HOUSE_KEEPING)
         self.conf.config(group=a10constants.A10_HOUSE_KEEPING,
-                         disable_write_memory=True)
+                         use_periodic_write_memory='disable')
         thunder = copy.deepcopy(VTHUNDER)
         thunder.partition_name = "testPartition"
         mock_task = task.WriteMemory()
@@ -535,7 +535,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.conf.register_opts(config_options.A10_HOUSE_KEEPING_OPTS,
                                 group=a10constants.A10_HOUSE_KEEPING)
         self.conf.config(group=a10constants.A10_HOUSE_KEEPING,
-                         disable_write_memory=False)
+                         use_periodic_write_memory='enable')
         mock_thunder = copy.deepcopy(VTHUNDER)
         mock_task = task.WriteMemory()
         mock_task.axapi_client = self.client_mock
@@ -546,7 +546,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.conf.register_opts(config_options.A10_HOUSE_KEEPING_OPTS,
                                 group=a10constants.A10_HOUSE_KEEPING)
         self.conf.config(group=a10constants.A10_HOUSE_KEEPING,
-                         disable_write_memory=True)
+                         use_periodic_write_memory='enable')
         ret_val = task.WriteMemory().execute(vthunder=None)
         self.assertIsNone(ret_val)
 

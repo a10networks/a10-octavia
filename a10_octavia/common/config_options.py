@@ -289,9 +289,10 @@ A10_HOUSE_KEEPING_OPTS = [
     cfg.IntOpt('write_mem_interval',
                default=3600,
                help=_('Write Memory interval in seconds')),
-    cfg.BoolOpt('disable_write_memory',
-                default=False,
-                help=_('Set this flag to disable write memory on all thunders'))
+    cfg.StrOpt('use_periodic_write_memory',
+               choices=['enable', 'disable'],
+               default='disable',
+               help=_('Enable to use periodic write memory on all thunders'))
 ]
 
 A10_NOVA_OPTS = [
