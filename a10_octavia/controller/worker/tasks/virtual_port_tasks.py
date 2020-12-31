@@ -137,7 +137,7 @@ class ListenersParent(object):
 
             # use default nat-pool pool if pool is not specified
             if 'port' not in vport_args or 'pool' not in vport_args['port']:
-                pool_flavor = flavor.get('nat_pool')
+                pool_flavor = flavor_data.get('nat_pool')
                 if pool_flavor and 'pool_name' in pool_flavor:
                     pool_arg = {}
                     pool_arg['pool'] = pool_flavor['pool_name']
@@ -187,11 +187,11 @@ class ListenerUpdate(ListenersParent, task.Task):
     """Task to update listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder, flavor=None):
+    def execute(self, loadbalancer, listener, vthunder, flavor_data=None):
         try:
             if listener:
                 self.set(self.axapi_client.slb.virtual_server.vport.replace,
-                         loadbalancer, listener, vthunder, flavor)
+                         loadbalancer, listener, vthunder, flavor_data)
                 LOG.debug("Successfully updated listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update listener: %s", listener.id)
