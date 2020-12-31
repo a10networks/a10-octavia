@@ -29,13 +29,19 @@ LOG = logging.getLogger(__name__)
 
 class LoadBalancerParent(object):
 
-    def set(self, set_method, loadbalancer, **kwargs):
+    def set(self, set_method, loadbalancer, flavor_data=None, **kwargs):
+        config_args = {
+            'arp_disable': CONF.slb.arp_disable,
+            'port_list': kwargs.get('port_list'),
+            'vrid': CONF.slb.default_virtual_server_vrid,
+            'virtual_server': utils.meta(loadbalancer, 'virtual_server', {})
+        }
+
         status = self.axapi_client.slb.UP
         if not loadbalancer.provisioning_status:
             status = self.axapi_client.slb.DOWN
-        vip_meta = utils.meta(loadbalancer, 'virtual_server', {})
-        arp_disable = CONF.slb.arp_disable
-        vrid = CONF.slb.default_virtual_server_vrid
+        config_args['status'] = status
+
         desc = loadbalancer.description
         if not desc:
             desc = None
@@ -43,31 +49,35 @@ class LoadBalancerParent(object):
             desc = ""
         else:
             desc = '"{}"'.format(desc)
+        config_args['description'] = desc
 
-        set_method(
-            loadbalancer.id,
-            loadbalancer.vip.ip_address,
-            arp_disable=arp_disable,
-            description=desc,
-            status=status, vrid=vrid,
-            port_list=kwargs.get('port_list'),
-            axapi_body=vip_meta)
+        if flavor_data:
+            virtual_server_flavor = flavor_data.get('virtual_server')
+            if virtual_server_flavor:
+                name_exprs = virtual_server_flavor.get('name_expressions')
+                if name_exprs:
+                    del virtual_server_flavor['name_expressions']
+                virtual_server_flavor.update(utils.parse_name_expressions(
+                    loadbalancer.name, name_exprs))
+                config_args['virtual_server'].update(virtual_server_flavor)
+
+        set_method(loadbalancer.id, loadbalancer.vip.ip_address, **config_args)
 
 
 class CreateVirtualServerTask(LoadBalancerParent, task.Task):
     """Task to create a virtual server"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, vthunder):
+    def execute(self, loadbalancer, vthunder, flavor_data=None):
         try:
-            self.set(self.axapi_client.slb.virtual_server.create, loadbalancer)
+            self.set(self.axapi_client.slb.virtual_server.create, loadbalancer, flavor_data)
             LOG.debug("Successfully created load balancer: %s", loadbalancer.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to created load balancer: %s", loadbalancer.id)
             raise e
 
     @axapi_client_decorator
-    def revert(self, loadbalancer, vthunder, *args, **kwargs):
+    def revert(self, loadbalancer, vthunder, flavor_data=None, *args, **kwargs):
         try:
             LOG.warning("Reverting creation of load balancer: %s", loadbalancer.id)
             self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
@@ -97,12 +107,12 @@ class UpdateVirtualServerTask(LoadBalancerParent, task.Task):
     """Task to update a virtual server"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, vthunder):
+    def execute(self, loadbalancer, vthunder, flavor_data=None):
         try:
             port_list = self.axapi_client.slb.virtual_server.get(
                 loadbalancer.id)['virtual-server'].get('port-list')
             self.set(self.axapi_client.slb.virtual_server.replace, loadbalancer,
-                     port_list=port_list)
+                     port_list=port_list, flavor_data=flavor_data)
             LOG.debug("Successfully updated load balancer: %s", loadbalancer.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update load balancer: %s", loadbalancer.id)

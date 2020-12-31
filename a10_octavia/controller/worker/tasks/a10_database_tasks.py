@@ -14,6 +14,7 @@
 
 
 from datetime import datetime
+import json
 import sqlalchemy
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -48,6 +49,8 @@ class BaseDatabaseTask(task.Task):
         self.loadbalancer_repo = a10_repo.LoadBalancerRepository()
         self.vip_repo = repo.VipRepository()
         self.listener_repo = repo.ListenerRepository()
+        self.flavor_repo = repo.FlavorRepository()
+        self.flavor_profile_repo = repo.FlavorProfileRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -122,7 +125,8 @@ class CheckExistingProjectToThunderMappedEntries(BaseDatabaseTask):
                 parent_project_id = utils.get_parent_project(
                     vthunder_config.project_id)
                 if parent_project_id:
-                    vthunder_config.partition_name = parent_project_id[:14]
+                    if parent_project_id != 'default':
+                        vthunder_config.partition_name = parent_project_id[:14]
                 else:
                     LOG.error(
                         "The parent project for project %s does not exist. ",
@@ -180,7 +184,8 @@ class CheckExistingThunderToProjectMappedEntries(BaseDatabaseTask):
             config_ip_addr_partition = '{}:{}'.format(
                 vthunder_config.ip_address, vthunder_config.partition_name)
             if existing_ip_addr_partition == config_ip_addr_partition:
-                if vthunder.project_id != loadbalancer.project_id:
+                if loadbalancer.project_id not in (vthunder.project_id,
+                                                   utils.get_parent_project(vthunder.project_id)):
                     raise exceptions.ProjectInUseByExistingThunderError(
                         config_ip_addr_partition, vthunder.project_id, loadbalancer.project_id)
 
@@ -692,3 +697,40 @@ class GetChildProjectsOfParentPartition(BaseDatabaseTask):
                     "Failed to fetch list of projects, if multi-tenancy and use parent partition "
                     "is enabled due to %s", str(e))
                 raise e
+
+
+class GetFlavorData(BaseDatabaseTask):
+
+    def _flavor_search(self, lb_resource):
+        if hasattr(lb_resource, 'flavor_id'):
+            return lb_resource.flavor_id
+        elif hasattr(lb_resource, 'pool'):
+            return self._flavor_search(lb_resource.pool)
+        elif hasattr(lb_resource, 'load_balancer'):
+            return self._flavor_search(lb_resource.load_balancer)
+        return None
+
+    def _format_keys(self, flavor_data):
+        if type(flavor_data) is list:
+            item_list = []
+            for item in flavor_data:
+                item_list.append(self._format_keys(item))
+            return item_list
+        elif type(flavor_data) is dict:
+            item_dict = {}
+            for k, v in flavor_data.items():
+                item_dict[k.replace('-', '_')] = self._format_keys(v)
+            return item_dict
+        else:
+            return flavor_data
+
+    def execute(self, lb_resource):
+        flavor_id = self._flavor_search(lb_resource)
+        if flavor_id:
+            flavor = self.flavor_repo.get(db_apis.get_session(), id=flavor_id)
+            if flavor and flavor.flavor_profile_id:
+                flavor_profile = self.flavor_profile_repo.get(
+                    db_apis.get_session(),
+                    id=flavor.flavor_profile_id)
+                flavor_data = json.loads(flavor_profile.flavor_data)
+                return self._format_keys(flavor_data)

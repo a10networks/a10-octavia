@@ -127,8 +127,12 @@ class ListenerFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         update_listener_flow.add(self.handle_ssl_cert_flow(flow_type='update'))
+        update_listener_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LISTENER},
+            provides=constants.FLAVOR))
         update_listener_flow.add(virtual_port_tasks.ListenerUpdate(
-            requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
+            requires=[constants.LOADBALANCER, constants.LISTENER,
+                      a10constants.VTHUNDER, constants.FLAVOR]))
         update_listener_flow.add(database_tasks.UpdateListenerInDB(
             requires=[constants.LISTENER, constants.UPDATE_DICT]))
         update_listener_flow.add(a10_database_tasks.
@@ -149,8 +153,12 @@ class ListenerFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         create_listener_flow.add(self.handle_ssl_cert_flow(flow_type='create'))
+        create_listener_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LISTENER},
+            provides=constants.FLAVOR))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
-            requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
+            requires=[constants.LOADBALANCER, constants.LISTENER,
+                      a10constants.VTHUNDER, constants.FLAVOR]))
         create_listener_flow.add(a10_database_tasks.
                                  MarkLBAndListenerActiveInDB(
                                      requires=[constants.LOADBALANCER,

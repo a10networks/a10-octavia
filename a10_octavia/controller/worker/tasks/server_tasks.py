@@ -32,11 +32,21 @@ class MemberCreate(task.Task):
     """Task to create a member and associate to pool"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool, member_count_ip):
+    def execute(self, member, vthunder, pool, member_count_ip, flavor=None):
         server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         server_args = utils.meta(member, 'server', {})
-        server_args['conn-limit'] = CONF.server.conn_limit
-        server_args['conn-resume'] = CONF.server.conn_resume
+        server_args = utils.dash_to_underscore(server_args)
+        server_args['conn_limit'] = CONF.server.conn_limit
+        server_args['conn_resume'] = CONF.server.conn_resume
+        # overwrite options from flavor
+        if flavor:
+            server_flavor = flavor.get('server')
+            if server_flavor:
+                name_exprs = server_flavor.get('name_expressions')
+                parsed_exprs = utils.parse_name_expressions(member.name, name_exprs)
+                server_flavor.pop('name_expressions', None)
+                server_args.update(server_flavor)
+                server_args.update(parsed_exprs)
         server_args = {'server': server_args}
 
         server_temp = {}
@@ -56,15 +66,24 @@ class MemberCreate(task.Task):
             try:
                 self.axapi_client.slb.server.create(server_name, member.ip_address, status=status,
                                                     server_templates=server_temp,
-                                                    axapi_args=server_args)
+                                                    **server_args)
                 LOG.debug("Successfully created member: %s", member.id)
             except (acos_errors.Exists, acos_errors.AddressSpecifiedIsInUse):
                 self.axapi_client.slb.server.update(server_name, member.ip_address, status=status,
                                                     server_templates=server_temp,
-                                                    axapi_args=server_args)
+                                                    **server_args)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to create member: %s", member.id)
             raise e
+
+        try:
+            protocol = openstack_mappings.service_group_protocol(
+                self.axapi_client, pool.protocol)
+            self.axapi_client.slb.server.port.create(server_name, member.protocol_port, protocol,
+                                                     weight=member.weight)
+        except (acos_errors.ACOSException, exceptions.ConnectionError):
+            LOG.exception("Failed add port in member %s", member.id)
+            # no raise, it will still work even no port. but options for port will missing
 
         try:
             self.axapi_client.slb.service_group.member.create(
@@ -127,11 +146,21 @@ class MemberUpdate(task.Task):
     """Task to update member"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder):
+    def execute(self, member, vthunder, pool, flavor=None):
         server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         server_args = utils.meta(member, 'server', {})
-        server_args['conn-limit'] = CONF.server.conn_limit
-        server_args['conn-resume'] = CONF.server.conn_resume
+        server_args = utils.dash_to_underscore(server_args)
+        server_args['conn_limit'] = CONF.server.conn_limit
+        server_args['conn_resume'] = CONF.server.conn_resume
+        # overwrite options from flavor
+        if flavor:
+            server_flavor = flavor.get('server')
+            if server_flavor:
+                name_exprs = server_flavor.get('name_expressions')
+                parsed_exprs = utils.parse_name_expressions(member.name, name_exprs)
+                server_flavor.pop('name_expressions', None)
+                server_args.update(server_flavor)
+                server_args.update(parsed_exprs)
         server_args = {'server': server_args}
 
         template_server = CONF.server.template_server
@@ -139,19 +168,36 @@ class MemberUpdate(task.Task):
             template_server = None
         server_temp = {'template-server': template_server}
 
+        port_list = None
+        curr_args = self.axapi_client.slb.server.get(server_name)
+        if 'server' in curr_args:
+            if 'port-list' in curr_args['server']:
+                port_list = curr_args['server']['port-list']
+
         if not member.enabled:
             status = False
         else:
             status = True
 
         try:
+            port_list = self.axapi_client.slb.server.get(server_name)['server'].get('port-list')
             self.axapi_client.slb.server.replace(server_name, member.ip_address, status=status,
                                                  server_templates=server_temp,
-                                                 axapi_args=server_args)
+                                                 port_list=port_list,
+                                                 **server_args)
             LOG.debug("Successfully updated member: %s", member.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update member: %s", member.id)
             raise e
+
+        try:
+            protocol = openstack_mappings.service_group_protocol(
+                self.axapi_client, pool.protocol)
+            self.axapi_client.slb.server.port.update(server_name, member.protocol_port, protocol,
+                                                     weight=member.weight)
+        except (acos_errors.ACOSException, exceptions.ConnectionError):
+            LOG.exception("Failed add port in member %s", member.id)
+            # no raise, it will still work even no port. but options for port will missing
 
 
 class MemberDeletePool(task.Task):

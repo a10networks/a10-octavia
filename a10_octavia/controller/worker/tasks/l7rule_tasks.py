@@ -61,7 +61,7 @@ class L7RuleParent(object):
             aflex_scripts.append({"aflex": filename})
         else:
             aflex_scripts = [{"aflex": filename}]
-        kargs["aflex-scripts"] = aflex_scripts
+        kargs["aflex_scripts"] = aflex_scripts
 
         try:
             self.axapi_client.slb.virtual_server.vport.update(
@@ -138,7 +138,7 @@ class DeleteL7Rule(task.Task):
             aflex_scripts.append({"aflex": filename})
         else:
             aflex_scripts = [{"aflex": filename}]
-        kargs["aflex-scripts"] = aflex_scripts
+        kargs["aflex_scripts"] = aflex_scripts
 
         try:
             self.axapi_client.slb.virtual_server.vport.update(
