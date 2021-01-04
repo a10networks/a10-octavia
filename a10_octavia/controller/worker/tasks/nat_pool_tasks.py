@@ -85,3 +85,32 @@ class NatPoolCreate(task.Task):
                                   "thunder device %s",
                                   pool_name, vthunder.partition_name, vthunder.ip_address)
                     raise e
+
+
+class NatPoolDelete(task.Task):
+    """Task to delete nat pool"""
+
+    @axapi_client_decorator
+    def execute(self, loadbalancer, vthunder, lb_count, flavor_data=None):
+        if lb_count <= 1:
+            if flavor_data:
+                natpool_flavor_list = flavor_data.get('nat_pool_list')
+                natpool_flavor = flavor_data.get('nat_pool')
+                if natpool_flavor_list:
+                    for i in range(len(natpool_flavor_list)):
+                        pool_name = natpool_flavor_list[i]['pool_name']
+                        try:
+                            self.axapi_client.nat.pool.delete(pool_name)
+                        except(acos_errors.ACOSException) as e:
+                            LOG.exception("Failed to delete Nat-pool with name %s due to %s",
+                                          pool_name, str(e))
+                if natpool_flavor:
+                    pool_name = natpool_flavor['pool_name']
+                    try:
+                        self.axapi_client.nat.pool.delete(pool_name)
+                    except(acos_errors.ACOSException) as e:
+                        LOG.exception("Failed to delete Nat-pool with name %s due to %s",
+                                      pool_name, str(e))
+        else:
+            LOG.warning("Cannot delete Nat-pool(s) in flavor %s as "
+                        "they are in use by another loadbalancer(s)", loadbalancer.flavor_id)
