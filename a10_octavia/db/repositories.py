@@ -319,6 +319,17 @@ class VThunderRepository(BaseRepository):
 
 
 class LoadBalancerRepository(repo.LoadBalancerRepository):
+    thunder_model_class = models.VThunder
+
+    def get_active_lbs_by_thunder(self, session, vthunder):
+        lb_list = []
+        query = session.query(self.model_class).filter(
+            and_(vthunder.loadbalancer_id == self.model_class.id,
+                 self.model_class.provisioning_status == consts.ACTIVE))
+        model_list = query.all()
+        for data in model_list:
+            lb_list.append(data.to_data_model())
+        return lb_list
 
     def get_lb_count_by_subnet(self, session, project_ids, subnet_id):
         return session.query(self.model_class).join(base_models.Vip).filter(
