@@ -734,3 +734,19 @@ class GetFlavorData(BaseDatabaseTask):
                     id=flavor.flavor_profile_id)
                 flavor_data = json.loads(flavor_profile.flavor_data)
                 return self._format_keys(flavor_data)
+
+
+class SetThunderUpdatedAt(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        try:
+            if vthunder:
+                LOG.debug("Updated the updated_at field for thunder : {}:{}"
+                          .format(vthunder.ip_address, vthunder.partition_name))
+                self.vthunder_repo.update(
+                    db_apis.get_session(),
+                    vthunder.id,
+                    updated_at=datetime.utcnow())
+        except Exception as e:
+            LOG.exception('Failed to set updated_at field for thunder due to: {}'
+                          ', skipping.'.format(str(e)))

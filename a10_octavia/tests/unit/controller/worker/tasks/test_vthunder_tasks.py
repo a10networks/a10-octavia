@@ -490,6 +490,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.assertIsNone(ret_val)
 
     def test_WriteMemory_execute_save_shared_mem(self):
+        self.conf.register_opts(config_options.A10_HOUSE_KEEPING_OPTS,
+                                group=a10constants.A10_HOUSE_KEEPING)
+        self.conf.config(group=a10constants.A10_HOUSE_KEEPING,
+                         use_periodic_write_memory='disable')
         mock_thunder = copy.deepcopy(VTHUNDER)
         mock_task = task.WriteMemory()
         mock_task.axapi_client = self.client_mock
@@ -497,6 +501,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.write_memory.assert_called_with(partition='shared')
 
     def test_WriteMemory_execute_save_specific_partition_mem(self):
+        self.conf.register_opts(config_options.A10_HOUSE_KEEPING_OPTS,
+                                group=a10constants.A10_HOUSE_KEEPING)
+        self.conf.config(group=a10constants.A10_HOUSE_KEEPING,
+                         use_periodic_write_memory='disable')
         thunder = copy.deepcopy(VTHUNDER)
         thunder.partition_name = "testPartition"
         mock_task = task.WriteMemory()
@@ -506,7 +514,39 @@ class TestVThunderTasks(base.BaseTaskTestCase):
             partition='specified',
             specified_partition='testPartition')
 
+    def test_WriteMemoryHouseKeeper_execute_save_shared_mem(self):
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_task = task.WriteMemoryHouseKeeper()
+        mock_task.axapi_client = self.client_mock
+        mock_task.execute(mock_thunder)
+        self.client_mock.system.action.write_memory.assert_called_with(partition='shared')
+
+    def test_WriteMemoryHouseKeeper_execute_save_specific_partition_mem(self):
+        thunder = copy.deepcopy(VTHUNDER)
+        thunder.partition_name = "testPartition"
+        mock_task = task.WriteMemoryHouseKeeper()
+        mock_task.axapi_client = self.client_mock
+        mock_task.execute(thunder)
+        self.client_mock.system.action.write_memory.assert_called_with(
+            partition='specified',
+            specified_partition='testPartition')
+
+    def test_WriteMemory_execute_not_called(self):
+        self.conf.register_opts(config_options.A10_HOUSE_KEEPING_OPTS,
+                                group=a10constants.A10_HOUSE_KEEPING)
+        self.conf.config(group=a10constants.A10_HOUSE_KEEPING,
+                         use_periodic_write_memory='enable')
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_task = task.WriteMemory()
+        mock_task.axapi_client = self.client_mock
+        mock_task.execute(mock_thunder)
+        self.client_mock.system.action.write_memory.assert_not_called()
+
     def test_WriteMemory_execute_delete_flow_after_error_no_fail(self):
+        self.conf.register_opts(config_options.A10_HOUSE_KEEPING_OPTS,
+                                group=a10constants.A10_HOUSE_KEEPING)
+        self.conf.config(group=a10constants.A10_HOUSE_KEEPING,
+                         use_periodic_write_memory='enable')
         ret_val = task.WriteMemory().execute(vthunder=None)
         self.assertIsNone(ret_val)
 
