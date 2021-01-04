@@ -107,6 +107,7 @@ HANDLE_VRID_MEMBER_SUBFLOW = 'handle-vrid-member-subflow'
 SPARE_VTHUNDER_CREATE = 'spare-vthunder-create'
 WRITE_MEMORY_THUNDER_FLOW = 'write-memory-thunder-flow'
 LB_TO_VTHUNDER_SUBFLOW = 'lb-to-vthunder-subflow'
+LOADBALANCERS_LIST = 'loadbalancers_list'
 VRID_LIST = 'vrid_list'
 RESOURCE_COUNT = 'resource_count'
 
