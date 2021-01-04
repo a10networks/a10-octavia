@@ -783,3 +783,16 @@ class DeleteNatPoolEntry(BaseDatabaseTask):
         else:
             self.nat_pool_repo.delete(db_apis.get_session(), id=nat_pool.id)
             LOG.info("Successfully deleted nat pool entry in database.")
+
+
+class CountLoadbalancersWithFlavor(BaseDatabaseTask):
+    def execute(self, loadbalancer):
+        try:
+            return self.loadbalancer_repo.get_lb_count_by_flavor(
+                db_apis.get_session(),
+                loadbalancer.project_id, loadbalancer.flavor_id)
+        except Exception as e:
+            LOG.exception("Failed to get LB count for flavor %s due to %s ",
+                          loadbalancer.flavor_id, str(e))
+            raise e
+        return 0

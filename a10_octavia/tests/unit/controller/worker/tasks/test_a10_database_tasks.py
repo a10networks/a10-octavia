@@ -531,3 +531,10 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         NAT_POOL.member_ref_count = 1
         db_task.execute(NAT_POOL)
         self.nat_pool_repo.delete(mock.ANY, id=NAT_POOL.id)
+
+    def test_lb_count_according_to_flavor(self):
+        mock_count_lb = task.CountLoadbalancersWithFlavor()
+        mock_count_lb.loadbalancer_repo.get_lb_count_by_flavor = mock.Mock()
+        mock_count_lb.loadbalancer_repo.get_lb_count_by_flavor.return_value = 2
+        lb_count = mock_count_lb.execute(LB)
+        self.assertEqual(2, lb_count)
