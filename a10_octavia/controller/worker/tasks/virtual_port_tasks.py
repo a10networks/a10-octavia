@@ -84,10 +84,11 @@ class ListenersParent(object):
             vport_templates[template_key] = template_vport
 
         template_args = {}
-        if listener.protocol == 'https' and listener.tls_certificate_id:
-            # Adding TERMINATED_HTTPS SSL cert, created in previous task
-            template_args["template_client_ssl"] = listener.id
-        elif listener.protocol.upper() in a10constants.HTTP_TYPE:
+        if listener.protocol.upper() in a10constants.HTTP_TYPE:
+            if listener.protocol == 'https' and listener.tls_certificate_id:
+                # Adding TERMINATED_HTTPS SSL cert, created in previous task
+                template_args["template_client_ssl"] = listener.id
+
             template_http = CONF.listener.template_http
             if template_http and template_http.lower() != 'none':
                 template_key = 'template-http'
