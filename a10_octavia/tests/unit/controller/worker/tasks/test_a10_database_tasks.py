@@ -497,3 +497,55 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         db_task.vthunder_repo.update.assert_called_once_with(mock.ANY,
                                                              vthunder.id,
                                                              updated_at=mock.ANY)
+
+    def test_GetActiveLoadBalancersByThunder_return_empty(self):
+        lb_task = task.GetActiveLoadBalancersByThunder()
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.loadbalancer_id = a10constants.MOCK_LOAD_BALANCER_ID
+        lb_task.loadbalancer_repo.get_active_lbs_by_thunder = mock.Mock()
+        lb_task.loadbalancer_repo.get_active_lbs_by_thunder.return_value = []
+        lb_list = lb_task.execute(vthunder)
+        self.assertEqual(lb_list, [])
+
+    def test_GetActiveLoadBalancersByThunder_return_list(self):
+        lb_task = task.GetActiveLoadBalancersByThunder()
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.loadbalancer_id = a10constants.MOCK_LOAD_BALANCER_ID
+        lb_task.loadbalancer_repo.get_active_lbs_by_thunder = mock.Mock()
+        lb_task.loadbalancer_repo.get_active_lbs_by_thunder.return_value = [LB]
+        lb_list = lb_task.execute(vthunder)
+        self.assertEqual(len(lb_list), 1)
+
+    def test_MarkLoadBalancersPendingUpdateInDB_execute(self):
+        lb_task = task.MarkLoadBalancersPendingUpdateInDB()
+        lb_list = []
+        lb_list.append(LB)
+        lb_task.loadbalancer_repo.update = mock.Mock()
+        lb_task.execute(lb_list)
+        lb_task.loadbalancer_repo.update.assert_called_once_with(mock.ANY,
+                                                                 LB.id,
+                                                                 provisioning_status=mock.ANY)
+
+    def test_MarkLoadBalancersPendingUpdateInDB_execute_for_empty_list(self):
+        lb_task = task.MarkLoadBalancersPendingUpdateInDB()
+        lb_list = []
+        lb_task.loadbalancer_repo.update = mock.Mock()
+        lb_task.execute(lb_list)
+        lb_task.loadbalancer_repo.update.assert_not_called()
+
+    def test_MarkLoadBalancersActiveInDB_execute(self):
+        lb_task = task.MarkLoadBalancersActiveInDB()
+        lb_list = []
+        lb_list.append(LB)
+        lb_task.loadbalancer_repo.update = mock.Mock()
+        lb_task.execute(lb_list)
+        lb_task.loadbalancer_repo.update.assert_called_once_with(mock.ANY,
+                                                                 LB.id,
+                                                                 provisioning_status=mock.ANY)
+
+    def test_MarkLoadBalancersActiveInDB_execute_for_empty_list(self):
+        lb_task = task.MarkLoadBalancersActiveInDB()
+        lb_list = []
+        lb_task.loadbalancer_repo.update = mock.Mock()
+        lb_task.execute(lb_list)
+        lb_task.loadbalancer_repo.update.assert_not_called()
