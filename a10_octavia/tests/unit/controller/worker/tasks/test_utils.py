@@ -118,11 +118,3 @@ class TestUtils(base.TestCase):
     def test_dash_to_underscore(self):
         obj_flavor = utils.dash_to_underscore(DASH_FLAVOR)
         self.assertEqual(UNDERSCORE_FLAVOR, obj_flavor)
-
-    def test_ip_str_to_int(self):
-        ip_int = utils.ip_str_to_int("220.14.5.37")
-        self.assertEqual(ip_int, 3691906341)
-
-    def test_ip_int_to_str(self):
-        ip_str = utils.ip_int_to_str(3691906341)
-        self.assertEqual(ip_str, "220.14.5.37")

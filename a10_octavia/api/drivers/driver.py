@@ -245,14 +245,24 @@ class A10ProviderDriver(driver_base.ProviderDriver):
             # validate nat-pool and nat-pool-list keys
             if 'nat-pool' in flavor_dict:
                 nat = flavor_dict['nat-pool']
-                if (('pool-name' not in nat or 'start-address' not in nat or
-                     'end-address' not in nat or 'netmask' not in nat)):
-                    raise Exception('nat-pool manditory key missing')
+                if 'pool-name' not in nat:
+                    raise Exception('pool-name is required for nat-pool flavor')
+                if 'start-address' not in nat:
+                    raise Exception('start-address is required for nat-pool flavor')
+                if 'end-address' not in nat:
+                    raise Exception('end-address is required for nat-pool flavor')
+                if 'netmask' not in nat:
+                    raise Exception('netmask is required for nat-pool flavor')
             if 'nat-pool-list' in flavor_dict:
                 for nat in flavor_dict['nat-pool-list']:
-                    if (('pool-name' not in nat or 'start-address' not in nat or
-                         'end-address' not in nat or 'netmask' not in nat)):
-                        raise Exception('nat-pool-list entry manditory key missing')
+                    if 'pool-name' not in nat:
+                        raise Exception('pool-name is required for nat-pool-list flavor')
+                    if 'start-address' not in nat:
+                        raise Exception('start-address is required for nat-pool-list flavor')
+                    if 'end-address' not in nat:
+                        raise Exception('end-address is required for nat-pool-list flavor')
+                    if 'netmask' not in nat:
+                        raise Exception('netmask is required for nat-pool-list flavor')
         except js_exceptions.ValidationError as e:
             error_object = ''
             if e.relative_path:
