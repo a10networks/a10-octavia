@@ -18,6 +18,8 @@ from requests import exceptions
 from taskflow import task
 
 import acos_client.errors as acos_errors
+import socket
+import struct
 
 from a10_octavia.common import openstack_mappings
 from a10_octavia.common import utils as a10_utils
@@ -259,7 +261,6 @@ class MemberFindNatPool(MemberBaseTask):
                     for flavor in (pools_flavor or []):
                         if vport['port']['pool'] == flavor['pool_name']:
                             return flavor
-        return
 
 
 class MemberReserveSubnetAddr(MemberBaseTask):
@@ -271,10 +272,10 @@ class MemberReserveSubnetAddr(MemberBaseTask):
         if nat_pool is None:
             try:
                 addr_list = []
-                start = utils.ip_str_to_int(nat_flavor['start_address'])
-                end = utils.ip_str_to_int(nat_flavor['end_address'])
+                start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
+                end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
                 while start <= end:
-                    addr_list.append(utils.ip_int_to_str(start))
+                    addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
                     start += 1
                 port = self.network_driver.reserve_subnet_addresses(member.subnet_id, addr_list)
                 LOG.debug("Successfully allocate addresses for nat pool %s on port %s",

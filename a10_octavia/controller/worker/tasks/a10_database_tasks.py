@@ -738,14 +738,15 @@ class GetFlavorData(BaseDatabaseTask):
 
 
 class GetNatPoolEntry(BaseDatabaseTask):
+
     def execute(self, member, nat_flavor=None):
         if nat_flavor and 'pool_name' in nat_flavor:
             return self.nat_pool_repo.get(db_apis.get_session(), name=nat_flavor['pool_name'],
                                           subnet_id=member.subnet_id)
-        return
 
 
 class UpdateNatPoolDB(BaseDatabaseTask):
+
     def execute(self, member, nat_flavor=None, nat_pool=None, subnet_port=None):
         if nat_flavor is None:
             return
@@ -772,6 +773,7 @@ class UpdateNatPoolDB(BaseDatabaseTask):
 
 
 class DeleteNatPoolEntry(BaseDatabaseTask):
+
     def execute(self, nat_pool=None):
         if nat_pool is None:
             return
@@ -786,6 +788,7 @@ class DeleteNatPoolEntry(BaseDatabaseTask):
 
 
 class CountLoadbalancersWithFlavor(BaseDatabaseTask):
+
     def execute(self, loadbalancer):
         try:
             return self.loadbalancer_repo.get_lb_count_by_flavor(
