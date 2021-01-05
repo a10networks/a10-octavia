@@ -288,6 +288,7 @@ A10_HOUSE_KEEPING_OPTS = [
                       ' rotation')),
     cfg.IntOpt('write_mem_interval',
                default=3600,
+               min=300,
                help=_('Write Memory interval in seconds')),
     cfg.StrOpt('use_periodic_write_memory',
                choices=['enable', 'disable'],
