@@ -44,10 +44,10 @@ class NatPoolCreate(task.Task):
                         start_address = natpool_flavor_list[i]['start_address']
                         end_address = natpool_flavor_list[i]['end_address']
                         netmask = natpool_flavor_list[i]['netmask']
-                        gateway = natpool_flavor_list[i]['gateway']
                         try:
                             self.axapi_client.nat.pool.create(
-                                pool_name, start_address, end_address, netmask, gateway=gateway)
+                                pool_name, start_address, end_address, netmask,
+                                **natpool_flavor_list[i])
                         except(acos_errors.Exists) as e:
                             LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                           "thunder device %s",
@@ -58,8 +58,6 @@ class NatPoolCreate(task.Task):
                                           " of thunder device %s",
                                           pool_name, vthunder.partition_name, vthunder.ip_address)
                             raise e
-                    else:
-                        continue
             if natpool_flavor:
                 device_pool = self.axapi_client.nat.pool.try_get(natpool_flavor['pool_name'])
                 if (device_pool and
@@ -71,10 +69,9 @@ class NatPoolCreate(task.Task):
                 start_address = natpool_flavor['start_address']
                 end_address = natpool_flavor['end_address']
                 netmask = natpool_flavor['netmask']
-                gateway = natpool_flavor['gateway']
                 try:
                     self.axapi_client.nat.pool.create(
-                        pool_name, start_address, end_address, netmask, gateway=gateway)
+                        pool_name, start_address, end_address, netmask, **natpool_flavor)
                 except(acos_errors.Exists) as e:
                     LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                   "thunder device %s",
@@ -85,6 +82,27 @@ class NatPoolCreate(task.Task):
                                   "thunder device %s",
                                   pool_name, vthunder.partition_name, vthunder.ip_address)
                     raise e
+
+    @axapi_client_decorator
+    def revert(self, loadbalancer, vthunder, flavor_data=None, *args, **kwargs):
+        natpool_flavor_list = flavor_data.get('nat_pool_list')
+        natpool_flavor = flavor_data.get('nat_pool')
+        try:
+            if natpool_flavor_list:
+                for i in range(len(natpool_flavor_list)):
+                    pool_name = natpool_flavor_list[i]['pool_name']
+                    LOG.warning("Reverting creation of nat-pool: %s", pool_name)
+                    self.axapi_client.nat.pool.delete(pool_name)
+            if natpool_flavor:
+                pool_name = natpool_flavor['pool_name']
+                LOG.warning("Reverting creation of nat-pool: %s", pool_name)
+                self.axapi_client.nat.pool.delete(pool_name)
+        except ConnectionError:
+            LOG.exception(
+                "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
+        except Exception as e:
+            LOG.exception("Failed to revert creation of the nat-pool due to: %s",
+                          str(e))
 
 
 class NatPoolDelete(task.Task):
