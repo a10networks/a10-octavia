@@ -15,6 +15,7 @@
 
 from concurrent import futures
 import datetime
+from datetime import datetime as dt_funcs
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -105,7 +106,7 @@ class WriteMemory(object):
 
     def perform_memory_writes(self):
         write_interval = datetime.timedelta(seconds=CONF.a10_house_keeping.write_mem_interval)
-        curr_time_stamp = datetime.datetime.utcnow()
+        curr_time_stamp = dt_funcs.utcnow()
         expiry_time = curr_time_stamp - write_interval
         if (self.prev_run_time and int(self.prev_run_time.strftime("%s")) <
                 int(expiry_time.strftime("%s"))):
