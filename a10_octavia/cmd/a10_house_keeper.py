@@ -13,11 +13,11 @@
 #    under the License.
 
 
-import datetime
 import signal
 import sys
 import threading
 import time
+from datetime import datetime
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -82,7 +82,7 @@ def write_memory():
         LOG.info("Write Memory interval set to %s seconds", interval)
         while not write_memory_thread_event.is_set():
             LOG.info("Initiating the write memory operation for all thunders...")
-            timestamp = datetime.datetime.utcnow()
+            timestamp = datetime.utcnow()
             LOG.debug("Starting write memory thread ar %s", str(timestamp))
             try:
                 write_memory_perform.perform_memory_writes()
@@ -104,7 +104,7 @@ def main():
 
     gmr.TextGuruMeditation.setup_autorun(version)
 
-    timestamp = datetime.datetime.utcnow()
+    timestamp = datetime.utcnow()
     LOG.info("Starting house keeping at %s", str(timestamp))
 
     # Thread to perform spare amphora check
