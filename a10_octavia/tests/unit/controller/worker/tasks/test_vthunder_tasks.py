@@ -24,6 +24,7 @@ except ImportError:
 from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
 
+from octavia.common import data_models as o_data_models
 from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron import utils
 
@@ -134,6 +135,8 @@ VCS_DEVICE1_FAILED = {
         }
     }
 }
+
+LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
 
 
 class TestVThunderTasks(base.BaseTaskTestCase):
@@ -516,17 +519,23 @@ class TestVThunderTasks(base.BaseTaskTestCase):
 
     def test_WriteMemoryHouseKeeper_execute_save_shared_mem(self):
         mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_thunder.loadbalancer_id = a10constants.MOCK_LOAD_BALANCER_ID
+        lb_list = []
+        lb_list.append(LB)
         mock_task = task.WriteMemoryHouseKeeper()
         mock_task.axapi_client = self.client_mock
-        mock_task.execute(mock_thunder)
+        mock_task.execute(mock_thunder, lb_list)
         self.client_mock.system.action.write_memory.assert_called_with(partition='shared')
 
     def test_WriteMemoryHouseKeeper_execute_save_specific_partition_mem(self):
         thunder = copy.deepcopy(VTHUNDER)
+        thunder.loadbalancer_id = a10constants.MOCK_LOAD_BALANCER_ID
+        lb_list = []
+        lb_list.append(LB)
         thunder.partition_name = "testPartition"
         mock_task = task.WriteMemoryHouseKeeper()
         mock_task.axapi_client = self.client_mock
-        mock_task.execute(thunder)
+        mock_task.execute(thunder, lb_list)
         self.client_mock.system.action.write_memory.assert_called_with(
             partition='specified',
             specified_partition='testPartition')

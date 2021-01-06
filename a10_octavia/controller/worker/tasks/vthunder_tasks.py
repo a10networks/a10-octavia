@@ -809,11 +809,11 @@ class WriteMemoryHouseKeeper(VThunderBaseTask):
                     LOG.info("Performing write memory for thunder - {}:{}"
                              .format(vthunder.ip_address, "shared"))
                     self.axapi_client.system.action.write_memory(partition="shared")
-        except acos_errors.ACOSException as e:
+        except acos_errors.ACOSException:
             LOG.warning('Failed to write memory on thunder device: {} due to ACOSException'
                         '.... skipping'.format(vthunder.ip_address))
             self._revert_lb_to_active(vthunder, loadbalancers_list)
-        except req_exceptions.ConnectionError as e:
+        except req_exceptions.ConnectionError:
             LOG.warning('Failed to write memory on thunder device: {} due to ConnectionError'
                         '.... skipping'.format(vthunder.ip_address))
             self._revert_lb_to_active(vthunder, loadbalancers_list)
