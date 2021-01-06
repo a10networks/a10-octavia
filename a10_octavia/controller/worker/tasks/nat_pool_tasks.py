@@ -38,14 +38,8 @@ class NatPoolCreate(task.Task):
                     if not (device_pool and
                             (device_pool['pool']['start-address'] == nat_pool['start_address'] and
                                 device_pool['pool']['end-address'] == nat_pool['end_address'])):
-                        pool_name = nat_pool.pop('pool_name')
-                        start_address = nat_pool.pop('start_address')
-                        end_address = nat_pool.pop('end_address')
-                        netmask = nat_pool.pop('netmask')
-                        pool_args = {'pool': nat_pool}
                         try:
-                            self.axapi_client.nat.pool.create(
-                                pool_name, start_address, end_address, netmask, **pool_args)
+                            self.axapi_client.nat.pool.create(**nat_pool)
                         except(acos_errors.Exists) as e:
                             LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                           "thunder device %s",
@@ -63,14 +57,8 @@ class NatPoolCreate(task.Task):
                         and device_pool['pool']['end-address'] == natpool_flavor['end_address']
                      )):
                     return
-                pool_name = natpool_flavor.pop('pool_name')
-                start_address = natpool_flavor.pop('start_address')
-                end_address = natpool_flavor.pop('end_address')
-                netmask = natpool_flavor.pop('netmask')
-                pool_args = {'pool': natpool_flavor}
                 try:
-                    self.axapi_client.nat.pool.create(
-                        pool_name, start_address, end_address, netmask, **pool_args)
+                    self.axapi_client.nat.pool.create(**natpool_flavor)
                 except(acos_errors.Exists) as e:
                     LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                   "thunder device %s",
