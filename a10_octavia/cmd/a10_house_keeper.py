@@ -13,11 +13,11 @@
 #    under the License.
 
 
+from datetime import datetime
 import signal
 import sys
 import threading
 import time
-from datetime import datetime
 
 from oslo_config import cfg
 from oslo_log import log as logging

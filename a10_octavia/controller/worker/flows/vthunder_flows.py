@@ -398,7 +398,7 @@ class VThunderFlows(object):
                     partition=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION)))
             write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
                 requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST,
-                    a10constants.WRITE_MEM_SHARED_PART),
+                          a10constants.WRITE_MEM_SHARED_PART),
                 rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
                 name='{flow}-{partition}-{id}'.format(
                     id=vthunder.vthunder_id,
