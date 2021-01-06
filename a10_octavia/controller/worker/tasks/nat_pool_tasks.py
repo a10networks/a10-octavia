@@ -43,12 +43,14 @@ class NatPoolCreate(task.Task):
                         except(acos_errors.Exists) as e:
                             LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                           "thunder device %s",
-                                          pool_name, vthunder.partition_name, vthunder.ip_address)
+                                          nat_pool['pool_name'], vthunder.partition_name,
+                                          vthunder.ip_address)
                             raise e
                         except Exception as e:
                             LOG.exception("Failed to create nat-pool with name %s on partition %s"
                                           " of thunder device %s",
-                                          pool_name, vthunder.partition_name, vthunder.ip_address)
+                                          nat_pool['pool_name'], vthunder.partition_name,
+                                          vthunder.ip_address)
                             raise e
             if natpool_flavor:
                 device_pool = self.axapi_client.nat.pool.try_get(natpool_flavor['pool_name'])
@@ -62,12 +64,14 @@ class NatPoolCreate(task.Task):
                 except(acos_errors.Exists) as e:
                     LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                   "thunder device %s",
-                                  pool_name, vthunder.partition_name, vthunder.ip_address)
+                                  natpool_flavor['pool_name'], vthunder.partition_name,
+                                  vthunder.ip_address)
                     raise e
                 except Exception as e:
                     LOG.exception("Failed to create nat-pool with name %s on partition %s of "
                                   "thunder device %s",
-                                  pool_name, vthunder.partition_name, vthunder.ip_address)
+                                  natpool_flavor['pool_name'], vthunder.partition_name,
+                                  vthunder.ip_address)
                     raise e
 
     @axapi_client_decorator
