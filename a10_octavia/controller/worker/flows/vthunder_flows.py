@@ -390,14 +390,15 @@ class VThunderFlows(object):
             write_memory_flow.add(a10_database_tasks.MarkLoadBalancersPendingUpdateInDB(
                 requires=a10constants.LOADBALANCERS_LIST))
             write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
-                requires=a10constants.VTHUNDER,
+                requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST),
                 rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
                 name='{flow}-{partition}-{id}'.format(
                     id=vthunder.vthunder_id,
                     flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
                     partition=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION)))
             write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
-                requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART),
+                requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST,
+                    a10constants.WRITE_MEM_SHARED_PART),
                 rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
                 name='{flow}-{partition}-{id}'.format(
                     id=vthunder.vthunder_id,
