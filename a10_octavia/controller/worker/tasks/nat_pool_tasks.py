@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_log import log as logging
+from requests.exceptions import ConnectionError
 from taskflow import task
 
 import acos_client.errors as acos_errors
@@ -32,22 +33,19 @@ class NatPoolCreate(task.Task):
             natpool_flavor_list = flavor_data.get('nat_pool_list')
             natpool_flavor = flavor_data.get('nat_pool')
             if natpool_flavor_list:
-                for i in range(len(natpool_flavor_list)):
-                    device_pool = self.axapi_client.nat.pool.try_get(
-                        natpool_flavor_list[i]['pool_name'])
+                for nat_pool in natpool_flavor_list:
+                    device_pool = self.axapi_client.nat.pool.try_get(nat_pool['pool_name'])
                     if not (device_pool and
-                            (device_pool['pool']['start-address'] ==
-                                natpool_flavor_list[i]['start_address'] and
-                                device_pool['pool']['end-address'] ==
-                                natpool_flavor_list[i]['end_address'])):
-                        pool_name = natpool_flavor_list[i]['pool_name']
-                        start_address = natpool_flavor_list[i]['start_address']
-                        end_address = natpool_flavor_list[i]['end_address']
-                        netmask = natpool_flavor_list[i]['netmask']
+                            (device_pool['pool']['start-address'] == nat_pool['start_address'] and
+                                device_pool['pool']['end-address'] == nat_pool['end_address'])):
+                        pool_name = nat_pool.pop('pool_name')
+                        start_address = nat_pool.pop('start_address')
+                        end_address = nat_pool.pop('end_address')
+                        netmask = nat_pool.pop('netmask')
+                        pool_args = {'pool': nat_pool}
                         try:
                             self.axapi_client.nat.pool.create(
-                                pool_name, start_address, end_address, netmask,
-                                **natpool_flavor_list[i])
+                                pool_name, start_address, end_address, netmask, **pool_args)
                         except(acos_errors.Exists) as e:
                             LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                           "thunder device %s",
@@ -65,13 +63,14 @@ class NatPoolCreate(task.Task):
                         and device_pool['pool']['end-address'] == natpool_flavor['end_address']
                      )):
                     return
-                pool_name = natpool_flavor['pool_name']
-                start_address = natpool_flavor['start_address']
-                end_address = natpool_flavor['end_address']
-                netmask = natpool_flavor['netmask']
+                pool_name = natpool_flavor.pop('pool_name')
+                start_address = natpool_flavor.pop('start_address')
+                end_address = natpool_flavor.pop('end_address')
+                netmask = natpool_flavor.pop('netmask')
+                pool_args = {'pool': natpool_flavor}
                 try:
                     self.axapi_client.nat.pool.create(
-                        pool_name, start_address, end_address, netmask, **natpool_flavor)
+                        pool_name, start_address, end_address, netmask, **pool_args)
                 except(acos_errors.Exists) as e:
                     LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                   "thunder device %s",
@@ -89,8 +88,8 @@ class NatPoolCreate(task.Task):
         natpool_flavor = flavor_data.get('nat_pool')
         try:
             if natpool_flavor_list:
-                for i in range(len(natpool_flavor_list)):
-                    pool_name = natpool_flavor_list[i]['pool_name']
+                for nat_pool in natpool_flavor_list:
+                    pool_name = nat_pool['pool_name']
                     LOG.warning("Reverting creation of nat-pool: %s", pool_name)
                     self.axapi_client.nat.pool.delete(pool_name)
             if natpool_flavor:
@@ -115,8 +114,8 @@ class NatPoolDelete(task.Task):
                 natpool_flavor_list = flavor_data.get('nat_pool_list')
                 natpool_flavor = flavor_data.get('nat_pool')
                 if natpool_flavor_list:
-                    for i in range(len(natpool_flavor_list)):
-                        pool_name = natpool_flavor_list[i]['pool_name']
+                    for nat_pool in natpool_flavor_list:
+                        pool_name = nat_pool['pool_name']
                         try:
                             self.axapi_client.nat.pool.delete(pool_name)
                         except(acos_errors.ACOSException) as e:
