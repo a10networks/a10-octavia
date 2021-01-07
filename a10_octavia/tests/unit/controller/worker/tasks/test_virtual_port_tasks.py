@@ -59,7 +59,10 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
     def _create_shared_template(self, template_type, template_config,
                                 mock_protocol, mock_templates):
         template_type = template_type.lower()
-        mock_templates.return_value = 'template-{}-shared'.format(template_type)
+        if template_type=="https":
+            mock_templates.return_value = 'template-http-shared'
+        else:
+            mock_templates.return_value = 'template-{}-shared'.format(template_type)
         listener = self._mock_listener(template_type.upper(), 1000)
         mock_protocol.return_value = listener.protocol
 
@@ -86,6 +89,18 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         vthunder.partition_name = "my_partition"
         listener_task, listener = self._create_shared_template(
             'http', {'template_http': 'temp1'}, mock_protocol, mock_templates)
+        listener_task.execute(LB, listener, vthunder)
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn('template-http-shared', kwargs['virtual_port_templates'])
+
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
+    @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
+    def test_create_https_listener_with_template_http_shared(self, mock_protocol, mock_templates):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.partition_name = "my_partition"
+        listener_task, listener = self._create_shared_template(
+            'https', {'template_http': 'temp1'}, mock_protocol, mock_templates)
+        listener.tls_certificate_id=a10constants.MOCK_TLS_CERTIFICATE_ID
         listener_task.execute(LB, listener, vthunder)
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
         self.assertIn('template-http-shared', kwargs['virtual_port_templates'])
@@ -133,6 +148,19 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         listener_task.execute(LB, listener, vthunder)
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
         self.assertIn('template-http', kwargs['virtual_port_templates'])
+
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
+    @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
+    def test_create_https_listener_with_template_http(self, mock_protocol, mock_templates):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.partition_name = "shared"
+        listener_task, listener = self._create_shared_template(
+            'https', {'template_http': 'temp1'}, mock_protocol, mock_templates)
+        listener.tls_certificate_id=a10constants.MOCK_TLS_CERTIFICATE_ID
+        listener_task.execute(LB, listener, vthunder)
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn('template-http', kwargs['virtual_port_templates'])
+
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.shared_template_modifier')
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
