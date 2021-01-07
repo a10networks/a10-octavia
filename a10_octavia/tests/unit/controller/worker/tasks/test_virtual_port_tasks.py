@@ -32,7 +32,7 @@ from a10_octavia.tests.unit import base
 
 VTHUNDER = data_models.VThunder()
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
-
+update_dict = {}
 
 class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
@@ -262,7 +262,7 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
                         return_value=listener.protocol):
-            listener_task.execute(LB, listener, VTHUNDER)
+            listener_task.execute(LB, listener, VTHUNDER, update_dict)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
         self.assertIn('use_rcv_hop', kwargs)
@@ -277,7 +277,7 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
                         return_value=listener.protocol):
-            listener_task.execute(LB, listener, VTHUNDER, flavor)
+            listener_task.execute(LB, listener, VTHUNDER, update_dict, flavor)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
         self.assertIn('support_http2', kwargs['port'])
@@ -294,7 +294,7 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
                         return_value=listener.protocol):
-            listener_task.execute(LB, listener, VTHUNDER, flavor)
+            listener_task.execute(LB, listener, VTHUNDER, update_dict, flavor)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
         self.assertIn('support_http2', kwargs['port'])
@@ -311,7 +311,7 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
                         return_value=listener.protocol):
-            listener_task.execute(LB, listener, VTHUNDER, flavor)
+            listener_task.execute(LB, listener, VTHUNDER, update_dict, flavor)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
         self.assertIn('support_http2', kwargs['port'])
@@ -329,7 +329,7 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
                         return_value=listener.protocol):
-            listener_task.execute(LB, listener, VTHUNDER, flavor)
+            listener_task.execute(LB, listener, VTHUNDER, update_dict, flavor)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
         self.assertIn('conn_limit', kwargs['port'])
