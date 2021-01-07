@@ -13,7 +13,7 @@
 #    under the License.
 
 
-import datetime
+from datetime import datetime
 import signal
 import sys
 import threading
@@ -32,6 +32,7 @@ CONF = cfg.CONF
 
 spare_amp_thread_event = threading.Event()
 db_cleanup_thread_event = threading.Event()
+write_memory_thread_event = threading.Event()
 
 
 def spare_amphora_check():
@@ -73,6 +74,26 @@ def db_cleanup():
         db_cleanup_thread_event.wait(interval)
 
 
+def write_memory():
+    """Performs write memory for all thunders"""
+    if CONF.a10_house_keeping.use_periodic_write_memory == 'enable':
+        interval = CONF.a10_house_keeping.write_mem_interval
+        write_memory_perform = house_keeping.WriteMemory()
+        LOG.info("Write Memory interval set to %s seconds", interval)
+        while not write_memory_thread_event.is_set():
+            LOG.info("Initiating the write memory operation for all thunders...")
+            timestamp = datetime.utcnow()
+            LOG.debug("Starting write memory thread ar %s", str(timestamp))
+            try:
+                write_memory_perform.perform_memory_writes()
+            except Exception as e:
+                LOG.exception('write memory caught the following exception and '
+                              ' is restarting: {}'.format(e))
+            write_memory_thread_event.wait(interval)
+    else:
+        LOG.warning("Write memory flag is disabled...")
+
+
 def _mutate_config(*args, **kwargs):
     LOG.info("Housekeeping recieved HUP signal, mutating config.")
     CONF.mutate_config_files()
@@ -83,8 +104,8 @@ def main():
 
     gmr.TextGuruMeditation.setup_autorun(version)
 
-    timestamp = str(datetime.datetime.utcnow())
-    LOG.info("Starting house keeping at %s", timestamp)
+    timestamp = datetime.utcnow()
+    LOG.info("Starting house keeping at %s", str(timestamp))
 
     # Thread to perform spare amphora check
     spare_amp_thread = threading.Thread(target=spare_amphora_check)
@@ -96,6 +117,11 @@ def main():
     db_cleanup_thread.daemon = True
     db_cleanup_thread.start()
 
+    # Thread to perform write memory
+    write_memory_thread = threading.Thread(target=write_memory)
+    write_memory_thread.daemon = True
+    write_memory_thread.start()
+
     signal.signal(signal.SIGHUP, _mutate_config)
 
     # Try-Exception block should be at the end to gracefully exit threads
@@ -106,6 +132,8 @@ def main():
         LOG.info("Attempting to gracefully terminate House-Keeping")
         spare_amp_thread_event.set()
         db_cleanup_thread_event.set()
+        write_memory_thread_event.set()
         spare_amp_thread.join()
         db_cleanup_thread.join()
+        write_memory_thread.join()
         LOG.info("House-Keeping process terminated")
