@@ -69,6 +69,8 @@ FLAVOR_PROFILE = o_data_models.FlavorProfile(id=a10constants.MOCK_FLAVOR_PROF_ID
 FLAVOR = o_data_models.Flavor(id=a10constants.MOCK_FLAVOR_ID,
                               flavor_profile_id=a10constants.MOCK_FLAVOR_PROF_ID)
 SUBNET = n_data_models.Subnet(id=uuidutils.generate_uuid())
+NAT_POOL = data_models.NATPool(id=uuidutils.generate_uuid(),
+                               port_id=a10constants.MOCK_PORT_ID)
 
 
 class TestA10DatabaseTasks(base.BaseTaskTestCase):
@@ -77,6 +79,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         super(TestA10DatabaseTasks, self).setUp()
         imp.reload(task)
         self.vrid_repo = mock.Mock()
+        self.nat_pool_repo = mock.Mock()
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
         self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
                                 group=a10constants.A10_GLOBAL_CONF_SECTION)
@@ -488,6 +491,53 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         flavor_task.flavor_profile_repo.get.return_value = flavor_prof
         ret_val = flavor_task.execute(LB)
         self.assertEqual(ret_val, {})
+
+    def test_GetNatPoolEntry(self):
+        db_task = task.GetNatPoolEntry()
+        db_task.nat_pool_repo = self.nat_pool_repo
+        flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
+        db_task.execute(MEMBER_1, flavor)
+        self.nat_pool_repo.get(mock.ANY, name="p1", subnet_id=MEMBER_1.subnet_id)
+
+    def test_UpdateNatPoolDB_update(self):
+        db_task = task.UpdateNatPoolDB()
+        db_task.nat_pool_repo = self.nat_pool_repo
+        flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
+        NAT_POOL.member_ref_count = 1
+        db_task.execute(MEMBER_1, flavor, NAT_POOL, None)
+        self.nat_pool_repo.update.assert_called_with(mock.ANY, mock.ANY, member_ref_count=2)
+
+    def test_UpdateNatPoolDB_create(self):
+        db_task = task.UpdateNatPoolDB()
+        db_task.nat_pool_repo = self.nat_pool_repo
+        flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
+        port = mock.Mock(id="1")
+        db_task.execute(MEMBER_1, flavor, None, port)
+        self.nat_pool_repo.create.assert_called_with(
+            mock.ANY, id=mock.ANY, name="p1",
+            subnet_id=MEMBER_1.subnet_id, start_address="1.1.1.1", end_address="1.1.1.2",
+            member_ref_count=1, port_id="1")
+
+    def test_DeleteNatPoolEntry_update(self):
+        db_task = task.DeleteNatPoolEntry()
+        db_task.nat_pool_repo = self.nat_pool_repo
+        NAT_POOL.member_ref_count = 2
+        db_task.execute(NAT_POOL)
+        self.nat_pool_repo.update.assert_called_with(mock.ANY, mock.ANY, member_ref_count=1)
+
+    def test_DeleteNatPoolEntry_delete(self):
+        db_task = task.DeleteNatPoolEntry()
+        db_task.nat_pool_repo = self.nat_pool_repo
+        NAT_POOL.member_ref_count = 1
+        db_task.execute(NAT_POOL)
+        self.nat_pool_repo.delete(mock.ANY, id=NAT_POOL.id)
+
+    def test_lb_count_according_to_flavor(self):
+        mock_count_lb = task.CountLoadbalancersWithFlavor()
+        mock_count_lb.loadbalancer_repo.get_lb_count_by_flavor = mock.Mock()
+        mock_count_lb.loadbalancer_repo.get_lb_count_by_flavor.return_value = 2
+        lb_count = mock_count_lb.execute(LB)
+        self.assertEqual(2, lb_count)
 
     def test_SetThunderUpdatedAt_execute_update(self):
         db_task = task.SetThunderUpdatedAt()

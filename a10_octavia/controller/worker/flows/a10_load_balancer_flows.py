@@ -33,6 +33,7 @@ from a10_octavia.controller.worker.flows import vthunder_flows
 from a10_octavia.controller.worker.tasks import a10_compute_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
+from a10_octavia.controller.worker.tasks import nat_pool_tasks
 from a10_octavia.controller.worker.tasks import virtual_server_tasks
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 
@@ -165,6 +166,14 @@ class LoadBalancerFlows(object):
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
             requires=constants.LOADBALANCER))
+        delete_LB_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR_DATA))
+        delete_LB_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
+            requires=constants.LOADBALANCER, provides=a10constants.LB_COUNT))
+        delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
+            requires=(constants.LOADBALANCER,
+                      a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
@@ -341,6 +350,9 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR_DATA))
+        lb_create_flow.add(nat_pool_tasks.NatPoolCreate(
+            requires=(constants.LOADBALANCER,
+                      a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
                       constants.FLAVOR_DATA),

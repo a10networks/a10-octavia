@@ -7,6 +7,7 @@ from sqlalchemy import pool
 
 from alembic import context
 from a10_octavia import a10_config
+from a10_octavia.db import base_models
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
