@@ -54,7 +54,8 @@ class TestHandlerNatPoolTasks(base.BaseTaskTestCase):
         self.client_mock.nat.pool.try_get.return_value = None
         mock_nat_pool_task.execute(LB, vthunder, flavor_data=flavor)
         args, kwargs = self.client_mock.nat.pool.create.call_args
-        self.assertIn('172.16.1.101', args)
+        self.assertEqual(kwargs['pool_name'], 'pool1')
+        self.assertEqual(kwargs['start_address'], '172.16.1.101')
         self.assertEqual(kwargs['gateway'], '172.16.1.1')
 
     def test_create_nat_pool_with_nat_pool_exists_with_nat_pool_flavor(self):
@@ -91,7 +92,7 @@ class TestHandlerNatPoolTasks(base.BaseTaskTestCase):
         self.client_mock.nat.pool.try_get.return_value = None
         mock_nat_pool_task.execute(LB, vthunder, flavor_data=flavor)
         args, kwargs = self.client_mock.nat.pool.create.call_args
-        self.assertIn('pooln2', args)
+        self.assertEqual(kwargs['pool_name'], 'pooln2')
         self.assertEqual(kwargs['gateway'], '172.16.3.1')
 
     def test_create_nat_pool_with_nat_pool_exists_with_nat_pool_list_flavor(self):
