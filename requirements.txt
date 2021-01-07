@@ -5,6 +5,7 @@ keystone>=15.0.1,<16.0.0
 python-barbicanclient>=4.5.2 	# copied from octavia requirements.txt
 python-glanceclient>=2.8.0 	# Apache-2.0
 python-novaclient>=9.1.0 	# Apache-2.0
+PyMySQL=0.10.1
 pyOpenSSL>=17.1.0 		# Apache-2.0
 
 taskflow>=2.16.0		# copied from octavia requirements.txt
