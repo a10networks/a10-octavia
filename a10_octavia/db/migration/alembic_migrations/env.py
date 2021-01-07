@@ -19,8 +19,8 @@ fileConfig(config.config_file_name)
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-target_metadata = base_models.BASE.metadata
-# target_metadata = None
+# target_metadata = mymodel.Base.metadata
+target_metadata = None
 
 if getattr(config, 'connection', None) is None:
     a10_cfg = a10_config.A10Config()
