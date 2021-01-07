@@ -787,9 +787,15 @@ class WriteMemory(VThunderBaseTask):
                         LOG.info("Performing write memory for thunder - {}:{}"
                                  .format(vthunder.ip_address, "shared"))
                         self.axapi_client.system.action.write_memory(partition="shared")
-            except (acos_errors.ACOSException, req_exceptions.ConnectionError):
-                LOG.warning("Failed to write memory on thunder device: %s.... skipping",
-                            vthunder.ip_address)
+            except acos_errors.ACOSException:
+                LOG.warning('Failed to write memory on thunder device: %s due to '
+                            'ACOSException.... skipping', vthunder.ip_address)
+            except req_exceptions.ConnectionError:
+                LOG.warning('Failed to write memory on thunder device: %s due to '
+                            'ConnectionError.... skipping', vthunder.ip_address)
+            except Exception as e:
+                LOG.warning('Failed to write memory on thunder device: {} due to {}'
+                            .format(vthunder.ip_address, str(e)))
 
 
 class WriteMemoryHouseKeeper(VThunderBaseTask):
