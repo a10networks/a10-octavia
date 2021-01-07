@@ -741,8 +741,13 @@ class GetNatPoolEntry(BaseDatabaseTask):
 
     def execute(self, member, nat_flavor=None):
         if nat_flavor and 'pool_name' in nat_flavor:
-            return self.nat_pool_repo.get(db_apis.get_session(), name=nat_flavor['pool_name'],
-                                          subnet_id=member.subnet_id)
+            try:
+                return self.nat_pool_repo.get(db_apis.get_session(), name=nat_flavor['pool_name'],
+                                              subnet_id=member.subnet_id)
+            except Exception as e:
+                LOG.exception("Failed to fetch subnet %s NAT pool %s entry from database: %s",
+                              nat_flavor['pool_name'], member.subnet_id, str(e))
+                raise e
 
 
 class UpdateNatPoolDB(BaseDatabaseTask):
@@ -755,21 +760,31 @@ class UpdateNatPoolDB(BaseDatabaseTask):
             if subnet_port is None:
                 raise exceptions.PortIdMissing()
 
-            id = uuidutils.generate_uuid()
-            pool_name = nat_flavor['pool_name']
-            subnet_id = member.subnet_id
-            start_address = nat_flavor['start_address']
-            end_address = nat_flavor['end_address']
-            port_id = subnet_port.id
-            self.nat_pool_repo.create(
-                db_apis.get_session(), id=id, name=pool_name, subnet_id=subnet_id,
-                start_address=start_address, end_address=end_address,
-                member_ref_count=1, port_id=port_id)
-            LOG.info("Successfully created nat pool entry in database.")
+            try:
+                id = uuidutils.generate_uuid()
+                pool_name = nat_flavor.get('pool_name')
+                subnet_id = member.subnet_id
+                start_address = nat_flavor.get('start_address')
+                end_address = nat_flavor.get('end_address')
+                port_id = subnet_port.id
+                self.nat_pool_repo.create(
+                    db_apis.get_session(), id=id, name=pool_name, subnet_id=subnet_id,
+                    start_address=start_address, end_address=end_address,
+                    member_ref_count=1, port_id=port_id)
+                LOG.info("Successfully created nat pool entry in database.")
+            except Exception as e:
+                LOG.exception("Failed to create subnet %s NAT pool %s entry to database: %s",
+                              subnet_id, pool_name, str(e))
+                raise e
         else:
-            ref = nat_pool.member_ref_count + 1
-            self.nat_pool_repo.update(
-                db_apis.get_session(), nat_pool.id, member_ref_count=ref)
+            try:
+                ref = nat_pool.member_ref_count + 1
+                self.nat_pool_repo.update(
+                    db_apis.get_session(), nat_pool.id, member_ref_count=ref)
+            except Exception as e:
+                LOG.exception("Failed to update NAT pool entry %s to database: %s",
+                              nat_pool.id, str(e))
+                raise e
 
 
 class DeleteNatPoolEntry(BaseDatabaseTask):
@@ -779,12 +794,22 @@ class DeleteNatPoolEntry(BaseDatabaseTask):
             return
 
         if nat_pool.member_ref_count > 1:
-            ref = nat_pool.member_ref_count - 1
-            self.nat_pool_repo.update(
-                db_apis.get_session(), nat_pool.id, member_ref_count=ref)
+            try:
+                ref = nat_pool.member_ref_count - 1
+                self.nat_pool_repo.update(
+                    db_apis.get_session(), nat_pool.id, member_ref_count=ref)
+            except Exception as e:
+                LOG.exception("Failed to update NAT pool entry %s to database: %s",
+                              nat_pool.id, str(e))
+                raise e
         else:
-            self.nat_pool_repo.delete(db_apis.get_session(), id=nat_pool.id)
-            LOG.info("Successfully deleted nat pool entry in database.")
+            try:
+                self.nat_pool_repo.delete(db_apis.get_session(), id=nat_pool.id)
+                LOG.info("Successfully deleted nat pool entry in database.")
+            except Exception as e:
+                LOG.exception("Failed to delete NAT pool entry %s to database: %s",
+                              nat_pool.id, str(e))
+                raise e
 
 
 class CountLoadbalancersWithFlavor(BaseDatabaseTask):

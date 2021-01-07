@@ -278,11 +278,11 @@ class MemberReserveSubnetAddr(MemberBaseTask):
                     addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
                     start += 1
                 port = self.network_driver.reserve_subnet_addresses(member.subnet_id, addr_list)
-                LOG.debug("Successfully allocate addresses for nat pool %s on port %s",
+                LOG.debug("Successfully allocated addresses for nat pool %s on port %s",
                           nat_flavor['pool_name'], port.id)
                 return port
             except Exception as e:
-                LOG.exception("Failed to reserver addresses in NAT pool %s from subnet %s",
+                LOG.exception("Failed to reserve addresses in NAT pool %s from subnet %s",
                               nat_flavor['pool_name'], member.subnet_id)
                 raise e
         return

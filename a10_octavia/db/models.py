@@ -77,6 +77,6 @@ class NATPool(base_models.BASE):
     subnet_id = sa.Column(sa.String(64), nullable=False)
     start_address = sa.Column('start_address', sa.String(64), nullable=False)
     end_address = sa.Column('end_address', sa.String(64), nullable=False)
-    member_ref_count = sa.Column(sa.Integer, default=0)
+    member_ref_count = sa.Column(sa.Integer, default=0, nullable=False)
     port_id = sa.Column(sa.String(64), nullable=False)
 
