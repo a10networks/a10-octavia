@@ -734,3 +734,61 @@ class GetFlavorData(BaseDatabaseTask):
                     id=flavor.flavor_profile_id)
                 flavor_data = json.loads(flavor_profile.flavor_data)
                 return self._format_keys(flavor_data)
+
+
+class SetThunderUpdatedAt(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        try:
+            if vthunder:
+                LOG.debug("Updated the updated_at field for thunder : {}:{}"
+                          .format(vthunder.ip_address, vthunder.partition_name))
+                self.vthunder_repo.update(
+                    db_apis.get_session(),
+                    vthunder.id,
+                    updated_at=datetime.utcnow())
+        except Exception as e:
+            LOG.exception('Failed to set updated_at field for thunder due to: {}'
+                          ', skipping.'.format(str(e)))
+
+
+class GetActiveLoadBalancersByThunder(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        try:
+            if vthunder:
+                loadbalancers_list = self.loadbalancer_repo.get_active_lbs_by_thunder(
+                    db_apis.get_session(),
+                    vthunder)
+                return loadbalancers_list
+        except Exception as e:
+            LOG.exception('Failed to get active Loadbalancers related to thunder '
+                          'due to: {}'.format(str(e)))
+
+
+class MarkLoadBalancersPendingUpdateInDB(BaseDatabaseTask):
+
+    def execute(self, loadbalancers_list):
+        try:
+            for lb in loadbalancers_list:
+                self.loadbalancer_repo.update(
+                    db_apis.get_session(),
+                    lb.id,
+                    provisioning_status='PENDING_UPDATE')
+        except Exception as e:
+            LOG.exception('Failed to set Loadbalancers to PENDING_UPDATE due to '
+                          ': {}'.format(str(e)))
+
+
+class MarkLoadBalancersActiveInDB(BaseDatabaseTask):
+
+    def execute(self, loadbalancers_list):
+        try:
+            for lb in loadbalancers_list:
+                self.loadbalancer_repo.update(
+                    db_apis.get_session(),
+                    lb.id,
+                    provisioning_status='ACTIVE')
+        except Exception as e:
+            LOG.exception('Failed to set Loadbalancers to ACTIVE due to '
+                          ': {}'.format(str(e)))

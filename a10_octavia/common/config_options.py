@@ -285,7 +285,15 @@ A10_HOUSE_KEEPING_OPTS = [
     cfg.IntOpt('cert_rotate_threads',
                default=10,
                help=_('Number of threads performing vthunder certificate'
-                      ' rotation'))
+                      ' rotation')),
+    cfg.IntOpt('write_mem_interval',
+               default=3600,
+               min=300,
+               help=_('Write Memory interval in seconds')),
+    cfg.StrOpt('use_periodic_write_memory',
+               choices=['enable', 'disable'],
+               default='disable',
+               help=_('Enable to use periodic write memory on all thunders'))
 ]
 
 A10_NOVA_OPTS = [

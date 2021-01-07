@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 
@@ -49,6 +50,8 @@ class ListenerFlows(object):
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENER]))
         create_listener_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        create_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 
@@ -93,6 +96,8 @@ class ListenerFlows(object):
             requires=constants.LOADBALANCER))
         delete_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
+        delete_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
     def get_delete_rack_listener_flow(self):
@@ -114,6 +119,8 @@ class ListenerFlows(object):
         delete_listener_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
         delete_listener_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        delete_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
@@ -141,6 +148,8 @@ class ListenerFlows(object):
                                                constants.LISTENER]))
         update_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
+        update_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=a10constants.VTHUNDER))
         return update_listener_flow
 
     def get_rack_vthunder_create_listener_flow(self, project_id):
@@ -164,6 +173,8 @@ class ListenerFlows(object):
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENER]))
         create_listener_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        create_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 

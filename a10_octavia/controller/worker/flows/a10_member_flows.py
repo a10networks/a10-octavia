@@ -109,6 +109,8 @@ class MemberFlows(object):
                                              constants.LISTENERS)))
         create_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
+        create_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=a10constants.VTHUNDER))
         return create_member_flow
 
     def get_delete_member_flow(self):
@@ -155,6 +157,8 @@ class MemberFlows(object):
         delete_member_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         delete_member_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        delete_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return delete_member_flow
 
@@ -214,6 +218,8 @@ class MemberFlows(object):
             requires=[constants.LOADBALANCER,
                       constants.LISTENERS]))
         delete_member_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        delete_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return delete_member_flow
 
@@ -391,6 +397,8 @@ class MemberFlows(object):
                                              constants.LISTENERS]))
         update_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
+        update_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=a10constants.VTHUNDER))
         return update_member_flow
 
     def get_rack_vthunder_update_member_flow(self):
@@ -435,6 +443,8 @@ class MemberFlows(object):
                                              constants.LISTENERS]))
         update_member_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
+        update_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=a10constants.VTHUNDER))
         return update_member_flow
 
     def get_rack_vthunder_create_member_flow(self):
@@ -478,5 +488,7 @@ class MemberFlows(object):
                                    requires=(constants.LOADBALANCER,
                                              constants.LISTENERS)))
         create_member_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        create_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_member_flow
