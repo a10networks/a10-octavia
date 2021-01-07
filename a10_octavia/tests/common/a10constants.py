@@ -57,6 +57,8 @@ SERVER_CONF_SECTION = 'server'
 VIRTUAL_SERVER_CONFIG_SECTION = 'slb'
 HEALTH_MONITOR_SECTION = 'health_monitor'
 
+A10_HOUSE_KEEPING = 'a10_house_keeping'
+
 MOCK_SERVICE_GROUP_PROTOCOL = "HTTP"
 MOCK_POOL_ID_2 = "mock-pool-2"
 MOCK_SUBNET_ID_2 = "mock-subnet-2"

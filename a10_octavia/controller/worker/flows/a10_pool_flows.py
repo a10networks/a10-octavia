@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 
@@ -66,6 +67,8 @@ class PoolFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_pool_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
+        create_pool_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=a10constants.VTHUNDER))
 
         return create_pool_flow
 
@@ -105,6 +108,8 @@ class PoolFlows(object):
         delete_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         delete_pool_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        delete_pool_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
 
         return delete_pool_flow
@@ -164,6 +169,8 @@ class PoolFlows(object):
         update_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_pool_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        update_pool_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
 
         return update_pool_flow
