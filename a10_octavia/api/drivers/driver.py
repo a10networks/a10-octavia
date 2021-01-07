@@ -224,12 +224,12 @@ class A10ProviderDriver(driver_base.ProviderDriver):
             for obj in flavor_schema.SUPPORTED_FLAVOR_SCHEMA['properties']:
                 obj_v = flavor_schema.SUPPORTED_FLAVOR_SCHEMA['properties'][obj]
                 if 'description' in obj_v:
-                    dict[obj] = obj_v.get('description')
+                    dict[obj] = obj_v.get('description', '')
                 if 'properties' in obj_v:
                     props = obj_v['properties']
                     for k, v in props.items():
                         if 'description' in v:
-                            dict[obj + '.' + k] = v.get('description')
+                            dict[obj + '.' + k] = v.get('description', '')
             return dict
         except Exception as e:
             raise exceptions.DriverError(
@@ -241,34 +241,6 @@ class A10ProviderDriver(driver_base.ProviderDriver):
     def validate_flavor(self, flavor_dict):
         try:
             validate(flavor_dict, flavor_schema.SUPPORTED_FLAVOR_SCHEMA)
-
-            # validate flavor for slb objects
-            if 'virtual-server' in flavor_dict:
-                flavor = flavor_dict['virtual-server']
-                if 'name' in flavor:
-                    raise Exception('axapi key \'name\' is not allowed')
-                if 'ip-address' in flavor:
-                    raise Exception('axapi key \'ip-address\' is not supported yet')
-            if 'virtual-port' in flavor_dict:
-                flavor = flavor_dict['virtual-port']
-                if 'name' in flavor:
-                    raise Exception('axapi key \'name\' is not allowed')
-                if 'port-number' in flavor:
-                    raise Exception('axapi key \'port-number\' is not allowed')
-                if 'protocol' in flavor:
-                    raise Exception('axapi key \'protocol\' is not allowed')
-            if 'service-group' in flavor_dict:
-                flavor = flavor_dict['service-group']
-                if 'name' in flavor:
-                    raise Exception('axapi key \'name\' is not allowed')
-            if 'server' in flavor_dict:
-                flavor = flavor_dict['server']
-                if 'name' in flavor:
-                    raise Exception('axapi key \'name\' is not allowed')
-            if 'health-monitor' in flavor_dict:
-                flavor = flavor_dict['health-monitor']
-                if 'name' in flavor:
-                    raise Exception('axapi key \'name\' is not allowed')
 
             # validate nat-pool and nat-pool-list keys
             if 'nat-pool' in flavor_dict:
