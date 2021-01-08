@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 class ListenersParent(object):
 
     def set(self, set_method, loadbalancer, listener, vthunder, update_dict={},
-            flavor=None, ssl_template=None):
+            flavor_data=None, ssl_template=None):
         listener.load_balancer = loadbalancer
         listener.protocol = openstack_mappings.virtual_port_protocol(
             self.axapi_client, listener.protocol).lower()
@@ -188,11 +188,11 @@ class ListenerUpdate(ListenersParent, task.Task):
     """Task to update listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder, update_dict=None, flavor=None):
+    def execute(self, loadbalancer, listener, vthunder, update_dict=None, flavor_data=None):
         try:
             if listener:
                 self.set(self.axapi_client.slb.virtual_server.vport.replace,
-                         loadbalancer, listener, vthunder, update_dict, flavor)
+                         loadbalancer, listener, vthunder, update_dict, flavor_data)
                 LOG.debug("Successfully updated listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update listener: %s", listener.id)
