@@ -34,6 +34,7 @@ VTHUNDER = data_models.VThunder()
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
 update_dict = {}
 
+
 class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
     def setUp(self):
