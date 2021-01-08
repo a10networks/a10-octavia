@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 
@@ -24,6 +25,7 @@ from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.controller.worker.tasks import cert_tasks
+from a10_octavia.controller.worker.tasks import nat_pool_tasks
 from a10_octavia.controller.worker.tasks import virtual_port_tasks
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 
@@ -49,6 +51,8 @@ class ListenerFlows(object):
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENER]))
         create_listener_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        create_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 
@@ -93,6 +97,8 @@ class ListenerFlows(object):
             requires=constants.LOADBALANCER))
         delete_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
+        delete_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
     def get_delete_rack_listener_flow(self):
@@ -114,6 +120,8 @@ class ListenerFlows(object):
         delete_listener_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
         delete_listener_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        delete_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
@@ -141,6 +149,8 @@ class ListenerFlows(object):
                                                constants.LISTENER]))
         update_listener_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
+        update_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=a10constants.VTHUNDER))
         return update_listener_flow
 
     def get_rack_vthunder_create_listener_flow(self, project_id):
@@ -155,15 +165,20 @@ class ListenerFlows(object):
         create_listener_flow.add(self.handle_ssl_cert_flow(flow_type='create'))
         create_listener_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
-            provides=constants.FLAVOR))
+            provides=constants.FLAVOR_DATA))
+        create_listener_flow.add(nat_pool_tasks.NatPoolCreate(
+            requires=(constants.LOADBALANCER,
+                      a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             requires=[constants.LOADBALANCER, constants.LISTENER,
-                      a10constants.VTHUNDER, constants.FLAVOR]))
+                      a10constants.VTHUNDER, constants.FLAVOR_DATA]))
         create_listener_flow.add(a10_database_tasks.
                                  MarkLBAndListenerActiveInDB(
                                      requires=[constants.LOADBALANCER,
                                                constants.LISTENER]))
         create_listener_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        create_listener_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 

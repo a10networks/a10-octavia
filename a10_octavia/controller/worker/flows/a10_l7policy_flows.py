@@ -50,6 +50,8 @@ class L7PolicyFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_l7policy_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
+        create_l7policy_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=a10constants.VTHUNDER))
         return create_l7policy_flow
 
     def get_delete_l7policy_flow(self):
@@ -76,6 +78,8 @@ class L7PolicyFlows(object):
         delete_l7policy_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         delete_l7policy_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        delete_l7policy_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return delete_l7policy_flow
 
@@ -108,5 +112,7 @@ class L7PolicyFlows(object):
         update_l7policy_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_l7policy_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        update_l7policy_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return update_l7policy_flow

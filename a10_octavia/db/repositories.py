@@ -183,6 +183,13 @@ class BaseRepository(object):
 class VThunderRepository(BaseRepository):
     model_class = models.VThunder
 
+    def get_recently_updated_thunders(self, session, expiry_time):
+        query = session.query(self.model_class).filter(
+            self.model_class.updated_at >= expiry_time).filter(
+            self.model_class.status == 'ACTIVE')
+        query = query.options(noload('*'))
+        return query.all()
+
     def get_stale_vthunders(self, session, initial_setup_wait_time, failover_wait_time):
         model = session.query(self.model_class).filter(
             self.model_class.created_at < initial_setup_wait_time).filter(
@@ -312,6 +319,17 @@ class VThunderRepository(BaseRepository):
 
 
 class LoadBalancerRepository(repo.LoadBalancerRepository):
+    thunder_model_class = models.VThunder
+
+    def get_active_lbs_by_thunder(self, session, vthunder):
+        lb_list = []
+        query = session.query(self.model_class).filter(
+            and_(vthunder.loadbalancer_id == self.model_class.id,
+                 self.model_class.provisioning_status == consts.ACTIVE))
+        model_list = query.all()
+        for data in model_list:
+            lb_list.append(data.to_data_model())
+        return lb_list
 
     def get_lb_count_by_subnet(self, session, project_ids, subnet_id):
         return session.query(self.model_class).join(base_models.Vip).filter(
@@ -319,6 +337,13 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
                  base_models.Vip.subnet_id == subnet_id,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
+
+    def get_lb_count_by_flavor(self, session, project_id, flavor_id):
+        return session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+                self.model_class.flavor_id == flavor_id,
+                or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                    self.model_class.provisioning_status == consts.ACTIVE)).count()
 
 
 class VRIDRepository(BaseRepository):
@@ -375,7 +400,7 @@ class MemberRepository(repo.MemberRepository):
             self.model_class.project_id == project_id).filter(
             and_(self.model_class.ip_address == ip_address,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
-                     self.model_class.provisioning_status == consts.ACTIVE))).count() 
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
 
     def get_pool_count_subnet(self, session, project_ids, subnet_id):
         return session.query(self.model_class.pool_id.distinct()).filter(
@@ -383,3 +408,6 @@ class MemberRepository(repo.MemberRepository):
             and_(self.model_class.subnet_id == subnet_id,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
+
+class NatPoolRepository(BaseRepository):
+    model_class = models.NATPool

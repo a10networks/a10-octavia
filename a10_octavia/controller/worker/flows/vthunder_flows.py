@@ -371,3 +371,40 @@ class VThunderFlows(object):
         :returns: True if vrrp is configured
         """
         return history[history.keys()[0]]
+
+    def get_write_memory_flow(self, thunders, store):
+        """Perform write memory for all thunders """
+        sf_name = 'a10-house-keeper' + '-' + a10constants.WRITE_MEMORY_THUNDER_FLOW
+
+        write_memory_flow = linear_flow.Flow(sf_name)
+        vthunder_store = {}
+        for vthunder in thunders:
+            vthunder_store[vthunder.vthunder_id] = vthunder
+            write_memory_flow.add(a10_database_tasks.GetActiveLoadBalancersByThunder(
+                requires=a10constants.VTHUNDER,
+                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
+                name='{flow}-{id}'.format(
+                    id=vthunder.vthunder_id,
+                    flow='GetActiveLoadBalancersByThunder'),
+                provides=a10constants.LOADBALANCERS_LIST))
+            write_memory_flow.add(a10_database_tasks.MarkLoadBalancersPendingUpdateInDB(
+                requires=a10constants.LOADBALANCERS_LIST))
+            write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
+                requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST),
+                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
+                name='{flow}-{partition}-{id}'.format(
+                    id=vthunder.vthunder_id,
+                    flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
+                    partition=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION)))
+            write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
+                requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST,
+                          a10constants.WRITE_MEM_SHARED_PART),
+                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
+                name='{flow}-{partition}-{id}'.format(
+                    id=vthunder.vthunder_id,
+                    flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
+                    partition=a10constants.WRITE_MEM_FOR_SHARED_PARTITION)))
+            write_memory_flow.add(a10_database_tasks.MarkLoadBalancersActiveInDB(
+                requires=a10constants.LOADBALANCERS_LIST))
+        store.update(vthunder_store)
+        return write_memory_flow

@@ -251,6 +251,36 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         self.assertIn('conn_limit', kwargs['port'])
         self.assertEqual(kwargs['port'].get('conn_limit'), 300)
 
+    def test_crete_virtual_port_with_snat_flavor(self):
+        listener = self._mock_listener('HTTP', 1000)
+        flavor = {"nat_pool": {"pool_name": "p1", "start-address": "1"}}
+
+        listener_task = task.ListenerCreate()
+        listener_task.axapi_client = self.client_mock
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER, flavor)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn('pool', kwargs['port'])
+        self.assertEqual(kwargs['port'].get('pool'), "p1")
+
+    def test_crete_virtual_port_with_vport_flavor_over_snat(self):
+        listener = self._mock_listener('HTTP', 1000)
+        flavor = {"nat_pool": {"pool_name": "p1"}, "virtual_port": {"pool": "p2"}}
+
+        listener_task = task.ListenerCreate()
+        listener_task.axapi_client = self.client_mock
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER, flavor)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
+        self.assertIn('pool', kwargs['port'])
+        self.assertEqual(kwargs['port'].get('pool'), "p2")
+
     def test_update_http_virtual_port_use_rcv_hop(self):
         listener = self._mock_listener('HTTP', 1000)
 

@@ -126,8 +126,8 @@ class ListenersParent(object):
             vport_templates[template_key] = template_policy
 
         vport_args = {}
-        if flavor:
-            virtual_port_flavor = flavor.get('virtual_port')
+        if flavor_data:
+            virtual_port_flavor = flavor_data.get('virtual_port')
             if virtual_port_flavor:
                 name_exprs = virtual_port_flavor.get('name_expressions')
                 parsed_exprs = utils.parse_name_expressions(
@@ -135,6 +135,14 @@ class ListenersParent(object):
                 virtual_port_flavor.pop('name_expressions', None)
                 virtual_port_flavor.update(parsed_exprs)
                 vport_args = {'port': virtual_port_flavor}
+
+            # use default nat-pool pool if pool is not specified
+            if 'port' not in vport_args or 'pool' not in vport_args['port']:
+                pool_flavor = flavor_data.get('nat_pool')
+                if pool_flavor and 'pool_name' in pool_flavor:
+                    pool_arg = {}
+                    pool_arg['pool'] = pool_flavor['pool_name']
+                    vport_args['port'] = pool_arg
         config_data.update(template_args)
         config_data.update(vport_args)
 
@@ -152,10 +160,10 @@ class ListenerCreate(ListenersParent, task.Task):
     """Task to create listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder, flavor=None):
+    def execute(self, loadbalancer, listener, vthunder, flavor_data=None):
         try:
             self.set(self.axapi_client.slb.virtual_server.vport.create,
-                     loadbalancer, listener, vthunder, flavor)
+                     loadbalancer, listener, vthunder, flavor_data)
             LOG.debug("Successfully created listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to create listener: %s", listener.id)
