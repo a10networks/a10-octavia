@@ -22,7 +22,7 @@ import socket
 import struct
 
 from a10_octavia.common import openstack_mappings
-from a10_octavia.common import utils as a10_utils
+from a10_octavia.controller.worker.tasks.a10_network_tasks import BaseNetworkTask
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -31,20 +31,7 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class MemberBaseTask(task.Task):
-
-    def __init__(self, **kwargs):
-        super(MemberBaseTask, self).__init__(**kwargs)
-        self._network_driver = None
-
-    @property
-    def network_driver(self):
-        if self._network_driver is None:
-            self._network_driver = a10_utils.get_network_driver()
-        return self._network_driver
-
-
-class MemberCreate(MemberBaseTask):
+class MemberCreate(task.Task):
     """Task to create a member and associate to pool"""
 
     @axapi_client_decorator
@@ -127,7 +114,7 @@ class MemberCreate(MemberBaseTask):
                           member.id, pool.id, str(e))
 
 
-class MemberDelete(MemberBaseTask):
+class MemberDelete(task.Task):
     """Task to delete member"""
 
     @axapi_client_decorator
@@ -158,7 +145,7 @@ class MemberDelete(MemberBaseTask):
             raise e
 
 
-class MemberUpdate(MemberBaseTask):
+class MemberUpdate(task.Task):
     """Task to update member"""
 
     @axapi_client_decorator
@@ -216,7 +203,7 @@ class MemberUpdate(MemberBaseTask):
             # no raise, it will still work even no port. but options for port will missing
 
 
-class MemberDeletePool(MemberBaseTask):
+class MemberDeletePool(task.Task):
     """Task to delete member"""
 
     @axapi_client_decorator
@@ -240,7 +227,7 @@ class MemberDeletePool(MemberBaseTask):
             raise e
 
 
-class MemberFindNatPool(MemberBaseTask):
+class MemberFindNatPool(task.Task):
 
     @axapi_client_decorator
     def execute(self, member, vthunder, pool, flavor=None):
@@ -263,7 +250,7 @@ class MemberFindNatPool(MemberBaseTask):
                             return flavor
 
 
-class MemberReserveSubnetAddr(MemberBaseTask):
+class MemberReserveSubnetAddr(BaseNetworkTask):
 
     def execute(self, member, nat_flavor=None, nat_pool=None):
         if nat_flavor is None:
@@ -288,7 +275,7 @@ class MemberReserveSubnetAddr(MemberBaseTask):
         return
 
 
-class MemberReleaseSubnetAddr(MemberBaseTask):
+class MemberReleaseSubnetAddr(BaseNetworkTask):
 
     def execute(self, member, nat_flavor=None, nat_pool=None):
         if nat_flavor is None or nat_pool is None:

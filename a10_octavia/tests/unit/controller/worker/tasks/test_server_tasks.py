@@ -14,6 +14,7 @@
 
 
 import imp
+import sys
 
 try:
     from unittest import mock
@@ -210,10 +211,13 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
             SERVER_NAME, MEMBER.protocol_port, pool_protocol_tcp)
 
     def test_reserver_subnet_addr(self):
-        mock = task.MemberReserveSubnetAddr()
-        mock._network_driver = self.client_mock
+        mock1 = task.MemberReserveSubnetAddr()
+        if sys.version_info[0] < 3:
+            mock1._network_driver = self.client_mock
+        else:
+            mock1.network_driver = self.client_mock
         flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
-        mock.execute(MEMBER, flavor)
+        mock1.execute(MEMBER, flavor)
         self.client_mock.reserve_subnet_addresses.assert_called_with(
             MEMBER.subnet_id, ["1.1.1.1", "1.1.1.2"])
 
@@ -226,7 +230,10 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
 
     def test_release_subnet_addr(self):
         mock = task.MemberReleaseSubnetAddr()
-        mock._network_driver = self.client_mock
+        if sys.version_info[0] < 3:
+            mock._network_driver = self.client_mock
+        else:
+            mock.network_driver = self.client_mock
         flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
         NAT_POOL.member_ref_count = 1
         mock.execute(MEMBER, flavor, NAT_POOL)
