@@ -32,6 +32,7 @@ from a10_octavia.tests.unit import base
 
 VTHUNDER = data_models.VThunder()
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
+UPDATE_DICT = {}
 
 
 class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
@@ -302,7 +303,7 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
                         return_value=listener.protocol):
-            listener_task.execute(LB, listener, VTHUNDER, flavor)
+            listener_task.execute(LB, listener, VTHUNDER, flavor_data=flavor)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.create.call_args
         self.assertIn('pool', kwargs['port'])
@@ -386,7 +387,7 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
                         return_value=listener.protocol):
-            listener_task.execute(LB, listener, VTHUNDER, flavor)
+            listener_task.execute(LB, listener, VTHUNDER, flavor, UPDATE_DICT)
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
         self.assertIn('conn_limit', kwargs['port'])
@@ -439,3 +440,37 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
                                                                             listener.protocol_port,
                                                                             listener.default_pool_id
                                                                             )
+
+    def test_set_http_virtual_port_conn_limit_with_cli(self):
+        listener = self._mock_listener('HTTP', 1000)
+        flavor = {}
+        update_dict = {"connection_limit": 1000}
+
+        listener_task = task.ListenerUpdate()
+        listener_task.axapi_client = self.client_mock
+        self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
+                         conn_limit=200)
+        listener_task.CONF = self.conf
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER, flavor, update_dict)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
+        self.assertEqual(kwargs['conn_limit'], 1000)
+
+    def test_set_http_virtual_port_conn_limit_with_config(self):
+        listener = self._mock_listener('HTTP', 1000)
+
+        listener_task = task.ListenerUpdate()
+        listener_task.axapi_client = self.client_mock
+        self.conf.config(group=a10constants.LISTENER_CONF_SECTION,
+                         conn_limit=200)
+        listener_task.CONF = self.conf
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER, UPDATE_DICT)
+
+        args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
+        self.assertEqual(kwargs['conn_limit'], 200)
