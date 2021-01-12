@@ -18,11 +18,8 @@ from requests import exceptions
 from taskflow import task
 
 import acos_client.errors as acos_errors
-import socket
-import struct
 
 from a10_octavia.common import openstack_mappings
-from a10_octavia.controller.worker.tasks.a10_network_tasks import BaseNetworkTask
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -248,43 +245,3 @@ class MemberFindNatPool(task.Task):
                     for flavor in (pools_flavor or []):
                         if vport['port']['pool'] == flavor['pool_name']:
                             return flavor
-
-
-class MemberReserveSubnetAddr(BaseNetworkTask):
-
-    def execute(self, member, nat_flavor=None, nat_pool=None):
-        if nat_flavor is None:
-            return
-
-        if nat_pool is None:
-            try:
-                addr_list = []
-                start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
-                end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
-                while start <= end:
-                    addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
-                    start += 1
-                port = self.network_driver.reserve_subnet_addresses(member.subnet_id, addr_list)
-                LOG.debug("Successfully allocated addresses for nat pool %s on port %s",
-                          nat_flavor['pool_name'], port.id)
-                return port
-            except Exception as e:
-                LOG.exception("Failed to reserve addresses in NAT pool %s from subnet %s",
-                              nat_flavor['pool_name'], member.subnet_id)
-                raise e
-        return
-
-
-class MemberReleaseSubnetAddr(BaseNetworkTask):
-
-    def execute(self, member, nat_flavor=None, nat_pool=None):
-        if nat_flavor is None or nat_pool is None:
-            return
-
-        if nat_pool.member_ref_count == 1:
-            try:
-                self.network_driver.delete_port(nat_pool.port_id)
-            except Exception as e:
-                LOG.exception("Failed to release addresses in NAT pool %s from subnet %s",
-                              nat_flavor['pool_name'], member.subnet_id)
-                raise e

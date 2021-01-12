@@ -204,7 +204,7 @@ class MemberFlows(object):
         delete_member_flow.add(a10_database_tasks.GetNatPoolEntry(
             requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
             provides=a10constants.NAT_POOL))
-        delete_member_flow.add(server_tasks.MemberReleaseSubnetAddr(
+        delete_member_flow.add(a10_network_tasks.ReleaseSubnetAddressForMember(
             requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL]))
         delete_member_flow.add(a10_database_tasks.DeleteNatPoolEntry(
             requires=a10constants.NAT_POOL))
@@ -498,7 +498,7 @@ class MemberFlows(object):
         create_member_flow.add(a10_database_tasks.GetNatPoolEntry(
             requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
             provides=a10constants.NAT_POOL))
-        create_member_flow.add(server_tasks.MemberReserveSubnetAddr(
+        create_member_flow.add(a10_network_tasks.ReserveSubnetAddressForMember(
             requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL],
             provides=a10constants.SUBNET_PORT))
         create_member_flow.add(a10_database_tasks.UpdateNatPoolDB(
