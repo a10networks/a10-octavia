@@ -31,7 +31,7 @@ from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
-MEMBER = o_data_models.Member()
+MEMBER = o_data_models.Member(subnet_id=a10constants.MOCK_SUBNET_ID)
 VTHUNDER = data_models.VThunder()
 SUBNET = o_net_data_models.Subnet()
 PORT = o_net_data_models.Port()
@@ -39,6 +39,8 @@ VRID = data_models.VRID()
 VRID_VALUE = 0
 SUBNET_1 = o_net_data_models.Subnet(id=a10constants.MOCK_SUBNET_ID)
 VRID_1 = data_models.VRID(id=1, subnet_id=a10constants.MOCK_SUBNET_ID)
+NAT_POOL = data_models.NATPool(port_id=a10constants.MOCK_PORT_ID)
+NAT_FLAVOR = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
 
 
 class MockIP(object):
@@ -449,3 +451,23 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.network_driver_mock.delete_port.assert_not_called()
         self.client_mock.vrrpa.update.assert_not_called()
         self.assertEqual(result, None)
+
+    def test_reserve_subnet_addr_for_member(self):
+        mock_network_task = a10_network_tasks.ReserveSubnetAddressForMember()
+        mock_network_task.network_driver = self.client_mock
+        mock_network_task.execute(MEMBER, NAT_FLAVOR)
+        self.client_mock.reserve_subnet_addresses.assert_called_with(
+            MEMBER.subnet_id, ["1.1.1.1", "1.1.1.2"])
+
+    def test_release_subnet_addr_referenced(self):
+        mock_network_task = a10_network_tasks.ReleaseSubnetAddressForMember()
+        NAT_POOL.member_ref_count = 2
+        ret_val = mock_network_task.execute(MEMBER, NAT_FLAVOR, NAT_POOL)
+        self.assertEqual(ret_val, None)
+
+    def test_release_subnet_addr(self):
+        mock_network_task = a10_network_tasks.ReleaseSubnetAddressForMember()
+        mock_network_task.network_driver = self.client_mock
+        NAT_POOL.member_ref_count = 1
+        mock_network_task.execute(MEMBER, NAT_FLAVOR, NAT_POOL)
+        self.client_mock.delete_port.assert_called_with(NAT_POOL.port_id)
