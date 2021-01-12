@@ -40,6 +40,7 @@ VRID_VALUE = 0
 SUBNET_1 = o_net_data_models.Subnet(id=a10constants.MOCK_SUBNET_ID)
 VRID_1 = data_models.VRID(id=1, subnet_id=a10constants.MOCK_SUBNET_ID)
 NAT_POOL = data_models.NATPool(port_id=a10constants.MOCK_PORT_ID)
+NAT_FLAVOR = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
 
 
 class MockIP(object):
@@ -451,25 +452,22 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.client_mock.vrrpa.update.assert_not_called()
         self.assertEqual(result, None)
 
-    def test_reserver_subnet_addr_for_member(self):
+    def test_reserve_subnet_addr_for_member(self):
         mock_network_task = a10_network_tasks.ReserveSubnetAddressForMember()
         mock_network_task.network_driver = self.client_mock
-        flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
-        mock_network_task.execute(MEMBER, flavor)
+        mock_network_task.execute(MEMBER, NAT_FLAVOR)
         self.client_mock.reserve_subnet_addresses.assert_called_with(
             MEMBER.subnet_id, ["1.1.1.1", "1.1.1.2"])
 
     def test_release_subnet_addr_referenced(self):
         mock_network_task = a10_network_tasks.ReleaseSubnetAddressForMember()
-        flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
         NAT_POOL.member_ref_count = 2
-        ret_val = mock_network_task.execute(MEMBER, flavor, NAT_POOL)
+        ret_val = mock_network_task.execute(MEMBER, NAT_FLAVOR, NAT_POOL)
         self.assertEqual(ret_val, None)
 
     def test_release_subnet_addr(self):
         mock_network_task = a10_network_tasks.ReleaseSubnetAddressForMember()
         mock_network_task.network_driver = self.client_mock
-        flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
         NAT_POOL.member_ref_count = 1
-        mock_network_task.execute(MEMBER, flavor, NAT_POOL)
+        mock_network_task.execute(MEMBER, NAT_FLAVOR, NAT_POOL)
         self.client_mock.delete_port.assert_called_with(NAT_POOL.port_id)
