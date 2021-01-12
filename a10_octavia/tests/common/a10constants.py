@@ -37,6 +37,7 @@ MOCK_VRID_FULL_FLOATING_IP = '10.10.10.45'
 MOCK_SUBNET_CIDR = '10.10.10.0/24'
 MOCK_SUBNET_ID = 'mock-subnet-1'
 MOCK_VRRP_PORT_ID = 'mock-vrrp-port-id'
+MOCK_PORT_ID = 'mock-port-id'
 
 SERVICE_GROUP_CONF_SECTION = 'service_group'
 LISTENER_CONF_SECTION = 'listener'
@@ -56,9 +57,13 @@ SERVER_CONF_SECTION = 'server'
 VIRTUAL_SERVER_CONFIG_SECTION = 'slb'
 HEALTH_MONITOR_SECTION = 'health_monitor'
 
+A10_HOUSE_KEEPING = 'a10_house_keeping'
+
 MOCK_SERVICE_GROUP_PROTOCOL = "HTTP"
 MOCK_POOL_ID_2 = "mock-pool-2"
 MOCK_SUBNET_ID_2 = "mock-subnet-2"
 
 MOCK_L7POLICY_ID = "mock-l7-policy-1"
 MOCK_L7RULE_ID = "mock-l7-rule-1"
+
+MOCK_TLS_CERTIFICATE_ID = "mock_tls_certificate_id"

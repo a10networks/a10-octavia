@@ -30,7 +30,8 @@ LOG = logging.getLogger(__name__)
 
 class ListenersParent(object):
 
-    def set(self, set_method, loadbalancer, listener, vthunder, flavor=None, ssl_template=None):
+    def set(self, set_method, loadbalancer, listener, vthunder,
+            flavor_data=None, ssl_template=None):
         listener.load_balancer = loadbalancer
         listener.protocol = openstack_mappings.virtual_port_protocol(
             self.axapi_client, listener.protocol).lower()
@@ -84,10 +85,11 @@ class ListenersParent(object):
             vport_templates[template_key] = template_vport
 
         template_args = {}
-        if listener.protocol == 'https' and listener.tls_certificate_id:
-            # Adding TERMINATED_HTTPS SSL cert, created in previous task
-            template_args["template_client_ssl"] = listener.id
-        elif listener.protocol.upper() in a10constants.HTTP_TYPE:
+        if listener.protocol.upper() in a10constants.HTTP_TYPE:
+            if listener.protocol == 'https' and listener.tls_certificate_id:
+                # Adding TERMINATED_HTTPS SSL cert, created in previous task
+                template_args["template_client_ssl"] = listener.id
+
             template_http = CONF.listener.template_http
             if template_http and template_http.lower() != 'none':
                 template_key = 'template-http'
@@ -125,8 +127,8 @@ class ListenersParent(object):
             vport_templates[template_key] = template_policy
 
         vport_args = {}
-        if flavor:
-            virtual_port_flavor = flavor.get('virtual_port')
+        if flavor_data:
+            virtual_port_flavor = flavor_data.get('virtual_port')
             if virtual_port_flavor:
                 name_exprs = virtual_port_flavor.get('name_expressions')
                 parsed_exprs = utils.parse_name_expressions(
@@ -134,6 +136,14 @@ class ListenersParent(object):
                 virtual_port_flavor.pop('name_expressions', None)
                 virtual_port_flavor.update(parsed_exprs)
                 vport_args = {'port': virtual_port_flavor}
+
+            # use default nat-pool pool if pool is not specified
+            if 'port' not in vport_args or 'pool' not in vport_args['port']:
+                pool_flavor = flavor_data.get('nat_pool')
+                if pool_flavor and 'pool_name' in pool_flavor:
+                    pool_arg = {}
+                    pool_arg['pool'] = pool_flavor['pool_name']
+                    vport_args['port'] = pool_arg
         config_data.update(template_args)
         config_data.update(vport_args)
 
@@ -151,10 +161,10 @@ class ListenerCreate(ListenersParent, task.Task):
     """Task to create listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder, flavor=None):
+    def execute(self, loadbalancer, listener, vthunder, flavor_data=None):
         try:
             self.set(self.axapi_client.slb.virtual_server.vport.create,
-                     loadbalancer, listener, vthunder, flavor)
+                     loadbalancer, listener, vthunder, flavor_data)
             LOG.debug("Successfully created listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to create listener: %s", listener.id)
@@ -179,11 +189,11 @@ class ListenerUpdate(ListenersParent, task.Task):
     """Task to update listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder, flavor=None):
+    def execute(self, loadbalancer, listener, vthunder, flavor_data=None):
         try:
             if listener:
                 self.set(self.axapi_client.slb.virtual_server.vport.replace,
-                         loadbalancer, listener, vthunder, flavor)
+                         loadbalancer, listener, vthunder, flavor_data)
                 LOG.debug("Successfully updated listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update listener: %s", listener.id)

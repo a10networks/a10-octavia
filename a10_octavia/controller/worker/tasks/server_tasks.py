@@ -18,8 +18,11 @@ from requests import exceptions
 from taskflow import task
 
 import acos_client.errors as acos_errors
+import socket
+import struct
 
 from a10_octavia.common import openstack_mappings
+from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -28,7 +31,20 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class MemberCreate(task.Task):
+class MemberBaseTask(task.Task):
+
+    def __init__(self, **kwargs):
+        super(MemberBaseTask, self).__init__(**kwargs)
+        self._network_driver = None
+
+    @property
+    def network_driver(self):
+        if self._network_driver is None:
+            self._network_driver = a10_utils.get_network_driver()
+        return self._network_driver
+
+
+class MemberCreate(MemberBaseTask):
     """Task to create a member and associate to pool"""
 
     @axapi_client_decorator
@@ -111,7 +127,7 @@ class MemberCreate(task.Task):
                           member.id, pool.id, str(e))
 
 
-class MemberDelete(task.Task):
+class MemberDelete(MemberBaseTask):
     """Task to delete member"""
 
     @axapi_client_decorator
@@ -142,7 +158,7 @@ class MemberDelete(task.Task):
             raise e
 
 
-class MemberUpdate(task.Task):
+class MemberUpdate(MemberBaseTask):
     """Task to update member"""
 
     @axapi_client_decorator
@@ -200,7 +216,7 @@ class MemberUpdate(task.Task):
             # no raise, it will still work even no port. but options for port will missing
 
 
-class MemberDeletePool(task.Task):
+class MemberDeletePool(MemberBaseTask):
     """Task to delete member"""
 
     @axapi_client_decorator
@@ -222,3 +238,66 @@ class MemberDeletePool(task.Task):
         except exceptions.ConnectionError as e:
             LOG.exception("Failed to delete member/port: %s", member.id)
             raise e
+
+
+class MemberFindNatPool(MemberBaseTask):
+
+    @axapi_client_decorator
+    def execute(self, member, vthunder, pool, flavor=None):
+        if flavor is None:
+            return
+
+        pool_flavor = flavor.get('nat_pool')
+        pools_flavor = flavor.get('nat_pool_list')
+        if pool_flavor or pools_flavor:
+            for listener in pool.listeners:
+                vport = self.axapi_client.slb.virtual_server.vport.get(pool.load_balancer.id,
+                                                                       listener.id,
+                                                                       listener.protocol,
+                                                                       listener.protocol_port)
+                if vport and 'port' in vport and 'pool' in vport['port']:
+                    if pool_flavor and vport['port']['pool'] == pool_flavor['pool_name']:
+                        return pool_flavor
+                    for flavor in (pools_flavor or []):
+                        if vport['port']['pool'] == flavor['pool_name']:
+                            return flavor
+
+
+class MemberReserveSubnetAddr(MemberBaseTask):
+
+    def execute(self, member, nat_flavor=None, nat_pool=None):
+        if nat_flavor is None:
+            return
+
+        if nat_pool is None:
+            try:
+                addr_list = []
+                start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
+                end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
+                while start <= end:
+                    addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
+                    start += 1
+                port = self.network_driver.reserve_subnet_addresses(member.subnet_id, addr_list)
+                LOG.debug("Successfully allocated addresses for nat pool %s on port %s",
+                          nat_flavor['pool_name'], port.id)
+                return port
+            except Exception as e:
+                LOG.exception("Failed to reserve addresses in NAT pool %s from subnet %s",
+                              nat_flavor['pool_name'], member.subnet_id)
+                raise e
+        return
+
+
+class MemberReleaseSubnetAddr(MemberBaseTask):
+
+    def execute(self, member, nat_flavor=None, nat_pool=None):
+        if nat_flavor is None or nat_pool is None:
+            return
+
+        if nat_pool.member_ref_count == 1:
+            try:
+                self.network_driver.delete_port(nat_pool.port_id)
+            except Exception as e:
+                LOG.exception("Failed to release addresses in NAT pool %s from subnet %s",
+                              nat_flavor['pool_name'], member.subnet_id)
+                raise e

@@ -38,11 +38,13 @@ POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID,
                           protocol=a10constants.MOCK_SERVICE_GROUP_PROTOCOL)
 MEMBER = o_data_models.Member(
     id=a10constants.MOCK_MEMBER_ID, protocol_port=t_constants.MOCK_PORT_ID,
-    project_id=t_constants.MOCK_PROJECT_ID, ip_address=t_constants.MOCK_IP_ADDRESS)
+    project_id=t_constants.MOCK_PROJECT_ID, ip_address=t_constants.MOCK_IP_ADDRESS,
+    subnet_id=a10constants.MOCK_SUBNET_ID)
 
 KEY_ARGS = {'server': utils.meta(MEMBER, 'server', {'conn_resume': None, 'conn_limit': 64000000})}
 SERVER_NAME = '{}_{}'.format(MEMBER.project_id[:5],
                              MEMBER.ip_address.replace('.', '_'))
+NAT_POOL = data_models.NATPool(port_id=a10constants.MOCK_PORT_ID)
 
 
 class TestHandlerServerTasks(base.BaseTaskTestCase):
@@ -206,3 +208,26 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
             POOL.id, SERVER_NAME, MEMBER.protocol_port)
         self.client_mock.slb.server.port.delete.assert_called_with(
             SERVER_NAME, MEMBER.protocol_port, pool_protocol_tcp)
+
+    def test_reserver_subnet_addr(self):
+        mock = task.MemberReserveSubnetAddr()
+        mock._network_driver = self.client_mock
+        flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
+        mock.execute(MEMBER, flavor)
+        self.client_mock.reserve_subnet_addresses.assert_called_with(
+            MEMBER.subnet_id, ["1.1.1.1", "1.1.1.2"])
+
+    def test_release_subnet_addr_referenced(self):
+        mock = task.MemberReleaseSubnetAddr()
+        flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
+        NAT_POOL.member_ref_count = 2
+        ret_val = mock.execute(MEMBER, flavor, NAT_POOL)
+        self.assertEqual(ret_val, None)
+
+    def test_release_subnet_addr(self):
+        mock = task.MemberReleaseSubnetAddr()
+        mock._network_driver = self.client_mock
+        flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
+        NAT_POOL.member_ref_count = 1
+        mock.execute(MEMBER, flavor, NAT_POOL)
+        self.client_mock.delete_port.assert_called_with(NAT_POOL.port_id)

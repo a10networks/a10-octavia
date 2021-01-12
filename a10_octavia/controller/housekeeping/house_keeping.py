@@ -15,12 +15,12 @@
 
 from concurrent import futures
 import datetime
+from datetime import datetime as dt_funcs
 
 from oslo_config import cfg
 from oslo_log import log as logging
 
 from octavia.db import api as db_api
-from octavia.db import repositories as repo
 
 from a10_octavia.controller.worker import controller_worker as cw
 from a10_octavia.db import repositories as a10repo
@@ -31,7 +31,6 @@ CONF = cfg.CONF
 
 class SpareAmphora(object):
     def __init__(self):
-        self.amp_repo = repo.AmphoraRepository()
         self.vthunder_repo = a10repo.VThunderRepository()
         self.cw = cw.A10ControllerWorker()
 
@@ -96,3 +95,39 @@ class DatabaseCleanup(object):
             LOG.info('Attempting to delete load balancer id : %s', lb_id)
             self.lb_repo.delete(session, id=lb_id)
             LOG.info('Deleted load balancer id : %s', lb_id)
+
+
+class WriteMemory(object):
+
+    def __init__(self):
+        self.prev_run_time = None
+        self.thunder_repo = a10repo.VThunderRepository()
+        self.cw = cw.A10ControllerWorker()
+
+    def perform_memory_writes(self):
+        write_interval = datetime.timedelta(seconds=CONF.a10_house_keeping.write_mem_interval)
+        curr_time_stamp = dt_funcs.utcnow()
+        expiry_time = curr_time_stamp - write_interval
+        if (self.prev_run_time and int(self.prev_run_time.strftime("%s")) <
+                int(expiry_time.strftime("%s"))):
+            LOG.debug("Previous write memory thread ran at %s: ", str(self.prev_run_time))
+            expiry_time = self.prev_run_time
+        thunders = self.thunder_repo.get_recently_updated_thunders(db_api.get_session(),
+                                                                   expiry_time=expiry_time)
+        ip_partition_list = set()
+        thunder_list = []
+        for thunder in thunders:
+            ip_partition = str(thunder.ip_address) + ":" + str(thunder.partition_name)
+            if ip_partition not in ip_partition_list:
+                ip_partition_list.add(ip_partition)
+                thunder_list.append(thunder)
+
+        self.prev_run_time = curr_time_stamp
+
+        if thunder_list:
+            LOG.info("Write Memory for Thunders : %s", list(ip_partition_list))
+            self.cw.perform_write_memory(thunder_list)
+            LOG.info("Finished running write memory for {} thunders...".format(len(thunder_list)))
+        else:
+            LOG.warning("No thunders found that are recently updated."
+                        " Not performing write memory...")

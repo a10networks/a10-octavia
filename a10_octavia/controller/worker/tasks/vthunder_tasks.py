@@ -12,6 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
+from datetime import datetime
+
 import acos_client
 from acos_client import errors as acos_errors
 try:
@@ -37,6 +40,7 @@ from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import activate_partition
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import device_context_switch_decorator
+from a10_octavia.db import repositories as a10_repo
 
 
 CONF = cfg.CONF
@@ -48,6 +52,8 @@ class VThunderBaseTask(task.Task):
     def __init__(self, **kwargs):
         super(VThunderBaseTask, self).__init__(**kwargs)
         self._network_driver = None
+        self.vthunder_repo = a10_repo.VThunderRepository()
+        self.loadbalancer_repo = a10_repo.LoadBalancerRepository()
 
     @property
     def network_driver(self):
@@ -768,13 +774,73 @@ class WriteMemory(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder, write_mem_shared_part=False):
+        if CONF.a10_house_keeping.use_periodic_write_memory == 'disable':
+            try:
+                if vthunder:
+                    if vthunder.partition_name != "shared" and not write_mem_shared_part:
+                        LOG.info("Performing write memory for thunder - {}:{}"
+                                 .format(vthunder.ip_address, vthunder.partition_name))
+                        self.axapi_client.system.action.write_memory(
+                            partition="specified",
+                            specified_partition=vthunder.partition_name)
+                    else:
+                        LOG.info("Performing write memory for thunder - {}:{}"
+                                 .format(vthunder.ip_address, "shared"))
+                        self.axapi_client.system.action.write_memory(partition="shared")
+            except acos_errors.ACOSException:
+                LOG.warning('Failed to write memory on thunder device: %s due to '
+                            'ACOSException.... skipping', vthunder.ip_address)
+            except req_exceptions.ConnectionError:
+                LOG.warning('Failed to write memory on thunder device: %s due to '
+                            'ConnectionError.... skipping', vthunder.ip_address)
+            except Exception as e:
+                LOG.warning('Failed to write memory on thunder device: {} due to {}'
+                            .format(vthunder.ip_address, str(e)))
+
+
+class WriteMemoryHouseKeeper(VThunderBaseTask):
+    """Task to write memory of the Thunder device using housekeeping"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder, loadbalancers_list, write_mem_shared_part=False):
         try:
             if vthunder:
                 if vthunder.partition_name != "shared" and not write_mem_shared_part:
+                    LOG.info("Performing write memory for thunder - {}:{}"
+                             .format(vthunder.ip_address, vthunder.partition_name))
                     self.axapi_client.system.action.write_memory(
                         partition="specified",
                         specified_partition=vthunder.partition_name)
                 else:
+                    LOG.info("Performing write memory for thunder - {}:{}"
+                             .format(vthunder.ip_address, "shared"))
                     self.axapi_client.system.action.write_memory(partition="shared")
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError):
-            LOG.warning("Failed to write memory on thunder device: %s", vthunder.ip_address)
+        except acos_errors.ACOSException:
+            LOG.warning('Failed to write memory on thunder device: {} due to ACOSException'
+                        '.... skipping'.format(vthunder.ip_address))
+            self._revert_lb_to_active(vthunder, loadbalancers_list)
+        except req_exceptions.ConnectionError:
+            LOG.warning('Failed to write memory on thunder device: {} due to ConnectionError'
+                        '.... skipping'.format(vthunder.ip_address))
+            self._revert_lb_to_active(vthunder, loadbalancers_list)
+        except Exception as e:
+            LOG.warning('Failed to write memory on thunder device: '
+                        '{} due to {}...skipping'.format(vthunder.ip_address, str(e)))
+            self._revert_lb_to_active(vthunder, loadbalancers_list)
+
+    def _revert_lb_to_active(self, vthunder, loadbalancers_list):
+        # Set updated_at of thunder to retry write memory
+        # for failed thunder via housekeeper
+        self.vthunder_repo.update(db_apis.get_session(),
+                                  vthunder.id,
+                                  updated_at=datetime.utcnow())
+        LOG.debug("Thunder updated_at set successfully")
+        try:
+            for lb in loadbalancers_list:
+                self.loadbalancer_repo.update(
+                    db_apis.get_session(),
+                    lb.id,
+                    provisioning_status='ACTIVE')
+        except Exception as e:
+            LOG.exception('Failed to set Loadbalancers to ACTIVE due to '
+                          ': {}'.format(str(e)))
