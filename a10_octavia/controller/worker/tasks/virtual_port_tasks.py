@@ -30,8 +30,8 @@ LOG = logging.getLogger(__name__)
 
 class ListenersParent(object):
 
-    def set(self, set_method, loadbalancer, listener, vthunder,
-            flavor_data=None, ssl_template=None):
+    def set(self, set_method, loadbalancer, listener, vthunder, flavor_data=None,
+            update_dict=None, ssl_template=None):
         listener.load_balancer = loadbalancer
         listener.protocol = openstack_mappings.virtual_port_protocol(
             self.axapi_client, listener.protocol).lower()
@@ -48,7 +48,7 @@ class ListenersParent(object):
         config_data['status'] = status
 
         conn_limit = CONF.listener.conn_limit
-        if listener.connection_limit != -1:
+        if update_dict and "connection_limit" in update_dict:
             conn_limit = listener.connection_limit
         if conn_limit < 1 or conn_limit > 64000000:
             LOG.warning('The specified member server connection limit '
@@ -189,11 +189,11 @@ class ListenerUpdate(ListenersParent, task.Task):
     """Task to update listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder, flavor_data=None):
+    def execute(self, loadbalancer, listener, vthunder, flavor_data=None, update_dict=None):
         try:
             if listener:
                 self.set(self.axapi_client.slb.virtual_server.vport.replace,
-                         loadbalancer, listener, vthunder, flavor_data)
+                         loadbalancer, listener, vthunder, flavor_data, update_dict)
                 LOG.debug("Successfully updated listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update listener: %s", listener.id)

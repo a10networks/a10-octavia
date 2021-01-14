@@ -18,11 +18,8 @@ from requests import exceptions
 from taskflow import task
 
 import acos_client.errors as acos_errors
-import socket
-import struct
 
 from a10_octavia.common import openstack_mappings
-from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils
 
@@ -31,20 +28,7 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class MemberBaseTask(task.Task):
-
-    def __init__(self, **kwargs):
-        super(MemberBaseTask, self).__init__(**kwargs)
-        self._network_driver = None
-
-    @property
-    def network_driver(self):
-        if self._network_driver is None:
-            self._network_driver = a10_utils.get_network_driver()
-        return self._network_driver
-
-
-class MemberCreate(MemberBaseTask):
+class MemberCreate(task.Task):
     """Task to create a member and associate to pool"""
 
     @axapi_client_decorator
@@ -127,7 +111,7 @@ class MemberCreate(MemberBaseTask):
                           member.id, pool.id, str(e))
 
 
-class MemberDelete(MemberBaseTask):
+class MemberDelete(task.Task):
     """Task to delete member"""
 
     @axapi_client_decorator
@@ -158,7 +142,7 @@ class MemberDelete(MemberBaseTask):
             raise e
 
 
-class MemberUpdate(MemberBaseTask):
+class MemberUpdate(task.Task):
     """Task to update member"""
 
     @axapi_client_decorator
@@ -216,7 +200,7 @@ class MemberUpdate(MemberBaseTask):
             # no raise, it will still work even no port. but options for port will missing
 
 
-class MemberDeletePool(MemberBaseTask):
+class MemberDeletePool(task.Task):
     """Task to delete member"""
 
     @axapi_client_decorator
@@ -240,7 +224,7 @@ class MemberDeletePool(MemberBaseTask):
             raise e
 
 
-class MemberFindNatPool(MemberBaseTask):
+class MemberFindNatPool(task.Task):
 
     @axapi_client_decorator
     def execute(self, member, vthunder, pool, flavor=None):
@@ -261,43 +245,3 @@ class MemberFindNatPool(MemberBaseTask):
                     for flavor in (pools_flavor or []):
                         if vport['port']['pool'] == flavor['pool_name']:
                             return flavor
-
-
-class MemberReserveSubnetAddr(MemberBaseTask):
-
-    def execute(self, member, nat_flavor=None, nat_pool=None):
-        if nat_flavor is None:
-            return
-
-        if nat_pool is None:
-            try:
-                addr_list = []
-                start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
-                end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
-                while start <= end:
-                    addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
-                    start += 1
-                port = self.network_driver.reserve_subnet_addresses(member.subnet_id, addr_list)
-                LOG.debug("Successfully allocated addresses for nat pool %s on port %s",
-                          nat_flavor['pool_name'], port.id)
-                return port
-            except Exception as e:
-                LOG.exception("Failed to reserve addresses in NAT pool %s from subnet %s",
-                              nat_flavor['pool_name'], member.subnet_id)
-                raise e
-        return
-
-
-class MemberReleaseSubnetAddr(MemberBaseTask):
-
-    def execute(self, member, nat_flavor=None, nat_pool=None):
-        if nat_flavor is None or nat_pool is None:
-            return
-
-        if nat_pool.member_ref_count == 1:
-            try:
-                self.network_driver.delete_port(nat_pool.port_id)
-            except Exception as e:
-                LOG.exception("Failed to release addresses in NAT pool %s from subnet %s",
-                              nat_flavor['pool_name'], member.subnet_id)
-                raise e
