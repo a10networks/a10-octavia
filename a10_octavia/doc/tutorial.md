@@ -23,7 +23,7 @@
     * [L7 Rules, Policies, and AFLEX](#L7-Rules,-Policies,-and-AFLEX)
     * [Terminated HTTPS/SSL Offloading](#Terminated-HTTPS)
     * [Hierarchical Multitenancy](#Hierarchical-Multitenancy)
-    * [Octavia Flavor Support] (#Octavia-Flavor-Support)
+    * [Octavia Flavor Support](#Octavia-Flavor-Support)
     * [SLB Configuration Options](#SLB-Configuration-Options)
 
 9. [Troubleshooting](#Troubleshooting)
