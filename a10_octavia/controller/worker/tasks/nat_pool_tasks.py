@@ -92,9 +92,9 @@ class NatPoolCreate(task.Task):
             except ConnectionError:
                 LOG.exception(
                     "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
-            except Exception as e:
-                LOG.exception("Failed to revert creation of the nat-pool due to: %s",
-                              str(e))
+            except (acos_errors.ACOSException, Exception) as e:
+                LOG.exception("Failed to revert creation of nat-pool %s due to: %s",
+                              pool_name, str(e))
 
 
 class NatPoolDelete(task.Task):
