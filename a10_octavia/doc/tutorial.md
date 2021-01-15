@@ -1974,7 +1974,7 @@ Note that the partition name is the first 14 characters of the parent project's 
 ***
 
 ### Octavia Flavor Support
-In this section we just brief this feature. Please reference Octavia Flavor Support document for more information: https://github.com/a10networks/a10-octavia/blob/master/a10_octavia/doc/octavia_flavor_support.md
+***In this section we just brief this feature. Please reference Octavia Flavor Support document for more information: https://github.com/a10networks/a10-octavia/blob/master/a10_octavia/doc/octavia_flavor_support.md***
 
 #### Feature Overview
 
