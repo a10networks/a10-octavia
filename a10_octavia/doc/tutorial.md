@@ -2046,6 +2046,14 @@ use_parent_partition = False
 
 Options set in the global section will apply to every project under the `hardware_thunder` configuration section
 
+#### housekeeper config example
+```shell
+[a10_house_keeping]
+use_periodic_write_memory = 'enable'
+write_mem_interval = 3600
+```
+Enable periodic write memory with interval 3600 seconds. (So, write memroy will not perform for every openstack commands. And will be maintained by housekeeper
+
 #### Loadbalancer/virtual server config example
 ```shell
 [slb]
