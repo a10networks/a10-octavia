@@ -82,11 +82,11 @@ class NatPoolCreate(task.Task):
             try:
                 if natpool_flavor_list:
                     for nat_pool in natpool_flavor_list:
-                        pool_name = nat_pool['pool_name']
+                        pool_name = nat_pool.get('pool_name')
                         LOG.warning("Reverting creation of nat-pool: %s", pool_name)
                         self.axapi_client.nat.pool.delete(pool_name)
                 if natpool_flavor:
-                    pool_name = natpool_flavor['pool_name']
+                    pool_name = natpool_flavor.get('pool_name')
                     LOG.warning("Reverting creation of nat-pool: %s", pool_name)
                     self.axapi_client.nat.pool.delete(pool_name)
             except ConnectionError:
