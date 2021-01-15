@@ -23,6 +23,7 @@
     * [L7 Rules, Policies, and AFLEX](#L7-Rules,-Policies,-and-AFLEX)
     * [Terminated HTTPS/SSL Offloading](#Terminated-HTTPS)
     * [Hierarchical Multitenancy](#Hierarchical-Multitenancy)
+    * [Octavia Flavor Support] (#Octavia-Flavor-Support)
     * [SLB Configuration Options](#SLB-Configuration-Options)
 
 9. [Troubleshooting](#Troubleshooting)
@@ -1969,6 +1970,66 @@ slb virtual-server fcbda83d-1098-4cb1-8acd-9c21f633ead 18.64.10.109
 ```
 
 Note that the partition name is the first 14 characters of the parent project's id.
+
+***
+
+### Octavia Flavor Support
+In this section we just brief this feature. Please reference Octavia Flavor Support document for more information: https://github.com/a10networks/a10-octavia/blob/master/a10_octavia/doc/octavia_flavor_support.md
+
+#### Feature Overview
+
+* Use octavia flavor/flavorprofile to specify options for slb objects.
+* Flavors can be shared between loadblancers.
+* Uses regex expressions to match object names, if match occurs then the provided setting is applied.
+* SNAT pool flavors are supported to allocate NAT pool on ACOS device.
+* ACOS aXAPI attributes can be spcified as options for slb objects and nat pools.
+* Doesn't require restart service for change loadbalancer options.
+* example commands:
+```shell
+$ openstack loadbalancer flavorprofile create --name fp1 --provider a10 --flavor-data '{"virtual-server": {"vport-disable-action":"drop-packet"}}'
+$ openstack loadbalancer flavor create --name f1 --flavorprofile fp1 --description "vtest" --enable
+$ openstack loadbalancer create --flavor f1 --vip-subnet-id f25ce642-f953-4058-8c46-98fdd72fb129 --vip-address 192.168.91.56 --name vip1
+```
+
+#### ACOS aXAPI
+The aXAPI version 3.0 offers an HTTP interface that can be used to configure and monitor your ACOS device.
+And for flaovr support feature, **a10-octavia allow user to specify aXAPI attributes in flavor options** to configure ACOS device objects.
+
+For more information for aXAPI and **aXAPI attributes for slb objects**, please find aXAPI v3.0 document for more information:
+ - aXAPI v30 document for ACOS 4.1.4-GR1-P5: https://documentation.a10networks.com/ACOS/414x/ACOS_4_1_4-GR1-P5/html/axapiv3/index.html
+ - aXAPI v30 document for ACOS 5.2.1: http://acos.docs.a10networks.com/axapi/521/index.html
+
+Please reference below example for how aXAPI attributes apply to flavor options.
+
+#### Flavor example
+
+Use virtual-server flavor as example:
+```
+{
+	"virtual-server": {
+		"arp-disable":1,
+		"name-expressions": [
+			{
+				"regex": "vip1", "json": {"user-tag": "vip1"}
+			},
+			{
+				"regex": "vip2", "json": {"user-tag": "vip2"}
+			}
+		]
+	}
+}
+```
+ - aXAPI attributes can be used as options to configure loadbalancers. (where **"arp-disable"** and **"user-tag"** are **aXAPI attributes** for ACOS)
+ - Global options are specified under "virtual-server". (in this example is **"arp-disable": 1**)
+ - Allow use regex expression to match specific object name and apply specific options to this object. 
+    - User can specify matching list in **"name-expressions"**, and use **"regex"** to specify object name regex you want match.
+      And then use **"json"** to specify options for matched objects.
+	- Any **slb object name** that **contains** the string in **"regex"** will match this name expression.
+	  And options in this name expression will apply to this slb object.
+    - In this example, loadbalancer **vip1** will configure **user-tag** as **vip1**.
+      loadbalancer **vip2** will configure **user-tag** as **vip2**.
+
+***
 
 ### SLB Configuration Options
 
