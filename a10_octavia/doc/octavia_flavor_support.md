@@ -564,14 +564,16 @@ slb virtual-server 6e4badd1-aa4a-4eaf-963c-105e97fc162f 192.168.91.56
 
 ## Limitations
 
-### 1.	Don’t allow the "name" aXAPI attribute in flavor option for all slb objects (i.e. virtual-server, virtual-port, service-group, server and health-monitor). 
+### 1.  The flavor-data can't be modified when flavorprofile is in used. User need to remove related loadbalancer objects before modify it.
+
+### 2.	Don’t allow the "name" aXAPI attribute in flavor option for all slb objects (i.e. virtual-server, virtual-port, service-group, server and health-monitor). 
 Since all object will use the same name and will cause problem.
 
-### 2.	Some aXAPI attributes will conflict with openstack command options, a10-octavia will:
+### 3.	Some aXAPI attributes will conflict with openstack command options, a10-octavia will:
   * Reject some of these aXAPI attributes in flavor. (For example: "port-number" and "protocol" aXAPI attributes keys are not allowed for virtual-port flavor.
   * Some of them will be accepted, but the show result in openstack and ACOS device will be different. (For example: When service-group flavor specify "lb-method" and it is different from the openstack pool create/set command --lb-algorithm option. In thunder it will use the method specified in lb-method, but in openstack show command it still show method specified in –lb-algorithm.)
   
-### 3.  Some aXAPI attributes will conflict with some default aXAPI attributes.
+### 4.  Some aXAPI attributes will conflict with some default aXAPI attributes.
 For example:
 ```python
 {
