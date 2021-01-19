@@ -691,7 +691,8 @@ class GetChildProjectsOfParentPartition(BaseDatabaseTask):
             try:
                 partition_project_list = self.vthunder_repo.get_project_list_using_partition(
                     db_apis.get_session(),
-                    partition_name=vthunder.partition_name)
+                    partition_name=vthunder.partition_name,
+                    ip_address=vthunder.ip_address)
                 return partition_project_list
             except Exception as e:
                 LOG.exception(
