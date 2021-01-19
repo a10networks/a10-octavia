@@ -404,6 +404,9 @@ class VThunderFlows(object):
                     id=vthunder.vthunder_id,
                     flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
                     partition=a10constants.WRITE_MEM_FOR_SHARED_PARTITION)))
+            write_memory_flow.add(a10_database_tasks.SetThunderLastWriteMem(
+                requires=a10constants.VTHUNDER,
+                rebind={a10constants.VTHUNDER: vthunder.vthunder_id}))
             write_memory_flow.add(a10_database_tasks.MarkLoadBalancersActiveInDB(
                 requires=a10constants.LOADBALANCERS_LIST))
         store.update(vthunder_store)
