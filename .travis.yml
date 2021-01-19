@@ -18,6 +18,5 @@ jobs:
     env: TOX_ENV=pep8
 install:
   - pip install tox
-  - pip install --upgrade setuptools
 script:
   - tox -e $TOX_ENV
