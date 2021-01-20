@@ -758,7 +758,9 @@ class UpdateNatPoolDB(BaseDatabaseTask):
 
         if nat_pool is None:
             if subnet_port is None:
-                raise exceptions.PortIdMissing()
+                # NAT pool addresses are not in member subnet. a10-octavia allows it
+                # but not able to reerve ip for it. So, no database entry is needed.
+                return
 
             try:
                 id = uuidutils.generate_uuid()
