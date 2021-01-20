@@ -548,6 +548,15 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
                                                              vthunder.id,
                                                              updated_at=mock.ANY)
 
+    def test_SetThunderLastWriteMem_execute_update(self):
+        db_task = task.SetThunderLastWriteMem()
+        vthunder = copy.deepcopy(VTHUNDER)
+        db_task.vthunder_repo.update = mock.Mock()
+        db_task.execute(vthunder)
+        db_task.vthunder_repo.update.assert_called_once_with(mock.ANY,
+                                                             vthunder.id,
+                                                             last_write_mem=mock.ANY)
+
     def test_GetActiveLoadBalancersByThunder_return_empty(self):
         lb_task = task.GetActiveLoadBalancersByThunder()
         vthunder = copy.deepcopy(VTHUNDER)

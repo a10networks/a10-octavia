@@ -844,6 +844,22 @@ class SetThunderUpdatedAt(BaseDatabaseTask):
                           ', skipping.'.format(str(e)))
 
 
+class SetThunderLastWriteMem(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        try:
+            if vthunder:
+                LOG.debug("Updated the last_write_mem field for thunder : {}:{}"
+                          .format(vthunder.ip_address, vthunder.partition_name))
+                self.vthunder_repo.update(
+                    db_apis.get_session(),
+                    vthunder.id,
+                    last_write_mem=datetime.utcnow())
+        except Exception as e:
+            LOG.exception('Failed to set last_write_mem field for thunder due to: {}'
+                          ', skipping.'.format(str(e)))
+
+
 class GetActiveLoadBalancersByThunder(BaseDatabaseTask):
 
     def execute(self, vthunder):

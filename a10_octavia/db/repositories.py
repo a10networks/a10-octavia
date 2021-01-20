@@ -183,10 +183,11 @@ class BaseRepository(object):
 class VThunderRepository(BaseRepository):
     model_class = models.VThunder
 
-    def get_recently_updated_thunders(self, session, expiry_time):
+    def get_recently_updated_thunders(self, session):
         query = session.query(self.model_class).filter(
-            self.model_class.updated_at >= expiry_time).filter(
-            self.model_class.status == 'ACTIVE')
+            or_(self.model_class.updated_at >= self.model_class.last_write_mem,
+                self.model_class.last_write_mem == None)).filter(
+            or_(self.model_class.status == 'ACTIVE', self.model_class.status == 'DELETED'))
         query = query.options(noload('*'))
         return query.all()
 
