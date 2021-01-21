@@ -14,7 +14,6 @@
 
 
 from acos_client import errors as acos_errors
-from acos_client.v21 import axapi_http as axapi_v21
 from oslo_config import cfg
 from oslo_log import log as logging
 from requests.exceptions import ConnectionError
@@ -52,8 +51,8 @@ class CreateAndAssociateHealthMonitor(task.Task):
                 name_exprs = flavors.get('name_expressions')
                 parsed_exprs = utils.parse_name_expressions(health_mon.name, name_exprs)
                 flavors.pop('name_expressions', None)
-                args = axapi_v21.merge_dicts(args, flavors)
-                args = axapi_v21.merge_dicts(args, parsed_exprs)
+                flavors.update(parsed_exprs)
+                args.update({'monitor': flavors})
 
         try:
             post_data = CONF.health_monitor.post_data
@@ -144,8 +143,8 @@ class UpdateHealthMonitor(task.Task):
                 name_exprs = flavors.get('name_expressions')
                 parsed_exprs = utils.parse_name_expressions(health_mon.name, name_exprs)
                 flavors.pop('name_expressions', None)
-                args = axapi_v21.merge_dicts(args, flavors)
-                args = axapi_v21.merge_dicts(args, parsed_exprs)
+                flavors.update(parsed_exprs)
+                args.update({'monitor': flavors})
 
         try:
             post_data = CONF.health_monitor.post_data

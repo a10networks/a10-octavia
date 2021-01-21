@@ -53,7 +53,7 @@ FLAVOR_WITH_REGEX_ARGS = {
     'monitor': {
         'retry': 5,
         'method': {
-            'http': {'http_response_code': '201', 'http_host': 'my.test.com'}
+            'http': {'http_host': 'my.test.com'}
         },
         'timeout': 8
     }
@@ -98,12 +98,10 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
     def test_health_monitor_create_with_flavor_task(self):
         flavor = {
             "health_monitor": {
-                "monitor": {
-                    "retry": 5,
-                    "method": {
-                        "http": {
-                            "http_response_code": "201"
-                        }
+                "retry": 5,
+                "method": {
+                    "http": {
+                        "http_response_code": "201"
                     }
                 }
             }
@@ -123,12 +121,10 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
     def test_health_monitor_create_with_flavor_and_config(self):
         flavor = {
             "health_monitor": {
-                "monitor": {
-                    "retry": 5,
-                    "method": {
-                        "http": {
-                            "http_response_code": "201"
-                        }
+                "retry": 5,
+                "method": {
+                    "http": {
+                        "http_response_code": "201"
                     }
                 }
             }
@@ -150,24 +146,20 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
     def test_health_monitor_create_with_flavor_regex_task(self):
         flavor = {
             "health_monitor": {
-                "monitor": {
-                    "retry": 5,
-                    "method": {
-                        "http": {
-                            "http_response_code": "201"
-                        }
+                "retry": 5,
+                "method": {
+                    "http": {
+                        "http_response_code": "201"
                     }
                 },
                 "name_expressions": [
                     {
                         "regex": "hm1",
                         "json": {
-                            "monitor": {
-                                "timeout": 8,
-                                "method": {
-                                    "http": {
-                                        "http_host": "my.test.com"
-                                    }
+                            "timeout": 8,
+                            "method": {
+                                "http": {
+                                    "http_host": "my.test.com"
                                 }
                             }
                         }
@@ -191,25 +183,21 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
     def test_health_monitor_create_with_regex_overwrite_flavor_task(self):
         flavor = {
             "health_monitor": {
-                "monitor": {
-                    "retry": 5,
-                    "timeout": 90,
-                    "method": {
-                        "http": {
-                            "http_response_code": "201"
-                        }
+                "retry": 5,
+                "timeout": 90,
+                "method": {
+                    "http": {
+                        "http_response_code": "201"
                     }
                 },
                 "name_expressions": [
                     {
                         "regex": "hm1",
                         "json": {
-                            "monitor": {
-                                "timeout": 8,
-                                "method": {
-                                    "http": {
-                                        "http_host": "my.test.com"
-                                    }
+                            "timeout": 8,
+                            "method": {
+                                "http": {
+                                    "http_host": "my.test.com"
                                 }
                             }
                         }
@@ -257,12 +245,10 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
     def test_health_monitor_update_with_flavor_and_config_task(self):
         flavor = {
             "health_monitor": {
-                "monitor": {
-                    "retry": 5,
-                    "method": {
-                        "http": {
-                            "http_response_code": "201"
-                        }
+                "retry": 5,
+                "method": {
+                    "http": {
+                        "http_response_code": "201"
                     }
                 }
             }
@@ -285,12 +271,10 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
     def test_health_monitor_update_with_flavor_task(self):
         flavor = {
             "health_monitor": {
-                "monitor": {
-                    "retry": 5,
-                    "method": {
-                        "http": {
-                            "http_response_code": "201"
-                        }
+                "retry": 5,
+                "method": {
+                    "http": {
+                        "http_response_code": "201"
                     }
                 }
             }
@@ -311,24 +295,20 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
     def test_health_monitor_update_with_flavor_regex_task(self):
         flavor = {
             "health_monitor": {
-                "monitor": {
-                    "retry": 5,
-                    "method": {
-                        "http": {
-                            "http_response_code": "201"
-                        }
+                "retry": 5,
+                "method": {
+                    "http": {
+                        "http_response_code": "201"
                     }
                 },
                 "name_expressions": [
                     {
                         "regex": "hm1",
                         "json": {
-                            "monitor": {
-                                "timeout": 8,
-                                "method": {
-                                    "http": {
-                                        "http_host": "my.test.com"
-                                    }
+                            "timeout": 8,
+                            "method": {
+                                "http": {
+                                    "http_host": "my.test.com"
                                 }
                             }
                         }
@@ -353,25 +333,21 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
     def test_health_monitor_update_with_regex_overwrite_flavor_task(self):
         flavor = {
             "health_monitor": {
-                "monitor": {
-                    "retry": 5,
-                    "timeout": 90,
-                    "method": {
-                        "http": {
-                            "http_response_code": "201"
-                        }
+                "retry": 5,
+                "timeout": 90,
+                "method": {
+                    "http": {
+                        "http_response_code": "201"
                     }
                 },
                 "name_expressions": [
                     {
                         "regex": "hm1",
                         "json": {
-                            "monitor": {
-                                "timeout": 8,
-                                "method": {
-                                    "http": {
-                                        "http_host": "my.test.com"
-                                    }
+                            "timeout": 8,
+                            "method": {
+                                "http": {
+                                    "http_host": "my.test.com"
                                 }
                             }
                         }

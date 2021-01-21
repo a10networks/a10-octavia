@@ -691,7 +691,8 @@ class GetChildProjectsOfParentPartition(BaseDatabaseTask):
             try:
                 partition_project_list = self.vthunder_repo.get_project_list_using_partition(
                     db_apis.get_session(),
-                    partition_name=vthunder.partition_name)
+                    partition_name=vthunder.partition_name,
+                    ip_address=vthunder.ip_address)
                 return partition_project_list
             except Exception as e:
                 LOG.exception(
@@ -758,7 +759,9 @@ class UpdateNatPoolDB(BaseDatabaseTask):
 
         if nat_pool is None:
             if subnet_port is None:
-                raise exceptions.PortIdMissing()
+                # NAT pool addresses are not in member subnet. a10-octavia allows it
+                # but not able to reerve ip for it. So, no database entry is needed.
+                return
 
             try:
                 id = uuidutils.generate_uuid()
@@ -839,6 +842,22 @@ class SetThunderUpdatedAt(BaseDatabaseTask):
                     updated_at=datetime.utcnow())
         except Exception as e:
             LOG.exception('Failed to set updated_at field for thunder due to: {}'
+                          ', skipping.'.format(str(e)))
+
+
+class SetThunderLastWriteMem(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        try:
+            if vthunder:
+                LOG.debug("Updated the last_write_mem field for thunder : {}:{}"
+                          .format(vthunder.ip_address, vthunder.partition_name))
+                self.vthunder_repo.update(
+                    db_apis.get_session(),
+                    vthunder.id,
+                    last_write_mem=datetime.utcnow())
+        except Exception as e:
+            LOG.exception('Failed to set last_write_mem field for thunder due to: {}'
                           ', skipping.'.format(str(e)))
 
 

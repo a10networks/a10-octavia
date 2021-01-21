@@ -13,8 +13,6 @@
 #    under the License.
 
 
-from datetime import datetime
-
 import acos_client
 from acos_client import errors as acos_errors
 try:
@@ -829,12 +827,6 @@ class WriteMemoryHouseKeeper(VThunderBaseTask):
             self._revert_lb_to_active(vthunder, loadbalancers_list)
 
     def _revert_lb_to_active(self, vthunder, loadbalancers_list):
-        # Set updated_at of thunder to retry write memory
-        # for failed thunder via housekeeper
-        self.vthunder_repo.update(db_apis.get_session(),
-                                  vthunder.id,
-                                  updated_at=datetime.utcnow())
-        LOG.debug("Thunder updated_at set successfully")
         try:
             for lb in loadbalancers_list:
                 self.loadbalancer_repo.update(

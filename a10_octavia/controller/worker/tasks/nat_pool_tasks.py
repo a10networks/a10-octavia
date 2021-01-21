@@ -76,24 +76,25 @@ class NatPoolCreate(task.Task):
 
     @axapi_client_decorator
     def revert(self, loadbalancer, vthunder, flavor_data=None, *args, **kwargs):
-        natpool_flavor_list = flavor_data.get('nat_pool_list')
-        natpool_flavor = flavor_data.get('nat_pool')
-        try:
-            if natpool_flavor_list:
-                for nat_pool in natpool_flavor_list:
-                    pool_name = nat_pool['pool_name']
+        if flavor_data:
+            natpool_flavor_list = flavor_data.get('nat_pool_list')
+            natpool_flavor = flavor_data.get('nat_pool')
+            try:
+                if natpool_flavor_list:
+                    for nat_pool in natpool_flavor_list:
+                        pool_name = nat_pool.get('pool_name')
+                        LOG.warning("Reverting creation of nat-pool: %s", pool_name)
+                        self.axapi_client.nat.pool.delete(pool_name)
+                if natpool_flavor:
+                    pool_name = natpool_flavor.get('pool_name')
                     LOG.warning("Reverting creation of nat-pool: %s", pool_name)
                     self.axapi_client.nat.pool.delete(pool_name)
-            if natpool_flavor:
-                pool_name = natpool_flavor['pool_name']
-                LOG.warning("Reverting creation of nat-pool: %s", pool_name)
-                self.axapi_client.nat.pool.delete(pool_name)
-        except ConnectionError:
-            LOG.exception(
-                "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
-        except Exception as e:
-            LOG.exception("Failed to revert creation of the nat-pool due to: %s",
-                          str(e))
+            except ConnectionError:
+                LOG.exception(
+                    "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
+            except (acos_errors.ACOSException, Exception) as e:
+                LOG.exception("Failed to revert creation of nat-pool %s due to: %s",
+                              pool_name, str(e))
 
 
 class NatPoolDelete(task.Task):
@@ -101,25 +102,26 @@ class NatPoolDelete(task.Task):
 
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder, lb_count, flavor_data=None):
-        if lb_count <= 1:
-            if flavor_data:
-                natpool_flavor_list = flavor_data.get('nat_pool_list')
-                natpool_flavor = flavor_data.get('nat_pool')
-                if natpool_flavor_list:
-                    for nat_pool in natpool_flavor_list:
-                        pool_name = nat_pool['pool_name']
+        if vthunder:
+            if lb_count <= 1:
+                if flavor_data:
+                    natpool_flavor_list = flavor_data.get('nat_pool_list')
+                    natpool_flavor = flavor_data.get('nat_pool')
+                    if natpool_flavor_list:
+                        for nat_pool in natpool_flavor_list:
+                            pool_name = nat_pool['pool_name']
+                            try:
+                                self.axapi_client.nat.pool.delete(pool_name)
+                            except(acos_errors.ACOSException) as e:
+                                LOG.exception("Failed to delete Nat-pool with name %s due to %s",
+                                              pool_name, str(e))
+                    if natpool_flavor:
+                        pool_name = natpool_flavor['pool_name']
                         try:
                             self.axapi_client.nat.pool.delete(pool_name)
                         except(acos_errors.ACOSException) as e:
                             LOG.exception("Failed to delete Nat-pool with name %s due to %s",
                                           pool_name, str(e))
-                if natpool_flavor:
-                    pool_name = natpool_flavor['pool_name']
-                    try:
-                        self.axapi_client.nat.pool.delete(pool_name)
-                    except(acos_errors.ACOSException) as e:
-                        LOG.exception("Failed to delete Nat-pool with name %s due to %s",
-                                      pool_name, str(e))
-        else:
-            LOG.warning("Cannot delete Nat-pool(s) in flavor %s as "
-                        "they are in use by another loadbalancer(s)", loadbalancer.flavor_id)
+            else:
+                LOG.warning("Cannot delete Nat-pool(s) in flavor %s as "
+                            "they are in use by another loadbalancer(s)", loadbalancer.flavor_id)

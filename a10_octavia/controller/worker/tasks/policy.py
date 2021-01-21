@@ -76,9 +76,9 @@ class PolicyUtil(object):
         # rule string static - required for file type rules only
         if l7rule.type == "FILE_TYPE":
             if l7rule.compare_type == "REGEX":
-                ruleString = "([HTTP::path] matches_regex"
+                ruleString = "([HTTP::uri] matches_regex"
             else:
-                ruleString = "([HTTP::path] ends_with"
+                ruleString = "([HTTP::uri] ends_with"
 
         # value
         value_string = l7rule.value
