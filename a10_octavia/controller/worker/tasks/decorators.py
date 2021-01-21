@@ -34,14 +34,17 @@ def activate_partition(vthunder_client, partition):
 def axapi_client_decorator(func):
     def wrapper(self, *args, **kwargs):
         vthunder = kwargs.get('vthunder')
+        use_shared_partition = kwargs.get('write_mem_shared_part', False)
         if vthunder:
             api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             self.axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
                                                    vthunder.username, vthunder.password,
                                                    timeout=30)
 
-            if vthunder.partition_name != "shared":
+            if vthunder.partition_name != "shared" and not use_shared_partition:
                 activate_partition(self.axapi_client, vthunder.partition_name)
+            else:
+                activate_partition(self.axapi_client, "shared")
 
         else:
             self.axapi_client = None
