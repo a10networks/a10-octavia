@@ -388,6 +388,9 @@ class VThunderFlows(object):
                     flow='GetActiveLoadBalancersByThunder'),
                 provides=a10constants.LOADBALANCERS_LIST))
             write_memory_flow.add(a10_database_tasks.MarkLoadBalancersPendingUpdateInDB(
+                name='{flow}-{id}'.format(
+                    id=vthunder.vthunder_id,
+                    flow='MarkLoadBalancersPendingUpdateInDB'),
                 requires=a10constants.LOADBALANCERS_LIST))
             write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
                 requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST),
@@ -406,8 +409,14 @@ class VThunderFlows(object):
                     partition=a10constants.WRITE_MEM_FOR_SHARED_PARTITION)))
             write_memory_flow.add(a10_database_tasks.SetThunderLastWriteMem(
                 requires=a10constants.VTHUNDER,
-                rebind={a10constants.VTHUNDER: vthunder.vthunder_id}))
+                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
+                name='{flow}-{id}'.format(
+                    id=vthunder.vthunder_id,
+                    flow='SetThunderLastWriteMem')))
             write_memory_flow.add(a10_database_tasks.MarkLoadBalancersActiveInDB(
+                name='{flow}-{id}'.format(
+                    id=vthunder.vthunder_id,
+                    flow='MarkLoadBalancersActiveInDB'),
                 requires=a10constants.LOADBALANCERS_LIST))
         store.update(vthunder_store)
         return write_memory_flow
