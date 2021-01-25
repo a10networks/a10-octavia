@@ -215,7 +215,7 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         mock_pool.revert(POOL, VTHUNDER)
         self.client_mock.slb.service_group.delete.assert_called_with(POOL.id)
 
-    def test_create_lb_algorithm_source_ip_hash_only(self):
+    def test_create_lb_algorithm_source_ip_hash(self):
         mock_pool = task.PoolCreate()
         mock_pool.axapi_client = self.client_mock
         mock_pool.CONF = self.conf
