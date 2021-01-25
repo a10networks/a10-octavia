@@ -226,7 +226,7 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         self.client_mock.slb.service_group.create.assert_called_with(
             a10constants.MOCK_POOL_ID,
             protocol=mock.ANY,
-            lb_method=mock_pool.axapi_client.slb.service_group.SOURCE_IP_HASH_ONLY,
+            lb_method=mock_pool.axapi_client.slb.service_group.SOURCE_IP_HASH,
             service_group_templates=mock.ANY,
             hm_name=None,
             mem_list=None,
