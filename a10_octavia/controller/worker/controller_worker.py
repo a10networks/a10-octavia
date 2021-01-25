@@ -901,10 +901,25 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         """
         store = {a10constants.WRITE_MEM_SHARED_PART: True}
 
-        write_mem_tf = self._taskflow_load(self._vthunder_flows.get_write_memory_flow(thunders,
-                                                                                      store),
-                                           store=store)
+        for vthunder in thunders:
+            write_mem_tf = self._taskflow_load(self._vthunder_flows.get_write_memory_flow(vthunder,
+                                                                                          store),
+                                               store=store)
 
-        with tf_logging.DynamicLoggingListener(write_mem_tf,
-                                               log=LOG):
-            write_mem_tf.run()
+            with tf_logging.DynamicLoggingListener(write_mem_tf,
+                                                   log=LOG):
+                write_mem_tf.run()
+
+    def perform_reload_check(self, thunders):
+        """Perform check for thunders see if thunder reload before write memory
+
+        :param thunders: group of thunder objects
+        :returns: None
+        """
+        store = {}
+        for vthunder in thunders:
+            reload_check_tf = self._taskflow_load(
+                self._vthunder_flows.get_reload_check_flow(vthunder, store),
+                store=store)
+            with tf_logging.DynamicLoggingListener(reload_check_tf, log=LOG):
+                reload_check_tf.run()

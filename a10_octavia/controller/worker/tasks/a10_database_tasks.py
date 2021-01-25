@@ -852,9 +852,10 @@ class SetThunderLastWriteMem(BaseDatabaseTask):
             if vthunder:
                 LOG.debug("Updated the last_write_mem field for thunder : {}:{}"
                           .format(vthunder.ip_address, vthunder.partition_name))
-                self.vthunder_repo.update(
+                self.vthunder_repo.update_last_write_mem(
                     db_apis.get_session(),
-                    vthunder.id,
+                    vthunder.ip_address,
+                    vthunder.partition_name,
                     last_write_mem=datetime.utcnow())
         except Exception as e:
             LOG.exception('Failed to set last_write_mem field for thunder due to: {}'
@@ -880,6 +881,8 @@ class MarkLoadBalancersPendingUpdateInDB(BaseDatabaseTask):
     def execute(self, loadbalancers_list):
         try:
             for lb in loadbalancers_list:
+                if lb.provisioning_status == constants.ERROR:
+                    continue
                 self.loadbalancer_repo.update(
                     db_apis.get_session(),
                     lb.id,
@@ -894,6 +897,8 @@ class MarkLoadBalancersActiveInDB(BaseDatabaseTask):
     def execute(self, loadbalancers_list):
         try:
             for lb in loadbalancers_list:
+                if lb.provisioning_status == constants.ERROR:
+                    continue
                 self.loadbalancer_repo.update(
                     db_apis.get_session(),
                     lb.id,
