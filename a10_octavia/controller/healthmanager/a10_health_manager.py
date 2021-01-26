@@ -18,7 +18,6 @@ import datetime
 
 from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_utils import excutils
 
 from octavia.controller.healthmanager import health_manager
 from octavia.db import api as db_apis
@@ -38,28 +37,26 @@ class A10HealthManager(health_manager.HealthManager):
         self.executor = futures.ThreadPoolExecutor(max_workers=self.threads)
         self.vthunder_repo = a10repo.VThunderRepository()
         self.dead = exit_event
+        self.db_session = db_apis.get_session()
 
     def health_check(self):
         futs = []
-        while not self.dead.is_set():
-            lock_session = None
-            try:
-                lock_session = db_apis.get_session()
-                failover_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
-                    seconds=CONF.a10_health_manager.heartbeat_timeout)
-                initial_setup_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
-                    seconds=CONF.a10_health_manager.failover_timeout)
-                vthunder = self.vthunder_repo.get_stale_vthunders(
-                    lock_session, initial_setup_wait_time, failover_wait_time)
+        vthunders = None
+        try:
+            failover_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
+                seconds=CONF.a10_health_manager.heartbeat_timeout)
+            initial_setup_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
+                seconds=CONF.a10_health_manager.failover_timeout)
+            vthunders = self.vthunder_repo.get_stale_vthunders(
+                self.db_session, initial_setup_wait_time, failover_wait_time)
 
-            except Exception:
-                with excutils.save_and_reraise_exception():
-                    if lock_session:
-                        lock_session.rollback()
+        except Exception as e:
+            LOG.warning("Error getting stale thunders: %s", str(e))
 
-            if vthunder is None:
-                break
+        if vthunders is None:
+            return
 
+        for vthunder in vthunders:
             LOG.info("Stale vThunder's id is: %s", vthunder.vthunder_id)
             fut = self.executor.submit(self.cw.failover_amphora, vthunder.vthunder_id)
             futs.append(fut)
