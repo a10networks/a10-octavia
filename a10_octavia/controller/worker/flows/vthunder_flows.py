@@ -423,7 +423,7 @@ class VThunderFlows(object):
 
     def get_reload_check_flow(self, vthunder, store):
         """Perform write memory for thunder """
-        sf_name = 'a10-house-keeper' + '-' + a10constants.WRITE_MEMORY_THUNDER_FLOW
+        sf_name = 'a10-house-keeper' + '-' + a10constants.RELOAD_CHECK_THUNDER_FLOW
 
         reload_check_flow = linear_flow.Flow(sf_name)
         vthunder_store = {}
@@ -436,7 +436,11 @@ class VThunderFlows(object):
                 flow='GetActiveLoadBalancersByThunder'),
             provides=a10constants.LOADBALANCERS_LIST))
         reload_check_flow.add(vthunder_tasks.WriteMemoryThunderStatusCheck(
+            name='{flow}-{id}'.format(
+                id=vthunder.vthunder_id,
+                flow='WriteMemoryThunderStatusCheck'),
             requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST),
             rebind={a10constants.VTHUNDER: vthunder.vthunder_id}))
+
         store.update(vthunder_store)
         return reload_check_flow
