@@ -18,6 +18,7 @@ import datetime
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import excutils
 
 from octavia.controller.healthmanager import health_manager
 from octavia.db import api as db_apis
@@ -40,37 +41,32 @@ class A10HealthManager(health_manager.HealthManager):
 
     def health_check(self):
         futs = []
-        db_session = db_apis.get_session()
-        list_full = False
         while not self.dead.is_set():
-            vthunders = None
+            lock_session = None
             try:
-                db_session = db_apis.get_session()
+                lock_session = db_apis.get_session()
                 failover_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
                     seconds=CONF.a10_health_manager.heartbeat_timeout)
                 initial_setup_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
                     seconds=CONF.a10_health_manager.failover_timeout)
-                vthunders = self.vthunder_repo.get_stale_vthunders(
-                    db_session, initial_setup_wait_time, failover_wait_time)
+                # TODO(ytsai-a10) get_stale_vthunders() will always get the same (first) vthunder
+                vthunder = self.vthunder_repo.get_stale_vthunders(
+                    lock_session, initial_setup_wait_time, failover_wait_time)
 
-            except Exception as e:
-                LOG.warning("Error getting stale thunders: %s", str(e))
+            except Exception:
+                # TODO(ytsai-a10) lock_session is not locked session, don't call rollback() here.
+                #       Just log a warning here is enough.
+                with excutils.save_and_reraise_exception():
+                    if lock_session:
+                        lock_session.rollback()
 
-            if vthunders is None:
+            if vthunder is None:
                 break
 
-            for vthunder in vthunders:
-                if self.dead.is_set():
-                    break
-
-                LOG.info("Stale vThunder's id is: %s", vthunder.vthunder_id)
-                fut = self.executor.submit(self.cw.failover_amphora, vthunder.vthunder_id)
-                futs.append(fut)
-                if len(futs) == self.threads:
-                    list_full = True
-                    break
-
-            if list_full is True:
+            LOG.info("Stale vThunder's id is: %s", vthunder.vthunder_id)
+            fut = self.executor.submit(self.cw.failover_amphora, vthunder.vthunder_id)
+            futs.append(fut)
+            if len(futs) == self.threads:
                 break
 
         if futs:

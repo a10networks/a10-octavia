@@ -67,7 +67,7 @@ def hm_health_check(exit_event):
     signal.signal(signal.SIGINT, hm_exit)
     LOG.warning("Pausing before starting health check")
     exit_event.wait(CONF.a10_health_manager.heartbeat_timeout)
-    # disable vthunder health check in this release
+    # TODO(ytsai-a10) Update health manager code from octavia and enable it
     # health_check.start()
 
 

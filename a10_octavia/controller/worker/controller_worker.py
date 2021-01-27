@@ -834,7 +834,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                      "ip_address": vthunder.ip_address}]}
             lock_session.commit()
             LOG.info(str(status))
-        lock_session.close()
+        # TODO(ytsai-a10) check if we need to call lock_session.close() to release db lock
 
     def failover_amphora(self, vthunder_id):
         """Perform failover operations for an vThunder.
