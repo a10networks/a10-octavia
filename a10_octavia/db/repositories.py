@@ -297,7 +297,6 @@ class VThunderRepository(BaseRepository):
 
         query = session.query(self.model_class).filter(
             self.model_class.updated_at < expiry_time)
-        query = session.query(self.model_class)
         if hasattr(self.model_class, 'status'):
             query = query.filter(or_(self.model_class.status == "USED_SPARE",
                                      self.model_class.status == consts.DELETED))
@@ -310,9 +309,10 @@ class VThunderRepository(BaseRepository):
         id_list = [model.id for model in model_list]
         return id_list
 
-    def get_project_list_using_partition(self, session, partition_name):
+    def get_project_list_using_partition(self, session, partition_name, ip_address):
         queryset_vthunders = session.query(self.model_class.project_id.distinct()).filter(
             and_(self.model_class.partition_name == partition_name,
+                 self.model_class.ip_address == ip_address,
                  or_(self.model_class.role == "STANDALONE",
                      self.model_class.role == "MASTER")))
         list_projects = [project[0] for project in queryset_vthunders]

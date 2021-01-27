@@ -373,11 +373,13 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
     def test_get_child_projects_for_partition(self):
         vthunder = copy.deepcopy(VTHUNDER)
         vthunder.partition_name = "mock-partition-name"
+        vthunder.ip_address = "mock-ip-addr"
         mock_get_projects = task.GetChildProjectsOfParentPartition()
         mock_get_projects.vthunder_repo.get_project_list_using_partition = mock.Mock()
         mock_get_projects.execute(MEMBER_1, vthunder)
         mock_get_projects.vthunder_repo.get_project_list_using_partition.\
-            assert_called_once_with(mock.ANY, partition_name='mock-partition-name')
+            assert_called_once_with(mock.ANY, partition_name='mock-partition-name',
+                                    ip_address="mock-ip-addr")
 
     def test_flavor_search_loadbalancer_find_flavor(self):
         flavor_task = task.GetFlavorData()

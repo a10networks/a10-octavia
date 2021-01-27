@@ -77,15 +77,6 @@ class MemberCreate(task.Task):
             raise e
 
         try:
-            protocol = openstack_mappings.service_group_protocol(
-                self.axapi_client, pool.protocol)
-            self.axapi_client.slb.server.port.create(server_name, member.protocol_port, protocol,
-                                                     weight=member.weight)
-        except (acos_errors.ACOSException, exceptions.ConnectionError):
-            LOG.exception("Failed add port in member %s", member.id)
-            # no raise, it will still work even no port. but options for port will missing
-
-        try:
             self.axapi_client.slb.service_group.member.create(
                 pool.id, server_name, member.protocol_port)
             LOG.debug("Successfully associated member %s to pool %s",
@@ -168,12 +159,6 @@ class MemberUpdate(task.Task):
             template_server = None
         server_temp = {'template-server': template_server}
 
-        port_list = None
-        curr_args = self.axapi_client.slb.server.get(server_name)
-        if 'server' in curr_args:
-            if 'port-list' in curr_args['server']:
-                port_list = curr_args['server']['port-list']
-
         if not member.enabled:
             status = False
         else:
@@ -189,15 +174,6 @@ class MemberUpdate(task.Task):
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update member: %s", member.id)
             raise e
-
-        try:
-            protocol = openstack_mappings.service_group_protocol(
-                self.axapi_client, pool.protocol)
-            self.axapi_client.slb.server.port.update(server_name, member.protocol_port, protocol,
-                                                     weight=member.weight)
-        except (acos_errors.ACOSException, exceptions.ConnectionError):
-            LOG.exception("Failed add port in member %s", member.id)
-            # no raise, it will still work even no port. but options for port will missing
 
 
 class MemberDeletePool(task.Task):
