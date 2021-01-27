@@ -1,7 +1,7 @@
 """Added NAT Pool table
 
-Revision ID: 3f576e3cd730
-Revises: 896487fad87d
+Revision ID: a41260fb4ccd
+Revises: 05b1446c7f20
 Create Date: 2020-12-21 16:52:42.793854
 
 """
