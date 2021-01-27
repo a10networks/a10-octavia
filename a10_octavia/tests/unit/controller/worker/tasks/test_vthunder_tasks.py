@@ -524,7 +524,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         lb_list.append(LB)
         mock_task = task.WriteMemoryHouseKeeper()
         mock_task.axapi_client = self.client_mock
-        mock_task.execute(mock_thunder, lb_list)
+        mock_task.execute(mock_thunder, lb_list, True)
         self.client_mock.system.action.write_memory.assert_called_with(partition='shared')
 
     def test_WriteMemoryHouseKeeper_execute_save_specific_partition_mem(self):

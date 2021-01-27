@@ -804,16 +804,17 @@ class WriteMemoryHouseKeeper(VThunderBaseTask):
     def execute(self, vthunder, loadbalancers_list, write_mem_shared_part=False):
         try:
             if vthunder:
-                if vthunder.partition_name != "shared" and not write_mem_shared_part:
-                    LOG.info("Performing write memory for thunder - {}:{}"
-                             .format(vthunder.ip_address, vthunder.partition_name))
-                    self.axapi_client.system.action.write_memory(
-                        partition="specified",
-                        specified_partition=vthunder.partition_name)
-                else:
+                if write_mem_shared_part:
                     LOG.info("Performing write memory for thunder - {}:{}"
                              .format(vthunder.ip_address, "shared"))
                     self.axapi_client.system.action.write_memory(partition="shared")
+                else:
+                    if vthunder.partition_name != "shared":
+                        LOG.info("Performing write memory for thunder - {}:{}"
+                                 .format(vthunder.ip_address, vthunder.partition_name))
+                        self.axapi_client.system.action.write_memory(
+                            partition="specified",
+                            specified_partition=vthunder.partition_name)
         except acos_errors.ACOSException:
             LOG.warning('Failed to write memory on thunder device: {} due to ACOSException'
                         '.... skipping'.format(vthunder.ip_address))
