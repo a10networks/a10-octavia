@@ -196,7 +196,6 @@ class VThunderRepository(BaseRepository):
             self.model_class.created_at < initial_setup_wait_time).filter(
             self.model_class.last_udp_update < failover_wait_time).filter(
             self.model_class.status == 'ACTIVE').filter(
-            self.model_class.topology != 'STANDALONE').filter(
             or_(self.model_class.role == "MASTER",
                 self.model_class.role == "BACKUP"))
         if model is None:

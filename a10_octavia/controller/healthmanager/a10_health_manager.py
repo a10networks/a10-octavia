@@ -37,30 +37,40 @@ class A10HealthManager(health_manager.HealthManager):
         self.executor = futures.ThreadPoolExecutor(max_workers=self.threads)
         self.vthunder_repo = a10repo.VThunderRepository()
         self.dead = exit_event
-        self.db_session = db_apis.get_session()
 
     def health_check(self):
         futs = []
-        vthunders = None
-        try:
-            failover_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
-                seconds=CONF.a10_health_manager.heartbeat_timeout)
-            initial_setup_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
-                seconds=CONF.a10_health_manager.failover_timeout)
-            vthunders = self.vthunder_repo.get_stale_vthunders(
-                self.db_session, initial_setup_wait_time, failover_wait_time)
+        db_session = db_apis.get_session()
+        list_full = False
+        while not self.dead.is_set():
+            vthunders = None
+            try:
+                db_session = db_apis.get_session()
+                failover_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
+                    seconds=CONF.a10_health_manager.heartbeat_timeout)
+                initial_setup_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
+                    seconds=CONF.a10_health_manager.failover_timeout)
+                vthunders = self.vthunder_repo.get_stale_vthunders(
+                    db_session, initial_setup_wait_time, failover_wait_time)
 
-        except Exception as e:
-            LOG.warning("Error getting stale thunders: %s", str(e))
+            except Exception as e:
+                LOG.warning("Error getting stale thunders: %s", str(e))
 
-        if vthunders is None:
-            return
+            if vthunders is None:
+                break
 
-        for vthunder in vthunders:
-            LOG.info("Stale vThunder's id is: %s", vthunder.vthunder_id)
-            fut = self.executor.submit(self.cw.failover_amphora, vthunder.vthunder_id)
-            futs.append(fut)
-            if len(futs) == self.threads:
+            for vthunder in vthunders:
+                if self.dead.is_set():
+                    break
+
+                LOG.info("Stale vThunder's id is: %s", vthunder.vthunder_id)
+                fut = self.executor.submit(self.cw.failover_amphora, vthunder.vthunder_id)
+                futs.append(fut)
+                if len(futs) == self.threads:
+                    list_full = True
+                    break
+
+            if list_full is True:
                 break
 
         if futs:
