@@ -15,6 +15,7 @@
 
 import acos_client
 from acos_client import errors as acos_errors
+import datetime
 try:
     import http.client as http_client
 except ImportError:
@@ -836,4 +837,43 @@ class WriteMemoryHouseKeeper(VThunderBaseTask):
                     provisioning_status='ACTIVE')
         except Exception as e:
             LOG.exception('Failed to set Loadbalancers to ACTIVE due to '
+                          ': {}'.format(str(e)))
+
+
+class WriteMemoryThunderStatusCheck(VThunderBaseTask):
+
+    @axapi_client_decorator
+    def execute(self, vthunder, loadbalancers_list):
+        if not loadbalancers_list:
+            return
+        try:
+            info = self.axapi_client.system.action.get_thunder_up_time()
+            if ("miscellenious-alb" in info and "oper" in info['miscellenious-alb'] and
+               "uptime" in info['miscellenious-alb']['oper']):
+                uptime = info['miscellenious-alb']['oper']['uptime']
+                uptime_delta = datetime.timedelta(seconds=uptime)
+                reload_time = datetime.datetime.utcnow() - uptime_delta
+                if (vthunder.last_write_mem is not None and
+                        vthunder.last_write_mem <= vthunder.updated_at):
+                    if reload_time > vthunder.updated_at:
+                        self._mark_lb_as_error(vthunder, loadbalancers_list)
+            else:
+                LOG.warning("Write Memory flow failed to detect Thunder status")
+                raise
+        except Exception as e:
+            # log warning but continue the write memory flow
+            LOG.warning("Write Memory flow failed to detect Thunder status: %s ... skipping",
+                        str(e))
+
+    def _mark_lb_as_error(self, vthunder, loadbalancers_list):
+        try:
+            LOG.warning('Detect vThunder %s reload before write memory, '
+                        'set loadbalancer status to ERROR', vthunder.id)
+            for lb in loadbalancers_list:
+                self.loadbalancer_repo.update(
+                    db_apis.get_session(),
+                    lb.id,
+                    provisioning_status='ERROR')
+        except Exception as e:
+            LOG.exception('Failed to set Loadbalancers to ERROR due to '
                           ': {}'.format(str(e)))

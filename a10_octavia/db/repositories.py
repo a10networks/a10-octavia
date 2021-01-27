@@ -318,6 +318,10 @@ class VThunderRepository(BaseRepository):
         list_projects = [project[0] for project in queryset_vthunders]
         return list_projects
 
+    def update_last_write_mem(self, session, ip_address, partition, **model_kwargs):
+        with session.begin(subtransactions=True):
+            session.query(self.model_class).filter_by(ip_address=ip_address, partition_name=partition).update(model_kwargs)
+
 
 class LoadBalancerRepository(repo.LoadBalancerRepository):
     thunder_model_class = models.VThunder

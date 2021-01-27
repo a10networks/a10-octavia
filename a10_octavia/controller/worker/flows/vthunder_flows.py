@@ -372,51 +372,75 @@ class VThunderFlows(object):
         """
         return history[history.keys()[0]]
 
-    def get_write_memory_flow(self, thunders, store):
-        """Perform write memory for all thunders """
+    def get_write_memory_flow(self, vthunder, store):
+        """Perform write memory for thunder """
         sf_name = 'a10-house-keeper' + '-' + a10constants.WRITE_MEMORY_THUNDER_FLOW
 
         write_memory_flow = linear_flow.Flow(sf_name)
         vthunder_store = {}
-        for vthunder in thunders:
-            vthunder_store[vthunder.vthunder_id] = vthunder
-            write_memory_flow.add(a10_database_tasks.GetActiveLoadBalancersByThunder(
-                requires=a10constants.VTHUNDER,
-                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
-                name='{flow}-{id}'.format(
-                    id=vthunder.vthunder_id,
-                    flow='GetActiveLoadBalancersByThunder'),
-                provides=a10constants.LOADBALANCERS_LIST))
-            write_memory_flow.add(a10_database_tasks.MarkLoadBalancersPendingUpdateInDB(
-                name='{flow}-{id}'.format(
-                    id=vthunder.vthunder_id,
-                    flow='MarkLoadBalancersPendingUpdateInDB'),
-                requires=a10constants.LOADBALANCERS_LIST))
-            write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
-                requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST,
-                          a10constants.WRITE_MEM_SHARED_PART),
-                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
-                name='{flow}-{partition}-{id}'.format(
-                    id=vthunder.vthunder_id,
-                    flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
-                    partition=a10constants.WRITE_MEM_FOR_SHARED_PARTITION)))
-            write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
-                requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST),
-                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
-                name='{flow}-{partition}-{id}'.format(
-                    id=vthunder.vthunder_id,
-                    flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
-                    partition=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION)))
-            write_memory_flow.add(a10_database_tasks.SetThunderLastWriteMem(
-                requires=a10constants.VTHUNDER,
-                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
-                name='{flow}-{id}'.format(
-                    id=vthunder.vthunder_id,
-                    flow='SetThunderLastWriteMem')))
-            write_memory_flow.add(a10_database_tasks.MarkLoadBalancersActiveInDB(
-                name='{flow}-{id}'.format(
-                    id=vthunder.vthunder_id,
-                    flow='MarkLoadBalancersActiveInDB'),
-                requires=a10constants.LOADBALANCERS_LIST))
+        vthunder_store[vthunder.vthunder_id] = vthunder
+        write_memory_flow.add(a10_database_tasks.GetActiveLoadBalancersByThunder(
+            requires=a10constants.VTHUNDER,
+            rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
+            name='{flow}-{id}'.format(
+                id=vthunder.vthunder_id,
+                flow='GetActiveLoadBalancersByThunder'),
+            provides=a10constants.LOADBALANCERS_LIST))
+        write_memory_flow.add(a10_database_tasks.MarkLoadBalancersPendingUpdateInDB(
+            name='{flow}-{id}'.format(
+                id=vthunder.vthunder_id,
+                flow='MarkLoadBalancersPendingUpdateInDB'),
+            requires=a10constants.LOADBALANCERS_LIST))
+        write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
+            requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST,
+                      a10constants.WRITE_MEM_SHARED_PART),
+            rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
+            name='{flow}-{partition}-{id}'.format(
+                id=vthunder.vthunder_id,
+                flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
+                partition=a10constants.WRITE_MEM_FOR_SHARED_PARTITION)))
+        write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
+            requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST),
+            rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
+            name='{flow}-{partition}-{id}'.format(
+                id=vthunder.vthunder_id,
+                flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
+                partition=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION)))
+        write_memory_flow.add(a10_database_tasks.SetThunderLastWriteMem(
+            requires=a10constants.VTHUNDER,
+            rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
+            name='{flow}-{id}'.format(
+                id=vthunder.vthunder_id,
+                flow='SetThunderLastWriteMem')))
+        write_memory_flow.add(a10_database_tasks.MarkLoadBalancersActiveInDB(
+            name='{flow}-{id}'.format(
+                id=vthunder.vthunder_id,
+                flow='MarkLoadBalancersActiveInDB'),
+            requires=a10constants.LOADBALANCERS_LIST))
+
         store.update(vthunder_store)
         return write_memory_flow
+
+    def get_reload_check_flow(self, vthunder, store):
+        """Perform write memory for thunder """
+        sf_name = 'a10-house-keeper' + '-' + a10constants.RELOAD_CHECK_THUNDER_FLOW
+
+        reload_check_flow = linear_flow.Flow(sf_name)
+        vthunder_store = {}
+        vthunder_store[vthunder.vthunder_id] = vthunder
+        reload_check_flow.add(a10_database_tasks.GetActiveLoadBalancersByThunder(
+            requires=a10constants.VTHUNDER,
+            rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
+            name='{flow}-{id}'.format(
+                id=vthunder.vthunder_id,
+                flow='GetActiveLoadBalancersByThunder'),
+            provides=a10constants.LOADBALANCERS_LIST))
+        reload_check_flow.add(vthunder_tasks.WriteMemoryThunderStatusCheck(
+            name='{flow}-{id}'.format(
+                id=vthunder.vthunder_id,
+                flow='WriteMemoryThunderStatusCheck'),
+            requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST),
+            rebind={a10constants.VTHUNDER: vthunder.vthunder_id}))
+
+        store.update(vthunder_store)
+        return reload_check_flow
