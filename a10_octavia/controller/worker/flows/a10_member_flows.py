@@ -259,6 +259,29 @@ class MemberFlows(object):
             name='pool_count_for_ip_' + member_id,
             requires=constants.MEMBER, provides=a10constants.POOL_COUNT_IP,
             rebind={constants.MEMBER: member_id}))
+
+        # NAT pools database and pools clean up for flavor
+        delete_member_thunder_subflow.add(a10_database_tasks.GetFlavorData(
+            name='get_flavor_data_' + member_id,
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR))
+        delete_member_thunder_subflow.add(server_tasks.MemberFindNatPool(
+            name='member_find_nat_pool_' + member_id,
+            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+                      constants.FLAVOR], provides=a10constants.NAT_FLAVOR,
+            rebind={constants.MEMBER: member_id}))
+        delete_member_thunder_subflow.add(a10_database_tasks.GetNatPoolEntry(
+            name='get_nat_pool_db_entry_' + member_id,
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
+            provides=a10constants.NAT_POOL, rebind={constants.MEMBER: member_id}))
+        delete_member_thunder_subflow.add(a10_network_tasks.ReleaseSubnetAddressForMember(
+            name='release_subnet_address_for_member_' + member_id,
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL],
+            rebind={constants.MEMBER: member_id}))
+        delete_member_thunder_subflow.add(a10_database_tasks.DeleteNatPoolEntry(
+            name='delete_nat_pool_entry_' + member_id,
+            requires=a10constants.NAT_POOL))
+
         delete_member_thunder_subflow.add(
             server_tasks.MemberDeletePool(
                 name='delete_thunder_member_pool_' +
