@@ -853,10 +853,8 @@ class WriteMemoryThunderStatusCheck(VThunderBaseTask):
                 uptime = info['miscellenious-alb']['oper']['uptime']
                 uptime_delta = datetime.timedelta(seconds=uptime)
                 reload_time = datetime.datetime.utcnow() - uptime_delta
-                if (vthunder.last_write_mem is not None and
-                        vthunder.last_write_mem <= vthunder.updated_at):
-                    if reload_time > vthunder.updated_at:
-                        self._mark_lb_as_error(vthunder, loadbalancers_list)
+                if reload_time > vthunder.updated_at:
+                    self._mark_lb_as_error(vthunder, loadbalancers_list)
             else:
                 LOG.warning("Write Memory flow failed to detect Thunder status")
                 raise
