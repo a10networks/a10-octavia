@@ -117,10 +117,12 @@ class WriteMemory(object):
                     reload_check_list.append(thunder)
                     reload_check_failed = True
                 elif thunder.updated_at > self.svc_up_time:
-                    # For new lb, it didn't have last_write_mem yet, if
-                    #  - it created after this service, some config is not save yet.
-                    #  - it created before this service, can't make sure it enable
-                    #    periodical write memory or not while lb is created.
+                    # For new lb, it didn't have last_write_mem yet, so if
+                    #  - it's latest update is after this service starts, then
+                    #    some config is not save yet.
+                    #  - it's latest update time is before this service starts, then
+                    #    we can't make sure it has config not save or not. Because
+                    #    periodical write memory may not enabled at that time.
                     reload_check_list.append(thunder)
                     reload_check_failed = True
             if reload_check_failed is False and ip_partition not in ip_partition_list:
