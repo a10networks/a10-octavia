@@ -105,17 +105,27 @@ class WriteMemory(object):
     def perform_memory_writes(self):
         thunders = self.thunder_repo.get_recently_updated_thunders(db_api.get_session())
         ip_partition_list = set()
-        thunder_list = []
+        write_mem_list = []
+        reload_check_list = []
         for thunder in thunders:
             ip_partition = str(thunder.ip_address) + ":" + str(thunder.partition_name)
             if ip_partition not in ip_partition_list:
                 ip_partition_list.add(ip_partition)
-                thunder_list.append(thunder)
+                write_mem_list.append(thunder)
+            if (thunder.status != 'DELETED' and
+                    thunder.loadbalancer_id is not None and
+                    thunder.last_write_mem is not None):
+                reload_check_list.append(thunder)
 
-        if thunder_list:
+        if reload_check_list:
+            LOG.info("Check configuration lost for Thunders : %s", list(reload_check_list))
+            self.cw.perform_reload_check(reload_check_list)
+            LOG.info("Finished conf lost check for {} thunders...".format(len(reload_check_list)))
+
+        if write_mem_list:
             LOG.info("Write Memory for Thunders : %s", list(ip_partition_list))
-            self.cw.perform_write_memory(thunder_list)
-            LOG.info("Finished running write memory for {} thunders...".format(len(thunder_list)))
+            self.cw.perform_write_memory(write_mem_list)
+            LOG.info("Finished running write memory for {} thunders...".format(len(write_mem_list)))
         else:
             LOG.warning("No thunders found that are recently updated."
                         " Not performing write memory...")

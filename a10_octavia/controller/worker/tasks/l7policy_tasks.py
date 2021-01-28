@@ -48,7 +48,7 @@ class L7PolicyParent(object):
 
         try:
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
-                listener.load_balancer_id, listener.name,
+                listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port)
             LOG.debug("Successfully fetched listener %s for l7policy %s", listener.id, l7policy.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
@@ -64,7 +64,7 @@ class L7PolicyParent(object):
 
         try:
             self.axapi_client.slb.virtual_server.vport.update(
-                listener.load_balancer_id, listener.name,
+                listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id, s_pers,
                 c_pers, 1, **kargs)
@@ -121,7 +121,7 @@ class DeleteL7Policy(task.Task):
                                                                      listener.protocol)
         try:
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
-                listener.load_balancer_id, listener.name,
+                listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port)
             LOG.debug("Successfully fetched listener %s for l7policy %s", listener.id, l7policy.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
@@ -137,8 +137,8 @@ class DeleteL7Policy(task.Task):
         kargs["aflex_scripts"] = new_aflex_scripts
 
         try:
-            self.axapi_client.slb.virtual_server.vport.update(
-                listener.load_balancer_id, listener.name,
+            self.axapi_client.slb.virtual_server.vport.replace(
+                listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id,
                 s_pers, c_pers, 1, **kargs)
