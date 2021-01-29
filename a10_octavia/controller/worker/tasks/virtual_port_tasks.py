@@ -143,7 +143,10 @@ class ListenersParent(object):
                 if pool_flavor and 'pool_name' in pool_flavor:
                     pool_arg = {}
                     pool_arg['pool'] = pool_flavor['pool_name']
-                    vport_args['port'] = pool_arg
+                    if 'port' in vport_args:
+                        vport_args['port'].update(pool_arg)
+                    else:
+                        vport_args['port'] = pool_arg
         config_data.update(template_args)
         config_data.update(vport_args)
 
