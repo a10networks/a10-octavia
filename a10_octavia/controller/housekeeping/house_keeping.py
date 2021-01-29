@@ -105,17 +105,12 @@ class WriteMemory(object):
 
     def perform_memory_writes(self):
         thunders = self.thunder_repo.get_recently_updated_thunders(db_api.get_session())
-        ip_partition_list = set()
-        write_mem_list = []
         reload_check_list = []
         for thunder in thunders:
-            ip_partition = str(thunder.ip_address) + ":" + str(thunder.partition_name)
-            reload_check_failed = False
             if (thunder.status != 'DELETED' and
                     thunder.loadbalancer_id is not None):
                 if thunder.last_write_mem is not None:
                     reload_check_list.append(thunder)
-                    reload_check_failed = True
                 elif thunder.updated_at > self.svc_up_time:
                     # For new lb, it didn't have last_write_mem yet, so if
                     #  - it's latest update is after this service starts, then
@@ -124,15 +119,20 @@ class WriteMemory(object):
                     #    we can't make sure it has config not save or not. Because
                     #    periodical write memory may not enabled at that time.
                     reload_check_list.append(thunder)
-                    reload_check_failed = True
-            if reload_check_failed is False and ip_partition not in ip_partition_list:
-                ip_partition_list.add(ip_partition)
-                write_mem_list.append(thunder)
 
         if reload_check_list:
             LOG.info("Check configuration lost for Thunders : %s", list(reload_check_list))
             self.cw.perform_reload_check(reload_check_list)
             LOG.info("Finished conf lost check for {} thunders...".format(len(reload_check_list)))
+
+        thunders = self.thunder_repo.get_recently_updated_thunders(db_api.get_session())
+        ip_partition_list = set()
+        write_mem_list = []
+        for thunder in thunders:
+            ip_partition = str(thunder.ip_address) + ":" + str(thunder.partition_name)
+            if ip_partition not in ip_partition_list:
+                ip_partition_list.add(ip_partition)
+                write_mem_list.append(thunder)
 
         if write_mem_list:
             LOG.info("Write Memory for Thunders : %s", list(ip_partition_list))
