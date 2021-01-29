@@ -819,14 +819,18 @@ class WriteMemoryHouseKeeper(VThunderBaseTask):
             LOG.warning('Failed to write memory on thunder device: {} due to ACOSException'
                         '.... skipping'.format(vthunder.ip_address))
             self._revert_lb_to_active(vthunder, loadbalancers_list)
+            return False
         except req_exceptions.ConnectionError:
             LOG.warning('Failed to write memory on thunder device: {} due to ConnectionError'
                         '.... skipping'.format(vthunder.ip_address))
             self._revert_lb_to_active(vthunder, loadbalancers_list)
+            return False
         except Exception as e:
             LOG.warning('Failed to write memory on thunder device: '
                         '{} due to {}...skipping'.format(vthunder.ip_address, str(e)))
             self._revert_lb_to_active(vthunder, loadbalancers_list)
+            return False
+        return True
 
     def _revert_lb_to_active(self, vthunder, loadbalancers_list):
         try:

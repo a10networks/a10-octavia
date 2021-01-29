@@ -554,7 +554,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         db_task = task.SetThunderLastWriteMem()
         vthunder = copy.deepcopy(VTHUNDER)
         db_task.vthunder_repo.update_last_write_mem = mock.Mock()
-        db_task.execute(vthunder)
+        db_task.execute(vthunder, True, True)
         db_task.vthunder_repo.update_last_write_mem.assert_called_once_with(
             mock.ANY, vthunder.ip_address, vthunder.partition_name, last_write_mem=mock.ANY)
 
