@@ -847,7 +847,9 @@ class SetThunderUpdatedAt(BaseDatabaseTask):
 
 class SetThunderLastWriteMem(BaseDatabaseTask):
 
-    def execute(self, vthunder):
+    def execute(self, vthunder, write_mem_shared=False, write_mem_private=False):
+        if write_mem_shared is False or write_mem_private is False:
+            return
         try:
             if vthunder:
                 LOG.debug("Updated the last_write_mem field for thunder : {}:{}"
