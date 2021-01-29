@@ -460,7 +460,7 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         self.assertEqual(kwargs['conn_limit'], 1000)
 
     def test_set_http_virtual_port_conn_limit_with_config(self):
-        listener = self._mock_listener('HTTP', 1000)
+        listener = self._mock_listener('HTTP', -1)
 
         listener_task = task.ListenerUpdate()
         listener_task.axapi_client = self.client_mock

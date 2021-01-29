@@ -819,14 +819,18 @@ class WriteMemoryHouseKeeper(VThunderBaseTask):
             LOG.warning('Failed to write memory on thunder device: {} due to ACOSException'
                         '.... skipping'.format(vthunder.ip_address))
             self._revert_lb_to_active(vthunder, loadbalancers_list)
+            return False
         except req_exceptions.ConnectionError:
             LOG.warning('Failed to write memory on thunder device: {} due to ConnectionError'
                         '.... skipping'.format(vthunder.ip_address))
             self._revert_lb_to_active(vthunder, loadbalancers_list)
+            return False
         except Exception as e:
             LOG.warning('Failed to write memory on thunder device: '
                         '{} due to {}...skipping'.format(vthunder.ip_address, str(e)))
             self._revert_lb_to_active(vthunder, loadbalancers_list)
+            return False
+        return True
 
     def _revert_lb_to_active(self, vthunder, loadbalancers_list):
         try:
@@ -853,10 +857,8 @@ class WriteMemoryThunderStatusCheck(VThunderBaseTask):
                 uptime = info['miscellenious-alb']['oper']['uptime']
                 uptime_delta = datetime.timedelta(seconds=uptime)
                 reload_time = datetime.datetime.utcnow() - uptime_delta
-                if (vthunder.last_write_mem is not None and
-                        vthunder.last_write_mem <= vthunder.updated_at):
-                    if reload_time > vthunder.updated_at:
-                        self._mark_lb_as_error(vthunder, loadbalancers_list)
+                if reload_time > vthunder.updated_at:
+                    self._mark_lb_as_error(vthunder, loadbalancers_list)
             else:
                 LOG.warning("Write Memory flow failed to detect Thunder status")
                 raise

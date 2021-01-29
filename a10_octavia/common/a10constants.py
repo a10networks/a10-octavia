@@ -24,6 +24,8 @@ BACKUP_VRRP_STATUS = 'backup_vrrp_status'
 NAT_POOL = 'nat_pool'
 NAT_FLAVOR = 'nat_flavor'
 SUBNET_PORT = 'subnet_port'
+WRITE_MEM_SHARED = 'write_mem_shared'
+WRITE_MEM_PRIVATE = 'write_mem_private'
 
 FAILED = 'FAILED'
 USED_SPARE = 'USED_SPARE'
