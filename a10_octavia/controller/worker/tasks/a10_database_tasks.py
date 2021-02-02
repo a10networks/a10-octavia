@@ -817,11 +817,20 @@ class DeleteNatPoolEntry(BaseDatabaseTask):
 
 class CountLoadbalancersWithFlavor(BaseDatabaseTask):
 
-    def execute(self, loadbalancer):
+    def execute(self, loadbalancer, vthunder):
         try:
-            return self.loadbalancer_repo.get_lb_count_by_flavor(
-                db_apis.get_session(),
-                loadbalancer.project_id, loadbalancer.flavor_id)
+            if vthunder.hierarchical_multitenancy == 'enable':
+                project_list = self.vthunder_repo.get_project_list_using_partition(
+                    db_apis.get_session(),
+                    partition_name=vthunder.partition_name,
+                    ip_address=vthunder.ip_address)
+                return self.loadbalancer_repo.get_hmt_lb_count_by_flavor(
+                    db_apis.get_session(),
+                    project_list, loadbalancer.flavor_id)
+            else:
+                return self.loadbalancer_repo.get_lb_count_by_flavor(
+                    db_apis.get_session(),
+                    loadbalancer.project_id, loadbalancer.flavor_id)
         except Exception as e:
             LOG.exception("Failed to get LB count for flavor %s due to %s ",
                           loadbalancer.flavor_id, str(e))

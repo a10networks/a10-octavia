@@ -350,6 +350,13 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                     self.model_class.provisioning_status == consts.ACTIVE)).count()
 
+    def get_hmt_lb_count_by_flavor(self, session, project_ids, flavor_id):
+        return session.query(self.model_class).filter(
+            self.model_class.project_id.in_(project_ids)).filter(
+                self.model_class.flavor_id == flavor_id,
+                or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                    self.model_class.provisioning_status == consts.ACTIVE)).count()
+
 
 class VRIDRepository(BaseRepository):
     model_class = models.VRID

@@ -538,7 +538,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_count_lb = task.CountLoadbalancersWithFlavor()
         mock_count_lb.loadbalancer_repo.get_lb_count_by_flavor = mock.Mock()
         mock_count_lb.loadbalancer_repo.get_lb_count_by_flavor.return_value = 2
-        lb_count = mock_count_lb.execute(LB)
+        lb_count = mock_count_lb.execute(LB, VTHUNDER)
         self.assertEqual(2, lb_count)
 
     def test_SetThunderUpdatedAt_execute_update(self):
