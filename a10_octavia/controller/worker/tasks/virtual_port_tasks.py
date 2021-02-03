@@ -30,17 +30,22 @@ LOG = logging.getLogger(__name__)
 
 class ListenersParent(object):
 
-    def set(self, set_method, loadbalancer, listener, vthunder, ssl_template=None):
+    def set(self, set_method, loadbalancer, listener, vthunder, flavor_data=None,
+            update_dict=None, ssl_template=None):
         listener.load_balancer = loadbalancer
         listener.protocol = openstack_mappings.virtual_port_protocol(
             self.axapi_client, listener.protocol).lower()
 
-        ipinip = CONF.listener.ipinip
-        use_rcv_hop = CONF.listener.use_rcv_hop_for_resp
-        ha_conn_mirror = CONF.listener.ha_conn_mirror
+        config_data = {
+            'ipinip': CONF.listener.ipinip,
+            'use_rcv_hop': CONF.listener.use_rcv_hop_for_resp,
+            'ha_conn_mirror': CONF.listener.ha_conn_mirror
+        }
+
         status = self.axapi_client.slb.UP
         if not listener.enabled:
             status = self.axapi_client.slb.DOWN
+        config_data['status'] = status
 
         conn_limit = CONF.listener.conn_limit
         if listener.connection_limit != -1:
@@ -50,6 +55,7 @@ class ListenersParent(object):
                         '(configuration setting: conn-limit) is out of '
                         'bounds with value {0}. Please set to between '
                         '1-64000000. Defaulting to 64000000'.format(conn_limit))
+        config_data['conn_limit'] = conn_limit
 
         no_dest_nat = CONF.listener.no_dest_nat
         if no_dest_nat and (
@@ -58,14 +64,15 @@ class ListenersParent(object):
             LOG.warning("'no_dest_nat' is not allowed for HTTP," +
                         "HTTPS or TERMINATED_HTTPS listener.")
             no_dest_nat = False
+        config_data['no_dest_nat'] = no_dest_nat
 
         autosnat = CONF.listener.autosnat
         if autosnat and no_dest_nat:
             raise exceptions.SNATConfigurationError()
+        config_data['autosnat'] = autosnat
 
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         device_templates = self.axapi_client.slb.template.templates.get()
-
         vport_templates = {}
         template_vport = CONF.listener.template_virtual_port
         if template_vport and template_vport.lower() != 'none':
@@ -78,11 +85,11 @@ class ListenersParent(object):
             vport_templates[template_key] = template_vport
 
         template_args = {}
-        if listener.protocol == 'https' and listener.tls_certificate_id:
-            # Adding TERMINATED_HTTPS SSL cert, created in previous task
-            template_args["template_client_ssl"] = listener.id
+        if listener.protocol.upper() in a10constants.HTTP_TYPE:
+            if listener.protocol == 'https' and listener.tls_certificate_id:
+                # Adding TERMINATED_HTTPS SSL cert, created in previous task
+                template_args["template_client_ssl"] = listener.id
 
-        elif listener.protocol.upper() in a10constants.HTTP_TYPE:
             template_http = CONF.listener.template_http
             if template_http and template_http.lower() != 'none':
                 template_key = 'template-http'
@@ -92,11 +99,12 @@ class ListenersParent(object):
                                                                       template_http,
                                                                       device_templates)
                 vport_templates[template_key] = template_http
+            """
             if ha_conn_mirror is not None:
                 ha_conn_mirror = None
                 LOG.warning("'ha_conn_mirror' is not allowed for HTTP "
                             "or TERMINATED_HTTPS listeners.")
-
+            """
         elif listener.protocol == 'tcp':
             template_tcp = CONF.listener.template_tcp
             if template_tcp and template_tcp.lower() != 'none':
@@ -118,29 +126,48 @@ class ListenersParent(object):
                                                                   device_templates)
             vport_templates[template_key] = template_policy
 
+        vport_args = {}
+        if flavor_data:
+            virtual_port_flavor = flavor_data.get('virtual_port')
+            if virtual_port_flavor:
+                name_exprs = virtual_port_flavor.get('name_expressions')
+                parsed_exprs = utils.parse_name_expressions(
+                    listener.name, name_exprs)
+                virtual_port_flavor.pop('name_expressions', None)
+                virtual_port_flavor.update(parsed_exprs)
+                vport_args = {'port': virtual_port_flavor}
+
+            # use default nat-pool pool if pool is not specified
+            if 'port' not in vport_args or 'pool' not in vport_args['port']:
+                pool_flavor = flavor_data.get('nat_pool')
+                if pool_flavor and 'pool_name' in pool_flavor:
+                    pool_arg = {}
+                    pool_arg['pool'] = pool_flavor['pool_name']
+                    if 'port' in vport_args:
+                        vport_args['port'].update(pool_arg)
+                    else:
+                        vport_args['port'] = pool_arg
+        config_data.update(template_args)
+        config_data.update(vport_args)
+
         set_method(loadbalancer.id,
                    listener.id,
                    listener.protocol,
                    listener.protocol_port,
                    listener.default_pool_id,
                    s_pers_name=s_pers, c_pers_name=c_pers,
-                   status=status, no_dest_nat=no_dest_nat,
-                   autosnat=autosnat, ipinip=ipinip,
-                   ha_conn_mirror=ha_conn_mirror,
-                   use_rcv_hop=use_rcv_hop,
-                   conn_limit=conn_limit,
                    virtual_port_templates=vport_templates,
-                   **template_args)
+                   **config_data)
 
 
 class ListenerCreate(ListenersParent, task.Task):
     """Task to create listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder):
+    def execute(self, loadbalancer, listener, vthunder, flavor_data=None):
         try:
             self.set(self.axapi_client.slb.virtual_server.vport.create,
-                     loadbalancer, listener, vthunder)
+                     loadbalancer, listener, vthunder, flavor_data)
             LOG.debug("Successfully created listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to create listener: %s", listener.id)
@@ -165,11 +192,11 @@ class ListenerUpdate(ListenersParent, task.Task):
     """Task to update listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder):
+    def execute(self, loadbalancer, listener, vthunder, flavor_data=None, update_dict=None):
         try:
             if listener:
                 self.set(self.axapi_client.slb.virtual_server.vport.replace,
-                         loadbalancer, listener, vthunder)
+                         loadbalancer, listener, vthunder, flavor_data, update_dict)
                 LOG.debug("Successfully updated listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update listener: %s", listener.id)

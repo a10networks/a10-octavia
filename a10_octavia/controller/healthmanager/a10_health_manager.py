@@ -49,10 +49,13 @@ class A10HealthManager(health_manager.HealthManager):
                     seconds=CONF.a10_health_manager.heartbeat_timeout)
                 initial_setup_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
                     seconds=CONF.a10_health_manager.failover_timeout)
+                # TODO(ytsai-a10) get_stale_vthunders() will always get the same (first) vthunder
                 vthunder = self.vthunder_repo.get_stale_vthunders(
                     lock_session, initial_setup_wait_time, failover_wait_time)
 
             except Exception:
+                # TODO(ytsai-a10) lock_session is not locked session, don't call rollback() here.
+                #       Just log a warning here is enough.
                 with excutils.save_and_reraise_exception():
                     if lock_session:
                         lock_session.rollback()

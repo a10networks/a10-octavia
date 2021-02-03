@@ -43,8 +43,12 @@ class HealthMonitorFlows(object):
         create_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        create_hm_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR))
         create_hm_flow.add(health_monitor_tasks.CreateAndAssociateHealthMonitor(
-            requires=[constants.LISTENERS, constants.HEALTH_MON, a10constants.VTHUNDER]))
+            requires=[constants.LISTENERS, constants.HEALTH_MON, a10constants.VTHUNDER,
+                      constants.FLAVOR]))
         create_hm_flow.add(database_tasks.MarkHealthMonitorActiveInDB(
             requires=constants.HEALTH_MON))
         create_hm_flow.add(database_tasks.MarkPoolActiveInDB(
@@ -57,6 +61,8 @@ class HealthMonitorFlows(object):
         create_hm_flow.add(vthunder_tasks.WriteMemory(
             name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
             requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
+        create_hm_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=(a10constants.VTHUNDER)))
         return create_hm_flow
 
     def get_delete_health_monitor_flow(self):
@@ -96,6 +102,8 @@ class HealthMonitorFlows(object):
         delete_hm_flow.add(vthunder_tasks.WriteMemory(
             name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
             requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
+        delete_hm_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=(a10constants.VTHUNDER)))
         return delete_hm_flow
 
     def get_delete_health_monitor_vthunder_subflow(self):
@@ -120,9 +128,13 @@ class HealthMonitorFlows(object):
         update_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        update_hm_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR))
         update_hm_flow.add(health_monitor_tasks.UpdateHealthMonitor(
             requires=[constants.LISTENERS, constants.HEALTH_MON,
-                      a10constants.VTHUNDER, constants.UPDATE_DICT]))
+                      a10constants.VTHUNDER, constants.UPDATE_DICT,
+                      constants.FLAVOR]))
         update_hm_flow.add(database_tasks.UpdateHealthMonInDB(
             requires=[constants.HEALTH_MON, constants.UPDATE_DICT]))
         update_hm_flow.add(database_tasks.MarkHealthMonitorActiveInDB(
@@ -137,4 +149,6 @@ class HealthMonitorFlows(object):
         update_hm_flow.add(vthunder_tasks.WriteMemory(
             name=a10constants.WRITE_MEM_FOR_SHARED_PARTITION,
             requires=(a10constants.VTHUNDER, a10constants.WRITE_MEM_SHARED_PART)))
+        update_hm_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=(a10constants.VTHUNDER)))
         return update_hm_flow

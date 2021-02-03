@@ -15,7 +15,7 @@
 
 TYPE_DICT = {
     "HOST_NAME": "HTTP::host",
-    "PATH": "HTTP::uri",
+    "PATH": "HTTP::path",
     "FILE_TYPE": "HTTP::uri endswith",
     "HEADER": "HTTP::header",
     "COOKIE": "HTTP::cookie"

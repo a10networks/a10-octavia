@@ -49,7 +49,7 @@ class L7RuleParent(object):
 
         try:
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
-                listener.load_balancer_id, listener.name,
+                listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port)
             LOG.debug("Successfully fetched listener %s for l7rule %s", listener.id, l7rule.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
@@ -61,11 +61,11 @@ class L7RuleParent(object):
             aflex_scripts.append({"aflex": filename})
         else:
             aflex_scripts = [{"aflex": filename}]
-        kargs["aflex-scripts"] = aflex_scripts
+        kargs["aflex_scripts"] = aflex_scripts
 
         try:
             self.axapi_client.slb.virtual_server.vport.update(
-                listener.load_balancer_id, listener.name,
+                listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id, s_pers,
                 c_pers, 1, **kargs)
@@ -126,7 +126,7 @@ class DeleteL7Rule(task.Task):
 
         try:
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
-                listener.load_balancer_id, listener.name,
+                listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port)
             LOG.debug("Successfully fetched listener %s for l7rule %s", listener.id, l7rule.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
@@ -138,11 +138,11 @@ class DeleteL7Rule(task.Task):
             aflex_scripts.append({"aflex": filename})
         else:
             aflex_scripts = [{"aflex": filename}]
-        kargs["aflex-scripts"] = aflex_scripts
+        kargs["aflex_scripts"] = aflex_scripts
 
         try:
             self.axapi_client.slb.virtual_server.vport.update(
-                listener.load_balancer_id, listener.name,
+                listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port, listener.default_pool_id,
                 s_pers, c_pers, 1, **kargs)
             LOG.debug("Successfully dissociated l7rule %s from listener %s", l7rule.id, listener.id)

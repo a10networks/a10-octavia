@@ -14,10 +14,13 @@
 #
 import acos_client.errors as acos_errors
 import copy
+from neutronclient.common import exceptions as neutron_exceptions
 from oslo_config import cfg
 from oslo_log import log as logging
 from requests import exceptions as req_exceptions
 import six
+import socket
+import struct
 from taskflow import task
 from taskflow.types import failure
 
@@ -934,3 +937,48 @@ class GetLBResourceSubnet(BaseNetworkTask):
         else:
             subnet = self.network_driver.get_subnet(lb_resource.subnet_id)
         return subnet
+
+
+class ReserveSubnetAddressForMember(BaseNetworkTask):
+
+    def execute(self, member, nat_flavor=None, nat_pool=None):
+        if nat_flavor is None:
+            return
+
+        if nat_pool is None:
+            try:
+                addr_list = []
+                start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
+                end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
+                while start <= end:
+                    addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
+                    start += 1
+                port = self.network_driver.reserve_subnet_addresses(member.subnet_id, addr_list)
+                LOG.debug("Successfully allocated addresses for nat pool %s on port %s",
+                          nat_flavor['pool_name'], port.id)
+                return port
+            except neutron_exceptions.InvalidIpForSubnetClient as e:
+                # The NAT pool addresses is not in member subnet, a10-octavia will allow it but
+                # will not able to reserve address for it. (since we don't know the subnet)
+                LOG.exception("Failed to reserve addresses in NAT pool %s from subnet %s: %s",
+                              nat_flavor['pool_name'], member.subnet_id, str(e))
+            except Exception as e:
+                LOG.exception("Failed to reserve addresses in NAT pool %s from subnet %s",
+                              nat_flavor['pool_name'], member.subnet_id)
+                raise e
+        return
+
+
+class ReleaseSubnetAddressForMember(BaseNetworkTask):
+
+    def execute(self, member, nat_flavor=None, nat_pool=None):
+        if nat_flavor is None or nat_pool is None:
+            return
+
+        if nat_pool.member_ref_count == 1:
+            try:
+                self.network_driver.delete_port(nat_pool.port_id)
+            except Exception as e:
+                LOG.exception("Failed to release addresses in NAT pool %s from subnet %s",
+                              nat_flavor['pool_name'], member.subnet_id)
+                raise e

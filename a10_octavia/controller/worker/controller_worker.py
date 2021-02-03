@@ -274,7 +274,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-    def create_load_balancer(self, load_balancer_id):
+    def create_load_balancer(self, load_balancer_id, flavor=None):
         """Function to create load balancer for A10 provider"""
 
         lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
@@ -286,7 +286,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         store = {constants.LOADBALANCER_ID: load_balancer_id,
                  constants.VIP: lb.vip,
                  constants.BUILD_TYPE_PRIORITY:
-                 constants.LB_CREATE_NORMAL_PRIORITY}
+                 constants.LB_CREATE_NORMAL_PRIORITY,
+                 constants.FLAVOR: flavor}
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
@@ -833,6 +834,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                      "ip_address": vthunder.ip_address}]}
             lock_session.commit()
             LOG.info(str(status))
+        # TODO(ytsai-a10) check if we need to call lock_session.close() to release db lock
 
     def failover_amphora(self, vthunder_id):
         """Perform failover operations for an vThunder.
@@ -891,3 +893,42 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
     def _get_db_obj_until_pending_update(self, repo, id):
         return repo.get(db_apis.get_session(), id=id)
+
+    def perform_write_memory(self, thunders):
+        """Perform write memory operations for a thunders
+
+        :param thunders: group of thunder objects
+        :returns: None
+        """
+        store = {a10constants.WRITE_MEM_SHARED_PART: True}
+
+        for vthunder in thunders:
+            try:
+                write_mem_tf = self._taskflow_load(
+                    self._vthunder_flows.get_write_memory_flow(vthunder, store),
+                    store=store)
+
+                with tf_logging.DynamicLoggingListener(write_mem_tf,
+                                                       log=LOG):
+                    write_mem_tf.run()
+            except Exception:
+                # continue on other thunders (assume exception is logged)
+                pass
+
+    def perform_reload_check(self, thunders):
+        """Perform check for thunders see if thunder reload before write memory
+
+        :param thunders: group of thunder objects
+        :returns: None
+        """
+        store = {}
+        for vthunder in thunders:
+            try:
+                reload_check_tf = self._taskflow_load(
+                    self._vthunder_flows.get_reload_check_flow(vthunder, store),
+                    store=store)
+                with tf_logging.DynamicLoggingListener(reload_check_tf, log=LOG):
+                    reload_check_tf.run()
+            except Exception:
+                # continue on other thunders (assume exception is logged)
+                pass

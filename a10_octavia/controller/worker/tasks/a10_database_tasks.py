@@ -14,6 +14,7 @@
 
 
 from datetime import datetime
+import json
 import sqlalchemy
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -48,6 +49,9 @@ class BaseDatabaseTask(task.Task):
         self.loadbalancer_repo = a10_repo.LoadBalancerRepository()
         self.vip_repo = repo.VipRepository()
         self.listener_repo = repo.ListenerRepository()
+        self.flavor_repo = repo.FlavorRepository()
+        self.flavor_profile_repo = repo.FlavorProfileRepository()
+        self.nat_pool_repo = a10_repo.NatPoolRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -687,10 +691,220 @@ class GetChildProjectsOfParentPartition(BaseDatabaseTask):
             try:
                 partition_project_list = self.vthunder_repo.get_project_list_using_partition(
                     db_apis.get_session(),
-                    partition_name=vthunder.partition_name)
+                    partition_name=vthunder.partition_name,
+                    ip_address=vthunder.ip_address)
                 return partition_project_list
             except Exception as e:
                 LOG.exception(
                     "Failed to fetch list of projects, if multi-tenancy and use parent partition "
                     "is enabled due to %s", str(e))
                 raise e
+
+
+class GetFlavorData(BaseDatabaseTask):
+
+    def _flavor_search(self, lb_resource):
+        if hasattr(lb_resource, 'flavor_id'):
+            return lb_resource.flavor_id
+        elif hasattr(lb_resource, 'pool'):
+            return self._flavor_search(lb_resource.pool)
+        elif hasattr(lb_resource, 'load_balancer'):
+            return self._flavor_search(lb_resource.load_balancer)
+        return None
+
+    def _format_keys(self, flavor_data):
+        if type(flavor_data) is list:
+            item_list = []
+            for item in flavor_data:
+                item_list.append(self._format_keys(item))
+            return item_list
+        elif type(flavor_data) is dict:
+            item_dict = {}
+            for k, v in flavor_data.items():
+                item_dict[k.replace('-', '_')] = self._format_keys(v)
+            return item_dict
+        else:
+            return flavor_data
+
+    def execute(self, lb_resource):
+        flavor_id = self._flavor_search(lb_resource)
+        if flavor_id:
+            flavor = self.flavor_repo.get(db_apis.get_session(), id=flavor_id)
+            if flavor and flavor.flavor_profile_id:
+                flavor_profile = self.flavor_profile_repo.get(
+                    db_apis.get_session(),
+                    id=flavor.flavor_profile_id)
+                flavor_data = json.loads(flavor_profile.flavor_data)
+                return self._format_keys(flavor_data)
+
+
+class GetNatPoolEntry(BaseDatabaseTask):
+
+    def execute(self, member, nat_flavor=None):
+        if nat_flavor and 'pool_name' in nat_flavor:
+            try:
+                return self.nat_pool_repo.get(db_apis.get_session(), name=nat_flavor['pool_name'],
+                                              subnet_id=member.subnet_id)
+            except Exception as e:
+                LOG.exception("Failed to fetch subnet %s NAT pool %s entry from database: %s",
+                              nat_flavor['pool_name'], member.subnet_id, str(e))
+                raise e
+
+
+class UpdateNatPoolDB(BaseDatabaseTask):
+
+    def execute(self, member, nat_flavor=None, nat_pool=None, subnet_port=None):
+        if nat_flavor is None:
+            return
+
+        if nat_pool is None:
+            if subnet_port is None:
+                # NAT pool addresses are not in member subnet. a10-octavia allows it
+                # but not able to reerve ip for it. So, no database entry is needed.
+                return
+
+            try:
+                id = uuidutils.generate_uuid()
+                pool_name = nat_flavor.get('pool_name')
+                subnet_id = member.subnet_id
+                start_address = nat_flavor.get('start_address')
+                end_address = nat_flavor.get('end_address')
+                port_id = subnet_port.id
+                self.nat_pool_repo.create(
+                    db_apis.get_session(), id=id, name=pool_name, subnet_id=subnet_id,
+                    start_address=start_address, end_address=end_address,
+                    member_ref_count=1, port_id=port_id)
+                LOG.info("Successfully created nat pool entry in database.")
+            except Exception as e:
+                LOG.exception("Failed to create subnet %s NAT pool %s entry to database: %s",
+                              subnet_id, pool_name, str(e))
+                raise e
+        else:
+            try:
+                ref = nat_pool.member_ref_count + 1
+                self.nat_pool_repo.update(
+                    db_apis.get_session(), nat_pool.id, member_ref_count=ref)
+            except Exception as e:
+                LOG.exception("Failed to update NAT pool entry %s to database: %s",
+                              nat_pool.id, str(e))
+                raise e
+
+
+class DeleteNatPoolEntry(BaseDatabaseTask):
+
+    def execute(self, nat_pool=None):
+        if nat_pool is None:
+            return
+
+        if nat_pool.member_ref_count > 1:
+            try:
+                ref = nat_pool.member_ref_count - 1
+                self.nat_pool_repo.update(
+                    db_apis.get_session(), nat_pool.id, member_ref_count=ref)
+            except Exception as e:
+                LOG.exception("Failed to update NAT pool entry %s to database: %s",
+                              nat_pool.id, str(e))
+                raise e
+        else:
+            try:
+                self.nat_pool_repo.delete(db_apis.get_session(), id=nat_pool.id)
+                LOG.info("Successfully deleted nat pool entry in database.")
+            except Exception as e:
+                LOG.exception("Failed to delete NAT pool entry %s to database: %s",
+                              nat_pool.id, str(e))
+                raise e
+
+
+class CountLoadbalancersWithFlavor(BaseDatabaseTask):
+
+    def execute(self, loadbalancer):
+        try:
+            return self.loadbalancer_repo.get_lb_count_by_flavor(
+                db_apis.get_session(),
+                loadbalancer.project_id, loadbalancer.flavor_id)
+        except Exception as e:
+            LOG.exception("Failed to get LB count for flavor %s due to %s ",
+                          loadbalancer.flavor_id, str(e))
+            raise e
+        return 0
+
+
+class SetThunderUpdatedAt(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        try:
+            if vthunder:
+                LOG.debug("Updated the updated_at field for thunder : {}:{}"
+                          .format(vthunder.ip_address, vthunder.partition_name))
+                self.vthunder_repo.update(
+                    db_apis.get_session(),
+                    vthunder.id,
+                    updated_at=datetime.utcnow())
+        except Exception as e:
+            LOG.exception('Failed to set updated_at field for thunder due to: {}'
+                          ', skipping.'.format(str(e)))
+
+
+class SetThunderLastWriteMem(BaseDatabaseTask):
+
+    def execute(self, vthunder, write_mem_shared=False, write_mem_private=False):
+        if write_mem_shared is False or write_mem_private is False:
+            return
+        try:
+            if vthunder:
+                LOG.debug("Updated the last_write_mem field for thunder : {}:{}"
+                          .format(vthunder.ip_address, vthunder.partition_name))
+                self.vthunder_repo.update_last_write_mem(
+                    db_apis.get_session(),
+                    vthunder.ip_address,
+                    vthunder.partition_name,
+                    last_write_mem=datetime.utcnow())
+        except Exception as e:
+            LOG.exception('Failed to set last_write_mem field for thunder due to: {}'
+                          ', skipping.'.format(str(e)))
+
+
+class GetActiveLoadBalancersByThunder(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        try:
+            if vthunder:
+                loadbalancers_list = self.loadbalancer_repo.get_active_lbs_by_thunder(
+                    db_apis.get_session(),
+                    vthunder)
+                return loadbalancers_list
+        except Exception as e:
+            LOG.exception('Failed to get active Loadbalancers related to thunder '
+                          'due to: {}'.format(str(e)))
+
+
+class MarkLoadBalancersPendingUpdateInDB(BaseDatabaseTask):
+
+    def execute(self, loadbalancers_list):
+        try:
+            for lb in loadbalancers_list:
+                if lb.provisioning_status == constants.ERROR:
+                    continue
+                self.loadbalancer_repo.update(
+                    db_apis.get_session(),
+                    lb.id,
+                    provisioning_status='PENDING_UPDATE')
+        except Exception as e:
+            LOG.exception('Failed to set Loadbalancers to PENDING_UPDATE due to '
+                          ': {}'.format(str(e)))
+
+
+class MarkLoadBalancersActiveInDB(BaseDatabaseTask):
+
+    def execute(self, loadbalancers_list):
+        try:
+            for lb in loadbalancers_list:
+                if lb.provisioning_status == constants.ERROR:
+                    continue
+                self.loadbalancer_repo.update(
+                    db_apis.get_session(),
+                    lb.id,
+                    provisioning_status='ACTIVE')
+        except Exception as e:
+            LOG.exception('Failed to set Loadbalancers to ACTIVE due to '
+                          ': {}'.format(str(e)))

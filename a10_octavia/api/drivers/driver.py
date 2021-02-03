@@ -12,12 +12,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from jsonschema import exceptions as js_exceptions
+from jsonschema import validate
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 
-from octavia.api.drivers import provider_base as driver_base
 from octavia.common import constants
+from octavia_lib.api.drivers import exceptions
+from octavia_lib.api.drivers import provider_base as driver_base
+
+from a10_octavia.api.drivers import flavor_schema
+
 
 CONF = cfg.CONF
 CONF.import_group('oslo_messaging', 'octavia.common.config')
@@ -39,7 +45,8 @@ class A10ProviderDriver(driver_base.ProviderDriver):
     # Load Balancer
     def loadbalancer_create(self, loadbalancer):
         LOG.info('A10 provider load balancer loadbalancer: %s.', loadbalancer.__dict__)
-        payload = {constants.LOAD_BALANCER_ID: loadbalancer.loadbalancer_id}
+        payload = {constants.LOAD_BALANCER_ID: loadbalancer.loadbalancer_id,
+                   constants.FLAVOR: loadbalancer.flavor}
         self.client.cast({}, 'create_load_balancer', **payload)
 
     def loadbalancer_delete(self, loadbalancer, cascade=False):
@@ -209,3 +216,91 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.L7RULE_ID: l7rule_id,
                    constants.L7RULE_UPDATES: l7rule_dict}
         self.client.cast({}, 'update_l7rule', **payload)
+
+    # Flavor
+    def get_supported_flavor_metadata(self):
+        try:
+            dict = {}
+            for obj in flavor_schema.SUPPORTED_FLAVOR_SCHEMA['properties']:
+                obj_v = flavor_schema.SUPPORTED_FLAVOR_SCHEMA['properties'][obj]
+                if 'description' in obj_v:
+                    dict[obj] = obj_v.get('description')
+                if 'properties' in obj_v:
+                    props = obj_v['properties']
+                    for k, v in props.items():
+                        if 'description' in v:
+                            dict[obj + '.' + k] = v.get('description')
+            return dict
+        except Exception as e:
+            raise exceptions.DriverError(
+                user_fault_string='Failed to get the supported flavor '
+                                  'metadata due to: {}'.format(str(e)),
+                operator_fault_string='Failed to get the supported flavor '
+                                      'metadata due to: {}'.format(str(e)))
+
+    def validate_flavor(self, flavor_dict):
+        try:
+            validate(flavor_dict, flavor_schema.SUPPORTED_FLAVOR_SCHEMA)
+
+            # validate flavor for slb objects
+            if 'virtual-server' in flavor_dict:
+                flavor = flavor_dict['virtual-server']
+                if 'name' in flavor:
+                    raise Exception('axapi key \'name\' is not allowed')
+                if 'ip-address' in flavor:
+                    raise Exception('axapi key \'ip-address\' is not supported yet')
+            if 'virtual-port' in flavor_dict:
+                flavor = flavor_dict['virtual-port']
+                if 'name' in flavor:
+                    raise Exception('axapi key \'name\' is not allowed')
+                if 'port-number' in flavor:
+                    raise Exception('axapi key \'port-number\' is not allowed')
+                if 'protocol' in flavor:
+                    raise Exception('axapi key \'protocol\' is not allowed')
+            if 'service-group' in flavor_dict:
+                flavor = flavor_dict['service-group']
+                if 'name' in flavor:
+                    raise Exception('axapi key \'name\' is not allowed')
+            if 'server' in flavor_dict:
+                flavor = flavor_dict['server']
+                if 'name' in flavor:
+                    raise Exception('axapi key \'name\' is not allowed')
+            if 'health-monitor' in flavor_dict:
+                flavor = flavor_dict['health-monitor']
+                if 'name' in flavor:
+                    raise Exception('axapi key \'name\' is not allowed')
+
+            # validate nat-pool and nat-pool-list keys
+            if 'nat-pool' in flavor_dict:
+                nat = flavor_dict['nat-pool']
+                if 'pool-name' not in nat:
+                    raise Exception('pool-name is required for nat-pool flavor')
+                if 'start-address' not in nat:
+                    raise Exception('start-address is required for nat-pool flavor')
+                if 'end-address' not in nat:
+                    raise Exception('end-address is required for nat-pool flavor')
+                if 'netmask' not in nat:
+                    raise Exception('netmask is required for nat-pool flavor')
+            if 'nat-pool-list' in flavor_dict:
+                for nat in flavor_dict['nat-pool-list']:
+                    if 'pool-name' not in nat:
+                        raise Exception('pool-name is required for nat-pool-list flavor')
+                    if 'start-address' not in nat:
+                        raise Exception('start-address is required for nat-pool-list flavor')
+                    if 'end-address' not in nat:
+                        raise Exception('end-address is required for nat-pool-list flavor')
+                    if 'netmask' not in nat:
+                        raise Exception('netmask is required for nat-pool-list flavor')
+        except js_exceptions.ValidationError as e:
+            error_object = ''
+            if e.relative_path:
+                error_object = '{} '.format(e.relative_path[0])
+            raise exceptions.UnsupportedOptionError(
+                user_fault_string='{0}{1}'.format(error_object, e.message),
+                operator_fault_string=str(e))
+        except Exception as e:
+            raise exceptions.DriverError(
+                user_fault_string='Failed to validate the flavor metadata '
+                                  'due to: {}'.format(str(e)),
+                operator_fault_string='Failed to validate the flavor metadata '
+                                      'due to: {}'.format(str(e)))

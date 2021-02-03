@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 
@@ -51,8 +52,11 @@ class PoolFlows(object):
         create_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        create_pool_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.POOL},
+            provides=constants.FLAVOR))
         create_pool = service_group_tasks.PoolCreate(
-            requires=[constants.POOL, a10constants.VTHUNDER],
+            requires=[constants.POOL, a10constants.VTHUNDER, constants.FLAVOR],
             provides=constants.POOL)
         create_pool_flow.add(*self._get_sess_pers_subflow(create_pool))
         create_pool_flow.add(virtual_port_tasks.ListenerUpdateForPool(
@@ -62,6 +66,8 @@ class PoolFlows(object):
         create_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         create_pool_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        create_pool_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
 
         return create_pool_flow
@@ -102,6 +108,8 @@ class PoolFlows(object):
         delete_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         delete_pool_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        delete_pool_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
 
         return delete_pool_flow
@@ -144,8 +152,12 @@ class PoolFlows(object):
         update_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        update_pool_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.POOL},
+            provides=constants.FLAVOR))
         update_pool = service_group_tasks.PoolUpdate(
-            requires=[constants.POOL, a10constants.VTHUNDER, constants.UPDATE_DICT],
+            requires=[constants.POOL, a10constants.VTHUNDER,
+                      constants.UPDATE_DICT, constants.FLAVOR],
             provides=constants.POOL)
         update_pool_flow.add(*self._get_sess_pers_subflow(update_pool))
         update_pool_flow.add(virtual_port_tasks.ListenerUpdateForPool(
@@ -157,6 +169,8 @@ class PoolFlows(object):
         update_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
             requires=[constants.LOADBALANCER, constants.LISTENERS]))
         update_pool_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        update_pool_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
 
         return update_pool_flow
