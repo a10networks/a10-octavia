@@ -18,6 +18,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from requests.exceptions import ConnectionError
 from taskflow import task
+
 from octavia.common import exceptions
 
 from a10_octavia.common import a10constants
@@ -60,8 +61,8 @@ class CreateAndAssociateHealthMonitor(task.Task):
         except Exception as e:
             raise exceptions.ProviderUnsupportedOptionError(
                 prov="A10",
-                user_msg=("A health monitor of  type TLS-HELLO is not supported by A10 provider.\n"
-                          "Failed to create health monitor {0}").format(health_mon.id))
+                user_msg=("Failed to create health monitor {}, A health monitor of type "
+                          "TLS-HELLO is not supported by A10 provider").format(health_mon.id))
 
         try:
             post_data = CONF.health_monitor.post_data
