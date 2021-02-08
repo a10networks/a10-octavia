@@ -96,9 +96,24 @@ class MemberFlows(object):
         create_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP
         ))
+        create_member_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR))
+        create_member_flow.add(server_tasks.MemberFindNatPool(
+            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+                      constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
+        create_member_flow.add(a10_database_tasks.GetNatPoolEntry(
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
+            provides=a10constants.NAT_POOL))
+        create_member_flow.add(a10_network_tasks.ReserveSubnetAddressForMember(
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL],
+            provides=a10constants.SUBNET_PORT))
+        create_member_flow.add(a10_database_tasks.UpdateNatPoolDB(
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR,
+                      a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
         create_member_flow.add(server_tasks.MemberCreate(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
-                      a10constants.MEMBER_COUNT_IP)))
+                      a10constants.MEMBER_COUNT_IP, constants.FLAVOR)))
         create_member_flow.add(database_tasks.MarkMemberActiveInDB(
             requires=constants.MEMBER))
         create_member_flow.add(database_tasks.MarkPoolActiveInDB(
@@ -143,6 +158,16 @@ class MemberFlows(object):
         delete_member_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
+        delete_member_flow.add(server_tasks.MemberFindNatPool(
+            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+                      constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
+        delete_member_flow.add(a10_database_tasks.GetNatPoolEntry(
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
+            provides=a10constants.NAT_POOL))
+        delete_member_flow.add(a10_network_tasks.ReleaseSubnetAddressForMember(
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL]))
+        delete_member_flow.add(a10_database_tasks.DeleteNatPoolEntry(
+            requires=a10constants.NAT_POOL))
         delete_member_flow.add(
             server_tasks.MemberDelete(
                 requires=(
