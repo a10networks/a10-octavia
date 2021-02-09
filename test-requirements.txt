@@ -2,4 +2,3 @@ PyMySQL<=0.10.1
 mock
 nose
 hacking
-uhashring==1.2
