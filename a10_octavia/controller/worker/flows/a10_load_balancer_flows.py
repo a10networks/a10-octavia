@@ -75,9 +75,12 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(
             self.get_post_lb_vthunder_association_flow(
                 post_amp_prefix, topology, mark_active=(not listeners)))
+        lb_create_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR_DATA))
         lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
-            requires=(constants.LOADBALANCER,
-                           a10constants.VTHUNDER)))
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                      constants.FLAVOR_DATA)))
         lb_create_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         lb_create_flow.add(a10_database_tasks.SetThunderUpdatedAt(

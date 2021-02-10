@@ -96,9 +96,12 @@ class MemberFlows(object):
         create_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP
         ))
+        create_member_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR))
         create_member_flow.add(server_tasks.MemberCreate(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
-                      a10constants.MEMBER_COUNT_IP)))
+                      a10constants.MEMBER_COUNT_IP, constants.FLAVOR)))
         create_member_flow.add(database_tasks.MarkMemberActiveInDB(
             requires=constants.MEMBER))
         create_member_flow.add(database_tasks.MarkPoolActiveInDB(
@@ -422,8 +425,12 @@ class MemberFlows(object):
         update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        update_member_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR))
         update_member_flow.add(server_tasks.MemberUpdate(
-            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
+            requires=(constants.MEMBER, a10constants.VTHUNDER,
+                      constants.POOL, constants.FLAVOR)))
         update_member_flow.add(database_tasks.UpdateMemberInDB(
             requires=[constants.MEMBER, constants.UPDATE_DICT]))
         update_member_flow.add(database_tasks.MarkMemberActiveInDB(
