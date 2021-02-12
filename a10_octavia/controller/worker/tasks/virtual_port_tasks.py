@@ -210,6 +210,7 @@ class ListenerUpdateForPool(ListenersParent, task.Task):
     def execute(self, loadbalancer, listener, vthunder):
         try:
             if listener:
+                c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
                 listener.protocol = openstack_mappings.virtual_port_protocol(
                     self.axapi_client, listener.protocol).lower()
                 self.axapi_client.slb.virtual_server.vport.update(
@@ -217,7 +218,8 @@ class ListenerUpdateForPool(ListenersParent, task.Task):
                     listener.id,
                     listener.protocol,
                     listener.protocol_port,
-                    listener.default_pool_id)
+                    listener.default_pool_id,
+                    s_pers_name=s_pers, c_pers_name=c_pers)
                 LOG.debug("Successfully updated listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update listener: %s", listener.id)
