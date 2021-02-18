@@ -204,8 +204,9 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.DecrementLoadBalancerQuota(
             requires=constants.LOADBALANCER))
-        delete_LB_flow.add(vthunder_tasks.WriteMemory(
-            requires=a10constants.VTHUNDER))
+        if not deleteCompute:
+            delete_LB_flow.add(vthunder_tasks.WriteMemory(
+                requires=a10constants.VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return (delete_LB_flow, store)
