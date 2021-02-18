@@ -219,10 +219,12 @@ def get_patched_ip_address(ip, cidr):
 
 
 def get_vrid_floating_ip_for_project(project_id):
-    device_info = CONF.hardware_thunder.devices.get(project_id)
-    if device_info:
-        vrid_fp = device_info.vrid_floating_ip
-        return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp
+    vrid_fp = None
+    if CONF.hardware_thunder.devices:
+        device_info = CONF.hardware_thunder.devices.get(project_id)
+        if device_info:
+            vrid_fp = device_info.vrid_floating_ip
+    return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp
 
 
 def validate_vcs_device_info(device_network_map):

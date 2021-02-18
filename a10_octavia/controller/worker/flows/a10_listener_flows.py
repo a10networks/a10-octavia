@@ -45,6 +45,9 @@ class ListenerFlows(object):
         create_listener_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
             provides=constants.FLAVOR_DATA))
+        create_listener_flow.add(nat_pool_tasks.NatPoolCreate(
+            requires=(constants.LOADBALANCER,
+                      a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             requires=[constants.LOADBALANCER, constants.LISTENER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA]))

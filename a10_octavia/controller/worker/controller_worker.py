@@ -903,9 +903,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         store = {a10constants.WRITE_MEM_SHARED_PART: True}
 
         for vthunder in thunders:
+            deleteCompute = False
+            if vthunder.status == 'DELETED' and vthunder.compute_id is not None:
+                deleteCompute = self._vthunder_repo.get_delete_compute_flag(db_apis.get_session(),
+                                                                            vthunder.compute_id)
             try:
                 write_mem_tf = self._taskflow_load(
-                    self._vthunder_flows.get_write_memory_flow(vthunder, store),
+                    self._vthunder_flows.get_write_memory_flow(vthunder, store, deleteCompute),
                     store=store)
 
                 with tf_logging.DynamicLoggingListener(write_mem_tf,

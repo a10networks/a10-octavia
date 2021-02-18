@@ -78,6 +78,9 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR_DATA))
+        lb_create_flow.add(nat_pool_tasks.NatPoolCreate(
+            requires=(constants.LOADBALANCER,
+                      a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
                       constants.FLAVOR_DATA)))
@@ -207,8 +210,9 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.DecrementLoadBalancerQuota(
             requires=constants.LOADBALANCER))
-        delete_LB_flow.add(vthunder_tasks.WriteMemory(
-            requires=a10constants.VTHUNDER))
+        if not deleteCompute:
+            delete_LB_flow.add(vthunder_tasks.WriteMemory(
+                requires=a10constants.VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return (delete_LB_flow, store)
