@@ -141,7 +141,7 @@ class CheckExistingProjectToThunderMappedEntries(BaseDatabaseTask):
                     loadbalancer.id)
         vthunder_ids = self.vthunder_repo.get_vthunders_by_project_id(
             db_apis.get_session(),
-            project_id=loadbalancer.project_id)
+            project_id=loadbalancer['project_id'])
 
         for vthunder_id in vthunder_ids:
             vthunder = self.vthunder_repo.get(
@@ -207,7 +207,7 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
     """Get VThunder from db using LoadBalancer"""
 
     def execute(self, loadbalancer):
-        loadbalancer_id = loadbalancer.id
+        loadbalancer_id = loadbalancer['loadbalancer_id']
         vthunder = self.vthunder_repo.get_vthunder_from_lb(
             db_apis.get_session(), loadbalancer_id)
         if vthunder is None:
@@ -300,7 +300,7 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
                 password=vthunder_config.password,
                 ip_address=vthunder_config.ip_address,
                 undercloud=vthunder_config.undercloud,
-                loadbalancer_id=loadbalancer.id,
+                loadbalancer_id=loadbalancer['loadbalancer_id'],
                 project_id=vthunder_config.project_id,
                 axapi_version=vthunder_config.axapi_version,
                 topology="STANDALONE",
@@ -316,7 +316,7 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
         except Exception as e:
             LOG.error(
                 'Failed to create vThunder entry in db for load balancer: %s.',
-                loadbalancer.id)
+                loadbalancer['loadbalancer_id'])
             raise e
 
     def revert(self, result, loadbalancer, vthunder_config, *args, **kwargs):

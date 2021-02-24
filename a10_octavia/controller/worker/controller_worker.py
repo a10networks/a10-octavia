@@ -276,7 +276,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def create_load_balancer(self, load_balancer_id, flavor=None):
         """Function to create load balancer for A10 provider"""
-
         lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
         if not lb:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
@@ -299,11 +298,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
                 vthunder_conf=CONF.hardware_thunder.devices[lb.project_id],
                 topology=topology, listeners=lb.listeners)
-            create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
+            create_lb_tf = self.taskflow_load(create_lb_flow, store=store)
         else:
             create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
                 topology=topology, listeners=lb.listeners)
-            create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
+            create_lb_tf = self.taskflow_load(create_lb_flow, store=store)
 
         with tf_logging.DynamicLoggingListener(
                 create_lb_tf, log=LOG,
