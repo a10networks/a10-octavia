@@ -24,7 +24,7 @@ from taskflow import task
 from taskflow.types import failure
 
 from octavia.common import constants
-from octavia.controller.worker.v2 import task_utils
+from octavia.controller.worker import task_utils
 from octavia.network import base
 from octavia.network import data_models as n_data_models
 

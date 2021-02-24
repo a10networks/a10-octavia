@@ -1,7 +1,7 @@
 acos-client>=2.8.0		#
 octavia>=7.0.0			# victoria version of octavia
 octavia-lib			#
-keystone>=15.0.1,<16.0.0
+keystone==18.0.0
 python-barbicanclient>=4.5.2 	# copied from octavia requirements.txt
 python-glanceclient>=2.8.0 	# Apache-2.0
 python-novaclient>=9.1.0 	# Apache-2.0
@@ -9,3 +9,4 @@ pyOpenSSL>=19.1.0 		# Apache-2.0
 
 taskflow>=4.4.0			# copied from octavia requirements.txt
 tenacity>=5.0.4 		# copied from octavia requirements.txt
+jsonschema>=3.2.0		# 
