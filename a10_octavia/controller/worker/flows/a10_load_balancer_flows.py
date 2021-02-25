@@ -215,6 +215,16 @@ class LoadBalancerFlows(object):
                 requires=a10constants.VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
+        delete_LB_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.BACKUP_VTHUNDER))
+        delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
+            name="DELETED_BACKUP",
+            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+            inject={"status": constants.DELETED}))
+        delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            name="SET_BACKUP_UPDATEDAT",
+            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
         return (delete_LB_flow, store)
 
     def get_new_lb_networking_subflow(self, topology):
