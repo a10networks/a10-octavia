@@ -185,10 +185,10 @@ class CheckExistingThunderToProjectMappedEntries(BaseDatabaseTask):
             config_ip_addr_partition = '{}:{}'.format(
                 vthunder_config.ip_address, vthunder_config.partition_name)
             if existing_ip_addr_partition == config_ip_addr_partition:
-                if loadbalancer.project_id not in (vthunder.project_id,
+                if loadbalancer['project_id'] not in (vthunder.project_id,
                                                    utils.get_parent_project(vthunder.project_id)):
                     raise exceptions.ProjectInUseByExistingThunderError(
-                        config_ip_addr_partition, vthunder.project_id, loadbalancer.project_id)
+                        config_ip_addr_partition, vthunder.project_id, loadbalancer['project_id'])
 
 
 class DeleteVThunderEntry(BaseDatabaseTask):
@@ -327,14 +327,14 @@ class CreateRackVthunderEntry(BaseDatabaseTask):
 
         LOG.warning(
             'Reverting create Rack VThunder in DB for load balancer: %s',
-            loadbalancer.id)
+            loadbalancer['loadbalancer_id'])
         try:
             self.vthunder_repo.delete(
-                db_apis.get_session(), loadbalancer_id=loadbalancer.id)
+                db_apis.get_session(), loadbalancer_id=loadbalancer['loadbalancer_id'])
         except Exception:
             LOG.error(
                 "Failed to delete vThunder entry for load balancer: %s",
-                loadbalancer.id)
+                loadbalancer['loadbalancer_id'])
 
 
 class CreateVThunderHealthEntry(BaseDatabaseTask):
