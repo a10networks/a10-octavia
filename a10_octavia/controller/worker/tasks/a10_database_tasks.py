@@ -422,13 +422,13 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
             # delete all vrids from DB for the lB resource's project.
             try:
                 self.vrid_repo.delete(db_apis.get_session(),
-                                      project_id=lb_resource.project_id)
+                                      project_id=lb_resource['project_id'])
                 LOG.debug("Successfully deleted DB vrid from project %s",
-                          lb_resource.project_id)
+                          lb_resource['project_id'])
             except Exception as e:
                 LOG.error(
                     "Failed to delete VRID data for project %s due to %s",
-                    lb_resource.project_id,
+                    lb_resource['project_id'],
                     str(e))
                 raise e
             return
@@ -445,7 +445,7 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                     LOG.debug(
                         "Successfully updated DB vrid %s entry for loadbalancer resource %s",
                         vrid.id,
-                        lb_resource.id)
+                        lb_resource['loadbalancer_id'])
                 except Exception as e:
                     LOG.error(
                         "Failed to update VRID data for VRID FIP %s due to %s",
