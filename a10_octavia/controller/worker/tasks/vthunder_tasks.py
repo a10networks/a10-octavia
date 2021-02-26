@@ -658,7 +658,7 @@ class TagInterfaceForLB(TagInterfaceBaseTask):
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
         try:
-            vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
+            vlan_id = self.get_vlan_id(loadbalancer['vip_subnet_id'], False)
             self.tag_interfaces(vthunder, vlan_id)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to TagInterfaceForLB: %s", str(e))
@@ -668,12 +668,12 @@ class TagInterfaceForLB(TagInterfaceBaseTask):
     def revert(self, loadbalancer, vthunder, *args, **kwargs):
         try:
             if vthunder and vthunder.device_network_map:
-                vlan_id = self.get_vlan_id(loadbalancer.vip.subnet_id, False)
+                vlan_id = self.get_vlan_id(loadbalancer['vip_subnet_id'], False)
                 if self.is_vlan_deletable():
                     LOG.warning("Revert TagInterfaceForLB with VLAN id %s", vlan_id)
                     master_device_id = vthunder.device_network_map[0].vcs_device_id
                     for device_obj in vthunder.device_network_map:
-                        self.delete_device_vlan(vlan_id, loadbalancer.vip.subnet_id, vthunder,
+                        self.delete_device_vlan(vlan_id, loadbalancer['vip_subnet_id'], vthunder,
                                                 device_id=device_obj.vcs_device_id,
                                                 master_device_id=master_device_id)
         except req_exceptions.ConnectionError:

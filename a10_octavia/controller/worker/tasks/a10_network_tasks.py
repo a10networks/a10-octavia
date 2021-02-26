@@ -696,7 +696,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         update_vrid_flag = False
         vrid_value = CONF.a10_global.vrid
         conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
-            lb_resource.project_id)
+            lb_resource['project_id'])
         prev_vrid_value = copy.deepcopy(
             vrid_list[0].vrid) if vrid_list else None
 
@@ -708,7 +708,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 vrid_list.append(
                     data_models.VRID(
                         vrid=vrid_value,
-                        project_id=lb_resource.project_id,
+                        project_id=lb_resource['project_id'],
                         vrid_port_id=None,
                         vrid_floating_ip=None,
                         subnet_id=subnet.id))
@@ -735,14 +735,14 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                         except Exception as e:
                             LOG.error(
                                 "Failed to create neutron port for lb_resource: %s",
-                                lb_resource.id)
+                                lb_resource['loadbalancer_id'])
                             raise e
                     vrid_floating_ips.append(vrid.vrid_floating_ip)
             else:
                 for vrid in vrid_list:
                     subnet = self.network_driver.get_subnet(vrid.subnet_id)
                     conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
-                        lb_resource.project_id)
+                        lb_resource['project_id'])
                     conf_floating_ip = a10_utils.get_patched_ip_address(
                         conf_floating_ip, subnet.cidr)
                     vrid.vrid = vrid_value
@@ -762,7 +762,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                         except Exception as e:
                             LOG.error(
                                 "Failed to create neutron port for loadbalancer resource: %s with "
-                                "floating IP %s", lb_resource.id, conf_floating_ip)
+                                "floating IP %s", lb_resource['loadbalancer_id'], conf_floating_ip)
                             raise e
                     vrid_floating_ips.append(vrid.vrid_floating_ip)
         else:
@@ -927,15 +927,14 @@ class GetMemberSubnetVLANID(GetSubnetVLANIDParent, BaseNetworkTask):
 
 
 class GetLBResourceSubnet(BaseNetworkTask):
-    "Provides subnet ID for LB resource"
-
+    """Provides subnet ID for LB resource"""
     def execute(self, lb_resource):
         if not hasattr(lb_resource, 'subnet_id'):
             # Special case for load balancers as their vips have the subnet
             # info
-            subnet = self.network_driver.get_subnet(lb_resource.vip.subnet_id)
+            subnet = self.network_driver.get_subnet(lb_resource['vip_subnet_id'])
         else:
-            subnet = self.network_driver.get_subnet(lb_resource.subnet_id)
+            subnet = self.network_driver.get_subnet(lb_resource['subnet_id'])
         return subnet
 
 
