@@ -798,7 +798,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
         LOG.warning(
             "Reverting VRRP floating IP delta task for lb_resource %s",
-            lb_resource.id)
+            lb_resource['loadbalancer_id'])
         # Delete newly added ports
         for port in self.added_fip_ports:
             try:
