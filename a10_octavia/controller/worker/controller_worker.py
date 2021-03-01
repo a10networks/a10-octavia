@@ -300,7 +300,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 vthunder_conf=CONF.hardware_thunder.devices[lb.project_id],
                 topology=topology, listeners=lb.listeners)
             create_lb_tf = self.taskflow_load(create_lb_flow, store=store)
-            self.taskflow_load()
         else:
             create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
                 topology=topology, listeners=lb.listeners)
