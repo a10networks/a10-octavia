@@ -59,7 +59,7 @@ RACK_DEVICE_LIST = {
 }
 
 
-@mock.patch("octavia.controller.worker.v2.tasks.database_tasks.UpdateAmphoraVIPData")
+@mock.patch("octavia.controller.worker.v1.tasks.database_tasks.UpdateAmphoraVIPData")
 class TestLoadBalancerFlows(base.TestCase):
     def setUp(self):
         super(TestLoadBalancerFlows, self).setUp()

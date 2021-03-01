@@ -16,8 +16,8 @@
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
-from octavia.controller.worker.v2.tasks import database_tasks
-from octavia.controller.worker.v2.tasks import lifecycle_tasks
+from octavia.controller.worker.v1.tasks import database_tasks
+from octavia.controller.worker.v1.tasks import lifecycle_tasks
 from octavia.controller.worker.v1.tasks import model_tasks
 
 from a10_octavia.common import a10constants

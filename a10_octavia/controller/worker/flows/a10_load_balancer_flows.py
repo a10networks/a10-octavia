@@ -19,14 +19,15 @@ from taskflow.patterns import unordered_flow
 
 from octavia.common import constants
 from octavia.common import exceptions
-from octavia.controller.worker.v2.flows import amphora_flows
-from octavia.controller.worker.v2.flows import listener_flows
-from octavia.controller.worker.v2.flows import member_flows
-from octavia.controller.worker.v2.flows import pool_flows
-from octavia.controller.worker.v2.tasks import compute_tasks
-from octavia.controller.worker.v2.tasks import database_tasks
-from octavia.controller.worker.v2.tasks import lifecycle_tasks
-from octavia.controller.worker.v2.tasks import network_tasks
+
+from octavia.controller.worker.v1.flows import amphora_flows
+from octavia.controller.worker.v1.flows import listener_flows
+from octavia.controller.worker.v1.flows import member_flows
+from octavia.controller.worker.v1.flows import pool_flows
+from octavia.controller.worker.v1.tasks import compute_tasks
+from octavia.controller.worker.v1.tasks import database_tasks
+from octavia.controller.worker.v1.tasks import lifecycle_tasks
+from octavia.controller.worker.v1.tasks import network_tasks
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 
