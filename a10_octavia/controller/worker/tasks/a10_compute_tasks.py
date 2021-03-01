@@ -20,7 +20,7 @@ from taskflow.types import failure
 
 from octavia.common import constants
 from octavia.common import exceptions
-from octavia.controller.worker.v2.tasks.compute_tasks import BaseComputeTask
+from octavia.controller.worker.v1.tasks.compute_tasks import BaseComputeTask
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
