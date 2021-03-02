@@ -80,7 +80,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         :returns: amphora_id
         """
-        create_vthunder_tf = self._taskflow_load(
+        create_vthunder_tf = self.taskflow_load(
             self._vthunder_flows.get_create_vthunder_flow(),
             store={constants.BUILD_TYPE_PRIORITY:
                    constants.LB_CREATE_SPARES_POOL_PRIORITY}
@@ -110,7 +110,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         pool.health_monitor = health_mon
         load_balancer = pool.load_balancer
 
-        create_hm_tf = self._taskflow_load(
+        create_hm_tf = self.taskflow_load(
             self._health_monitor_flows.get_create_health_monitor_flow(),
             store={constants.HEALTH_MON: health_mon,
                    constants.POOL: pool,
@@ -135,7 +135,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = pool.listeners
         load_balancer = pool.load_balancer
 
-        delete_hm_tf = self._taskflow_load(
+        delete_hm_tf = self.taskflow_load(
             self._health_monitor_flows.get_delete_health_monitor_flow(),
             store={constants.HEALTH_MON: health_mon,
                    constants.POOL: pool,
@@ -171,7 +171,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         pool.health_monitor = health_mon
         load_balancer = pool.load_balancer
 
-        update_hm_tf = self._taskflow_load(
+        update_hm_tf = self.taskflow_load(
             self._health_monitor_flows.get_update_health_monitor_flow(),
             store={constants.HEALTH_MON: health_mon,
                    constants.POOL: pool,
@@ -200,7 +200,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         if (listener.project_id in parent_project_list or
                 (listener_parent_proj and listener_parent_proj in parent_project_list)
                 or listener.project_id in CONF.hardware_thunder.devices):
-            create_listener_tf = self._taskflow_load(self._listener_flows.
+            create_listener_tf = self.taskflow_load(self._listener_flows.
                                                      get_rack_vthunder_create_listener_flow(
                                                          listener.project_id),
                                                      store={constants.LOADBALANCER:
@@ -208,7 +208,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                             constants.LISTENER:
                                                             listener})
         else:
-            create_listener_tf = self._taskflow_load(self._listener_flows.
+            create_listener_tf = self.taskflow_load(self._listener_flows.
                                                      get_create_listener_flow(),
                                                      store={constants.LOADBALANCER:
                                                             load_balancer,
@@ -227,12 +227,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = listener.load_balancer
 
         if listener.project_id in CONF.hardware_thunder.devices:
-            delete_listener_tf = self._taskflow_load(
+            delete_listener_tf = self.taskflow_load(
                 self._listener_flows.get_delete_rack_listener_flow(),
                 store={constants.LOADBALANCER: load_balancer,
                        constants.LISTENER: listener})
         else:
-            delete_listener_tf = self._taskflow_load(
+            delete_listener_tf = self.taskflow_load(
                 self._listener_flows.get_delete_listener_flow(),
                 store={constants.LOADBALANCER: load_balancer,
                        constants.LISTENER: listener})
@@ -257,7 +257,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         load_balancer = listener.load_balancer
 
-        update_listener_tf = self._taskflow_load(self._listener_flows.
+        update_listener_tf = self.taskflow_load(self._listener_flows.
                                                  get_update_listener_flow(),
                                                  store={constants.LISTENER:
                                                         listener,
@@ -299,11 +299,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
                 vthunder_conf=CONF.hardware_thunder.devices[lb.project_id],
                 topology=topology, listeners=lb.listeners)
-            create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
+            create_lb_tf = self.taskflow_load(create_lb_flow, store=store)
         else:
             create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
                 topology=topology, listeners=lb.listeners)
-            create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
+            create_lb_tf = self.taskflow_load(create_lb_flow, store=store)
 
         with tf_logging.DynamicLoggingListener(
                 create_lb_tf, log=LOG,
@@ -326,7 +326,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                       constants.VIP: lb.vip,
                       constants.SERVER_GROUP_ID: lb.server_group_id})
 
-        delete_lb_tf = self._taskflow_load(flow, store=store)
+        delete_lb_tf = self.taskflow_load(flow, store=store)
 
         with tf_logging.DynamicLoggingListener(delete_lb_tf,
                                                log=LOG):
@@ -351,7 +351,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             db_apis.get_session(),
             load_balancer_id=load_balancer_id)
 
-        update_lb_tf = self._taskflow_load(
+        update_lb_tf = self.taskflow_load(
             self._lb_flows.get_update_load_balancer_flow(),
             store={constants.LOADBALANCER: lb,
                    constants.VIP: lb.vip,
@@ -394,7 +394,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         if (member.project_id in parent_project_list or
                 (member_parent_proj and member_parent_proj in parent_project_list)
                 or member.project_id in CONF.hardware_thunder.devices):
-            create_member_tf = self._taskflow_load(
+            create_member_tf = self.taskflow_load(
                 self._member_flows.get_rack_vthunder_create_member_flow(),
                 store={
                     constants.MEMBER: member,
@@ -402,7 +402,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                     constants.LOADBALANCER: load_balancer,
                     constants.POOL: pool})
         else:
-            create_member_tf = self._taskflow_load(self._member_flows.
+            create_member_tf = self.taskflow_load(self._member_flows.
                                                    get_create_member_flow(
                                                        topology=topology),
                                                    store={constants.MEMBER: member,
@@ -430,13 +430,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = pool.load_balancer
 
         if member.project_id in CONF.hardware_thunder.devices:
-            delete_member_tf = self._taskflow_load(
+            delete_member_tf = self.taskflow_load(
                 self._member_flows.get_rack_vthunder_delete_member_flow(),
                 store={constants.MEMBER: member, constants.LISTENERS: listeners,
                        constants.LOADBALANCER: load_balancer, constants.POOL: pool}
             )
         else:
-            delete_member_tf = self._taskflow_load(
+            delete_member_tf = self.taskflow_load(
                 self._member_flows.get_delete_member_flow(),
                 store={constants.MEMBER: member, constants.LISTENERS: listeners,
                        constants.LOADBALANCER: load_balancer, constants.POOL: pool}
@@ -477,7 +477,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = pool.load_balancer
 
         if member.project_id in CONF.hardware_thunder.devices:
-            update_member_tf = self._taskflow_load(self._member_flows.
+            update_member_tf = self.taskflow_load(self._member_flows.
                                                    get_rack_vthunder_update_member_flow(),
                                                    store={constants.MEMBER: member,
                                                           constants.LISTENERS:
@@ -487,7 +487,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                           constants.POOL: pool,
                                                           constants.UPDATE_DICT: member_updates})
         else:
-            update_member_tf = self._taskflow_load(self._member_flows.get_update_member_flow(),
+            update_member_tf = self.taskflow_load(self._member_flows.get_update_member_flow(),
                                                    store={constants.MEMBER: member,
                                                           constants.LISTENERS:
                                                           listeners,
@@ -527,7 +527,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             default_listener = pool.listeners[0]
         load_balancer = pool.load_balancer
 
-        create_pool_tf = self._taskflow_load(self._pool_flows.
+        create_pool_tf = self.taskflow_load(self._pool_flows.
                                              get_create_pool_flow(),
                                              store={constants.POOL: pool,
                                                     constants.LISTENERS:
@@ -566,7 +566,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                  constants.HEALTH_MON: health_monitor,
                  a10constants.MEMBER_COUNT: mem_count}
 
-        delete_pool_tf = self._taskflow_load(
+        delete_pool_tf = self.taskflow_load(
             self._pool_flows.get_delete_pool_flow(
                 members, health_monitor, store),
             store=store)
@@ -601,7 +601,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             default_listener = pool.listeners[0]
         load_balancer = pool.load_balancer
 
-        update_pool_tf = self._taskflow_load(self._pool_flows.
+        update_pool_tf = self.taskflow_load(self._pool_flows.
                                              get_update_pool_flow(),
                                              store={constants.POOL: pool,
                                                     constants.LISTENERS:
@@ -638,7 +638,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
 
-        create_l7policy_tf = self._taskflow_load(
+        create_l7policy_tf = self.taskflow_load(
             self._l7policy_flows.get_create_l7policy_flow(),
             store={constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
@@ -659,7 +659,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = l7policy.listener.load_balancer
         listeners = [l7policy.listener]
 
-        delete_l7policy_tf = self._taskflow_load(
+        delete_l7policy_tf = self.taskflow_load(
             self._l7policy_flows.get_delete_l7policy_flow(),
             store={constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
@@ -692,7 +692,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
 
-        update_l7policy_tf = self._taskflow_load(
+        update_l7policy_tf = self.taskflow_load(
             self._l7policy_flows.get_update_l7policy_flow(),
             store={constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
@@ -725,7 +725,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
 
-        create_l7rule_tf = self._taskflow_load(
+        create_l7rule_tf = self.taskflow_load(
             self._l7rule_flows.get_create_l7rule_flow(),
             store={constants.L7RULE: l7rule,
                    constants.L7POLICY: l7policy,
@@ -747,7 +747,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = l7policy.listener.load_balancer
         listeners = [l7policy.listener]
 
-        delete_l7rule_tf = self._taskflow_load(
+        delete_l7rule_tf = self.taskflow_load(
             self._l7rule_flows.get_delete_l7rule_flow(),
             store={constants.L7RULE: l7rule,
                    constants.L7POLICY: l7policy,
@@ -781,7 +781,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
 
-        update_l7rule_tf = self._taskflow_load(
+        update_l7rule_tf = self.taskflow_load(
             self._l7rule_flows.get_update_l7rule_flow(),
             store={constants.L7RULE: l7rule,
                    constants.L7POLICY: l7policy,
@@ -904,7 +904,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         for vthunder in thunders:
             try:
-                write_mem_tf = self._taskflow_load(
+                write_mem_tf = self.taskflow_load(
                     self._vthunder_flows.get_write_memory_flow(vthunder, store),
                     store=store)
 
@@ -924,7 +924,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         store = {}
         for vthunder in thunders:
             try:
-                reload_check_tf = self._taskflow_load(
+                reload_check_tf = self.taskflow_load(
                     self._vthunder_flows.get_reload_check_flow(vthunder, store),
                     store=store)
                 with tf_logging.DynamicLoggingListener(reload_check_tf, log=LOG):
