@@ -17,9 +17,9 @@ from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
-from octavia.controller.worker.tasks import database_tasks
-from octavia.controller.worker.tasks import lifecycle_tasks
-from octavia.controller.worker.tasks import model_tasks
+from octavia.controller.worker.v1.tasks import database_tasks
+from octavia.controller.worker.v1.tasks import lifecycle_tasks
+from octavia.controller.worker.v1.tasks import model_tasks
 
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows

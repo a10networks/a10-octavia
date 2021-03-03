@@ -19,7 +19,7 @@ from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
-from octavia.controller.worker.tasks import database_tasks
+from octavia.controller.worker.v1.tasks import database_tasks
 
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_compute_tasks as compute_tasks
