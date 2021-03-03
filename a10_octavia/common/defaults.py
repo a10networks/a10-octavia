@@ -14,23 +14,10 @@
 
 DEFAULT = {
     'arp_disable': False,
-    'default_virtual_server_vrid': None,
-    'logging_template': None,
-    'policy_template': None,
-    'template_virtual_server': None,
-    'default_virtual_server_vrid': None,
+    'default_virtual_server_vrid': 0,
     'ipinip': False,
-    'no_dest_nat': None,
-    'ha_conn_mirror': None,
-    'template_virtual_port': None,
-    'template_tcp': None,
-    'template_policy': None,
+    'no_dest_nat': False,
     'autosnat': True,
-    'conn_limit': None,
-    'template_http': None,
-    'templates': None,
-    'conn_limit': None,
-    'conn_resume': None,
-    'templates': None,
+    'conn_limit': 64000000,
     'use_rcv_hop_for_resp': False
 }
