@@ -302,7 +302,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
         else:
             create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
-                topology=topology, listeners=lb.listeners)
+                load_balancer_id, topology=topology, listeners=lb.listeners)
             create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
 
         with tf_logging.DynamicLoggingListener(

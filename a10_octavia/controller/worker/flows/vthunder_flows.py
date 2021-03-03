@@ -188,6 +188,10 @@ class VThunderFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         create_amp_for_lb_subflow.add(
+            vthunder_tasks.VThunderComputeConnectivityWait(
+                name=a10constants.MASTER_CONNECTIVITY_WAIT,
+                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        create_amp_for_lb_subflow.add(
             database_tasks.MarkAmphoraAllocatedInDB(
                 name=sf_name + '-' + constants.MARK_AMPHORA_ALLOCATED_INDB,
                 requires=(constants.AMPHORA, constants.LOADBALANCER_ID)))
@@ -251,6 +255,18 @@ class VThunderFlows(object):
         vthunder_for_amphora_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        vthunder_for_amphora_subflow.add(database_tasks.ReloadLoadBalancer(
+            name=sf_name + '-' + constants.RELOADLOAD_BALANCER,
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
+        vthunder_for_amphora_subflow.add(a10_network_tasks.AllocateVIP(
+            name=sf_name + '-' + a10constants.ALLOCATE_VIP,
+            requires=constants.LOADBALANCER,
+            provides=constants.VIP))
+        vthunder_for_amphora_subflow.add(database_tasks.UpdateVIPAfterAllocation(
+            name=sf_name + '-' + a10constants.UPDATE_VIP_AFTER_ALLOCATION,
+            requires=(constants.LOADBALANCER_ID, constants.VIP),
+            provides=constants.LOADBALANCER))
         vthunder_for_amphora_subflow.add(
             database_tasks.MarkAmphoraAllocatedInDB(
                 name=sf_name + '-' + constants.MARK_AMPHORA_ALLOCATED_INDB,
