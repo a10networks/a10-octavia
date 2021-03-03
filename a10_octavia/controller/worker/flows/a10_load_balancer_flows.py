@@ -232,7 +232,7 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORAE_NETWORK_CONFIG))
         new_LB_net_subflow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER,
+            requires=constants.LOADBALANCER_ID,
             provides=constants.AMPHORA))
         new_LB_net_subflow.add(
             vthunder_tasks.VThunderComputeConnectivityWait(
