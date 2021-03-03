@@ -146,10 +146,14 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
         imp.reload(task)
         self.client_mock = mock.Mock()
+        self.db_session = mock.patch(
+            'a10_octavia.controller.worker.tasks.a10_database_tasks.db_apis.get_session')
+        self.db_session.start()
 
     def tearDown(self):
         super(TestVThunderTasks, self).tearDown()
         self.conf.reset()
+        self.db_session.stop()
 
     def _mock_lb(self):
         lb = mock.Mock()
@@ -175,7 +179,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._get_ve_ip = mock.Mock()
         mock_task._get_ve_ip.return_value = VE_IP
         mock_task.get_subnet_and_mask = mock.Mock()
-        mock_task.get_subnet_and_mask.return_value = [SUBNET_MASK[0], SUBNET_MASK[1]]
+        mock_task.get_subnet_and_mask.return_value = [
+            SUBNET_MASK[0], SUBNET_MASK[1]]
         mock_task._subnet_ip = SUBNET_MASK[0]
         mock_task._subnet_mask = SUBNET_MASK[1]
         mock_task._subnet = mock.Mock()
@@ -204,7 +209,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.list_networks.return_value = [NETWORK_11]
         mock_task.execute(lb, mock_thunder)
         self.client_mock.vlan.create.assert_called_with(VLAN_ID,
-                                                        tagged_eths=[TAG_INTERFACE],
+                                                        tagged_eths=[
+                                                            TAG_INTERFACE],
                                                         veth=True)
         args, kwargs = mock_task._network_driver.neutron_client.create_port.call_args
         self.assertIn('port', args[0])
@@ -234,7 +240,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.list_networks.return_value = [NETWORK_12]
         mock_task.execute(lb, mock_thunder)
         self.client_mock.vlan.create.assert_called_with(VE_IP_VLAN_ID,
-                                                        tagged_eths=[TAG_INTERFACE],
+                                                        tagged_eths=[
+                                                            TAG_INTERFACE],
                                                         veth=True)
         self.client_mock.interface.ve.create.assert_called_with(VE_IP_VLAN_ID,
                                                                 ip_address=STATIC_VE_IP,
@@ -263,7 +270,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.list_networks.return_value = [NETWORK_12]
         mock_task.execute(lb, mock_thunder)
         self.client_mock.vlan.create.assert_called_with(VE_IP_VLAN_ID,
-                                                        tagged_trunks=[TAG_TRUNK_INTERFACE],
+                                                        tagged_trunks=[
+                                                            TAG_TRUNK_INTERFACE],
                                                         veth=True)
         self.client_mock.interface.ve.create.assert_called_with(VE_IP_VLAN_ID,
                                                                 ip_address=STATIC_VE_IP,
@@ -281,7 +289,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self._mock_tag_task(mock_task)
         self.client_mock.interface.ethernet.get.return_value = ETH_DATA
         self.client_mock.vlan.exists.side_effect = Exception
-        self.assertRaises(Exception, lambda: mock_task.execute(lb, mock_thunder))
+        self.assertRaises(
+            Exception, lambda: mock_task.execute(lb, mock_thunder))
 
     def test_TagInterfaceForLB_revert_created_vlan(self):
         intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
@@ -299,7 +308,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_port_id_from_ip.return_value = DEL_PORT_ID
         mock_task.revert(lb, mock_thunder)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
-        mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
+        mock_task._network_driver.neutron_client.delete_port.assert_called_with(
+            DEL_PORT_ID)
 
     def test_TagInterfaceForMember_create_vlan_ve_with_dhcp(self):
         intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
@@ -319,7 +329,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.list_networks.return_value = [NETWORK_11]
         mock_task.execute(member, mock_thunder)
         self.client_mock.vlan.create.assert_called_with(VLAN_ID,
-                                                        tagged_eths=[TAG_INTERFACE],
+                                                        tagged_eths=[
+                                                            TAG_INTERFACE],
                                                         veth=True)
         args, kwargs = mock_task._network_driver.neutron_client.create_port.call_args
         self.assertIn('port', args[0])
@@ -340,7 +351,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.vlan.exists.return_value = False
         mock_task._network_driver.neutron_client.create_port = mock.Mock()
         mock_task._network_driver.neutron_client.create_port.side_effect = Exception
-        self.assertRaises(Exception, lambda: mock_task.execute(member, mock_thunder))
+        self.assertRaises(
+            Exception, lambda: mock_task.execute(member, mock_thunder))
 
     def test_TagInterfaceForMember_revert_created_vlan(self):
         intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
@@ -358,7 +370,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_port_id_from_ip.return_value = DEL_PORT_ID
         mock_task.revert(member, mock_thunder)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
-        mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
+        mock_task._network_driver.neutron_client.delete_port.assert_called_with(
+            DEL_PORT_ID)
 
     def test_TagInterfaceForMember_execute_log_warning_no_subnet_id(self):
         member = self._mock_member()
@@ -368,7 +381,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         log_message = str("Subnet id argument was not specified during "
                           "issuance of create command/API call for member %s. "
                           "Skipping TagInterfaceForMember task")
-        expected_log = ["WARNING:{}:{}".format(task_path, log_message % member.id)]
+        expected_log = ["WARNING:{}:{}".format(
+            task_path, log_message % member.id)]
         mock_task = task.TagInterfaceForMember()
         with self.assertLogs(task_path, level='WARN') as cm:
             mock_task.execute(member, VTHUNDER)
@@ -382,7 +396,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         log_message = str("Subnet id argument was not specified during "
                           "issuance of create command/API call for member %s. "
                           "Skipping TagInterfaceForMember task")
-        expected_log = ["WARNING:{}:{}".format(task_path, log_message % member.id)]
+        expected_log = ["WARNING:{}:{}".format(
+            task_path, log_message % member.id)]
         mock_task = task.TagInterfaceForMember()
         with self.assertLogs(task_path, level='WARN') as cm:
             mock_task.revert(member, VTHUNDER)
@@ -396,7 +411,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         log_message = str("Subnet id argument was not specified during "
                           "issuance of create command/API call for member %s. "
                           "Skipping DeleteInterfaceTagIfNotInUseForMember task")
-        expected_log = ["WARNING:{}:{}".format(task_path, log_message % member.id)]
+        expected_log = ["WARNING:{}:{}".format(
+            task_path, log_message % member.id)]
         mock_task = task.DeleteInterfaceTagIfNotInUseForMember()
         with self.assertLogs(task_path, level='WARN') as cm:
             mock_task.execute(member, VTHUNDER)
@@ -418,7 +434,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_port_id_from_ip.return_value = DEL_PORT_ID
         mock_task.execute(lb, mock_thunder)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
-        mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
+        mock_task._network_driver.neutron_client.delete_port.assert_called_with(
+            DEL_PORT_ID)
 
     def test_DeleteInterfaceTagIfNotInUseForMember_execute_delete_vlan(self):
         intf = a10_utils.convert_interface_to_data_model(ETHERNET_INTERFACE)
@@ -436,7 +453,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_port_id_from_ip.return_value = DEL_PORT_ID
         mock_task.execute(member, mock_thunder)
         self.client_mock.vlan.delete.assert_called_with(VLAN_ID)
-        mock_task._network_driver.neutron_client.delete_port.assert_called_with(DEL_PORT_ID)
+        mock_task._network_driver.neutron_client.delete_port.assert_called_with(
+            DEL_PORT_ID)
 
     def test_SetupDeviceNetworkMap_execute_vcs_disabled(self):
         self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
@@ -467,10 +485,12 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.assertEqual(len(thunder.device_network_map), 2)
         self.assertEqual(thunder.device_network_map[0].vcs_device_id, 1)
         self.assertEqual(thunder.device_network_map[0].state, "Master")
-        self.assertEqual(thunder.device_network_map[0].mgmt_ip_address, DEVICE1_MGMT_IP)
+        self.assertEqual(
+            thunder.device_network_map[0].mgmt_ip_address, DEVICE1_MGMT_IP)
         self.assertEqual(thunder.device_network_map[1].vcs_device_id, 2)
         self.assertEqual(thunder.device_network_map[1].state, "vBlade")
-        self.assertEqual(thunder.device_network_map[1].mgmt_ip_address, DEVICE2_MGMT_IP)
+        self.assertEqual(
+            thunder.device_network_map[1].mgmt_ip_address, DEVICE2_MGMT_IP)
 
     def test_SetupDeviceNetworkMap_execute_vcs_device1_failed(self):
         self.conf.register_opts(config_options.A10_HARDWARE_THUNDER_OPTS,
@@ -486,7 +506,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.assertEqual(len(thunder.device_network_map), 1)
         self.assertEqual(thunder.device_network_map[0].vcs_device_id, 2)
         self.assertEqual(thunder.device_network_map[0].state, "Master")
-        self.assertEqual(thunder.device_network_map[0].mgmt_ip_address, DEVICE2_MGMT_IP)
+        self.assertEqual(
+            thunder.device_network_map[0].mgmt_ip_address, DEVICE2_MGMT_IP)
 
     def test_SetupDeviceNetworkMap_execute_delete_flow_after_error_no_fail(self):
         ret_val = task.SetupDeviceNetworkMap().execute(vthunder=None)
@@ -501,7 +522,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task = task.WriteMemory()
         mock_task.axapi_client = self.client_mock
         mock_task.execute(mock_thunder)
-        self.client_mock.system.action.write_memory.assert_called_with(partition='shared')
+        self.client_mock.system.action.write_memory.assert_called_with(
+            partition='shared')
 
     def test_WriteMemory_execute_save_specific_partition_mem(self):
         self.conf.register_opts(config_options.A10_HOUSE_KEEPING_OPTS,
@@ -525,7 +547,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task = task.WriteMemoryHouseKeeper()
         mock_task.axapi_client = self.client_mock
         mock_task.execute(mock_thunder, lb_list, True)
-        self.client_mock.system.action.write_memory.assert_called_with(partition='shared')
+        self.client_mock.system.action.write_memory.assert_called_with(
+            partition='shared')
 
     def test_WriteMemoryHouseKeeper_execute_save_specific_partition_mem(self):
         thunder = copy.deepcopy(VTHUNDER)
@@ -603,3 +626,43 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         expected_error = exceptions.PartitionNotActiveError
         task_function = task.HandleACOSPartitionChange().execute
         self.assertRaises(expected_error, task_function, mock_thunder)
+
+    def test_AmphoraPostVipPlug_execute_for_reload(self):
+        thunder = copy.deepcopy(VTHUNDER)
+        thunder.acos_version = "5.2.1"
+        mock_task = task.AmphoraePostVIPPlug()
+        mock_task.axapi_client = self.client_mock
+        mock_task.execute(LB, thunder)
+        self.client_mock.system.action.write_memory.assert_called()
+        self.client_mock.system.action.reload.assert_called()
+        self.client_mock.system.action.reboot.assert_not_called()
+
+    def test_AmphoraPostVipPlug_execute_for_reboot(self):
+        thunder = copy.deepcopy(VTHUNDER)
+        thunder.acos_version = "4.1.4"
+        mock_task = task.AmphoraePostVIPPlug()
+        mock_task.axapi_client = self.client_mock
+        mock_task.execute(LB, thunder)
+        self.client_mock.system.action.write_memory.assert_called()
+        self.client_mock.system.action.reboot.assert_called()
+        self.client_mock.system.action.reload.assert_not_called()
+
+    def test_UpdateAcosVersionInVthunderEntry_execute_for_first_lb(self):
+        thunder = copy.deepcopy(VTHUNDER)
+        mock_task = task.UpdateAcosVersionInVthunderEntry()
+        mock_task.axapi_client = self.client_mock
+        mock_task.vthunder_repo = mock.MagicMock()
+        mock_task.vthunder_repo.get_vthunder_by_project_id.return_value = None
+        mock_task.vthunder_repo.get_delete_compute_flag.return_value = True
+        mock_task.execute(thunder, LB)
+        self.client_mock.system.action.get_acos_version.assert_called()
+
+    def test_UpdateAcosVersionInVthunderEntry_execute_for_lb_with_existing_vthunder(self):
+        thunder = copy.deepcopy(VTHUNDER)
+        mock_task = task.UpdateAcosVersionInVthunderEntry()
+        mock_task.axapi_client = self.client_mock
+        mock_task.vthunder_repo = mock.MagicMock()
+        mock_task.vthunder_repo.get_vthunder_by_project_id.return_value = VTHUNDER
+        mock_task.vthunder_repo.get_delete_compute_flag.return_value = False
+        mock_task.execute(thunder, LB)
+        self.client_mock.system.action.get_acos_version.assert_not_called()
