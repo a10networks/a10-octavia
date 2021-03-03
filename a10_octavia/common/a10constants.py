@@ -37,6 +37,9 @@ PARTITION_PROJECT_LIST = 'partition_project_list'
 IFNUM_BACKUP = 'ifnum_backup'
 IFNUM_MASTER = 'ifnum_master'
 
+# Octavia taskflow flow and task names (missing name in victoria octavia)
+RELOADLOAD_BALANCER = 'octavia-reloadload-balancer'
+
 VTHUNDER = 'vthunder'
 STATUS = 'status'
 ROLE = 'role'

@@ -345,7 +345,7 @@ class LoadBalancerFlows(object):
         new_LB_net_subflow = linear_flow.Flow(constants.
                                               LOADBALANCER_NETWORKING_SUBFLOW)
         new_LB_net_subflow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER,
+            requires=constants.LOADBALANCER_ID,
             provides=constants.AMPHORA))
         new_LB_net_subflow.add(vthunder_tasks.UpdateAcosVersionInVthunderEntry(
             name=a10constants.UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY,
