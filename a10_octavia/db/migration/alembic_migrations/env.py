@@ -10,6 +10,9 @@ from a10_octavia import a10_config
 from a10_octavia.db import base_models
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
+
+VERSION_TABLE = 'alembic_version_a10'
+
 config = context.config
 
 # Interpret the config file for Python logging.
@@ -68,7 +71,9 @@ def run_migrations_online():
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            version_table=VERSION_TABLE,
+            target_metadata=target_metadata
         )
 
         with context.begin_transaction():
