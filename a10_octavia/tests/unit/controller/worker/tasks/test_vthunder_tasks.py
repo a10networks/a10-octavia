@@ -135,8 +135,8 @@ VCS_DEVICE1_FAILED = {
         }
     }
 }
-
-LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
+VIP = o_data_models.Vip(ip_address="1.1.1.1")
+LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID, vip=VIP)
 
 
 class TestVThunderTasks(base.BaseTaskTestCase):
@@ -627,21 +627,29 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         task_function = task.HandleACOSPartitionChange().execute
         self.assertRaises(expected_error, task_function, mock_thunder)
 
-    def test_AmphoraPostVipPlug_execute_for_reload(self):
+    @mock.patch('a10_octavia.common.utils.verify_acos_version', return_value=True)
+    def test_AmphoraPostVipPlug_execute_for_reload(self, mock_vthunder_reload_flag):
         thunder = copy.deepcopy(VTHUNDER)
         thunder.acos_version = "5.2.1"
         mock_task = task.AmphoraePostVIPPlug()
         mock_task.axapi_client = self.client_mock
+        mock_task.loadbalancer_repo = mock.MagicMock()
+        mock_task.a10_utils = mock.MagicMock()
+        mock_task.loadbalancer_repo.check_lb_with_distinct_subnet_and_project.return_value = True
         mock_task.execute(LB, thunder)
         self.client_mock.system.action.write_memory.assert_called()
         self.client_mock.system.action.reload.assert_called()
         self.client_mock.system.action.reboot.assert_not_called()
 
-    def test_AmphoraPostVipPlug_execute_for_reboot(self):
+    @mock.patch('a10_octavia.common.utils.verify_acos_version', return_value=False)
+    def test_AmphoraPostVipPlug_execute_for_reboot(self, mock_vthunder_reload_flag):
         thunder = copy.deepcopy(VTHUNDER)
         thunder.acos_version = "4.1.4"
         mock_task = task.AmphoraePostVIPPlug()
         mock_task.axapi_client = self.client_mock
+        mock_task.loadbalancer_repo = mock.MagicMock()
+        mock_task.a10_utils = mock.MagicMock()
+        mock_task.loadbalancer_repo.check_lb_with_distinct_subnet_and_project.return_value = True
         mock_task.execute(LB, thunder)
         self.client_mock.system.action.write_memory.assert_called()
         self.client_mock.system.action.reboot.assert_called()
