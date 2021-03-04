@@ -658,19 +658,19 @@ class TestVThunderTasks(base.BaseTaskTestCase):
     def test_UpdateAcosVersionInVthunderEntry_execute_for_first_lb(self):
         thunder = copy.deepcopy(VTHUNDER)
         mock_task = task.UpdateAcosVersionInVthunderEntry()
-        mock_task.axapi_client = self.client_mock
-        mock_task.vthunder_repo = mock.MagicMock()
+        mock_task.axapi_client = mock.MagicMock()[1:999]
+        mock_task.vthunder_repo = mock.MagicMock()[1:999]
         mock_task.vthunder_repo.get_vthunder_by_project_id.return_value = None
         mock_task.vthunder_repo.get_delete_compute_flag.return_value = True
         mock_task.execute(thunder, LB)
-        self.client_mock.system.action.get_acos_version.assert_called()
+        mock_task.axapi_client.system.action.get_acos_version.assert_called()
 
     def test_UpdateAcosVersionInVthunderEntry_execute_for_lb_with_existing_vthunder(self):
         thunder = copy.deepcopy(VTHUNDER)
         mock_task = task.UpdateAcosVersionInVthunderEntry()
-        mock_task.axapi_client = self.client_mock
-        mock_task.vthunder_repo = mock.MagicMock()
+        mock_task.axapi_client = mock.MagicMock()[1:999]
+        mock_task.vthunder_repo = mock.MagicMock()[1:999]
         mock_task.vthunder_repo.get_vthunder_by_project_id.return_value = VTHUNDER
         mock_task.vthunder_repo.get_delete_compute_flag.return_value = False
         mock_task.execute(thunder, LB)
-        self.client_mock.system.action.get_acos_version.assert_not_called()
+        mock_task.axapi_client.system.action.get_acos_version.assert_not_called()
