@@ -102,24 +102,34 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder):
         """Execute get_info routine for a vThunder until it responds."""
-        try:
-            if "5.2" in vthunder.acos_version[:3]:
-                self.axapi_client.system.action.write_memory()
-                self.axapi_client.system.action.probe_network_devices()
-                self.axapi_client.system.action.reload()
-                LOG.debug("Waiting for 30 seconds to trigger vThunder reload.")
-                time.sleep(30)
-                LOG.debug("Successfully reloaded vThunder: %s", vthunder.id)
-            else:
-                self.axapi_client.system.action.write_memory()
-                self.axapi_client.system.action.reboot()
-                LOG.debug("Waiting for 30 seconds to trigger vThunder reboot.")
-                time.sleep(30)
-                LOG.debug("Successfully rebooted vThunder: %s", vthunder.id)
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
-            LOG.exception("Failed to save configuration and reboot on vThunder for amphora id: %s",
-                          vthunder.amphora_id)
-            raise e
+        vthunder = self.vthunder_repo.get_vthunder_by_project_id(db_apis.get_session(),
+                                                                 loadbalancer.project_id)
+        lb_exists_flag = False
+        if vthunder:
+            lb_exists_flag = self.loadbalancer_repo.check_lb_with_distinct_subnet_and_project(
+                db_apis.get_session(),
+                loadbalancer.project_id,
+                loadbalancer.vip.subnet_id)
+        if lb_exists_flag:
+            try:
+                vthunder_reload_flag = a10_utils.verify_acos_version(vthunder.acos_version)
+                if vthunder_reload_flag:
+                    self.axapi_client.system.action.write_memory()
+                    self.axapi_client.system.action.probe_network_devices()
+                    self.axapi_client.system.action.reload()
+                    LOG.debug("Waiting for 30 seconds to trigger vThunder reload.")
+                    time.sleep(30)
+                    LOG.debug("Successfully reloaded vThunder: %s", vthunder.id)
+                else:
+                    self.axapi_client.system.action.write_memory()
+                    self.axapi_client.system.action.reboot()
+                    LOG.debug("Waiting for 30 seconds to trigger vThunder reboot.")
+                    time.sleep(30)
+                    LOG.debug("Successfully rebooted vThunder: %s", vthunder.id)
+            except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+                LOG.exception("Failed to save configuration and reboot on vThunder "
+                              "for amphora id: %s", vthunder.amphora_id)
+                raise e
 
 
 class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
@@ -154,7 +164,7 @@ class EnableInterface(VThunderBaseTask):
                     ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                     self.axapi_client.system.action.setInterface(ifnum)
             LOG.debug("Configured the mgmt interface for vThunder: %s", vthunder.id)
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError, KeyError) as e:
             LOG.exception("Failed to configure mgmt interface vThunder: %s", str(e))
             raise e
 
@@ -906,16 +916,15 @@ class UpdateAcosVersionInVthunderEntry(VThunderBaseTask):
         if not existing_vthunder or compute_flag:
             try:
                 acos_version_summary = self.axapi_client.system.action.get_acos_version()
-                acos_version = acos_version_summary['version']['oper']['sw-version'][:5]
-                self.vthunder_repo.update(
-                        db_apis.get_session(),
-                        vthunder.id,
-                        acos_version=acos_version)
+                acos_version = acos_version_summary['version']['oper']['sw-version'].split(',')[0]
+                self.vthunder_repo.update(db_apis.get_session(),
+                                          vthunder.id,
+                                          acos_version=acos_version)
             except Exception as e:
                 LOG.exception('Failed to set acos_version in vthunders table '
                               ': {}'.format(str(e)))
         else:
             self.vthunder_repo.update(
-                        db_apis.get_session(),
-                        vthunder.id,
-                        acos_version=existing_vthunder.acos_version)
+                db_apis.get_session(),
+                vthunder.id,
+                acos_version=existing_vthunder.acos_version)

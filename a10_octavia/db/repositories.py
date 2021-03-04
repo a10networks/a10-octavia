@@ -351,7 +351,7 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                     self.model_class.provisioning_status == consts.ACTIVE)).count()
 
-    def get_lb_exists_flag(self, session, project_id, subnet_id):
+    def check_lb_with_distinct_subnet_and_project(self, session, project_id, subnet_id):
         lb = session.query(self.model_class).join(base_models.Vip).filter(
             and_(self.model_class.project_id == project_id,
                  base_models.Vip.subnet_id == subnet_id,

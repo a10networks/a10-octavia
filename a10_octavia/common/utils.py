@@ -292,3 +292,14 @@ def validate_interface_vlan_map(hardware_device):
         device_network_map.append(device_map)
     validate_vcs_device_info(device_network_map)
     return device_network_map
+
+
+def verify_acos_version(acos_version):
+    major = acos_version.split('.')[0]
+    minor = acos_version.split('.')[1]
+    patch = acos_version.split('.')[2]
+
+    if major >= 5 and minor >= 2 and patch >= 0:
+        return True
+    else:
+        return False

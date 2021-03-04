@@ -27,8 +27,6 @@ from octavia.controller.worker.tasks import compute_tasks
 from octavia.controller.worker.tasks import database_tasks
 from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import network_tasks
-from octavia.db import api as db_apis
-from octavia.db import repositories as repo
 
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.flows import vthunder_flows
@@ -38,7 +36,6 @@ from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.controller.worker.tasks import nat_pool_tasks
 from a10_octavia.controller.worker.tasks import virtual_server_tasks
 from a10_octavia.controller.worker.tasks import vthunder_tasks
-from a10_octavia.db import repositories as a10repo
 
 
 CONF = cfg.CONF
@@ -53,11 +50,8 @@ class LoadBalancerFlows(object):
         self.pool_flows = pool_flows.PoolFlows()
         self.member_flows = member_flows.MemberFlows()
         self.vthunder_flows = vthunder_flows.VThunderFlows()
-        self._lb_repo = repo.LoadBalancerRepository()
-        self._vthunder_repo = a10repo.VThunderRepository()
-        self.loadbalancer_repo = a10repo.LoadBalancerRepository()
 
-    def get_create_load_balancer_flow(self, load_balancer_id, topology, listeners=None):
+    def get_create_load_balancer_flow(self, topology, listeners=None):
         """Flow to create a load balancer"""
 
         f_name = constants.CREATE_LOADBALANCER_FLOW
@@ -81,7 +75,7 @@ class LoadBalancerFlows(object):
         post_amp_prefix = constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
         lb_create_flow.add(
             self.get_post_lb_vthunder_association_flow(
-                load_balancer_id, post_amp_prefix, topology, mark_active=(not listeners)))
+                post_amp_prefix, topology, mark_active=(not listeners)))
         lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
             requires=(constants.LOADBALANCER,
                            a10constants.VTHUNDER)))
@@ -126,7 +120,7 @@ class LoadBalancerFlows(object):
 
         return flows + [amps_flow]
 
-    def get_post_lb_vthunder_association_flow(self, load_balancer_id, prefix, topology,
+    def get_post_lb_vthunder_association_flow(self, prefix, topology,
                                               mark_active=True):
         """Flow to manage networking after lb creation"""
 
@@ -138,7 +132,7 @@ class LoadBalancerFlows(object):
                 requires=constants.LOADBALANCER_ID,
                 provides=constants.LOADBALANCER))
         # IMP: here we will inject network flow
-        new_LB_net_subflow = self.get_new_lb_networking_subflow(load_balancer_id, topology)
+        new_LB_net_subflow = self.get_new_lb_networking_subflow(topology)
         post_create_lb_flow.add(new_LB_net_subflow)
 
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
@@ -218,17 +212,8 @@ class LoadBalancerFlows(object):
             requires=a10constants.VTHUNDER))
         return (delete_LB_flow, store)
 
-    def get_new_lb_networking_subflow(self, load_balancer_id, topology):
+    def get_new_lb_networking_subflow(self, topology):
         """Subflow to setup networking for amphora"""
-        lb = self._lb_repo.get(db_apis.get_session(),
-                               id=load_balancer_id)
-        vthunder = self._vthunder_repo.get_vthunder_by_project_id(db_apis.get_session(),
-                                                                  lb.project_id)
-        lb_exists_flag = False
-        if vthunder:
-            lb_exists_flag = self.loadbalancer_repo.get_lb_exists_flag(db_apis.get_session(),
-                                                                       lb.project_id,
-                                                                       lb.vip.subnet_id)
         new_LB_net_subflow = linear_flow.Flow(constants.
                                               LOADBALANCER_NETWORKING_SUBFLOW)
         new_LB_net_subflow.add(a10_network_tasks.PlugVIP(
@@ -256,11 +241,9 @@ class LoadBalancerFlows(object):
             name=a10constants.GET_VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        if lb_exists_flag:
-            new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
-                name=a10constants.AMPHORAE_POST_VIP_PLUG,
-                requires=(constants.LOADBALANCER,
-                          a10constants.VTHUNDER)))
+        new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
+            name=a10constants.AMPHORAE_POST_VIP_PLUG,
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         new_LB_net_subflow.add(
             vthunder_tasks.VThunderComputeConnectivityWait(
                 name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
