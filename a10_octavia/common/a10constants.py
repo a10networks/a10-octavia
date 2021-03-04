@@ -14,6 +14,9 @@
 
 GET_VTHUNDER_FOR_LB_SUBFLOW = 'octavia-get-vthunder-for-lb-subflow'
 
+# Octavia taskflow flow and task names (missing name in victoria octavia)
+RELOADLOAD_BALANCER = 'octavia-reloadload-balancer'
+
 VTHUNDER = 'vthunder'
 STATUS = 'status'
 ROLE = 'role'

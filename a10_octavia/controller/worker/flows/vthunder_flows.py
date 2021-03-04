@@ -127,7 +127,7 @@ class VThunderFlows(object):
             provides=constants.AMPHORA_ID))
         # VIP subnet integration at bootup
         create_amp_for_lb_subflow.add(database_tasks.ReloadLoadBalancer(
-            name=sf_name + '-' + constants.RELOADLOAD_BALANCER,
+            name=sf_name + '-' + a10constants.RELOADLOAD_BALANCER,
             requires=constants.LOADBALANCER_ID,
             provides=constants.LOADBALANCER))
         create_amp_for_lb_subflow.add(a10_network_tasks.AllocateVIP(
