@@ -19,6 +19,7 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 
 from octavia.common import constants
+from octavia_lib.api.drivers import data_models as driver_dm
 from octavia_lib.api.drivers import exceptions
 from octavia_lib.api.drivers import provider_base as driver_base
 
@@ -43,8 +44,20 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         self.client = messaging.RPCClient(self.transport, target=self.target)
 
     # Load Balancer
+    def create_vip_port(self, loadbalancer_id, project_id, vip_dictionary):
+        # No need to implement our create_vip_port() just raise NotImplementedError to
+        # let Octavia to create the port.
+        raise exceptions.NotImplementedError(
+            user_fault_string='',
+            operator_fault_string='create_vip_port() not supported in A10.'
+        )
+
     def loadbalancer_create(self, loadbalancer):
         LOG.info('A10 provider load balancer loadbalancer: %s.', loadbalancer.__dict__)
+        if loadbalancer.flavor == driver_dm.Unset:
+            loadbalancer.flavor = None
+        if loadbalancer.availability_zone == driver_dm.Unset:
+            loadbalancer.availability_zone = None
         payload = {constants.LOAD_BALANCER_ID: loadbalancer.loadbalancer_id,
                    constants.FLAVOR: loadbalancer.flavor}
         self.client.cast({}, 'create_load_balancer', **payload)
@@ -148,6 +161,12 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.MEMBER_ID: member_id,
                    constants.MEMBER_UPDATES: member_dict}
         self.client.cast({}, 'update_member', **payload)
+
+    def member_batch_update(self, pool_id, members):
+        raise exceptions.NotImplementedError(
+            user_fault_string='member_batch_update() not supported in A10.',
+            operator_fault_string='member_batch_update() not supported in A10.'
+        )
 
     # Health Monitor
     def health_monitor_create(self, healthmonitor):
@@ -304,3 +323,37 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                                   'due to: {}'.format(str(e)),
                 operator_fault_string='Failed to validate the flavor metadata '
                                       'due to: {}'.format(str(e)))
+
+    # Availability Zone
+    def get_supported_availability_zone_metadata(self):
+        """Returns the valid availability zone metadata keys and descriptions.
+
+        This extracts the valid availability zone metadata keys and
+        descriptions from the JSON validation schema and returns it as a
+        dictionary.
+
+        :return: Dictionary of availability zone metadata keys and descriptions
+        :raises DriverError: An unexpected error occurred.
+        """
+        props = {}
+        return props
+
+    def validate_availability_zone(self, availability_zone_dict):
+        """Validates availability zone profile data.
+
+        This will validate an availability zone profile dataset against the
+        availability zone settings the amphora driver supports.
+
+        :param availability_zone_dict: The availability zone dict to validate.
+        :type availability_zone_dict: dict
+        :return: None
+        :raises DriverError: An unexpected error occurred.
+        :raises UnsupportedOptionError: If the driver does not support
+          one of the availability zone settings.
+        """
+        raise exceptions.NotImplementedError(
+            user_fault_string='Availability zone feature is not supported '
+                              'by a10-octaiva yet.',
+            operator_fault_string='Availability zone feature is not supported '
+                                  'by a10-octaiva yet.'
+        )
