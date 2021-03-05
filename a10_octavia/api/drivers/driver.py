@@ -45,7 +45,8 @@ class A10ProviderDriver(driver_base.ProviderDriver):
 
     # Load Balancer
     def create_vip_port(self, loadbalancer_id, project_id, vip_dictionary):
-        super(A10ProviderDriver, self).create_vip_port(loadbalancer_id, project_id, vip_dictionary, None)
+        super(A10ProviderDriver, self).create_vip_port(loadbalancer_id, project_id,
+                                                       vip_dictionary, None)
 
     def loadbalancer_create(self, loadbalancer):
         LOG.info('A10 provider load balancer loadbalancer: %s.', loadbalancer.__dict__)
