@@ -45,12 +45,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
 
     # Load Balancer
     def create_vip_port(self, loadbalancer_id, project_id, vip_dictionary):
-        # No need to implement our create_vip_port() just raise NotImplementedError to
-        # let Octavia to create the port.
-        raise exceptions.NotImplementedError(
-            user_fault_string='',
-            operator_fault_string='create_vip_port() not supported in A10.'
-        )
+        super(A10ProviderDriver, self).create_vip_port(loadbalancer_id, project_id, vip_dictionary, None)
 
     def loadbalancer_create(self, loadbalancer):
         LOG.info('A10 provider load balancer loadbalancer: %s.', loadbalancer.__dict__)
