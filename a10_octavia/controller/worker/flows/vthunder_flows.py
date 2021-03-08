@@ -189,7 +189,7 @@ class VThunderFlows(object):
             provides=a10constants.VTHUNDER))
         create_amp_for_lb_subflow.add(
             vthunder_tasks.VThunderComputeConnectivityWait(
-                name=a10constants.MASTER_CONNECTIVITY_WAIT,
+                name=a10constants.WAIT_FOR_VTHUNDER_CONNECTIVITY,
                 requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         create_amp_for_lb_subflow.add(
             database_tasks.MarkAmphoraAllocatedInDB(

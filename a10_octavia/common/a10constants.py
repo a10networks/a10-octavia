@@ -99,6 +99,7 @@ UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY = 'update-acos-version-in-vthunder-entry'
 VTHUNDER_BY_LB = 'vthunder-by-loadbalancer'
 GET_VTHUNDER_BY_LB = "get-vthunder-by-lb"
 VTHUNDER_CONNECTIVITY_WAIT = "vThunder-connectivity-wait"
+WAIT_FOR_VTHUNDER_CONNECTIVITY = "wait-for-vthunder-connectivity"
 CHANGE_PARTITION = 'change-partition'
 CREATE_SSL_CERT_FLOW = 'create-ssl-cert-flow'
 DELETE_SSL_CERT_FLOW = 'delete-ssl-cert-flow'

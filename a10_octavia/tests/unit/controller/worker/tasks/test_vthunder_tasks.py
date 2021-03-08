@@ -40,7 +40,7 @@ from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
 PROJECT_ID = "project-rack-vthunder"
-VTHUNDER = a10_data_models.VThunder(project_id=PROJECT_ID)
+VTHUNDER = a10_data_models.VThunder(project_id=PROJECT_ID, acos_version="5.2.1")
 VLAN_ID = '11'
 VE_IP_VLAN_ID = '12'
 DELETE_VLAN = True
@@ -627,33 +627,28 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         task_function = task.HandleACOSPartitionChange().execute
         self.assertRaises(expected_error, task_function, mock_thunder)
 
-    @mock.patch('a10_octavia.common.utils.verify_acos_version', return_value=True)
-    def test_AmphoraPostVipPlug_execute_for_reload(self, mock_vthunder_reload_flag):
+    def test_AmphoraPostVipPlug_execute_for_reload_reboot(self):
         thunder = copy.deepcopy(VTHUNDER)
-        thunder.acos_version = "5.2.1"
         mock_task = task.AmphoraePostVIPPlug()
         mock_task.axapi_client = self.client_mock
         mock_task.loadbalancer_repo = mock.MagicMock()
-        mock_task.a10_utils = mock.MagicMock()
+        mock_task.vthunder_repo = mock.MagicMock()
         mock_task.loadbalancer_repo.check_lb_with_distinct_subnet_and_project.return_value = True
+        mock_task.vthunder_repo.get_vthunder_by_project_id.return_value = thunder
+        vthunder = mock_task.vthunder_repo.get_vthunder_by_project_id.return_value
         mock_task.execute(LB, thunder)
-        self.client_mock.system.action.write_memory.assert_called()
-        self.client_mock.system.action.reload.assert_called()
-        self.client_mock.system.action.reboot.assert_not_called()
+        self.client_mock.system.action.write_memory.assert_called_with()
+        self.client_mock.system.action.reload_reboot.assert_called_with(vthunder.acos_version)
 
-    @mock.patch('a10_octavia.common.utils.verify_acos_version', return_value=False)
-    def test_AmphoraPostVipPlug_execute_for_reboot(self, mock_vthunder_reload_flag):
+    def test_AmphoraPostVipPlug_execute_for_no_reload_reboot(self):
         thunder = copy.deepcopy(VTHUNDER)
-        thunder.acos_version = "4.1.4"
         mock_task = task.AmphoraePostVIPPlug()
         mock_task.axapi_client = self.client_mock
         mock_task.loadbalancer_repo = mock.MagicMock()
-        mock_task.a10_utils = mock.MagicMock()
-        mock_task.loadbalancer_repo.check_lb_with_distinct_subnet_and_project.return_value = True
+        mock_task.loadbalancer_repo.check_lb_with_distinct_subnet_and_project.return_value = False
         mock_task.execute(LB, thunder)
-        self.client_mock.system.action.write_memory.assert_called()
-        self.client_mock.system.action.reboot.assert_called()
-        self.client_mock.system.action.reload.assert_not_called()
+        self.client_mock.system.action.write_memory.assert_not_called()
+        self.client_mock.system.action.reload_reboot.assert_not_called()
 
     def test_UpdateAcosVersionInVthunderEntry_execute_for_first_lb(self):
         thunder = copy.deepcopy(VTHUNDER)
@@ -663,7 +658,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.vthunder_repo.get_vthunder_by_project_id.return_value = None
         mock_task.vthunder_repo.get_delete_compute_flag.return_value = True
         mock_task.execute(thunder, LB)
-        mock_task.axapi_client.system.action.get_acos_version.assert_called()
+        mock_task.axapi_client.system.action.get_acos_version.assert_called_with()
 
     def test_UpdateAcosVersionInVthunderEntry_execute_for_lb_with_existing_vthunder(self):
         thunder = copy.deepcopy(VTHUNDER)

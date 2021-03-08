@@ -112,20 +112,11 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
                 loadbalancer.vip.subnet_id)
         if lb_exists_flag:
             try:
-                vthunder_reload_flag = a10_utils.verify_acos_version(vthunder.acos_version)
-                if vthunder_reload_flag:
-                    self.axapi_client.system.action.write_memory()
-                    self.axapi_client.system.action.probe_network_devices()
-                    self.axapi_client.system.action.reload()
-                    LOG.debug("Waiting for 30 seconds to trigger vThunder reload.")
-                    time.sleep(30)
-                    LOG.debug("Successfully reloaded vThunder: %s", vthunder.id)
-                else:
-                    self.axapi_client.system.action.write_memory()
-                    self.axapi_client.system.action.reboot()
-                    LOG.debug("Waiting for 30 seconds to trigger vThunder reboot.")
-                    time.sleep(30)
-                    LOG.debug("Successfully rebooted vThunder: %s", vthunder.id)
+                self.axapi_client.system.action.write_memory()
+                self.axapi_client.system.action.reload_reboot(vthunder.acos_version)
+                LOG.debug("Waiting for 30 seconds to trigger vThunder reload.")
+                time.sleep(30)
+                LOG.debug("Successfully reloaded/rebooted vThunder: %s", vthunder.id)
             except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
                 LOG.exception("Failed to save configuration and reboot on vThunder "
                               "for amphora id: %s", vthunder.amphora_id)
@@ -164,7 +155,7 @@ class EnableInterface(VThunderBaseTask):
                     ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                     self.axapi_client.system.action.setInterface(ifnum)
             LOG.debug("Configured the mgmt interface for vThunder: %s", vthunder.id)
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError, KeyError) as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure mgmt interface vThunder: %s", str(e))
             raise e
 
@@ -910,9 +901,8 @@ class UpdateAcosVersionInVthunderEntry(VThunderBaseTask):
         compute_flag = False
         existing_vthunder = self.vthunder_repo.get_vthunder_by_project_id(db_apis.get_session(),
                                                                           loadbalancer.project_id)
-        if existing_vthunder:
-            compute_flag = self.vthunder_repo.get_delete_compute_flag(db_apis.get_session(),
-                                                                      vthunder.compute_id)
+        compute_flag = self.vthunder_repo.get_delete_compute_flag(db_apis.get_session(),
+                                                                  vthunder.compute_id)
         if not existing_vthunder or compute_flag:
             try:
                 acos_version_summary = self.axapi_client.system.action.get_acos_version()
