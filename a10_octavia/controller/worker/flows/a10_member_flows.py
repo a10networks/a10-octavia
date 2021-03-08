@@ -71,6 +71,7 @@ class MemberFlows(object):
                     constants.ADDED_PORTS,
                     constants.LOADBALANCER,
                     a10constants.VTHUNDER]))
+        create_member_flow.add(self.handle_vrid_for_member_subflow())
         # configure member flow for HA
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             create_member_flow.add(
@@ -176,6 +177,7 @@ class MemberFlows(object):
                     constants.POOL,
                     a10constants.MEMBER_COUNT_IP,
                     a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL)))
+        delete_member_flow.add(self.get_delete_member_vrid_subflow())
         delete_member_flow.add(database_tasks.DeleteMemberInDB(
             requires=constants.MEMBER))
         delete_member_flow.add(database_tasks.DecrementMemberQuota(
@@ -447,6 +449,7 @@ class MemberFlows(object):
         update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        update_member_flow.add(self.handle_vrid_for_member_subflow())
         update_member_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
