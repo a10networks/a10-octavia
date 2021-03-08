@@ -45,8 +45,11 @@ class A10ProviderDriver(driver_base.ProviderDriver):
 
     # Load Balancer
     def create_vip_port(self, loadbalancer_id, project_id, vip_dictionary):
-        super(A10ProviderDriver, self).create_vip_port(loadbalancer_id, project_id,
-                                                       vip_dictionary, None)
+        # raise NotImplementedError to let octavia create port for us.
+        raise exceptions.NotImplementedError(
+            user_fault_string='',
+            operator_fault_string='create_vip_port() not supported in A10.'
+        )
 
     def loadbalancer_create(self, loadbalancer):
         LOG.info('A10 provider load balancer loadbalancer: %s.', loadbalancer.__dict__)
@@ -331,6 +334,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         :return: Dictionary of availability zone metadata keys and descriptions
         :raises DriverError: An unexpected error occurred.
         """
+        # return empty dictionary for a10-octavia support nothing.
         props = {}
         return props
 
