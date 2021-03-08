@@ -47,8 +47,8 @@ class A10ProviderDriver(driver_base.ProviderDriver):
     def create_vip_port(self, loadbalancer_id, project_id, vip_dictionary):
         # raise NotImplementedError to let octavia create port for us.
         raise exceptions.NotImplementedError(
-            user_fault_string='',
-            operator_fault_string='create_vip_port() not supported in A10.'
+            user_fault_string='The a10 provider does not implement custom create_vip_port()',
+            operator_fault_string='The a10 provider does not implement custom create_vip_port()'
         )
 
     def loadbalancer_create(self, loadbalancer):
@@ -163,8 +163,8 @@ class A10ProviderDriver(driver_base.ProviderDriver):
 
     def member_batch_update(self, pool_id, members):
         raise exceptions.NotImplementedError(
-            user_fault_string='member_batch_update() not supported in A10.',
-            operator_fault_string='member_batch_update() not supported in A10.'
+            user_fault_string='The a10 provider does not support batch member update',
+            operator_fault_string='The a10 provider does not support batch member update'
         )
 
     # Health Monitor
@@ -358,8 +358,6 @@ class A10ProviderDriver(driver_base.ProviderDriver):
           one of the availability zone settings.
         """
         raise exceptions.NotImplementedError(
-            user_fault_string='Availability zone feature is not supported '
-                              'by a10-octaiva yet.',
-            operator_fault_string='Availability zone feature is not supported '
-                                  'by a10-octaiva yet.'
+            user_fault_string='The a10 provider does not support Availability zone feature',
+            operator_fault_string='The a10 provider does not support Availability zone feature'
         )
