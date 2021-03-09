@@ -638,7 +638,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         vthunder = mock_task.vthunder_repo.get_vthunder_by_project_id.return_value
         mock_task.execute(LB, thunder)
         self.client_mock.system.action.write_memory.assert_called_with()
-        self.client_mock.system.action.reload_reboot.assert_called_with(vthunder.acos_version)
+        self.client_mock.system.action.reload_reboot_for_interface_attachment.assert_called_with(
+            vthunder.acos_version)
 
     def test_AmphoraPostVipPlug_execute_for_no_reload_reboot(self):
         thunder = copy.deepcopy(VTHUNDER)
@@ -648,7 +649,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.loadbalancer_repo.check_lb_with_distinct_subnet_and_project.return_value = False
         mock_task.execute(LB, thunder)
         self.client_mock.system.action.write_memory.assert_not_called()
-        self.client_mock.system.action.reload_reboot.assert_not_called()
+        self.client_mock.system.action.reload_reboot_for_interface_attachment.assert_not_called()
 
     def test_UpdateAcosVersionInVthunderEntry_execute_for_first_lb(self):
         thunder = copy.deepcopy(VTHUNDER)
