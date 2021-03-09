@@ -136,7 +136,8 @@ VCS_DEVICE1_FAILED = {
     }
 }
 VIP = o_data_models.Vip(ip_address="1.1.1.1")
-LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID, vip=VIP)
+AMPHORAE = [o_data_models.Amphora(id=a10constants.MOCK_AMPHORA_ID)]
+LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID, vip=VIP, amphorae=AMPHORAE)
 
 
 class TestVThunderTasks(base.BaseTaskTestCase):
@@ -669,3 +670,23 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.vthunder_repo.get_delete_compute_flag.return_value = False
         mock_task.execute(thunder, LB)
         mock_task.axapi_client.system.action.get_acos_version.assert_not_called()
+
+    def test_AmphoraePostMemberNetworkPlug_execute_for_reload_reboot(self):
+        thunder = copy.deepcopy(VTHUNDER)
+        thunder.acos_version = "5.2.1"
+        added_ports = {'amphora_id': '123'}
+        mock_task = task.AmphoraePostMemberNetworkPlug()
+        mock_task.axapi_client = self.client_mock
+        mock_task.execute(added_ports, LB, thunder)
+        self.client_mock.system.action.write_memory.assert_called_with()
+        self.client_mock.system.action.reload_reboot.assert_called_with("5.2.1")
+
+    def test_AmphoraePostMemberNetworkPlug_execute_for_no_reload_reboot(self):
+        thunder = copy.deepcopy(VTHUNDER)
+        thunder.acos_version = "5.2.1"
+        added_ports = {'amphora_id': ''}
+        mock_task = task.AmphoraePostMemberNetworkPlug()
+        mock_task.axapi_client = self.client_mock
+        mock_task.execute(added_ports, LB, thunder)
+        self.client_mock.system.action.write_memory.assert_not_called()
+        self.client_mock.system.action.reload_reboot.assert_not_called()
