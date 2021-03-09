@@ -133,13 +133,14 @@ class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
             amphora_id = loadbalancer.amphorae[0].id
             if len(added_ports[amphora_id]) > 0:
                 self.axapi_client.system.action.write_memory()
-                self.axapi_client.system.action.reboot()
+                self.axapi_client.system.action.reload_reboot(vthunder.acos_version)
+                LOG.debug("Waiting for 30 seconds to trigger vThunder reload/reboot.")
                 time.sleep(30)
-                LOG.debug("Successfully rebooted vThunder: %s", vthunder.id)
+                LOG.debug("Successfully rebooted/reloaded vThunder: %s", vthunder.id)
             else:
-                LOG.debug("vThunder reboot is not required for member addition.")
+                LOG.debug("vThunder reboot/relaod is not required for member addition.")
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
-            LOG.exception("Failed to reboot vthunder device: %s", str(e))
+            LOG.exception("Failed to reboot/reload vthunder device: %s", str(e))
             raise e
 
 
