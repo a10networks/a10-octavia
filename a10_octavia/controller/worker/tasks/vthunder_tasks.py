@@ -134,7 +134,8 @@ class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
             amphora_id = loadbalancer.amphorae[0].id
             if len(added_ports[amphora_id]) > 0:
                 self.axapi_client.system.action.write_memory()
-                self.axapi_client.system.action.reload_reboot(vthunder.acos_version)
+                self.axapi_client.system.action.reload_reboot_for_interface_attachment(
+                    vthunder.acos_version)
                 LOG.debug("Waiting for 30 seconds to trigger vThunder reload/reboot.")
                 time.sleep(30)
                 LOG.debug("Successfully rebooted/reloaded vThunder: %s", vthunder.id)
