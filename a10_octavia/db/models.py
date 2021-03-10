@@ -49,6 +49,7 @@ class VThunder(base_models.BASE):
     partition_name = sa.Column(sa.String(14), nullable=True)
     hierarchical_multitenancy = sa.Column(sa.String(7), nullable=False)
     last_write_mem = sa.Column(u'last_write_mem', sa.DateTime(), nullable=True)
+    acos_version = sa.Column(sa.String(36), nullable=True)
 
     @classmethod
     def find_by_loadbalancer_id(cls, loadbalancer_id, db_session=None):

@@ -37,6 +37,7 @@ from a10_octavia.controller.worker.tasks import nat_pool_tasks
 from a10_octavia.controller.worker.tasks import virtual_server_tasks
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 
+
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
@@ -213,7 +214,6 @@ class LoadBalancerFlows(object):
 
     def get_new_lb_networking_subflow(self, topology):
         """Subflow to setup networking for amphora"""
-
         new_LB_net_subflow = linear_flow.Flow(constants.
                                               LOADBALANCER_NETWORKING_SUBFLOW)
         new_LB_net_subflow.add(a10_network_tasks.PlugVIP(
@@ -234,9 +234,19 @@ class LoadBalancerFlows(object):
         new_LB_net_subflow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
+        new_LB_net_subflow.add(vthunder_tasks.UpdateAcosVersionInVthunderEntry(
+            name=a10constants.UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY,
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
+        new_LB_net_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            name=a10constants.GET_VTHUNDER_BY_LB,
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
+            name=a10constants.AMPHORAE_POST_VIP_PLUG,
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         new_LB_net_subflow.add(
             vthunder_tasks.VThunderComputeConnectivityWait(
-                name=a10constants.MASTER_CONNECTIVITY_WAIT,
+                name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
                 requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
             requires=a10constants.VTHUNDER))
