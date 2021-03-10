@@ -256,6 +256,12 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                 operator_fault_string='Failed to get the supported flavor '
                                       'metadata due to: {}'.format(str(e)))
 
+    def _validate_flavor_name_expressions(self, obj_flavor):
+        if 'name-expressions' in obj_flavor:
+            for reg_flavor in obj_flavor['name-expressions']:
+                if 'regex' not in reg_flavor or 'json' not in reg_flavor:
+                    raise Exception('key \'regex\' and \'json\' is mandatory for \'name-expressions\'')
+
     def validate_flavor(self, flavor_dict):
         try:
             validate(flavor_dict, flavor_schema.SUPPORTED_FLAVOR_SCHEMA)
@@ -267,6 +273,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                     raise Exception('axapi key \'name\' is not allowed')
                 if 'ip-address' in flavor:
                     raise Exception('axapi key \'ip-address\' is not supported yet')
+                self._validate_flavor_name_expressions(flavor)
             if 'virtual-port' in flavor_dict:
                 flavor = flavor_dict['virtual-port']
                 if 'name' in flavor:
@@ -275,18 +282,22 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                     raise Exception('axapi key \'port-number\' is not allowed')
                 if 'protocol' in flavor:
                     raise Exception('axapi key \'protocol\' is not allowed')
+                self._validate_flavor_name_expressions(flavor)
             if 'service-group' in flavor_dict:
                 flavor = flavor_dict['service-group']
                 if 'name' in flavor:
                     raise Exception('axapi key \'name\' is not allowed')
+                self._validate_flavor_name_expressions(flavor)
             if 'server' in flavor_dict:
                 flavor = flavor_dict['server']
                 if 'name' in flavor:
                     raise Exception('axapi key \'name\' is not allowed')
+                self._validate_flavor_name_expressions(flavor)
             if 'health-monitor' in flavor_dict:
                 flavor = flavor_dict['health-monitor']
                 if 'name' in flavor:
                     raise Exception('axapi key \'name\' is not allowed')
+                self._validate_flavor_name_expressions(flavor)
 
             # validate nat-pool and nat-pool-list keys
             if 'nat-pool' in flavor_dict:
