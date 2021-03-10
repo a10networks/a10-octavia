@@ -129,9 +129,25 @@ class MemberFlows(object):
         delete_member_flow.add(model_tasks.
                                DeleteModelObject(rebind={constants.OBJECT:
                                                          constants.MEMBER}))
+        delete_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPHORA))
         delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        delete_member_flow.add(a10_network_tasks.CalculateDelta(
+            requires=constants.LOADBALANCER,
+            provides=constants.DELTAS))
+        delete_member_flow.add(a10_network_tasks.HandleNetworkDeltas(
+            requires=constants.DELTAS, provides=constants.ADDED_PORTS))
+        delete_member_flow.add(
+            vthunder_tasks.AmphoraePostMemberNetworkUnPlug(
+                requires=(
+                    constants.LOADBALANCER,
+                    constants.ADDED_PORTS,
+                    a10constants.VTHUNDER)))
+        delete_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         delete_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP))
         delete_member_flow.add(

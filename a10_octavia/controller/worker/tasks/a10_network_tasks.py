@@ -246,6 +246,7 @@ class HandleNetworkDelta(BaseNetworkTask):
             try:
                 self.network_driver.unplug_network(delta.compute_id,
                                                    nic.network_id)
+
             except base.NetworkNotFound:
                 LOG.debug("Network %d not found ", nic.network_id)
             except Exception:
@@ -297,6 +298,8 @@ class HandleNetworkDeltas(BaseNetworkTask):
                 try:
                     self.network_driver.unplug_network(delta.compute_id,
                                                        nic.network_id)
+                    network = self.network_driver.get_network(nic.network_id)
+                    added_ports[amp_id].append(network)
                 except base.NetworkNotFound:
                     LOG.debug("Network %d not found ", nic.network_id)
                 except Exception as e:
