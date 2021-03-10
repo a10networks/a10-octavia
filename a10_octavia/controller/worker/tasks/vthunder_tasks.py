@@ -113,7 +113,8 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
         if lb_exists_flag:
             try:
                 self.axapi_client.system.action.write_memory()
-                self.axapi_client.system.action.reload_reboot(vthunder.acos_version)
+                self.axapi_client.system.action.reload_reboot_for_interface_attachment(
+                    vthunder.acos_version)
                 LOG.debug("Waiting for 30 seconds to trigger vThunder reload.")
                 time.sleep(30)
                 LOG.debug("Successfully reloaded/rebooted vThunder: %s", vthunder.id)
@@ -133,7 +134,8 @@ class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
             amphora_id = loadbalancer.amphorae[0].id
             if len(added_ports[amphora_id]) > 0:
                 self.axapi_client.system.action.write_memory()
-                self.axapi_client.system.action.reload_reboot(vthunder.acos_version)
+                self.axapi_client.system.action.reload_reboot_for_interface_attachment(
+                    vthunder.acos_version)
                 LOG.debug("Waiting for 30 seconds to trigger vThunder reload/reboot.")
                 time.sleep(30)
                 LOG.debug("Successfully rebooted/reloaded vThunder: %s", vthunder.id)
@@ -919,3 +921,25 @@ class UpdateAcosVersionInVthunderEntry(VThunderBaseTask):
                 db_apis.get_session(),
                 vthunder.id,
                 acos_version=existing_vthunder.acos_version)
+
+
+class AmphoraePostMemberNetworkUnPlug(VThunderBaseTask):
+    """Task to reboot and configure vThunder device"""
+
+    @axapi_client_decorator
+    def execute(self, added_ports, loadbalancer, vthunder):
+        """Execute get_info routine for a vThunder until it responds."""
+        try:
+            amphora_id = loadbalancer.amphorae[0].id
+            if len(added_ports[amphora_id]) > 0:
+                self.axapi_client.system.action.write_memory()
+                self.axapi_client.system.action.reload_reboot_for_interface_detachment(
+                    vthunder.acos_version)
+                LOG.debug("Waiting for 30 seconds to trigger vThunder reload/reboot.")
+                time.sleep(30)
+                LOG.debug("Successfully rebooted/reloaded vThunder: %s", vthunder.id)
+            else:
+                LOG.debug("vThunder reboot/relaod is not required for member addition.")
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+            LOG.exception("Failed to reboot/reload vthunder device: %s", str(e))
+            raise e
