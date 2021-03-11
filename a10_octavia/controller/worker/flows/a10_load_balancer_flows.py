@@ -199,7 +199,7 @@ class LoadBalancerFlows(object):
             delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
                 requires=constants.LOADBALANCER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
-            name="DELETED",
+            name=a10constants.MARK_VTHUNDER_MASTER_DELETED_IN_DB,
             requires=a10constants.VTHUNDER,
             inject={"status": constants.DELETED}))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeDeletedInDB(
@@ -214,16 +214,17 @@ class LoadBalancerFlows(object):
             delete_LB_flow.add(vthunder_tasks.WriteMemory(
                 requires=a10constants.VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            name=a10constants.SET_THUNDER_UPDATE_AT,
             requires=a10constants.VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.BACKUP_VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
-            name="DELETED_BACKUP",
+            name=a10constants.MARK_VTHUNDER_BACKUP_DELETED_IN_DB,
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
             inject={"status": constants.DELETED}))
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
-            name="SET_BACKUP_UPDATEDAT",
+            name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
         return (delete_LB_flow, store)
 

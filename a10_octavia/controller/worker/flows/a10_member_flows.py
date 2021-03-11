@@ -100,18 +100,7 @@ class MemberFlows(object):
         create_member_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
-        create_member_flow.add(server_tasks.MemberFindNatPool(
-            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
-                      constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
-        create_member_flow.add(a10_database_tasks.GetNatPoolEntry(
-            requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
-            provides=a10constants.NAT_POOL))
-        create_member_flow.add(a10_network_tasks.ReserveSubnetAddressForMember(
-            requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL],
-            provides=a10constants.SUBNET_PORT))
-        create_member_flow.add(a10_database_tasks.UpdateNatPoolDB(
-            requires=[constants.MEMBER, a10constants.NAT_FLAVOR,
-                      a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
+        create_member_flow.add(self.get_create_member_snat_pool_subflow())
         create_member_flow.add(server_tasks.MemberCreate(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                       a10constants.MEMBER_COUNT_IP, constants.FLAVOR)))
@@ -547,18 +536,7 @@ class MemberFlows(object):
         create_member_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
-        create_member_flow.add(server_tasks.MemberFindNatPool(
-            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
-                      constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
-        create_member_flow.add(a10_database_tasks.GetNatPoolEntry(
-            requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
-            provides=a10constants.NAT_POOL))
-        create_member_flow.add(a10_network_tasks.ReserveSubnetAddressForMember(
-            requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL],
-            provides=a10constants.SUBNET_PORT))
-        create_member_flow.add(a10_database_tasks.UpdateNatPoolDB(
-            requires=[constants.MEMBER, a10constants.NAT_FLAVOR,
-                      a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
+        create_member_flow.add(self.get_create_member_snat_pool_subflow())
         create_member_flow.add(server_tasks.MemberCreate(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                       a10constants.MEMBER_COUNT_IP, constants.FLAVOR)))
@@ -575,3 +553,20 @@ class MemberFlows(object):
         create_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_member_flow
+
+    def get_create_member_snat_pool_subflow(self):
+        create_member_snat_subflow = linear_flow.Flow(
+            a10constants.CREATE_MEMBER_SNAT_POOL_SUBFLOW)
+        create_member_snat_subflow.add(server_tasks.MemberFindNatPool(
+            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+                      constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
+        create_member_snat_subflow.add(a10_database_tasks.GetNatPoolEntry(
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
+            provides=a10constants.NAT_POOL))
+        create_member_snat_subflow.add(a10_network_tasks.ReserveSubnetAddressForMember(
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL],
+            provides=a10constants.SUBNET_PORT))
+        create_member_snat_subflow.add(a10_database_tasks.UpdateNatPoolDB(
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR,
+                      a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
+        return create_member_snat_subflow
