@@ -40,7 +40,8 @@ from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
 PROJECT_ID = "project-rack-vthunder"
-VTHUNDER = a10_data_models.VThunder(project_id=PROJECT_ID, acos_version="5.2.1")
+VTHUNDER = a10_data_models.VThunder(
+    project_id=PROJECT_ID, acos_version="5.2.1")
 VLAN_ID = '11'
 VE_IP_VLAN_ID = '12'
 DELETE_VLAN = True
@@ -137,7 +138,8 @@ VCS_DEVICE1_FAILED = {
 }
 VIP = o_data_models.Vip(ip_address="1.1.1.1")
 AMPHORAE = [o_data_models.Amphora(id=a10constants.MOCK_AMPHORA_ID)]
-LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID, vip=VIP, amphorae=AMPHORAE)
+LB = o_data_models.LoadBalancer(
+    id=a10constants.MOCK_LOAD_BALANCER_ID, vip=VIP, amphorae=AMPHORAE)
 
 
 class TestVThunderTasks(base.BaseTaskTestCase):
@@ -639,7 +641,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         vthunder = mock_task.vthunder_repo.get_vthunder_by_project_id.return_value
         mock_task.execute(LB, thunder)
         self.client_mock.system.action.write_memory.assert_called_with()
-        self.client_mock.system.action.reload_reboot.assert_called_with(vthunder.acos_version)
+        self.client_mock.system.action.reload_reboot_for_interface_attachment.assert_called_with(
+            vthunder.acos_version)
 
     def test_AmphoraPostVipPlug_execute_for_no_reload_reboot(self):
         thunder = copy.deepcopy(VTHUNDER)
@@ -649,7 +652,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.loadbalancer_repo.check_lb_with_distinct_subnet_and_project.return_value = False
         mock_task.execute(LB, thunder)
         self.client_mock.system.action.write_memory.assert_not_called()
-        self.client_mock.system.action.reload_reboot.assert_not_called()
+        self.client_mock.system.action.reload_reboot_for_interface_attachment.assert_not_called()
 
     def test_UpdateAcosVersionInVthunderEntry_execute_for_first_lb(self):
         thunder = copy.deepcopy(VTHUNDER)
@@ -679,7 +682,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.axapi_client = self.client_mock
         mock_task.execute(added_ports, LB, thunder)
         self.client_mock.system.action.write_memory.assert_called_with()
-        self.client_mock.system.action.reload_reboot.assert_called_with("5.2.1")
+        self.client_mock.system.action.reload_reboot_for_interface_attachment.assert_called_with(
+            "5.2.1")
 
     def test_AmphoraePostMemberNetworkPlug_execute_for_no_reload_reboot(self):
         thunder = copy.deepcopy(VTHUNDER)
@@ -689,4 +693,4 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.axapi_client = self.client_mock
         mock_task.execute(added_ports, LB, thunder)
         self.client_mock.system.action.write_memory.assert_not_called()
-        self.client_mock.system.action.reload_reboot.assert_not_called()
+        self.client_mock.system.action.reload_reboot_for_interface_attachment.assert_not_called()
