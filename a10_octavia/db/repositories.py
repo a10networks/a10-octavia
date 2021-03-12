@@ -361,6 +361,18 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
         else:
             return False
 
+    def get_lbs_by_project_id(self, session, project_id):
+        lb_list = []
+        query = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            or_(self.model_class.provisioning_status == "ACTIVE",
+                self.model_class.provisioning_status == "PENDING_UPDATE"))
+
+        model_list = query.all()
+        for data in model_list:
+            lb_list.append(data.to_data_model())
+        return lb_list
+
 
 class VRIDRepository(BaseRepository):
     model_class = models.VRID
