@@ -923,7 +923,7 @@ class UpdateAcosVersionInVthunderEntry(VThunderBaseTask):
                 acos_version=existing_vthunder.acos_version)
 
 
-class AmphoraePostMemberNetworkUnPlug(VThunderBaseTask):
+class AmphoraePostNetworkUnplug(VThunderBaseTask):
     """Task to reboot and configure vThunder device"""
 
     @axapi_client_decorator
