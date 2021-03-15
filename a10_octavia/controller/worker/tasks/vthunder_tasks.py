@@ -348,7 +348,7 @@ class ConfirmVRRPStatus(VThunderBaseTask):
     """Task to confirm master and backup VRRP status"""
 
     def execute(self, master_vrrp_status, backup_vrrp_status):
-        if master_vrrp_status and master_vrrp_status:
+        if master_vrrp_status and backup_vrrp_status:
             return True
         else:
             return False
