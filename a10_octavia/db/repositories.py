@@ -258,7 +258,8 @@ class VThunderRepository(BaseRepository):
     def get_delete_compute_flag(self, session, compute_id):
         if compute_id:
             count = session.query(self.model_class).filter(
-                self.model_class.compute_id == compute_id).count()
+                and_(self.model_class.compute_id == compute_id,
+                     self.model_class.status == "ACTIVE")).count()
             if count < 2:
                 return True
 

@@ -193,12 +193,12 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
             requires=a10constants.VTHUNDER,
             provides=a10constants.LOADBALANCERS_LIST))
-        delete_LB_flow.add(a10_network_tasks.CalculateDelta(
-            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
-            provides=constants.DELTAS))
-        delete_LB_flow.add(a10_network_tasks.HandleNetworkDeltas(
-            requires=constants.DELTAS, provides=constants.ADDED_PORTS))
         if not deleteCompute:
+            delete_LB_flow.add(a10_network_tasks.CalculateDelta(
+                requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
+                provides=constants.DELTAS))
+            delete_LB_flow.add(a10_network_tasks.HandleNetworkDeltas(
+                requires=constants.DELTAS, provides=constants.ADDED_PORTS))
             delete_LB_flow.add(vthunder_tasks.AmphoraePostNetworkUnplug(
                 name=a10constants.AMPHORA_POST_NETWORK_UNPLUG,
                 requires=(constants.LOADBALANCER, constants.ADDED_PORTS, a10constants.VTHUNDER)))
