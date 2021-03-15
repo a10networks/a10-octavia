@@ -394,52 +394,70 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         self.assertEqual(kwargs['port'].get('conn_limit'), 300)
 
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
-    def test_listener_update_for_pool_with_http_protocol(self, mock_protocol):
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_sess_pers_templates')
+    def test_listener_update_for_pool_with_http_protocol_with_session_persistence(
+            self, mock_pers_templates, mock_protocol):
         listener = self._mock_listener('HTTP', 1000)
         mock_protocol.return_value = listener.protocol
+        mock_pers_templates.return_value = None, a10constants.MOCK_POOL_ID
 
         listener_task = task.ListenerUpdateForPool()
         listener_task.axapi_client = self.client_mock
 
         listener_task.execute(LB, listener, VTHUNDER)
-        self.client_mock.slb.virtual_server.vport.update.assert_called_with(LB.id,
-                                                                            listener.id,
-                                                                            listener.protocol,
-                                                                            listener.protocol_port,
-                                                                            listener.default_pool_id
-                                                                            )
+        self.client_mock.slb.virtual_server.vport.update.assert_called_with(
+            LB.id,
+            listener.id,
+            listener.protocol,
+            listener.protocol_port,
+            listener.default_pool_id,
+            c_pers_name=None,
+            s_pers_name=a10constants.MOCK_POOL_ID
+        )
 
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
-    def test_listener_update_for_pool_with_https_protocol(self, mock_protocol):
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_sess_pers_templates')
+    def test_listener_update_for_pool_with_https_protocol_without_session_persistence(
+            self, mock_pers_templates, mock_protocol):
         listener = self._mock_listener('HTTPS', 1000)
         mock_protocol.return_value = listener.protocol
+        mock_pers_templates.return_value = None, None
 
         listener_task = task.ListenerUpdateForPool()
         listener_task.axapi_client = self.client_mock
 
         listener_task.execute(LB, listener, VTHUNDER)
-        self.client_mock.slb.virtual_server.vport.update.assert_called_with(LB.id,
-                                                                            listener.id,
-                                                                            listener.protocol,
-                                                                            listener.protocol_port,
-                                                                            listener.default_pool_id
-                                                                            )
+        self.client_mock.slb.virtual_server.vport.update.assert_called_with(
+            LB.id,
+            listener.id,
+            listener.protocol,
+            listener.protocol_port,
+            listener.default_pool_id,
+            c_pers_name=None,
+            s_pers_name=None
+        )
 
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
-    def test_listener_update_for_pool_with_tcp_protocol(self, mock_protocol):
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_sess_pers_templates')
+    def test_listener_update_for_pool_with_tcp_protocol_with_session_persistence(
+            self, mock_pers_templates, mock_protocol):
         listener = self._mock_listener('TCP', 1000)
         mock_protocol.return_value = listener.protocol
+        mock_pers_templates.return_value = a10constants.MOCK_POOL_ID, None
 
         listener_task = task.ListenerUpdateForPool()
         listener_task.axapi_client = self.client_mock
 
         listener_task.execute(LB, listener, VTHUNDER)
-        self.client_mock.slb.virtual_server.vport.update.assert_called_with(LB.id,
-                                                                            listener.id,
-                                                                            listener.protocol,
-                                                                            listener.protocol_port,
-                                                                            listener.default_pool_id
-                                                                            )
+        self.client_mock.slb.virtual_server.vport.update.assert_called_with(
+            LB.id,
+            listener.id,
+            listener.protocol,
+            listener.protocol_port,
+            listener.default_pool_id,
+            c_pers_name=a10constants.MOCK_POOL_ID,
+            s_pers_name=None
+        )
 
     def test_set_http_virtual_port_conn_limit_with_cli(self):
         listener = self._mock_listener('HTTP', 1000)

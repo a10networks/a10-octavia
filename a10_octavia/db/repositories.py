@@ -187,6 +187,8 @@ class VThunderRepository(BaseRepository):
         query = session.query(self.model_class).filter(
             or_(self.model_class.updated_at >= self.model_class.last_write_mem,
                 self.model_class.last_write_mem == None)).filter(
+            or_(self.model_class.role == "STANDALONE",
+                self.model_class.role == "MASTER")).filter(
             or_(self.model_class.status == 'ACTIVE', self.model_class.status == 'DELETED'))
         query = query.options(noload('*'))
         return query.all()
@@ -343,9 +345,9 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
 
-    def get_lb_count_by_flavor(self, session, project_id, flavor_id):
+    def get_lb_count_by_flavor(self, session, project_ids, flavor_id):
         return session.query(self.model_class).filter(
-            self.model_class.project_id == project_id).filter(
+            self.model_class.project_id.in_(project_ids)).filter(
                 self.model_class.flavor_id == flavor_id,
                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                     self.model_class.provisioning_status == consts.ACTIVE)).count()
