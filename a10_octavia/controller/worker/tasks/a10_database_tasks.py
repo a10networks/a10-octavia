@@ -820,7 +820,7 @@ class CountLoadbalancersWithFlavor(BaseDatabaseTask):
     def execute(self, loadbalancer, vthunder):
         try:
             project_list = []
-            if vthunder.hierarchical_multitenancy == 'enable':
+            if vthunder and vthunder.hierarchical_multitenancy == 'enable':
                 project_list = self.vthunder_repo.get_project_list_using_partition(
                     db_apis.get_session(),
                     partition_name=vthunder.partition_name,
