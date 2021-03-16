@@ -58,11 +58,11 @@ class CreateAndAssociateHealthMonitor(task.Task):
 
         try:
             health_mon.type = openstack_mappings.hm_type(self.axapi_client, health_mon.type)
-        except Exception as e:
+        except Exception:
             raise exceptions.ProviderUnsupportedOptionError(
                 prov="A10",
                 user_msg=("Failed to create health monitor {}, A health monitor of type "
-                          "TLS-HELLO is not supported by A10 provider").format(health_mon.id))
+                          "{} is not supported by A10 provider").format(health_mon.id, health_mon.type))
 
         try:
             post_data = CONF.health_monitor.post_data
