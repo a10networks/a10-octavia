@@ -45,17 +45,20 @@ class MemberFlows(object):
                       constants.POOL]))
         create_member_flow.add(database_tasks.MarkMemberPendingCreateInDB(
             requires=constants.MEMBER))
-        create_member_flow.add(a10_network_tasks.CalculateDelta(
-            requires=constants.LOADBALANCER,
-            provides=constants.DELTAS))
-        create_member_flow.add(a10_network_tasks.HandleNetworkDeltas(
-            requires=constants.DELTAS, provides=constants.ADDED_PORTS))
-        create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER,
-            provides=constants.AMPHORA))
         create_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        create_member_flow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.LOADBALANCERS_LIST))
+        create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPHORA))
+        create_member_flow.add(a10_network_tasks.CalculateDelta(
+            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
+            provides=constants.DELTAS))
+        create_member_flow.add(a10_network_tasks.HandleNetworkDeltas(
+            requires=constants.DELTAS, provides=constants.ADDED_PORTS))
         # managing interface additions here
         create_member_flow.add(
             vthunder_tasks.AmphoraePostMemberNetworkPlug(
@@ -71,6 +74,7 @@ class MemberFlows(object):
                     constants.ADDED_PORTS,
                     constants.LOADBALANCER,
                     a10constants.VTHUNDER]))
+        create_member_flow.add(self.handle_vrid_for_member_subflow())
         # configure member flow for HA
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             create_member_flow.add(
@@ -96,9 +100,13 @@ class MemberFlows(object):
         create_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP
         ))
+        create_member_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR))
+        create_member_flow.add(self.get_create_member_snat_pool_subflow())
         create_member_flow.add(server_tasks.MemberCreate(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
-                      a10constants.MEMBER_COUNT_IP)))
+                      a10constants.MEMBER_COUNT_IP, constants.FLAVOR)))
         create_member_flow.add(database_tasks.MarkMemberActiveInDB(
             requires=constants.MEMBER))
         create_member_flow.add(database_tasks.MarkPoolActiveInDB(
@@ -129,6 +137,9 @@ class MemberFlows(object):
         delete_member_flow.add(model_tasks.
                                DeleteModelObject(rebind={constants.OBJECT:
                                                          constants.MEMBER}))
+        delete_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPHORA))
         delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -143,6 +154,34 @@ class MemberFlows(object):
         delete_member_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
+        delete_member_flow.add(database_tasks.DeleteMemberInDB(
+            requires=constants.MEMBER))
+        delete_member_flow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.LOADBALANCERS_LIST))
+        delete_member_flow.add(a10_network_tasks.CalculateDelta(
+            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
+            provides=constants.DELTAS))
+        delete_member_flow.add(a10_network_tasks.HandleNetworkDeltas(
+            requires=constants.DELTAS, provides=constants.ADDED_PORTS))
+        delete_member_flow.add(
+            vthunder_tasks.AmphoraePostNetworkUnplug(
+                requires=(
+                    constants.LOADBALANCER,
+                    constants.ADDED_PORTS,
+                    a10constants.VTHUNDER)))
+        delete_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        delete_member_flow.add(server_tasks.MemberFindNatPool(
+            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+                      constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
+        delete_member_flow.add(a10_database_tasks.GetNatPoolEntry(
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
+            provides=a10constants.NAT_POOL))
+        delete_member_flow.add(a10_network_tasks.ReleaseSubnetAddressForMember(
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL]))
+        delete_member_flow.add(a10_database_tasks.DeleteNatPoolEntry(
+            requires=a10constants.NAT_POOL))
         delete_member_flow.add(
             server_tasks.MemberDelete(
                 requires=(
@@ -151,6 +190,7 @@ class MemberFlows(object):
                     constants.POOL,
                     a10constants.MEMBER_COUNT_IP,
                     a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL)))
+        delete_member_flow.add(self.get_delete_member_vrid_subflow())
         delete_member_flow.add(database_tasks.DeleteMemberInDB(
             requires=constants.MEMBER))
         delete_member_flow.add(database_tasks.DecrementMemberQuota(
@@ -422,8 +462,13 @@ class MemberFlows(object):
         update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        update_member_flow.add(self.handle_vrid_for_member_subflow())
+        update_member_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR))
         update_member_flow.add(server_tasks.MemberUpdate(
-            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL)))
+            requires=(constants.MEMBER, a10constants.VTHUNDER,
+                      constants.POOL, constants.FLAVOR)))
         update_member_flow.add(database_tasks.UpdateMemberInDB(
             requires=[constants.MEMBER, constants.UPDATE_DICT]))
         update_member_flow.add(database_tasks.MarkMemberActiveInDB(
@@ -515,18 +560,7 @@ class MemberFlows(object):
         create_member_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
-        create_member_flow.add(server_tasks.MemberFindNatPool(
-            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
-                      constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
-        create_member_flow.add(a10_database_tasks.GetNatPoolEntry(
-            requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
-            provides=a10constants.NAT_POOL))
-        create_member_flow.add(a10_network_tasks.ReserveSubnetAddressForMember(
-            requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL],
-            provides=a10constants.SUBNET_PORT))
-        create_member_flow.add(a10_database_tasks.UpdateNatPoolDB(
-            requires=[constants.MEMBER, a10constants.NAT_FLAVOR,
-                      a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
+        create_member_flow.add(self.get_create_member_snat_pool_subflow())
         create_member_flow.add(server_tasks.MemberCreate(
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                       a10constants.MEMBER_COUNT_IP, constants.FLAVOR)))
@@ -543,3 +577,20 @@ class MemberFlows(object):
         create_member_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return create_member_flow
+
+    def get_create_member_snat_pool_subflow(self):
+        create_member_snat_subflow = linear_flow.Flow(
+            a10constants.CREATE_MEMBER_SNAT_POOL_SUBFLOW)
+        create_member_snat_subflow.add(server_tasks.MemberFindNatPool(
+            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+                      constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
+        create_member_snat_subflow.add(a10_database_tasks.GetNatPoolEntry(
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
+            provides=a10constants.NAT_POOL))
+        create_member_snat_subflow.add(a10_network_tasks.ReserveSubnetAddressForMember(
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL],
+            provides=a10constants.SUBNET_PORT))
+        create_member_snat_subflow.add(a10_database_tasks.UpdateNatPoolDB(
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR,
+                      a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
+        return create_member_snat_subflow

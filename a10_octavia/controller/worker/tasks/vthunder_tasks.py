@@ -364,7 +364,7 @@ class ConfirmVRRPStatus(VThunderBaseTask):
     """Task to confirm master and backup VRRP status"""
 
     def execute(self, master_vrrp_status, backup_vrrp_status):
-        if master_vrrp_status and master_vrrp_status:
+        if master_vrrp_status and backup_vrrp_status:
             return True
         else:
             return False
@@ -921,3 +921,25 @@ class UpdateAcosVersionInVthunderEntry(VThunderBaseTask):
                 db_apis.get_session(),
                 vthunder.id,
                 acos_version=existing_vthunder.acos_version)
+
+
+class AmphoraePostNetworkUnplug(VThunderBaseTask):
+    """Task to reboot and configure vThunder device"""
+
+    @axapi_client_decorator
+    def execute(self, added_ports, loadbalancer, vthunder):
+        """Execute get_info routine for a vThunder until it responds."""
+        try:
+            amphora_id = loadbalancer.amphorae[0].id
+            if len(added_ports[amphora_id]) > 0:
+                self.axapi_client.system.action.write_memory()
+                self.axapi_client.system.action.reload_reboot_for_interface_detachment(
+                    vthunder.acos_version)
+                LOG.debug("Waiting for 30 seconds to trigger vThunder reload/reboot.")
+                time.sleep(30)
+                LOG.debug("Successfully rebooted/reloaded vThunder: %s", vthunder.id)
+            else:
+                LOG.debug("vThunder reboot/relaod is not required for member addition.")
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+            LOG.exception("Failed to reboot/reload vthunder device: %s", str(e))
+            raise e

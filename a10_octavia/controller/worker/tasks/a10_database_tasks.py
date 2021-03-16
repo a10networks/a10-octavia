@@ -916,3 +916,17 @@ class MarkLoadBalancersActiveInDB(BaseDatabaseTask):
         except Exception as e:
             LOG.exception('Failed to set Loadbalancers to ACTIVE due to '
                           ': {}'.format(str(e)))
+
+
+class GetLoadBalancerListByProjectID(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        try:
+            if vthunder:
+                loadbalancers_list = self.loadbalancer_repo.get_lbs_by_project_id(
+                    db_apis.get_session(),
+                    vthunder.project_id)
+                return loadbalancers_list
+        except Exception as e:
+            LOG.exception('Failed to get active Loadbalancers related to vthunder '
+                          'due to: {}'.format(str(e)))

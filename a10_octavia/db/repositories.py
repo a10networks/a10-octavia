@@ -187,6 +187,8 @@ class VThunderRepository(BaseRepository):
         query = session.query(self.model_class).filter(
             or_(self.model_class.updated_at >= self.model_class.last_write_mem,
                 self.model_class.last_write_mem == None)).filter(
+            or_(self.model_class.role == "STANDALONE",
+                self.model_class.role == "MASTER")).filter(
             or_(self.model_class.status == 'ACTIVE', self.model_class.status == 'DELETED'))
         query = query.options(noload('*'))
         return query.all()
@@ -258,7 +260,8 @@ class VThunderRepository(BaseRepository):
     def get_delete_compute_flag(self, session, compute_id):
         if compute_id:
             count = session.query(self.model_class).filter(
-                self.model_class.compute_id == compute_id).count()
+                and_(self.model_class.compute_id == compute_id,
+                     self.model_class.status == "ACTIVE")).count()
             if count < 2:
                 return True
 
@@ -360,6 +363,18 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
             return True
         else:
             return False
+
+    def get_lbs_by_project_id(self, session, project_id):
+        lb_list = []
+        query = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            or_(self.model_class.provisioning_status == "ACTIVE",
+                self.model_class.provisioning_status == "PENDING_UPDATE"))
+
+        model_list = query.all()
+        for data in model_list:
+            lb_list.append(data.to_data_model())
+        return lb_list
 
 
 class VRIDRepository(BaseRepository):
