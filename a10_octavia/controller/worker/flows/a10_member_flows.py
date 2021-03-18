@@ -191,8 +191,6 @@ class MemberFlows(object):
                     a10constants.MEMBER_COUNT_IP,
                     a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL)))
         delete_member_flow.add(self.get_delete_member_vrid_subflow())
-        delete_member_flow.add(database_tasks.DeleteMemberInDB(
-            requires=constants.MEMBER))
         delete_member_flow.add(database_tasks.DecrementMemberQuota(
             requires=constants.MEMBER))
         delete_member_flow.add(database_tasks.MarkPoolActiveInDB(
