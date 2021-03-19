@@ -260,7 +260,8 @@ class VThunderRepository(BaseRepository):
     def get_delete_compute_flag(self, session, compute_id):
         if compute_id:
             count = session.query(self.model_class).filter(
-                self.model_class.compute_id == compute_id).count()
+                and_(self.model_class.compute_id == compute_id,
+                     self.model_class.status == "ACTIVE")).count()
             if count < 2:
                 return True
 
@@ -322,7 +323,8 @@ class VThunderRepository(BaseRepository):
 
     def update_last_write_mem(self, session, ip_address, partition, **model_kwargs):
         with session.begin(subtransactions=True):
-            session.query(self.model_class).filter_by(ip_address=ip_address, partition_name=partition).update(model_kwargs)
+            session.query(self.model_class).filter_by(
+                    ip_address=ip_address, partition_name=partition).update(model_kwargs)
 
 
 class LoadBalancerRepository(repo.LoadBalancerRepository):
@@ -351,6 +353,28 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
                 self.model_class.flavor_id == flavor_id,
                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                     self.model_class.provisioning_status == consts.ACTIVE)).count()
+
+    def check_lb_with_distinct_subnet_and_project(self, session, project_id, subnet_id):
+        lb = session.query(self.model_class).join(base_models.Vip).filter(
+            and_(self.model_class.project_id == project_id,
+                 base_models.Vip.subnet_id == subnet_id,
+                 self.model_class.provisioning_status == consts.ACTIVE)).count()
+        if lb == 0:
+            return True
+        else:
+            return False
+
+    def get_lbs_by_project_id(self, session, project_id):
+        lb_list = []
+        query = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            or_(self.model_class.provisioning_status == "ACTIVE",
+                self.model_class.provisioning_status == "PENDING_UPDATE"))
+
+        model_list = query.all()
+        for data in model_list:
+            lb_list.append(data.to_data_model())
+        return lb_list
 
 
 class VRIDRepository(BaseRepository):
@@ -415,6 +439,7 @@ class MemberRepository(repo.MemberRepository):
             and_(self.model_class.subnet_id == subnet_id,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
+
 
 class NatPoolRepository(BaseRepository):
     model_class = models.NATPool
