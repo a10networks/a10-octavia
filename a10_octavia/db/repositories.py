@@ -326,6 +326,17 @@ class VThunderRepository(BaseRepository):
             session.query(self.model_class).filter_by(
                     ip_address=ip_address, partition_name=partition).update(model_kwargs)
 
+    def get_vthunder_by_project_id_and_role(self, session, project_id, role):
+        model = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.status == "ACTIVE",
+                 self.model_class.role == role)).first()
+
+        if not model:
+            return None
+
+        return model.to_data_model()
+
 
 class LoadBalancerRepository(repo.LoadBalancerRepository):
     thunder_model_class = models.VThunder
