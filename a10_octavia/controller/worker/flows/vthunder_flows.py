@@ -236,6 +236,7 @@ class VThunderFlows(object):
         vthunder_for_amphora_subflow.add(a10_database_tasks.GetComputeForProject(
             name=sf_name + '-' + a10constants.GET_COMPUTE_FOR_PROJECT,
             requires=constants.LOADBALANCER,
+            inject={"role": role},
             provides=constants.COMPUTE_ID))
         vthunder_for_amphora_subflow.add(database_tasks.UpdateAmphoraComputeId(
             name=sf_name + '-' + constants.UPDATE_AMPHORA_COMPUTEID,
