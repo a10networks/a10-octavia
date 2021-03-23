@@ -237,9 +237,9 @@ class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
 class GetComputeForProject(BaseDatabaseTask):
     """ Get Compute details form Loadbalancer object -> project ID"""
 
-    def execute(self, loadbalancer):
-        vthunder = self.vthunder_repo.get_vthunder_by_project_id(
-            db_apis.get_session(), loadbalancer.project_id)
+    def execute(self, loadbalancer, role):
+        vthunder = self.vthunder_repo.get_vthunder_by_project_id_and_role(
+            db_apis.get_session(), loadbalancer.project_id, role)
         if vthunder is None:
             vthunder = self.vthunder_repo.get_spare_vthunder(
                 db_apis.get_session())
