@@ -189,3 +189,72 @@ class PoolFlows(object):
         :returns: True if if pool has session persistence
         """
         return history[history.keys()[0]].session_persistence is not None
+
+    def get_delete_pool_flow_internal(self, name, members, pool_listener_name, health_mon):
+        """Create a flow to delete a pool, etc.
+        :returns: The flow for deleting a pool
+        """
+        store = {}
+        delete_pool_flow = linear_flow.Flow(constants.DELETE_POOL_FLOW)
+        # health monitor should cascade
+        # members should cascade
+        delete_pool_flow.add(database_tasks.MarkPoolPendingDeleteInDB(
+            name='mark_pool_pending_delete_in_db_' + name,
+            requires=constants.POOL,
+            rebind={constants.POOL: name}))
+        delete_pool_flow.add(database_tasks.CountPoolChildrenForQuota(
+            name='count_pool_children_for_quota_' + name,
+            requires=constants.POOL,
+            provides=constants.POOL_CHILD_COUNT,
+            rebind={constants.POOL: name}))
+        delete_pool_flow.add(virtual_port_tasks.ListenerUpdateForPool(
+            name='listener_update_for_pool_' + name,
+            requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER],
+            rebind={constants.LISTENER: pool_listener_name}))
+        delete_pool_flow.add(persist_tasks.DeleteSessionPersistence(
+            name='delete_session_persistence_' + name,
+            requires=[a10constants.VTHUNDER, constants.POOL],
+            rebind={constants.POOL: name}))
+        delete_pool_flow.add(model_tasks.DeleteModelObject(
+            name='delete_model_object_' + name,
+            rebind={constants.OBJECT: name}))
+        # Delete pool children
+        delete_pool_flow.add(self._get_delete_health_monitor_vthunder_cascade_subflow(health_mon))
+        (members_delete, member_store) = self._get_delete_member_vthunder_cascade_subflow(
+            members, name)
+        store.update(member_store)
+        delete_pool_flow.add(members_delete)
+        delete_pool_flow.add(service_group_tasks.PoolDelete(
+            name='pool_delete_' + name,
+            requires=[constants.POOL, a10constants.VTHUNDER],
+            rebind={constants.POOL: name}))
+        delete_pool_flow.add(database_tasks.DeletePoolInDB(
+            name='delete_pool_in_db_' + name,
+            requires=constants.POOL,
+            rebind={constants.POOL: name}))
+        delete_pool_flow.add(database_tasks.DecrementPoolQuota(
+            name='decrement_pool_quota_' + name,
+            requires=[constants.POOL, constants.POOL_CHILD_COUNT],
+            rebind={constants.POOL: name}))
+
+        return (delete_pool_flow, store)
+
+    def _get_delete_member_vthunder_cascade_subflow(self, members, name):
+        delete_member_vthunder_cascade_subflow = linear_flow.Flow(
+            a10constants.DELETE_MEMBERS_SUBFLOW_WITH_POOL_DELETE_FLOW)
+        store = {}
+        for member in members:
+            member_name = 'member' + member.id
+            store[member_name] = member
+            delete_member_vthunder_cascade_subflow.add(
+                self.member_flow.get_delete_member_vthunder_internal_cascade_subflow(
+                    member_name, name))
+        return (delete_member_vthunder_cascade_subflow, store)
+
+    def _get_delete_health_monitor_vthunder_cascade_subflow(self, health_mon):
+        delete_hm_vthunder_cascade_subflow = linear_flow.Flow(
+            a10constants.DELETE_HEALTH_MONITOR_SUBFLOW_WITH_POOL_DELETE_FLOW)
+        if health_mon:
+            delete_hm_vthunder_cascade_subflow.add(
+                self.hm_flow.get_delete_health_monitor_vthunder_cascade_subflow(health_mon))
+        return delete_hm_vthunder_cascade_subflow

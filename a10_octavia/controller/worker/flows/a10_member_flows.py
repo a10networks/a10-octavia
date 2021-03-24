@@ -570,3 +570,71 @@ class MemberFlows(object):
             requires=[constants.MEMBER, a10constants.NAT_FLAVOR,
                       a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
         return create_member_snat_subflow
+
+    def get_delete_member_vthunder_internal_cascade_subflow(self, member, name):
+        delete_member_thunder_cascade_subflow = linear_flow.Flow(
+            a10constants.DELETE_MEMBER_VTHUNDER_INTERNAL_SUBFLOW)
+        delete_member_thunder_cascade_subflow.add(vthunder_tasks.SetupDeviceNetworkMap(
+            name='setup_device_network_map_' + member,
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.VTHUNDER))
+        delete_member_thunder_cascade_subflow.add(
+            a10_database_tasks.CountMembersWithIPPortProtocol(
+                name='count_members_ip_port_' + member,
+                requires=(
+                    constants.MEMBER,
+                    constants.POOL),
+                provides=a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL,
+                rebind={
+                    constants.MEMBER: member,
+                    constants.POOL: name}))
+        delete_member_thunder_cascade_subflow.add(a10_database_tasks.PoolCountforIP(
+            name='pool_count_for_ip_' + member,
+            requires=constants.MEMBER, provides=a10constants.POOL_COUNT_IP,
+            rebind={constants.MEMBER: member}))
+
+        # NAT pools database and pools clean up for flavor
+        delete_member_thunder_cascade_subflow.add(a10_database_tasks.GetFlavorData(
+            name='get_flavor_data_' + member,
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR))
+        delete_member_thunder_cascade_subflow.add(server_tasks.MemberFindNatPool(
+            name='member_find_nat_pool_' + member,
+            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+                      constants.FLAVOR], provides=a10constants.NAT_FLAVOR,
+            rebind={constants.MEMBER: member, constants.POOL: name}))
+        delete_member_thunder_cascade_subflow.add(a10_database_tasks.GetNatPoolEntry(
+            name='get_nat_pool_db_entry_' + member,
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
+            provides=a10constants.NAT_POOL, rebind={constants.MEMBER: member}))
+        delete_member_thunder_cascade_subflow.add(a10_network_tasks.ReleaseSubnetAddressForMember(
+            name='release_subnet_address_for_member_' + member,
+            requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL],
+            rebind={constants.MEMBER: member}))
+        delete_member_thunder_cascade_subflow.add(a10_database_tasks.DeleteNatPoolEntry(
+            name='delete_nat_pool_entry_' + member,
+            requires=a10constants.NAT_POOL))
+
+        delete_member_thunder_cascade_subflow.add(
+            server_tasks.MemberDeletePool(
+                name='delete_thunder_member_pool_' +
+                member,
+                requires=(
+                    constants.MEMBER,
+                    a10constants.VTHUNDER,
+                    constants.POOL,
+                    a10constants.POOL_COUNT_IP,
+                    a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL),
+                rebind={
+                    constants.MEMBER: member, constants.POOL: name}))
+        if CONF.a10_global.network_type == 'vlan':
+            delete_member_thunder_cascade_subflow.add(
+                vthunder_tasks.DeleteInterfaceTagIfNotInUseForMember(
+                    name='delete_unused_interface_tag_in_member_' +
+                    member,
+                    requires=[
+                        constants.MEMBER,
+                        a10constants.VTHUNDER],
+                    rebind={
+                        constants.MEMBER: member}))
+        return delete_member_thunder_cascade_subflow

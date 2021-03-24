@@ -116,3 +116,14 @@ class L7PolicyFlows(object):
         update_l7policy_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return update_l7policy_flow
+
+    def get_delete_l7policy_internal_flow(self, l7policy_name):
+        delete_l7policy_flow = linear_flow.Flow(constants.DELETE_L7POLICY_FLOW)
+        delete_l7policy_flow.add(model_tasks.DeleteModelObject(
+            name='delete_model_object_' + l7policy_name,
+            rebind={constants.OBJECT: l7policy_name}))
+        delete_l7policy_flow.add(l7policy_tasks.DeleteL7Policy(
+            name='delete_l7policy_' + l7policy_name,
+            requires=[constants.L7POLICY, a10constants.VTHUNDER],
+            rebind={constants.L7POLICY: l7policy_name}))
+        return delete_l7policy_flow
