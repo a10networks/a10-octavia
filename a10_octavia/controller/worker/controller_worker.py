@@ -302,7 +302,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
         else:
             create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
-                topology=topology, listeners=lb.listeners)
+                load_balancer_id, topology=topology, listeners=lb.listeners)
             create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
 
         with tf_logging.DynamicLoggingListener(
@@ -428,6 +428,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         pool = member.pool
         listeners = pool.listeners
         load_balancer = pool.load_balancer
+        topology = CONF.a10_controller_worker.loadbalancer_topology
 
         if member.project_id in CONF.hardware_thunder.devices:
             delete_member_tf = self._taskflow_load(
@@ -437,7 +438,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             )
         else:
             delete_member_tf = self._taskflow_load(
-                self._member_flows.get_delete_member_flow(),
+                self._member_flows.get_delete_member_flow(topology=topology),
                 store={constants.MEMBER: member, constants.LISTENERS: listeners,
                        constants.LOADBALANCER: load_balancer, constants.POOL: pool}
             )
