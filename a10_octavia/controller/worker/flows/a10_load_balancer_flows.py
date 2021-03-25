@@ -211,6 +211,9 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
             requires=a10constants.VTHUNDER,
             provides=a10constants.LOADBALANCERS_LIST))
+        delete_LB_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.BACKUP_VTHUNDER))
         if not deleteCompute:
             delete_LB_flow.add(a10_network_tasks.CalculateDelta(
                 requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
@@ -224,6 +227,16 @@ class LoadBalancerFlows(object):
                 vthunder_tasks.VThunderComputeConnectivityWait(
                     name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
                     requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+            if lb.topology == "ACTIVE_STANDBY":
+                delete_LB_flow.add(vthunder_tasks.AmphoraePostNetworkUnplug(
+                    name=a10constants.AMPHORA_POST_NETWORK_UNPLUG_FOR_BACKUP_VTHUNDER,
+                    requires=(constants.LOADBALANCER, constants.ADDED_PORTS),
+                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+                delete_LB_flow.add(
+                    vthunder_tasks.VThunderComputeConnectivityWait(
+                        name=a10constants.BACKUP_CONNECTIVITY_WAIT,
+                        rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                        requires=constants.AMPHORA))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         if deleteCompute:
@@ -247,9 +260,6 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             name=a10constants.SET_THUNDER_UPDATE_AT,
             requires=a10constants.VTHUNDER))
-        delete_LB_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
-            requires=constants.LOADBALANCER,
-            provides=a10constants.BACKUP_VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name=a10constants.MARK_VTHUNDER_BACKUP_DELETED_IN_DB,
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},

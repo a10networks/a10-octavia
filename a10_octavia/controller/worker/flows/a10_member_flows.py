@@ -67,6 +67,7 @@ class MemberFlows(object):
                     constants.ADDED_PORTS,
                     a10constants.VTHUNDER)))
         create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
             requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         create_member_flow.add(
             vthunder_tasks.EnableInterfaceForMembers(
@@ -124,7 +125,7 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER))
         return create_member_flow
 
-    def get_delete_member_flow(self):
+    def get_delete_member_flow(self, topology):
         """Flow to delete a member on VThunder
 
         :returns: The flow for deleting a member
@@ -174,7 +175,24 @@ class MemberFlows(object):
                     constants.ADDED_PORTS,
                     a10constants.VTHUNDER)))
         delete_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
             requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            delete_member_flow.add(
+                a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                    name=a10constants.GET_BACKUP_VTHUNDER_BY_LB,
+                    requires=constants.LOADBALANCER,
+                    provides=a10constants.BACKUP_VTHUNDER))
+            delete_member_flow.add(
+                vthunder_tasks.AmphoraePostNetworkUnplug(
+                    name=a10constants.AMPHORA_POST_NETWORK_UNPLUG_FOR_BACKUP_VTHUNDER,
+                    requires=(constants.LOADBALANCER, constants.ADDED_PORTS),
+                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+            delete_member_flow.add(
+                vthunder_tasks.VThunderComputeConnectivityWait(
+                    name=a10constants.BACKUP_CONNECTIVITY_WAIT,
+                    requires=constants.AMPHORA,
+                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
         delete_member_flow.add(server_tasks.MemberFindNatPool(
             requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                       constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
