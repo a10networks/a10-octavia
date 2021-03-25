@@ -87,6 +87,9 @@ class MemberFlows(object):
                     name="backup_amphora_network_plug", requires=[
                         constants.ADDED_PORTS, constants.LOADBALANCER], rebind={
                         a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+            create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+                name=a10constants.MASTER_CONNECTIVITY_WAIT,
+                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
             create_member_flow.add(
                 vthunder_tasks.VThunderComputeConnectivityWait(
                     name="backup_compute_conn_wait", requires=constants.AMPHORA, rebind={
