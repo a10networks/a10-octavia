@@ -108,14 +108,13 @@ class ListenerFlows(object):
             requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
-    def get_delete_listener_internal_flow(self, listener_name, compute_flag):
-        """Create a flow to delete a listener and l7policies internally
+    def get_cascade_delete_listener_internal_flow(self, listener_name, compute_flag):
+        """Create a flow to delete a listener
            (will skip deletion on the amp and marking LB active)
         :returns: The flow for deleting a listener
         """
         delete_listener_flow = linear_flow.Flow(constants.DELETE_LISTENER_FLOW)
-        delete_listener_flow.add(self.handle_ssl_cert_cascade_flow(listener_name))
-        # Should cascade delete all L7 policies
+        delete_listener_flow.add(self.handle_cascade_delete_ssl_cert_flow(listener_name))
         if compute_flag:
             delete_listener_flow.add(network_tasks.UpdateVIPForDelete(
                 name='delete_update_vip_' + listener_name,
@@ -253,7 +252,7 @@ class ListenerFlows(object):
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         return update_ssl_cert_flow
 
-    def get_ssl_certificate_delete_cascade_flow(self, listener_name):
+    def get_cascade_delete_ssl_certificate_flow(self, listener_name):
         delete_ssl_cert_flow = linear_flow.Flow(
             a10constants.DELETE_SSL_CERT_FLOW)
         delete_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
@@ -272,8 +271,8 @@ class ListenerFlows(object):
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         return delete_ssl_cert_flow
 
-    def handle_ssl_cert_cascade_flow(self, listener_name):
-        configure_ssl = self.get_ssl_certificate_delete_cascade_flow(listener_name)
+    def handle_cascade_delete_ssl_cert_flow(self, listener_name):
+        configure_ssl = self.get_cascade_delete_ssl_certificate_flow(listener_name)
 
         configure_ssl_flow = graph_flow.Flow(
             a10constants.LISTENER_TYPE_DECIDER_FLOW)

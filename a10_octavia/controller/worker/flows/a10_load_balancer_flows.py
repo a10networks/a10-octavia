@@ -189,8 +189,8 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER,
                       a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
         if cascade:
-            (listeners_delete, store) = self._get_delete_listeners_flow(lb)
-            (pools_delete, pool_store) = self._get_delete_pools_flow(lb)
+            (listeners_delete, store) = self._get_cascade_delete_listeners_flow(lb)
+            (pools_delete, pool_store) = self._get_cascade_delete_pools_flow(lb)
             store.update(pool_store)
             delete_LB_flow.add(pools_delete)
             delete_LB_flow.add(listeners_delete)
@@ -518,7 +518,7 @@ class LoadBalancerFlows(object):
 
         return delete_lb_vrid_subflow
 
-    def _get_delete_listeners_flow(self, lb):
+    def _get_cascade_delete_listeners_flow(self, lb):
         """Sets up an internal delete flow
         Because task flow doesn't support loops we store each listener
         we want to delete in the store part and then rebind
@@ -534,16 +534,16 @@ class LoadBalancerFlows(object):
                 l7policy_name = 'l7policy_' + l7policy.id
                 store[l7policy_name] = l7policy
                 listeners_delete_flow.add(
-                    self._l7policy_flows.get_delete_l7policy_internal_flow(
+                    self._l7policy_flows.get_cascade_delete_l7policy_internal_flow(
                         l7policy_name))
             listener_name = 'listener_' + listener.id
             store[listener_name] = listener
             listeners_delete_flow.add(
-                self._listener_flows.get_delete_listener_internal_flow(
+                self._listener_flows.get_cascade_delete_listener_internal_flow(
                     listener_name, compute_flag))
         return (listeners_delete_flow, store)
 
-    def _get_delete_pools_flow(self, lb):
+    def _get_cascade_delete_pools_flow(self, lb):
         """Sets up an internal delete flow
         Because task flow doesn't support loops we store each pool
         we want to delete in the store part and then rebind
@@ -568,7 +568,7 @@ class LoadBalancerFlows(object):
             if health_monitor is not None:
                 health_mon = 'health_mon' + health_monitor.id
                 store[health_mon] = health_monitor
-            (pool_delete, pool_store) = self._pool_flows.get_delete_pool_flow_internal(
+            (pool_delete, pool_store) = self._pool_flows.get_cascade_delete_pool_internal_flow(
                 pool_name, members, pool_listener_name, health_mon)
             store.update(pool_store)
             pools_delete_flow.add(pool_delete)

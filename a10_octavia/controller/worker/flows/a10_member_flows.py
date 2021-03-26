@@ -593,7 +593,7 @@ class MemberFlows(object):
                       a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
         return create_member_snat_subflow
 
-    def get_delete_member_vthunder_internal_cascade_subflow(self, member, pool):
+    def get_cascade_delete_member_vthunder_internal_subflow(self, member, pool):
         delete_member_thunder_cascade_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBER_VTHUNDER_INTERNAL_SUBFLOW)
         delete_member_thunder_cascade_subflow.add(
