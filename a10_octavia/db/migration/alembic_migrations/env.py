@@ -8,6 +8,11 @@ from sqlalchemy import pool
 from alembic import context
 from a10_octavia import a10_config
 from a10_octavia.db import base_models
+
+# These must be imported for autogen to work. DO NOT DELETE!
+from a10_octavia.db.models import VThunder, NATPool, VRID
+VALID_AUOTGEN_TABLE_NAMES = ('vthunders', 'nat_pool', 'vrid')
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 
@@ -23,7 +28,7 @@ fileConfig(config.config_file_name)
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = None
+target_metadata = [base_models.BASE.metadata]
 
 if getattr(config, 'connection', None) is None:
     a10_cfg = a10_config.A10Config()
@@ -34,6 +39,11 @@ if getattr(config, 'connection', None) is None:
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
+
+def include_object(object, name, type_, reflected, compare_to):
+    if type_ == "table" and name not in VALID_AUOTGEN_TABLE_NAMES:
+        return False
+    return True
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
@@ -49,7 +59,10 @@ def run_migrations_offline():
     """
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url, target_metadata=target_metadata, literal_binds=True
+        url=url,
+        target_metadata=target_metadata,
+        literal_binds=True,
+        include_object=include_object
     )
 
     with context.begin_transaction():
@@ -73,7 +86,8 @@ def run_migrations_online():
         context.configure(
             connection=connection,
             version_table=VERSION_TABLE,
-            target_metadata=target_metadata
+            target_metadata=target_metadata,
+            include_object=include_object
         )
 
         with context.begin_transaction():
