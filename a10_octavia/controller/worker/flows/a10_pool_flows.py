@@ -114,11 +114,11 @@ class PoolFlows(object):
 
         return delete_pool_flow
 
-    def _get_delete_health_monitor_vthunder_subflow(self, health_mon):
+    def _get_delete_health_monitor_vthunder_subflow(self, health_mon, cascade=False):
         delete_hm_vthunder_subflow = linear_flow.Flow(
             a10constants.DELETE_HEALTH_MONITOR_SUBFLOW_WITH_POOL_DELETE_FLOW)
         if health_mon:
-            if isinstance(health_mon, unicode):
+            if cascade:
                 delete_hm_vthunder_subflow.add(
                     self.hm_flow.get_delete_health_monitor_vthunder_subflow(health_mon))
             else:
@@ -224,7 +224,7 @@ class PoolFlows(object):
             name='delete_model_object_' + pool_name,
             rebind={constants.OBJECT: pool_name}))
         # Delete pool children
-        delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon))
+        delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon, True))
         (members_delete, member_store) = self._get_cascade_delete_member_vthunder_subflow(
             members, pool_name)
         store.update(member_store)
