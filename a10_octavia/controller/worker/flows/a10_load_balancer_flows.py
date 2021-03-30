@@ -179,6 +179,9 @@ class LoadBalancerFlows(object):
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
             requires=constants.LOADBALANCER))
+        if cascade:
+            (pools_listeners_delete, store) = self._get_cascade_delete_pools_listeners_flow(lb)
+            delete_LB_flow.add(pools_listeners_delete)
         delete_LB_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR_DATA))
@@ -188,12 +191,9 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
             requires=(constants.LOADBALANCER,
                       a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
-        if cascade:
-            (listeners_delete, store) = self._get_cascade_delete_listeners_flow(lb)
-            (pools_delete, pool_store) = self._get_cascade_delete_pools_flow(lb)
-            store.update(pool_store)
-            delete_LB_flow.add(pools_delete)
-            delete_LB_flow.add(listeners_delete)
+#        if cascade:
+#            (pools_listeners_delete, store) = self._get_cascade_delete_pools_listeners_flow(lb)
+#            delete_LB_flow.add(pools_listeners_delete)
         delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
         if CONF.a10_global.network_type == 'vlan':
             delete_LB_flow.add(
@@ -518,41 +518,17 @@ class LoadBalancerFlows(object):
 
         return delete_lb_vrid_subflow
 
-    def _get_cascade_delete_listeners_flow(self, lb):
-        """Sets up an internal delete flow
-        Because task flow doesn't support loops we store each listener
-        we want to delete in the store part and then rebind
-        :param lb: load balancer
-        :return: (flow, store) -- flow for the deletion and store with all
-                 the listeners stored properly
-        """
-        listeners_delete_flow = unordered_flow.Flow('listener_delete_flow')
-        store = {}
-        compute_flag = lb.amphorae
-        for listener in lb.listeners:
-            for l7policy in listener.l7policies:
-                l7policy_name = 'l7policy_' + l7policy.id
-                store[l7policy_name] = l7policy
-                listeners_delete_flow.add(
-                    self._l7policy_flows.get_cascade_delete_l7policy_internal_flow(
-                        l7policy_name))
-            listener_name = 'listener_' + listener.id
-            store[listener_name] = listener
-            listeners_delete_flow.add(
-                self._listener_flows.get_cascade_delete_listener_internal_flow(
-                    listener_name, compute_flag))
-        return (listeners_delete_flow, store)
-
-    def _get_cascade_delete_pools_flow(self, lb):
+    def _get_cascade_delete_pools_listeners_flow(self, lb):
         """Sets up an internal delete flow
         Because task flow doesn't support loops we store each pool
-        we want to delete in the store part and then rebind
+        and listener we want to delete in the store part and then rebind
         :param lb: load balancer
         :return: (flow, store) -- flow for the deletion and store with all
-                  the listeners stored properly
+                  the listeners/pools stored properly
         """
-        pools_delete_flow = unordered_flow.Flow('pool_delete_flow')
+        pools_listeners_delete_flow = unordered_flow.Flow('pool_listener_delete_flow')
         store = {}
+        # loop fo loadbalancer's pool deletion
         for pool in lb.pools:
             pool_name = 'pool' + pool.id
             members = pool.members
@@ -571,5 +547,21 @@ class LoadBalancerFlows(object):
             (pool_delete, pool_store) = self._pool_flows.get_cascade_delete_pool_internal_flow(
                 pool_name, members, pool_listener_name, health_mon)
             store.update(pool_store)
-            pools_delete_flow.add(pool_delete)
-        return (pools_delete_flow, store)
+            pools_listeners_delete_flow.add(pool_delete)
+
+        # loop for loadbalancer's listener deletion
+        compute_flag = lb.amphorae
+        for listener in lb.listeners:
+            l7policy_delete_flow = linear_flow.Flow('l7policy_delete_flow')
+            for l7policy in listener.l7policies:
+                l7policy_name = 'l7policy_' + l7policy.id
+                store[l7policy_name] = l7policy
+                l7policy_delete_flow.add(
+                        self._l7policy_flows.get_cascade_delete_l7policy_internal_flow(
+                            l7policy_name))
+            listener_name = 'listener_' + listener.id
+            store[listener_name] = listener
+            pools_listeners_delete_flow.add(
+                self._listener_flows.get_cascade_delete_listener_internal_flow(
+                    listener_name, compute_flag))
+        return (pools_listeners_delete_flow, store)

@@ -106,11 +106,13 @@ class HealthMonitorFlows(object):
             requires=(a10constants.VTHUNDER)))
         return delete_hm_flow
 
-    def get_delete_health_monitor_vthunder_subflow(self):
+    def get_delete_health_monitor_vthunder_subflow(self, health_mon=constants.HEALTH_MON):
         delete_hm_vthunder_subflow = linear_flow.Flow(
             a10constants.DELETE_HEALTH_MONITOR_VTHUNDER_SUBFLOW)
         delete_hm_vthunder_subflow.add(health_monitor_tasks.DeleteHealthMonitor(
-            requires=[constants.HEALTH_MON, a10constants.VTHUNDER]))
+            name="delete_health_monitor_" + health_mon,
+            requires=[constants.HEALTH_MON, a10constants.VTHUNDER],
+            rebind={constants.HEALTH_MON: health_mon}))
         return delete_hm_vthunder_subflow
 
     def get_update_health_monitor_flow(self):
@@ -152,12 +154,3 @@ class HealthMonitorFlows(object):
         update_hm_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=(a10constants.VTHUNDER)))
         return update_hm_flow
-
-    def get_cascade_delete_health_monitor_vthunder_subflow(self, health_mon):
-        delete_hm_vthunder_cascade_subflow = linear_flow.Flow(
-            a10constants.DELETE_HEALTH_MONITOR_VTHUNDER_SUBFLOW)
-        delete_hm_vthunder_cascade_subflow.add(health_monitor_tasks.DeleteHealthMonitor(
-            name="delete_health_monitor_" + health_mon,
-            requires=[constants.HEALTH_MON, a10constants.VTHUNDER],
-            rebind={constants.HEALTH_MON: health_mon}))
-        return delete_hm_vthunder_cascade_subflow

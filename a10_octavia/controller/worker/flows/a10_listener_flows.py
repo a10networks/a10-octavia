@@ -63,17 +63,20 @@ class ListenerFlows(object):
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 
-    def handle_ssl_cert_flow(self, flow_type='create'):
+    def handle_ssl_cert_flow(self, flow_type='create', listener_name=constants.LISTENER):
         if flow_type == 'create':
             configure_ssl = self.get_ssl_certificate_create_flow()
         elif flow_type == 'update':
             configure_ssl = self.get_ssl_certificate_update_flow()
         else:
-            configure_ssl = self.get_ssl_certificate_delete_flow()
+            configure_ssl = self.get_ssl_certificate_delete_flow(listener_name)
 
         configure_ssl_flow = graph_flow.Flow(
             a10constants.LISTENER_TYPE_DECIDER_FLOW)
-        check_ssl = cert_tasks.CheckListenerType(requires=constants.LISTENER)
+        check_ssl = cert_tasks.CheckListenerType(
+            name='check_listener_type_' + listener_name,
+            requires=constants.LISTENER,
+            rebind={constants.LISTENER: listener_name})
         configure_ssl_flow.add(check_ssl, configure_ssl)
         configure_ssl_flow.link(check_ssl, configure_ssl,
                                 decider=self._check_ssl_data, decider_depth='flow')
@@ -114,7 +117,8 @@ class ListenerFlows(object):
         :returns: The flow for deleting a listener
         """
         delete_listener_flow = linear_flow.Flow(constants.DELETE_LISTENER_FLOW)
-        delete_listener_flow.add(self.handle_cascade_delete_ssl_cert_flow(listener_name))
+        delete_listener_flow.add(self.handle_ssl_cert_flow(
+            flow_type='delete', listener_name=listener_name))
         if compute_flag:
             delete_listener_flow.add(network_tasks.UpdateVIPForDelete(
                 name='delete_update_vip_' + listener_name,
@@ -224,17 +228,22 @@ class ListenerFlows(object):
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         return create_ssl_cert_flow
 
-    def get_ssl_certificate_delete_flow(self):
+    def get_ssl_certificate_delete_flow(self, listener):
         delete_ssl_cert_flow = linear_flow.Flow(
             a10constants.DELETE_SSL_CERT_FLOW)
         delete_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
+            name='get_ssl_cert_data_' + listener,
             requires=[constants.LOADBALANCER, constants.LISTENER],
+            rebind={constants.LISTENER: listener},
             provides=a10constants.CERT_DATA))
         delete_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateDelete(
+            name='client_ssl_template_delete_' + listener,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         delete_ssl_cert_flow.add(cert_tasks.SSLCertDelete(
+            name='ssl_cert_delete_' + listener,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         delete_ssl_cert_flow.add(cert_tasks.SSLKeyDelete(
+            name='ssl_key_delete_' + listener,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         return delete_ssl_cert_flow
 
@@ -251,36 +260,3 @@ class ListenerFlows(object):
         update_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateUpdate(
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         return update_ssl_cert_flow
-
-    def get_cascade_delete_ssl_certificate_flow(self, listener_name):
-        delete_ssl_cert_flow = linear_flow.Flow(
-            a10constants.DELETE_SSL_CERT_FLOW)
-        delete_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
-            name='delete_update_vip_1' + listener_name,
-            requires=[constants.LOADBALANCER, constants.LISTENER],
-            rebind={constants.LISTENER: listener_name},
-            provides=a10constants.CERT_DATA))
-        delete_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateDelete(
-            name='delete_update_vip_2' + listener_name,
-            requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
-        delete_ssl_cert_flow.add(cert_tasks.SSLCertDelete(
-            name='delete_update_vip_3' + listener_name,
-            requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
-        delete_ssl_cert_flow.add(cert_tasks.SSLKeyDelete(
-            name='delete_update_vip_4' + listener_name,
-            requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
-        return delete_ssl_cert_flow
-
-    def handle_cascade_delete_ssl_cert_flow(self, listener_name):
-        configure_ssl = self.get_cascade_delete_ssl_certificate_flow(listener_name)
-
-        configure_ssl_flow = graph_flow.Flow(
-            a10constants.LISTENER_TYPE_DECIDER_FLOW)
-        check_ssl = cert_tasks.CheckListenerType(
-            name='check_listener_type_' + listener_name,
-            requires=constants.LISTENER,
-            rebind={constants.LISTENER: listener_name})
-        configure_ssl_flow.add(check_ssl, configure_ssl)
-        configure_ssl_flow.link(check_ssl, configure_ssl,
-                                decider=self._check_ssl_data, decider_depth='flow')
-        return configure_ssl_flow

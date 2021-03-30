@@ -118,8 +118,12 @@ class PoolFlows(object):
         delete_hm_vthunder_subflow = linear_flow.Flow(
             a10constants.DELETE_HEALTH_MONITOR_SUBFLOW_WITH_POOL_DELETE_FLOW)
         if health_mon:
-            delete_hm_vthunder_subflow.add(
-                self.hm_flow.get_delete_health_monitor_vthunder_subflow())
+            if isinstance(health_mon, basestring):
+                delete_hm_vthunder_subflow.add(
+                        self.hm_flow.get_delete_health_monitor_vthunder_subflow(health_mon))
+            else:
+                delete_hm_vthunder_subflow.add(
+                        self.hm_flow.get_delete_health_monitor_vthunder_subflow())
         return delete_hm_vthunder_subflow
 
     def _get_delete_member_vthunder_subflow(self, members, store):
@@ -190,7 +194,8 @@ class PoolFlows(object):
         """
         return history[history.keys()[0]].session_persistence is not None
 
-    def get_cascade_delete_pool_internal_flow(self, pool_name, members, pool_listener_name, health_mon):
+    def get_cascade_delete_pool_internal_flow(
+            self, pool_name, members, pool_listener_name, health_mon):
         """Create a flow to delete a pool, etc.
         :returns: The flow for deleting a pool
         """
@@ -219,7 +224,7 @@ class PoolFlows(object):
             name='delete_model_object_' + pool_name,
             rebind={constants.OBJECT: pool_name}))
         # Delete pool children
-        delete_pool_flow.add(self._get_cascade_delete_health_monitor_vthunder_subflow(health_mon))
+        delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon))
         (members_delete, member_store) = self._get_cascade_delete_member_vthunder_subflow(
             members, pool_name)
         store.update(member_store)
@@ -247,14 +252,6 @@ class PoolFlows(object):
             member_name = 'member' + member.id
             store[member_name] = member
             delete_member_vthunder_cascade_subflow.add(
-                self.member_flow.get_cascade_delete_member_vthunder_internal_subflow(
+                self.member_flow.get_delete_member_vthunder_internal_subflow(
                     member_name, pool))
         return (delete_member_vthunder_cascade_subflow, store)
-
-    def _get_cascade_delete_health_monitor_vthunder_subflow(self, health_mon):
-        delete_hm_vthunder_cascade_subflow = linear_flow.Flow(
-            a10constants.DELETE_HEALTH_MONITOR_SUBFLOW_WITH_POOL_DELETE_FLOW)
-        if health_mon:
-            delete_hm_vthunder_cascade_subflow.add(
-                self.hm_flow.get_cascade_delete_health_monitor_vthunder_subflow(health_mon))
-        return delete_hm_vthunder_cascade_subflow
