@@ -62,7 +62,8 @@ class CreateAndAssociateHealthMonitor(task.Task):
             raise exceptions.ProviderUnsupportedOptionError(
                 prov="A10",
                 user_msg=("Failed to create health monitor {}, A health monitor of type "
-                          "{} is not supported by A10 provider").format(health_mon.id, health_mon.type))
+                          "{} is not supported by A10 provider"
+                          ).format(health_mon.id, health_mon.type))
 
         try:
             post_data = CONF.health_monitor.post_data

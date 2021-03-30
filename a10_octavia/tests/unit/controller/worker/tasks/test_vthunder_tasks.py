@@ -705,7 +705,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.reload_reboot_for_interface_detachment.assert_called_with(
             "5.2.1")
 
-    def test_AmphoraePostNetworkUnplug_execute_for_reload_reboot(self):
+    def test_AmphoraePostNetworkUnplug_execute_for_no_reload_reboot(self):
         thunder = copy.deepcopy(VTHUNDER)
         added_ports = {'amphora_id': ''}
         mock_task = task.AmphoraePostNetworkUnplug()
