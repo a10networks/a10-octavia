@@ -118,12 +118,12 @@ class PoolFlows(object):
         delete_hm_vthunder_subflow = linear_flow.Flow(
             a10constants.DELETE_HEALTH_MONITOR_SUBFLOW_WITH_POOL_DELETE_FLOW)
         if health_mon:
-            if isinstance(health_mon, basestring):
+            if isinstance(health_mon, unicode):
                 delete_hm_vthunder_subflow.add(
-                        self.hm_flow.get_delete_health_monitor_vthunder_subflow(health_mon))
+                    self.hm_flow.get_delete_health_monitor_vthunder_subflow(health_mon))
             else:
                 delete_hm_vthunder_subflow.add(
-                        self.hm_flow.get_delete_health_monitor_vthunder_subflow())
+                    self.hm_flow.get_delete_health_monitor_vthunder_subflow())
         return delete_hm_vthunder_subflow
 
     def _get_delete_member_vthunder_subflow(self, members, store):

@@ -191,9 +191,6 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
             requires=(constants.LOADBALANCER,
                       a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
-#        if cascade:
-#            (pools_listeners_delete, store) = self._get_cascade_delete_pools_listeners_flow(lb)
-#            delete_LB_flow.add(pools_listeners_delete)
         delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
         if CONF.a10_global.network_type == 'vlan':
             delete_LB_flow.add(
@@ -557,8 +554,7 @@ class LoadBalancerFlows(object):
                 l7policy_name = 'l7policy_' + l7policy.id
                 store[l7policy_name] = l7policy
                 l7policy_delete_flow.add(
-                        self._l7policy_flows.get_cascade_delete_l7policy_internal_flow(
-                            l7policy_name))
+                    self._l7policy_flows.get_cascade_delete_l7policy_internal_flow(l7policy_name))
             listener_name = 'listener_' + listener.id
             store[listener_name] = listener
             pools_listeners_delete_flow.add(
