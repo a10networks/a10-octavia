@@ -713,3 +713,14 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.execute(added_ports, LB, thunder)
         self.client_mock.system.action.write_memory.assert_not_called()
         self.client_mock.system.action.reload_reboot_for_interface_detachment.assert_not_called()
+
+    def test_AmphoraePostNetworkUnplug_amophora_not_available(self):
+        mock_thunder = copy.deepcopy(VTHUNDER)
+        mock_LB = copy.deepcopy(LB)
+        mock_LB.amphorae = []
+        added_ports = {}
+        mock_task = task.AmphoraePostNetworkUnplug()
+        mock_task.axapi_client = self.client_mock
+        mock_task.execute(added_ports, mock_LB, mock_thunder)
+        self.client_mock.system.action.write_memory.assert_not_called()
+        self.client_mock.system.action.reload_reboot_for_interface_detachment.assert_not_called()
