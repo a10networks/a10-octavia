@@ -188,9 +188,6 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.LB_COUNT))
-        delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
-            requires=(constants.LOADBALANCER,
-                      a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
         delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
         if CONF.a10_global.network_type == 'vlan':
             delete_LB_flow.add(
@@ -223,6 +220,9 @@ class LoadBalancerFlows(object):
                     requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
+        delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
+            requires=(constants.LOADBALANCER,
+                      a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
         if deleteCompute:
             delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
                 requires=constants.LOADBALANCER))
@@ -523,7 +523,7 @@ class LoadBalancerFlows(object):
         :return: (flow, store) -- flow for the deletion and store with all
                   the listeners/pools stored properly
         """
-        pools_listeners_delete_flow = unordered_flow.Flow('pool_listener_delete_flow')
+        pools_listeners_delete_flow = linear_flow.Flow('pool_listener_delete_flow')
         store = {}
         # loop fo loadbalancer's pool deletion
         for pool in lb.pools:
@@ -547,6 +547,7 @@ class LoadBalancerFlows(object):
             pools_listeners_delete_flow.add(pool_delete)
 
         # loop for loadbalancer's listener deletion
+        listeners_delete_flow = unordered_flow.Flow('listener_delete_flow')
         compute_flag = lb.amphorae
         for listener in lb.listeners:
             l7policy_delete_flow = linear_flow.Flow('l7policy_delete_flow')
@@ -555,9 +556,11 @@ class LoadBalancerFlows(object):
                 store[l7policy_name] = l7policy
                 l7policy_delete_flow.add(
                     self._l7policy_flows.get_cascade_delete_l7policy_internal_flow(l7policy_name))
+            listeners_delete_flow.add(l7policy_delete_flow)
             listener_name = 'listener_' + listener.id
             store[listener_name] = listener
-            pools_listeners_delete_flow.add(
+            listeners_delete_flow.add(
                 self._listener_flows.get_cascade_delete_listener_internal_flow(
                     listener_name, compute_flag))
+        pools_listeners_delete_flow.add(listeners_delete_flow)
         return (pools_listeners_delete_flow, store)
