@@ -79,7 +79,7 @@ def axapi_client_decorator_for_revert(func):
                 else:
                     if vthunder.partition_name != "shared":
                         activate_partition(self.axapi_client, vthunder.partition_name)
-            except Exception as e:
+            except Exception:
                 pass
 
         else:
