@@ -47,7 +47,7 @@ class VThunder(base_models.BASE):
     created_at = sa.Column(u'created_at', sa.DateTime(), nullable=True)
     updated_at = sa.Column(u'updated_at', sa.DateTime(), nullable=True)
     partition_name = sa.Column(sa.String(14), default='shared', nullable=False)
-    hierarchical_multitenancy = sa.Column(sa.String(7), nullable=False)
+    hierarchical_multitenancy = sa.Column(sa.String(7), default='disable', nullable=False)
     last_write_mem = sa.Column(u'last_write_mem', sa.DateTime(), nullable=True)
     acos_version = sa.Column(sa.String(36), nullable=True)
 

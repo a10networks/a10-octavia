@@ -1,8 +1,8 @@
-"""Set 'shared' as the default partition name
+"""Added defaults for non-nullable tables
 
-Revision ID: b308634a5069
+Revision ID: a3c90b57952d
 Revises: 34a0d811941d
-Create Date: 2021-03-30 23:42:36.559792
+Create Date: 2021-03-31 23:10:50.297427
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
-revision = 'b308634a5069'
+revision = 'a3c90b57952d'
 down_revision = '34a0d811941d'
 branch_labels = None
 depends_on = None
