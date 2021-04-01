@@ -19,6 +19,7 @@ from taskflow import task
 import acos_client.errors as acos_errors
 
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 
 LOG = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class NatPoolCreate(task.Task):
                                   vthunder.ip_address)
                     raise e
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, loadbalancer, vthunder, flavor_data=None, *args, **kwargs):
         if flavor_data:
             natpool_flavor_list = flavor_data.get('nat_pool_list')

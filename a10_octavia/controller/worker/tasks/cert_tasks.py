@@ -21,6 +21,7 @@ from taskflow import task
 from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
 
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks import utils
 
 LOG = logging.getLogger(__name__)
@@ -75,7 +76,7 @@ class SSLCertCreate(task.Task):
             LOG.exception("Failed to create SSL certificate: %s", cert_data.cert_filename)
             raise e
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, cert_data, vthunder, *args, **kwargs):
         try:
             LOG.warning("Reverting creation of SSL certificate: %s", cert_data.cert_filename)
@@ -110,7 +111,7 @@ class SSLKeyCreate(task.Task):
             LOG.exception("Failed to create SSL key: %s", cert_data.key_filename)
             raise e
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, cert_data, vthunder, *args, **kwargs):
         try:
             LOG.warning("Reverting creation of SSL key: %s", cert_data.key_filename)
@@ -144,7 +145,7 @@ class ClientSSLTemplateCreate(task.Task):
             LOG.exception("Failed to create SSL template: %s", cert_data.template_name)
             raise e
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, cert_data, vthunder, *args, **kwargs):
         try:
             LOG.warning("Reverting creation of SSL template: %s", cert_data.template_name)

@@ -63,6 +63,41 @@ def axapi_client_decorator(func):
     return wrapper
 
 
+def axapi_client_decorator_for_revert(func):
+    def wrapper(self, *args, **kwargs):
+        vthunder = kwargs.get('vthunder')
+        use_shared_partition = kwargs.get('write_mem_shared_part', False)
+        if vthunder:
+            api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+            self.axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
+                                                   vthunder.username, vthunder.password,
+                                                   timeout=30)
+
+            try:
+                if use_shared_partition or vthunder.partition_name == 'shared':
+                    activate_partition(self.axapi_client, "shared")
+                else:
+                    if vthunder.partition_name != "shared":
+                        activate_partition(self.axapi_client, vthunder.partition_name)
+            except Exception as e:
+                pass
+
+        else:
+            self.axapi_client = None
+        result = func(self, *args, **kwargs)
+
+        try:
+            self.axapi_client.session.close()
+        except ConnectionError as e:
+            LOG.debug("Failed to close the vThunder session: %s", str(e))
+        except AttributeError:
+            pass
+
+        return result
+
+    return wrapper
+
+
 def device_context_switch_decorator(func):
     def wrapper(self, *args, **kwargs):
         master_device_id = kwargs.get('master_device_id')
