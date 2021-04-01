@@ -380,7 +380,8 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
         query = session.query(self.model_class).filter(
             self.model_class.project_id == project_id).filter(
             or_(self.model_class.provisioning_status == "ACTIVE",
-                self.model_class.provisioning_status == "PENDING_UPDATE"))
+                self.model_class.provisioning_status == "PENDING_UPDATE",
+                self.model_class.provisioning_status == "PENDING_CREATE"))
 
         model_list = query.all()
         for data in model_list:

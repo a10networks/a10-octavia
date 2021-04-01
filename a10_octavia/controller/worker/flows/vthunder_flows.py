@@ -130,15 +130,6 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.RELOADLOAD_BALANCER,
             requires=constants.LOADBALANCER_ID,
             provides=constants.LOADBALANCER))
-        create_amp_for_lb_subflow.add(a10_network_tasks.AllocateVIP(
-            name=sf_name + '-' + a10constants.ALLOCATE_VIP,
-            requires=constants.LOADBALANCER,
-            provides=constants.VIP))
-        create_amp_for_lb_subflow.add(database_tasks.UpdateVIPAfterAllocation(
-            name=sf_name + '-' + a10constants.UPDATE_VIP_AFTER_ALLOCATION,
-            requires=(constants.LOADBALANCER_ID, constants.VIP),
-            provides=constants.LOADBALANCER))
-
         require_server_group_id_condition = (
             role in (constants.ROLE_BACKUP, constants.ROLE_MASTER) and
             CONF.a10_nova.enable_anti_affinity)

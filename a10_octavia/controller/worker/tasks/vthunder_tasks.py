@@ -100,18 +100,10 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
     """Task to reboot and configure vThunder device"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, vthunder):
+    def execute(self, loadbalancer, vthunder, added_ports):
         """Execute get_info routine for a vThunder until it responds."""
-        vthunder = self.vthunder_repo.get_vthunder_by_project_id_and_role(db_apis.get_session(),
-                                                                          loadbalancer.project_id,
-                                                                          vthunder.role)
-        lb_exists_flag = False
-        if vthunder:
-            lb_exists_flag = self.loadbalancer_repo.check_lb_with_distinct_subnet_and_project(
-                db_apis.get_session(),
-                loadbalancer.project_id,
-                loadbalancer.vip.subnet_id)
-        if lb_exists_flag:
+        amphora_id = loadbalancer.amphorae[0].id
+        if len(added_ports[amphora_id]) > 0:
             try:
                 self.axapi_client.system.action.write_memory()
                 self.axapi_client.system.action.reload_reboot_for_interface_attachment(
@@ -151,18 +143,36 @@ class EnableInterface(VThunderBaseTask):
     """Task to configure vThunder ports"""
 
     @axapi_client_decorator
-    def execute(self, vthunder):
-        if vthunder.topology == "STANDALONE":
-            try:
+    def execute(self, vthunder, loadbalancer, ifnum_master=None, ifnum_backup=None):
+        vthunders = self.vthunder_repo.get_vthunder_by_project_id_and_role(db_apis.get_session(),
+                                                                           loadbalancer.project_id,
+                                                                           vthunder.role)
+        lb_exists_flag = False
+        if vthunders:
+            lb_exists_flag = self.loadbalancer_repo.check_lb_with_distinct_subnet_and_project(
+                db_apis.get_session(),
+                loadbalancer.project_id,
+                loadbalancer.vip.subnet_id)
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+        try:
+            if not lb_exists_flag or topology == "SINGLE":
                 interfaces = self.axapi_client.interface.get_list()
                 for i in range(len(interfaces['interface']['ethernet-list'])):
                     if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
                         ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                         self.axapi_client.system.action.setInterface(ifnum)
                 LOG.debug("Configured the ethernet interface for vThunder: %s", vthunder.id)
-            except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
-                LOG.exception("Failed to configure ethernet interface vThunder: %s", str(e))
-                raise e
+            if ifnum_master:
+                self.axapi_client.system.action.setInterface(ifnum_master)
+                LOG.debug("Configured the ethernet interface for master vThunder: %s", vthunder.id)
+            # elif ifnum_backup:
+                # TODO: swiching device context to vBlade device to enable its interfaces
+                # self.axapi_client.device_context.switch(2, None)
+                # self.axapi_client.system.action.setInterface(ifnum_backup)
+                # LOG.debug("Configured the ethernet interface for bbackup vThunder: %s", vthunder.id)
+        except(acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+            LOG.exception("Failed to configure ethernet interface vThunder: %s", str(e))
+            raise e
 
 
 class EnableInterfaceForMembers(VThunderBaseTask):
@@ -988,23 +998,4 @@ class GetVThunderInterface(VThunderBaseTask):
             return vthunder, ifnum_master, ifnum_backup
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to fetch ethernet interface Backup vThunder: %s", str(e))
-            raise e
-
-
-class EnableInterfaceForActiveStandbyVThunder(VThunderBaseTask):
-    """Task to enable interface of master and backup vThunders"""
-
-    @axapi_client_decorator
-    def execute(self, vthunder, ifnum_master, ifnum_backup):
-        try:
-            if ifnum_master:
-                self.axapi_client.system.action.setInterface(ifnum_master)
-                LOG.debug("Configured the ethernet interface for master vThunder: %s", vthunder.id)
-            # elif ifnum_backup:
-                # TODO: swiching device context to vBlade device to enable its interfaces
-                # self.axapi_client.device_context.switch(2, None)
-                # self.axapi_client.system.action.setInterface(ifnum_backup)
-                # LOG.debug("Configured the ethernet interface for bbackup vThunder: %s", vthunder.id)
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
-            LOG.exception("Failed to configure ethernet interface on vThunder: %s", str(e))
             raise e
