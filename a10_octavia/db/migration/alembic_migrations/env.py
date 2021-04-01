@@ -9,13 +9,17 @@ from alembic import context
 from a10_octavia import a10_config
 from a10_octavia.db import base_models
 
-# These must be imported for autogen to work. DO NOT DELETE!
+# ===========================================================
+#                    DO NOT DELETE THIS CODE!!!
+#
+# The below code is required for autogeneration to work
+# ===========================================================
 from a10_octavia.db.models import VThunder, NATPool, VRID
 VALID_AUOTGEN_TABLE_NAMES = ('vthunders', 'nat_pool', 'vrid')
+# ===========================================================
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
-
 VERSION_TABLE = 'alembic_version_a10'
 
 config = context.config
