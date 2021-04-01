@@ -630,7 +630,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         task_function = task.HandleACOSPartitionChange().execute
         self.assertRaises(expected_error, task_function, mock_thunder)
 
-    def test_AmphoraPostVipPlug_execute_for_reload_reboot(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.time')
+    def test_AmphoraPostVipPlug_execute_for_reload_reboot(self, mock_time):
         thunder = copy.deepcopy(VTHUNDER)
         mock_task = task.AmphoraePostVIPPlug()
         mock_task.axapi_client = self.client_mock
@@ -644,7 +645,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.reload_reboot_for_interface_attachment.assert_called_with(
             vthunder.acos_version)
 
-    def test_AmphoraPostVipPlug_execute_for_no_reload_reboot(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.time')
+    def test_AmphoraPostVipPlug_execute_for_no_reload_reboot(self, mock_time):
         thunder = copy.deepcopy(VTHUNDER)
         mock_task = task.AmphoraePostVIPPlug()
         mock_task.axapi_client = self.client_mock
@@ -674,7 +676,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.execute(thunder, LB)
         mock_task.axapi_client.system.action.get_acos_version.assert_not_called()
 
-    def test_AmphoraePostMemberNetworkPlug_execute_for_reload_reboot(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.time')
+    def test_AmphoraePostMemberNetworkPlug_execute_for_reload_reboot(self, mock_time):
         thunder = copy.deepcopy(VTHUNDER)
         thunder.acos_version = "5.2.1"
         added_ports = {'amphora_id': '123'}
@@ -685,7 +688,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.reload_reboot_for_interface_attachment.assert_called_with(
             "5.2.1")
 
-    def test_AmphoraePostMemberNetworkPlug_execute_for_no_reload_reboot(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.time')
+    def test_AmphoraePostMemberNetworkPlug_execute_for_no_reload_reboot(self, mock_time):
         thunder = copy.deepcopy(VTHUNDER)
         thunder.acos_version = "5.2.1"
         added_ports = {'amphora_id': ''}
@@ -695,7 +699,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.write_memory.assert_not_called()
         self.client_mock.system.action.reload_reboot_for_interface_attachment.assert_not_called()
 
-    def test_AmphoraePostNetworkUnplug_execute_for_reload_reboot(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.time')
+    def test_AmphoraePostNetworkUnplug_execute_for_reload_reboot(self, mock_time):
         thunder = copy.deepcopy(VTHUNDER)
         added_ports = {'amphora_id': '123'}
         mock_task = task.AmphoraePostNetworkUnplug()
@@ -705,7 +710,9 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.reload_reboot_for_interface_detachment.assert_called_with(
             "5.2.1")
 
-    def test_AmphoraePostNetworkUnplug_execute_for_no_reload_reboot(self):
+
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.time')
+    def test_AmphoraePostNetworkUnplug_execute_no_port_no_verion_no_reload_reboot(self, mock_time):
         thunder = copy.deepcopy(VTHUNDER)
         added_ports = {'amphora_id': ''}
         mock_task = task.AmphoraePostNetworkUnplug()
