@@ -710,7 +710,6 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.reload_reboot_for_interface_detachment.assert_called_with(
             "5.2.1")
 
-
     @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.time')
     def test_AmphoraePostNetworkUnplug_execute_no_port_no_verion_no_reload_reboot(self, mock_time):
         thunder = copy.deepcopy(VTHUNDER)
