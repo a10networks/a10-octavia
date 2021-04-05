@@ -287,7 +287,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                  constants.VIP: lb.vip,
                  constants.BUILD_TYPE_PRIORITY:
                  constants.LB_CREATE_NORMAL_PRIORITY,
-                 constants.FLAVOR: flavor}
+                 constants.FLAVOR: flavor,
+                 constants.AMPS_DATA: []}
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
