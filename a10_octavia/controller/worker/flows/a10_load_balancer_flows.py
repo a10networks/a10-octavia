@@ -293,7 +293,7 @@ class LoadBalancerFlows(object):
             name=a10constants.GET_VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        if vthunder:
+        if vthunder and topology == constants.TOPOLOGY_SINGLE:
             new_LB_net_subflow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.LOADBALANCERS_LIST))
@@ -337,8 +337,20 @@ class LoadBalancerFlows(object):
                 requires=constants.LOADBALANCER,
                 provides=a10constants.BACKUP_VTHUNDER))
             if vthunder:
+                new_LB_net_subflow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
+                    requires=a10constants.VTHUNDER,
+                    provides=a10constants.LOADBALANCERS_LIST))
+                new_LB_net_subflow.add(a10_network_tasks.CalculateDelta(
+                    requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
+                    provides=constants.DELTAS))
+                new_LB_net_subflow.add(a10_network_tasks.HandleNetworkDeltas(
+                    requires=constants.DELTAS, provides=constants.ADDED_PORTS))
                 new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
-                    name=a10constants.AMP_POST_VIP_PLUG,
+                    name=a10constants.AMPHORAE_POST_VIP_PLUG_FOR_MASTER,
+                    requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                              constants.ADDED_PORTS)))
+                new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
+                    name=a10constants.AMPHORAE_POST_VIP_PLUG_FOR_BACKUP,
                     requires=(constants.LOADBALANCER, constants.ADDED_PORTS),
                     rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
                 new_LB_net_subflow.add(
@@ -354,18 +366,55 @@ class LoadBalancerFlows(object):
                 new_LB_net_subflow.add(vthunder_tasks.GetVThunderInterface(
                     name=a10constants.GET_MASTER_VTHUNDER_INTERFACE,
                     requires=a10constants.VTHUNDER,
-                    provides=(a10constants.VTHUNDER, a10constants.IFNUM_MASTER,
-                              a10constants.IFNUM_BACKUP)))
+                    provides=(a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
                 new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
                     name=a10constants.MASTER_ENABLE_INTERFACE,
                     requires=(a10constants.VTHUNDER, constants.LOADBALANCER,
                               a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP,
                               constants.ADDED_PORTS)))
+                new_LB_net_subflow.add(vthunder_tasks.VCSReload(
+                    name=a10constants.VCS_RELOAD,
+                    requires=(a10constants.VTHUNDER)))
+                new_LB_net_subflow.add(
+                    vthunder_tasks.VThunderComputeConnectivityWait(
+                        name=a10constants.WAIT_FOR_MASTER_VCS_RELOAD,
+                        requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+                new_LB_net_subflow.add(
+                    vthunder_tasks.VThunderComputeConnectivityWait(
+                        name=a10constants.WAIT_FOR_BACKUP_VCS_RELOAD,
+                        rebind={
+                            a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                        requires=constants.AMPHORA))
+                new_LB_net_subflow.add(vthunder_tasks.GetBackupVThunder(
+                    name=a10constants.GET_BACKUP_VTHUNDER,
+                    requires=a10constants.VTHUNDER,
+                    provides=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.GetVThunderInterface(
                     name=a10constants.GET_BACKUP_VTHUNDER_INTERFACE,
-                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-                    provides=(a10constants.VTHUNDER, a10constants.IFNUM_MASTER,
-                              a10constants.IFNUM_BACKUP)))
+                    requires=a10constants.VTHUNDER,
+                    provides=(a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
+                new_LB_net_subflow.add(vthunder_tasks.GetMasterVThunder(
+                    name=a10constants.GET_MASTER_VTHUNDER,
+                    requires=a10constants.VTHUNDER,
+                    provides=a10constants.VTHUNDER))
+                new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
+                    name=a10constants.AMP_POST_VIP_PLUG,
+                    requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                              constants.ADDED_PORTS)))
+                new_LB_net_subflow.add(
+                    vthunder_tasks.VThunderComputeConnectivityWait(
+                        name=a10constants.CONNECTIVITY_WAIT_FOR_MASTER_VTHUNDER,
+                        requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+                new_LB_net_subflow.add(
+                    vthunder_tasks.VThunderComputeConnectivityWait(
+                        name=a10constants.CONNECTIVITY_WAIT_FOR_BACKUP_VTHUNDER,
+                        rebind={
+                            a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                        requires=constants.AMPHORA))
+                new_LB_net_subflow.add(vthunder_tasks.GetMasterVThunder(
+                    name=a10constants.GET_VTHUNDER_MASTER,
+                    requires=a10constants.VTHUNDER,
+                    provides=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
                     name=a10constants.BACKUP_ENABLE_INTERFACE,
                     requires=(a10constants.VTHUNDER, constants.LOADBALANCER,
