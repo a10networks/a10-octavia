@@ -238,6 +238,10 @@ class LoadBalancerFlows(object):
                         name=a10constants.BACKUP_CONNECTIVITY_WAIT,
                         rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                         requires=constants.AMPHORA))
+                delete_LB_flow.add(vthunder_tasks.GetMasterVThunder(
+                    name=a10constants.GET_VTHUNDER_MASTER,
+                    requires=a10constants.VTHUNDER,
+                    provides=a10constants.VTHUNDER))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         if deleteCompute:

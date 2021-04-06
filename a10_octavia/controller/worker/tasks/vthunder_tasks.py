@@ -103,7 +103,7 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
     def execute(self, loadbalancer, vthunder, added_ports):
         """Execute get_info routine for a vThunder until it responds."""
         amphora_id = loadbalancer.amphorae[0].id
-        if len(added_ports[amphora_id]) > 0:
+        if added_ports and len(added_ports[amphora_id]) > 0:
             try:
                 self.axapi_client.system.action.write_memory()
                 self.axapi_client.system.action.reload_reboot_for_interface_attachment(
@@ -149,18 +149,14 @@ class EnableInterface(VThunderBaseTask):
         compute_id = loadbalancer.amphorae[0].compute_id
         network_driver = utils.get_network_driver()
         nics = network_driver.get_plugged_networks(compute_id)
-        vthunders = self.vthunder_repo.get_vthunder_by_project_id_and_role(db_apis.get_session(),
-                                                                           loadbalancer.project_id,
-                                                                           vthunder.role)
-        lb_exists_flag = False
-        if vthunders:
-            lb_exists_flag = self.loadbalancer_repo.check_lb_with_distinct_subnet_and_project(
-                db_apis.get_session(),
-                loadbalancer.project_id,
-                loadbalancer.vip.subnet_id)
+        lb_exists_flag = self.loadbalancer_repo.check_lb_exists_in_project(
+            db_apis.get_session(),
+            loadbalancer.project_id)
+
         if not lb_exists_flag:
             added_ports[amphora_id] = []
             added_ports[amphora_id].append(nics[1])
+
         try:
             if added_ports and len(added_ports[amphora_id]) > 0:
                 if (not lb_exists_flag and topology == "ACTIVE_STANDBY") or topology == "SINGLE":
