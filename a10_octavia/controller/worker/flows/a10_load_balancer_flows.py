@@ -29,6 +29,9 @@ from octavia.controller.worker.tasks import lifecycle_tasks
 from octavia.controller.worker.tasks import network_tasks
 
 from a10_octavia.common import a10constants
+from a10_octavia.controller.worker.flows import a10_l7policy_flows
+from a10_octavia.controller.worker.flows import a10_listener_flows
+from a10_octavia.controller.worker.flows import a10_pool_flows
 from a10_octavia.controller.worker.flows import vthunder_flows
 from a10_octavia.controller.worker.tasks import a10_compute_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
@@ -50,6 +53,9 @@ class LoadBalancerFlows(object):
         self.pool_flows = pool_flows.PoolFlows()
         self.member_flows = member_flows.MemberFlows()
         self.vthunder_flows = vthunder_flows.VThunderFlows()
+        self._listener_flows = a10_listener_flows.ListenerFlows()
+        self._l7policy_flows = a10_l7policy_flows.L7PolicyFlows()
+        self._pool_flows = a10_pool_flows.PoolFlows()
 
     def get_create_load_balancer_flow(self, topology, listeners=None):
         """Flow to create a load balancer"""
@@ -153,7 +159,7 @@ class LoadBalancerFlows(object):
                 requires=constants.LOADBALANCER))
         return post_create_lb_flow
 
-    def get_delete_load_balancer_flow(self, lb, deleteCompute):
+    def get_delete_load_balancer_flow(self, lb, deleteCompute, cascade):
         """Flow to delete load balancer"""
 
         store = {}
@@ -173,15 +179,15 @@ class LoadBalancerFlows(object):
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
             requires=constants.LOADBALANCER))
+        if cascade:
+            (pools_listeners_delete, store) = self._get_cascade_delete_pools_listeners_flow(lb)
+            delete_LB_flow.add(pools_listeners_delete)
         delete_LB_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR_DATA))
         delete_LB_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.LB_COUNT))
-        delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
-            requires=(constants.LOADBALANCER,
-                      a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
         delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
         if CONF.a10_global.network_type == 'vlan':
             delete_LB_flow.add(
@@ -214,6 +220,9 @@ class LoadBalancerFlows(object):
                     requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
+        delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
+            requires=(constants.LOADBALANCER,
+                      a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
         if deleteCompute:
             delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
                 requires=constants.LOADBALANCER))
@@ -505,3 +514,53 @@ class LoadBalancerFlows(object):
             requires=[a10constants.VRID, a10constants.DELETE_VRID]))
 
         return delete_lb_vrid_subflow
+
+    def _get_cascade_delete_pools_listeners_flow(self, lb):
+        """Sets up an internal delete flow
+        Because task flow doesn't support loops we store each pool
+        and listener we want to delete in the store part and then rebind
+        :param lb: load balancer
+        :return: (flow, store) -- flow for the deletion and store with all
+                  the listeners/pools stored properly
+        """
+        pools_listeners_delete_flow = linear_flow.Flow('pool_listener_delete_flow')
+        store = {}
+        # loop fo loadbalancer's pool deletion
+        for pool in lb.pools:
+            pool_name = 'pool' + pool.id
+            members = pool.members
+            store[pool_name] = pool
+            listeners = pool.listeners
+            default_listener = None
+            pool_listener_name = 'pool_listener' + pool.id
+            if listeners:
+                default_listener = pool.listeners[0]
+            store[pool_listener_name] = default_listener
+            health_mon = None
+            health_monitor = pool.health_monitor
+            if health_monitor is not None:
+                health_mon = 'health_mon' + health_monitor.id
+                store[health_mon] = health_monitor
+            (pool_delete, pool_store) = self._pool_flows.get_cascade_delete_pool_internal_flow(
+                pool_name, members, pool_listener_name, health_mon)
+            store.update(pool_store)
+            pools_listeners_delete_flow.add(pool_delete)
+
+        # loop for loadbalancer's listener deletion
+        listeners_delete_flow = unordered_flow.Flow('listener_delete_flow')
+        compute_flag = lb.amphorae
+        for listener in lb.listeners:
+            l7policy_delete_flow = linear_flow.Flow('l7policy_delete_flow')
+            for l7policy in listener.l7policies:
+                l7policy_name = 'l7policy_' + l7policy.id
+                store[l7policy_name] = l7policy
+                l7policy_delete_flow.add(
+                    self._l7policy_flows.get_cascade_delete_l7policy_internal_flow(l7policy_name))
+            listeners_delete_flow.add(l7policy_delete_flow)
+            listener_name = 'listener_' + listener.id
+            store[listener_name] = listener
+            listeners_delete_flow.add(
+                self._listener_flows.get_cascade_delete_listener_internal_flow(
+                    listener_name, compute_flag))
+        pools_listeners_delete_flow.add(listeners_delete_flow)
+        return (pools_listeners_delete_flow, store)
