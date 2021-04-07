@@ -117,8 +117,9 @@ class DeleteL7Policy(task.Task):
         c_pers, s_pers = utils.get_sess_pers_templates(
             listener.default_pool)
         kargs = {}
-        listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
-                                                                     listener.protocol)
+        if not (listener.protocol).islower():
+            listener.protocol = openstack_mappings.virtual_port_protocol(
+                self.axapi_client, listener.protocol)
         try:
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.id,
