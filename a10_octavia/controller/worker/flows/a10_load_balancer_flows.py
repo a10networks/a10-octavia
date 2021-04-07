@@ -512,7 +512,7 @@ class LoadBalancerFlows(object):
         post_amp_prefix = constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
         lb_create_flow.add(
             self.get_post_lb_rack_vthunder_association_flow(
-                post_amp_prefix, load_balancer_id, topology, mark_active=(not listeners)))
+                post_amp_prefix, topology, mark_active=(not listeners)))
         lb_create_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR_DATA))

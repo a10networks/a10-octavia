@@ -771,7 +771,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         thunder.topology = "SINGLE"
         mock_task = task.EnableInterface()
         mock_task.loadbalancer_repo = mock.MagicMock()
-        mock_task.loadbalancer_repo.check_lb_with_distinct_subnet_and_project.return_value = True
+        mock_task.loadbalancer_repo.check_lb_exists_in_project.return_value = True
         mock_task.axapi_client = self.client_mock
         self.client_mock.interface.get_list.return_value = INTERFACES
         mock_task.execute(thunder, LB, added_ports)
@@ -783,7 +783,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         thunder.topology = "ACTIVE_STANDBY"
         mock_task = task.EnableInterface()
         mock_task.loadbalancer_repo = mock.MagicMock()
-        mock_task.loadbalancer_repo.check_lb_with_distinct_subnet_and_project.return_value = True
+        mock_task.loadbalancer_repo.check_lb_exists_in_project.return_value = True
         mock_task.axapi_client = self.client_mock
         self.client_mock.interface.get_list.return_value = INTERFACES
         mock_task.execute(thunder, LB, added_ports)
