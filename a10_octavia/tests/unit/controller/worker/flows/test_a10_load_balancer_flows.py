@@ -39,6 +39,7 @@ RACK_DEVICE = {
     "interface_vlan_map": {"1": {"11": {"use_dhcp": True}, "12": {"use_dhcp": True}}}
 }
 
+
 @mock.patch("octavia.controller.worker.tasks.database_tasks.UpdateAmphoraVIPData")
 class TestLoadBalancerFlows(base.TestCase):
     def setUp(self):
