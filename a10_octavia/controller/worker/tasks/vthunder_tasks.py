@@ -938,6 +938,7 @@ class UpdateAcosVersionInVthunderEntry(VThunderBaseTask):
                 db_apis.get_session(),
                 vthunder.id,
                 acos_version=existing_vthunder.acos_version)
+        return vthunder
 
 
 class AmphoraePostNetworkUnplug(VThunderBaseTask):

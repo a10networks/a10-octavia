@@ -292,7 +292,8 @@ class LoadBalancerFlows(object):
             provides=constants.AMPHORA))
         new_LB_net_subflow.add(vthunder_tasks.UpdateAcosVersionInVthunderEntry(
             name=a10constants.UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY,
-            requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+            provides=a10constants.VTHUNDER))
         new_LB_net_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=a10constants.GET_VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
@@ -335,11 +336,8 @@ class LoadBalancerFlows(object):
             new_LB_net_subflow.add(vthunder_tasks.UpdateAcosVersionInVthunderEntry(
                 name=a10constants.UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER,
                 requires=constants.LOADBALANCER,
-                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-            new_LB_net_subflow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
-                name=a10constants.GET_BACKUP_LOADBALANCER_FROM_DB,
-                requires=constants.LOADBALANCER,
-                provides=a10constants.BACKUP_VTHUNDER))
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                provides=a10constants.VTHUNDER))
             if vthunder:
                 new_LB_net_subflow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
                     requires=a10constants.VTHUNDER,
