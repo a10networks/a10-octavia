@@ -67,24 +67,25 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
     def execute(self, vthunder, amphora):
         """Execute get_info routine for a vThunder until it responds."""
         try:
-            axapi_client = a10_utils.get_axapi_client(vthunder)
-            LOG.info("Attempting to connect vThunder device for connection.")
-            attempts = 30
-            while attempts >= 0:
-                try:
-                    attempts = attempts - 1
-                    axapi_client.system.information()
-                    break
-                except (req_exceptions.ConnectionError, acos_errors.ACOSException,
-                        http_client.BadStatusLine, req_exceptions.ReadTimeout):
-                    attemptid = 21 - attempts
-                    time.sleep(20)
-                    LOG.debug("VThunder connection attempt - " + str(attemptid))
-                    pass
-            if attempts < 0:
-                LOG.error("Failed to connect vThunder in expected amount of boot time: %s",
-                          vthunder.id)
-                raise req_exceptions.ConnectionError
+            if vthunder:
+                axapi_client = a10_utils.get_axapi_client(vthunder)
+                LOG.info("Attempting to connect vThunder device for connection.")
+                attempts = 30
+                while attempts >= 0:
+                    try:
+                        attempts = attempts - 1
+                        axapi_client.system.information()
+                        break
+                    except (req_exceptions.ConnectionError, acos_errors.ACOSException,
+                            http_client.BadStatusLine, req_exceptions.ReadTimeout):
+                        attemptid = 21 - attempts
+                        time.sleep(20)
+                        LOG.debug("VThunder connection attempt - " + str(attemptid))
+                        pass
+                if attempts < 0:
+                    LOG.error("Failed to connect vThunder in expected amount of boot time: %s",
+                              vthunder.id)
+                    raise req_exceptions.ConnectionError
 
         except driver_except.TimeOutException as e:
             LOG.exception("Amphora compute instance failed to become reachable. "
@@ -944,16 +945,17 @@ class AmphoraePostNetworkUnplug(VThunderBaseTask):
     def execute(self, added_ports, loadbalancer, vthunder):
         """Execute get_info routine for a vThunder until it responds."""
         try:
-            amphora_id = loadbalancer.amphorae[0].id
-            if len(added_ports[amphora_id]) > 0:
-                self.axapi_client.system.action.write_memory()
-                self.axapi_client.system.action.reload_reboot_for_interface_detachment(
-                    vthunder.acos_version)
-                LOG.debug("Waiting for 30 seconds to trigger vThunder reload/reboot.")
-                time.sleep(30)
-                LOG.debug("Successfully rebooted/reloaded vThunder: %s", vthunder.id)
-            else:
-                LOG.debug("vThunder reboot/relaod is not required for member addition.")
+            if loadbalancer.amphorae:
+                amphora_id = loadbalancer.amphorae[0].id
+                if len(added_ports[amphora_id]) > 0:
+                    self.axapi_client.system.action.write_memory()
+                    self.axapi_client.system.action.reload_reboot_for_interface_detachment(
+                        vthunder.acos_version)
+                    LOG.debug("Waiting for 30 seconds to trigger vThunder reload/reboot.")
+                    time.sleep(30)
+                    LOG.debug("Successfully rebooted/reloaded vThunder: %s", vthunder.id)
+                else:
+                    LOG.debug("vThunder reboot/relaod is not required for member addition.")
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to reboot/reload vthunder device: %s", str(e))
             raise e

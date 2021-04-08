@@ -322,7 +322,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         if vthunder:
             deleteCompute = self._vthunder_repo.get_delete_compute_flag(db_apis.get_session(),
                                                                         vthunder.compute_id)
-        (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute)
+        if cascade:
+            (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute, True)
+        else:
+            (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute, False)
+
         store.update({constants.LOADBALANCER: lb,
                       constants.VIP: lb.vip,
                       constants.SERVER_GROUP_ID: lb.server_group_id})

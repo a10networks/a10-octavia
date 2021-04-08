@@ -298,7 +298,7 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER))
         return delete_member_flow
 
-    def get_delete_member_vthunder_internal_subflow(self, member_id):
+    def get_delete_member_vthunder_internal_subflow(self, member_id, pool=constants.POOL):
         delete_member_thunder_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBER_VTHUNDER_INTERNAL_SUBFLOW)
         delete_member_thunder_subflow.add(vthunder_tasks.SetupDeviceNetworkMap(
@@ -313,7 +313,8 @@ class MemberFlows(object):
                     constants.POOL),
                 provides=a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL,
                 rebind={
-                    constants.MEMBER: member_id}))
+                    constants.MEMBER: member_id,
+                    constants.POOL: pool}))
         delete_member_thunder_subflow.add(a10_database_tasks.PoolCountforIP(
             name='pool_count_for_ip_' + member_id,
             requires=constants.MEMBER, provides=a10constants.POOL_COUNT_IP,
@@ -328,7 +329,7 @@ class MemberFlows(object):
             name='member_find_nat_pool_' + member_id,
             requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                       constants.FLAVOR], provides=a10constants.NAT_FLAVOR,
-            rebind={constants.MEMBER: member_id}))
+            rebind={constants.MEMBER: member_id, constants.POOL: pool}))
         delete_member_thunder_subflow.add(a10_database_tasks.GetNatPoolEntry(
             name='get_nat_pool_db_entry_' + member_id,
             requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
@@ -352,7 +353,7 @@ class MemberFlows(object):
                     a10constants.POOL_COUNT_IP,
                     a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL),
                 rebind={
-                    constants.MEMBER: member_id}))
+                    constants.MEMBER: member_id, constants.POOL: pool}))
         if CONF.a10_global.network_type == 'vlan':
             delete_member_thunder_subflow.add(
                 vthunder_tasks.DeleteInterfaceTagIfNotInUseForMember(
