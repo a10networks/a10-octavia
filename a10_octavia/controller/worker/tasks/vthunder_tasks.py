@@ -722,8 +722,6 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
 
     @axapi_client_decorator_for_revert
     def revert(self, member, vthunder, *args, **kwargs):
-        print("revert:")
-        print(vthunder)
         if not member.subnet_id:
             LOG.warning("Subnet id argument was not specified during "
                         "issuance of create command/API call for member %s. "
