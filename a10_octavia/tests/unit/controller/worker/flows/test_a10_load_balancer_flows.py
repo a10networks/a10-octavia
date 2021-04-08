@@ -59,7 +59,7 @@ class TestLoadBalancerFlows(base.TestCase):
     def test_create_lb_flows(self, mock_net_driver):
         lb = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
                                         project_id='project-vthunder')
-        (create_flow, store) = self.flows.get_delete_load_balancer_flow(lb, False)
+        (create_flow, store) = self.flows.get_delete_load_balancer_flow(lb, False, False)
         self.assertIsInstance(create_flow, flow.Flow)
 
     def test_create_lb_rack_vthunder_vlan_flow(self, mock_net_driver):
