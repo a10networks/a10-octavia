@@ -805,4 +805,3 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.execute(added_ports, mock_LB, mock_thunder)
         self.client_mock.system.action.write_memory.assert_not_called()
         self.client_mock.system.action.reload_reboot_for_interface_detachment.assert_not_called()
-
