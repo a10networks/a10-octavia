@@ -153,6 +153,9 @@ class LoadBalancerFlows(object):
 
         post_create_lb_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
+
+        post_create_lb_flow.add(self.handle_vrid_for_loadbalancer_subflow())
+
         if mark_active:
             post_create_lb_flow.add(database_tasks.MarkLBActiveInDB(
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
