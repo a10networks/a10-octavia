@@ -31,7 +31,8 @@ class CheckListenerType(task.Task):
     """Task to check if listener type is TERMINATED_HTTPS"""
 
     def execute(self, listener):
-        if listener.protocol == 'TERMINATED_HTTPS' and listener.tls_certificate_id:
+        if (listener.protocol == 'TERMINATED_HTTPS' or listener.protocol
+                == 'https') and listener.tls_certificate_id:
             return True
         else:
             return False
