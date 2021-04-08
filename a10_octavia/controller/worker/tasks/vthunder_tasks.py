@@ -918,12 +918,9 @@ class UpdateAcosVersionInVthunderEntry(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder, loadbalancer):
-        compute_flag = False
         existing_vthunder = self.vthunder_repo.get_vthunder_by_project_id(db_apis.get_session(),
                                                                           loadbalancer.project_id)
-        compute_flag = self.vthunder_repo.get_delete_compute_flag(db_apis.get_session(),
-                                                                  vthunder.compute_id)
-        if not existing_vthunder or compute_flag:
+        if not existing_vthunder:
             try:
                 acos_version_summary = self.axapi_client.system.action.get_acos_version()
                 acos_version = acos_version_summary['version']['oper']['sw-version'].split(',')[0]
@@ -938,7 +935,6 @@ class UpdateAcosVersionInVthunderEntry(VThunderBaseTask):
                 db_apis.get_session(),
                 vthunder.id,
                 acos_version=existing_vthunder.acos_version)
-        return vthunder
 
 
 class AmphoraePostNetworkUnplug(VThunderBaseTask):
