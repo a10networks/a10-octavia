@@ -326,6 +326,17 @@ class VThunderRepository(BaseRepository):
             session.query(self.model_class).filter_by(
                     ip_address=ip_address, partition_name=partition).update(model_kwargs)
 
+    def get_vthunder_by_project_id_and_role(self, session, project_id, role):
+        model = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.status == "ACTIVE",
+                 self.model_class.role == role)).first()
+
+        if not model:
+            return None
+
+        return model.to_data_model()
+
 
 class LoadBalancerRepository(repo.LoadBalancerRepository):
     thunder_model_class = models.VThunder
@@ -354,22 +365,22 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                     self.model_class.provisioning_status == consts.ACTIVE)).count()
 
-    def check_lb_with_distinct_subnet_and_project(self, session, project_id, subnet_id):
+    def check_lb_exists_in_project(self, session, project_id):
         lb = session.query(self.model_class).join(base_models.Vip).filter(
             and_(self.model_class.project_id == project_id,
-                 base_models.Vip.subnet_id == subnet_id,
                  self.model_class.provisioning_status == consts.ACTIVE)).count()
         if lb == 0:
-            return True
-        else:
             return False
+        else:
+            return True
 
     def get_lbs_by_project_id(self, session, project_id):
         lb_list = []
         query = session.query(self.model_class).filter(
             self.model_class.project_id == project_id).filter(
             or_(self.model_class.provisioning_status == "ACTIVE",
-                self.model_class.provisioning_status == "PENDING_UPDATE"))
+                self.model_class.provisioning_status == "PENDING_UPDATE",
+                self.model_class.provisioning_status == "PENDING_CREATE"))
 
         model_list = query.all()
         for data in model_list:

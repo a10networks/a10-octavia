@@ -136,6 +136,33 @@ VCS_DEVICE1_FAILED = {
         }
     }
 }
+INTERFACES = {
+    "interface": {
+        "management": {
+            "ip": {"dhcp": 1, "control-apps-use-mgmt-port": 0},
+            "broadcast-rate-limit": {u'bcast-rate-limit-enable': 0},
+            "flow-control": 0,
+            "uuid": "6d4f3b4e-8beb-11eb-957b-fa163e54fddf",
+            "a10-url": "/axapi/v3/interface/management"},
+        "available-eth-list": {
+            "uuid": "6d4f40c6-8beb-11eb-957b-fa163e54fddf",
+            "a10-url": "/axapi/v3/interface/available-eth-list"},
+        "brief": {
+            "uuid": "6d4f42b0-8beb-11eb-957b-fa163e54fddf",
+            "a10-url": "/axapi/v3/interface/brief"},
+        "ethernet-list": [{
+            "port-scan-detection": "disable",
+            "uuid": "6d4f3fb8-8beb-11eb-957b-fa163e54fddf", "trap-source": 0,
+            "ping-sweep-detection": "disable", "mtu": 1500, "ifnum": 1,
+            "load-interval": 300, "a10-url": "/axapi/v3/interface/ethernet/1",
+            "action": "disable", "virtual-wire": 0, "l3-vlan-fwd-disable": 0}],
+        "a10-url": "/axapi/v3/interface",
+        "common": {
+            "uuid": "6d4f4224-8beb-11eb-957b-fa163e54fddf",
+            "a10-url": "/axapi/v3/interface/common"}
+    }
+}
+
 VIP = o_data_models.Vip(ip_address="1.1.1.1")
 AMPHORAE = [o_data_models.Amphora(id=a10constants.MOCK_AMPHORA_ID)]
 LB = o_data_models.LoadBalancer(
@@ -632,25 +659,27 @@ class TestVThunderTasks(base.BaseTaskTestCase):
 
     def test_AmphoraPostVipPlug_execute_for_reload_reboot(self):
         thunder = copy.deepcopy(VTHUNDER)
+        added_ports = {'amphora_id': '123'}
         mock_task = task.AmphoraePostVIPPlug()
         mock_task.axapi_client = self.client_mock
         mock_task.loadbalancer_repo = mock.MagicMock()
         mock_task.vthunder_repo = mock.MagicMock()
         mock_task.loadbalancer_repo.check_lb_with_distinct_subnet_and_project.return_value = True
-        mock_task.vthunder_repo.get_vthunder_by_project_id.return_value = thunder
-        vthunder = mock_task.vthunder_repo.get_vthunder_by_project_id.return_value
-        mock_task.execute(LB, thunder)
+        mock_task.vthunder_repo.get_vthunder_by_project_id_and_role.return_value = thunder
+        vthunder = mock_task.vthunder_repo.get_vthunder_by_project_id_and_role.return_value
+        mock_task.execute(LB, thunder, added_ports)
         self.client_mock.system.action.write_memory.assert_called_with()
         self.client_mock.system.action.reload_reboot_for_interface_attachment.assert_called_with(
             vthunder.acos_version)
 
     def test_AmphoraPostVipPlug_execute_for_no_reload_reboot(self):
         thunder = copy.deepcopy(VTHUNDER)
+        added_ports = {'amphora_id': ''}
         mock_task = task.AmphoraePostVIPPlug()
         mock_task.axapi_client = self.client_mock
         mock_task.loadbalancer_repo = mock.MagicMock()
         mock_task.loadbalancer_repo.check_lb_with_distinct_subnet_and_project.return_value = False
-        mock_task.execute(LB, thunder)
+        mock_task.execute(LB, thunder, added_ports)
         self.client_mock.system.action.write_memory.assert_not_called()
         self.client_mock.system.action.reload_reboot_for_interface_attachment.assert_not_called()
 
@@ -705,7 +734,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.reload_reboot_for_interface_detachment.assert_called_with(
             "5.2.1")
 
-    def test_AmphoraePostNetworkUnplug_execute_for_reload_reboot(self):
+    def test_AmphoraePostNetworkUnplug_execute_for_no_reload_reboot(self):
         thunder = copy.deepcopy(VTHUNDER)
         added_ports = {'amphora_id': ''}
         mock_task = task.AmphoraePostNetworkUnplug()
@@ -713,3 +742,49 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.execute(added_ports, LB, thunder)
         self.client_mock.system.action.write_memory.assert_not_called()
         self.client_mock.system.action.reload_reboot_for_interface_detachment.assert_not_called()
+
+    def test_GetVThunderInterface_execute_for_vMaster(self):
+        thunder = copy.deepcopy(VTHUNDER)
+        mock_task = task.GetVThunderInterface()
+        mock_task.axapi_client = self.client_mock
+        self.client_mock.system.action.get_vcs_summary_oper.return_value = VCS_MASTER_VBLADE
+        self.client_mock.interface.get_list.return_value = INTERFACES
+        thunder.ip_address = "10.0.0.1"
+        mock_task.execute(thunder)
+        self.client_mock.system.action.setInterface.assert_not_called()
+        self.assertEqual(mock_task.execute(thunder), (1, None))
+
+    def test_GetVThunderInterface_execute_for_vBlade(self):
+        thunder = copy.deepcopy(VTHUNDER)
+        mock_task = task.GetVThunderInterface()
+        mock_task.axapi_client = self.client_mock
+        self.client_mock.system.action.get_vcs_summary_oper.return_value = VCS_MASTER_VBLADE
+        self.client_mock.interface.get_list.return_value = INTERFACES
+        thunder.ip_address = "10.0.0.2"
+        mock_task.execute(thunder)
+        self.client_mock.system.action.setInterface.assert_not_called()
+        self.assertEqual(mock_task.execute(thunder), (None, 1))
+
+    def test_EnableInterface_execute_for_single_topology(self):
+        thunder = copy.deepcopy(VTHUNDER)
+        added_ports = {'amphora_id': ''}
+        thunder.topology = "SINGLE"
+        mock_task = task.EnableInterface()
+        mock_task.loadbalancer_repo = mock.MagicMock()
+        mock_task.loadbalancer_repo.check_lb_exists_in_project.return_value = True
+        mock_task.axapi_client = self.client_mock
+        self.client_mock.interface.get_list.return_value = INTERFACES
+        mock_task.execute(thunder, LB, added_ports)
+        self.client_mock.system.action.setInterface.assert_not_called()
+
+    def test_EnableInterface_execute_for_active_standby_topology(self):
+        thunder = copy.deepcopy(VTHUNDER)
+        added_ports = {'amphora_id': ''}
+        thunder.topology = "ACTIVE_STANDBY"
+        mock_task = task.EnableInterface()
+        mock_task.loadbalancer_repo = mock.MagicMock()
+        mock_task.loadbalancer_repo.check_lb_exists_in_project.return_value = True
+        mock_task.axapi_client = self.client_mock
+        self.client_mock.interface.get_list.return_value = INTERFACES
+        mock_task.execute(thunder, LB, added_ports)
+        self.client_mock.system.action.setInterface.assert_not_called()
