@@ -72,15 +72,13 @@ class CreateVThunderEntry(BaseDatabaseTask):
         username = CONF.vthunder.default_vthunder_username
         password = CONF.vthunder.default_vthunder_password
         axapi_version = CONF.vthunder.default_axapi_version
+        topology = CONF.a10_controller_worker.loadbalancer_topology
 
         if role == constants.ROLE_MASTER:
-            topology = "ACTIVE_STANDBY"
             role = "MASTER"
         elif role == constants.ROLE_BACKUP:
-            topology = "ACTIVE_STANDBY"
             role = "BACKUP"
         else:
-            topology = "STANDALONE"
             role = "MASTER"
 
         self.vthunder_repo.create(
@@ -237,9 +235,9 @@ class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
 class GetComputeForProject(BaseDatabaseTask):
     """ Get Compute details form Loadbalancer object -> project ID"""
 
-    def execute(self, loadbalancer):
-        vthunder = self.vthunder_repo.get_vthunder_by_project_id(
-            db_apis.get_session(), loadbalancer.project_id)
+    def execute(self, loadbalancer, role):
+        vthunder = self.vthunder_repo.get_vthunder_by_project_id_and_role(
+            db_apis.get_session(), loadbalancer.project_id, role)
         if vthunder is None:
             vthunder = self.vthunder_repo.get_spare_vthunder(
                 db_apis.get_session())

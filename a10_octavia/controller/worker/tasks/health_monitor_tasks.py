@@ -24,6 +24,7 @@ from octavia.common import exceptions
 from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
@@ -92,7 +93,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
                 health_mon.id, health_mon.pool_id)
             raise e
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, listeners, health_mon, vthunder, *args, **kwargs):
         try:
             self.axapi_client.slb.hm.delete(health_mon.id)

@@ -20,6 +20,7 @@ from taskflow import task
 
 
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks import utils
 
 
@@ -76,7 +77,7 @@ class CreateVirtualServerTask(LoadBalancerParent, task.Task):
             LOG.exception("Failed to created load balancer: %s", loadbalancer.id)
             raise e
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, loadbalancer, vthunder, flavor_data=None, *args, **kwargs):
         try:
             LOG.warning("Reverting creation of load balancer: %s", loadbalancer.id)

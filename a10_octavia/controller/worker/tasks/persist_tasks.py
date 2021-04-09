@@ -21,6 +21,7 @@ from taskflow import task
 from a10_octavia.common.a10constants import PERS_TYPE
 from a10_octavia.common.a10constants import SP_OBJ_DICT
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 
 LOG = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class HandleSessionPersistenceDelta(task.Task):
                 LOG.exception("Failed to create session persistence for pool: %s", pool.id)
                 raise e
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, vthunder, pool, *args, **kwargs):
         LOG.warning("Reverting creation of session persistence for pool: %s", pool.id)
         try:
