@@ -159,6 +159,8 @@ class ListenersParent(object):
                    virtual_port_templates=vport_templates,
                    **config_data)
 
+        listener.protocol = listener.protocol.upper()
+
 
 class ListenerCreate(ListenersParent, task.Task):
     """Task to create listener"""
