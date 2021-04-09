@@ -24,6 +24,7 @@ import acos_client.errors as acos_errors
 
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
@@ -105,7 +106,7 @@ class PoolCreate(PoolParent, task.Task):
             LOG.exception("Failed to create pool: %s", pool.id)
             raise e
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, pool, vthunder, flavor=None, *args, **kwargs):
         LOG.warning("Reverting creation of pool: %s", pool.id)
         try:

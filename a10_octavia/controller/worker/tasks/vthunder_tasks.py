@@ -38,6 +38,7 @@ from a10_octavia.common import openstack_mappings
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import activate_partition
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks.decorators import device_context_switch_decorator
 from a10_octavia.db import repositories as a10_repo
 
@@ -698,7 +699,7 @@ class TagInterfaceForLB(TagInterfaceBaseTask):
             LOG.exception("Failed to TagInterfaceForLB: %s", str(e))
             raise e
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, loadbalancer, vthunder, *args, **kwargs):
         try:
             if vthunder and vthunder.device_network_map:
@@ -736,7 +737,7 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
                           str(vlan_id), member.id)
             raise e
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, member, vthunder, *args, **kwargs):
         if not member.subnet_id:
             LOG.warning("Subnet id argument was not specified during "
