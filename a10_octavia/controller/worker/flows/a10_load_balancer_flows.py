@@ -277,6 +277,8 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             name=a10constants.SET_THUNDER_UPDATE_AT,
             requires=a10constants.VTHUNDER))
+        delete_LB_flow.add(network_tasks.DeallocateVIP(
+            requires=constants.LOADBALANCER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name=a10constants.MARK_VTHUNDER_BACKUP_DELETED_IN_DB,
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
@@ -290,6 +292,9 @@ class LoadBalancerFlows(object):
         """Subflow to setup networking for amphora"""
         new_LB_net_subflow = linear_flow.Flow(constants.
                                               LOADBALANCER_NETWORKING_SUBFLOW)
+        new_LB_net_subflow.add(a10_network_tasks.PlugVIP(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPS_DATA))
         new_LB_net_subflow.add(a10_network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.AMPS_DATA,
                       constants.UPDATE_DICT)))
