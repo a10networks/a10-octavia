@@ -298,7 +298,7 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER))
         return delete_member_flow
 
-    def get_delete_member_vthunder_internal_subflow(self, member_id, pool=constants.POOL):
+    def get_delete_member_vthunder_internal_subflow(self, member_id, pool):
         delete_member_thunder_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBER_VTHUNDER_INTERNAL_SUBFLOW)
         delete_member_thunder_subflow.add(vthunder_tasks.SetupDeviceNetworkMap(
@@ -405,30 +405,36 @@ class MemberFlows(object):
             requires=[a10constants.VRID, a10constants.DELETE_VRID]))
         return delete_member_vrid_subflow
 
-    def get_delete_member_vrid_internal_subflow(self):
+    def get_delete_member_vrid_internal_subflow(self, pool, pool_members):
         delete_member_vrid_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBER_VRID_INTERNAL_SUBFLOW)
         delete_member_vrid_subflow.add(
             a10_database_tasks.GetChildProjectsOfParentPartition(
-                rebind={a10constants.LB_RESOURCE: constants.POOL},
+                name='get_child_project_of_parent_partition' + pool,
+                rebind={a10constants.LB_RESOURCE: pool},
                 provides=a10constants.PARTITION_PROJECT_LIST
             ))
         delete_member_vrid_subflow.add(
             a10_database_tasks.GetSubnetForDeletionInPool(
+                name='get_subnet_for_deletion_in_pool' + pool,
                 requires=[a10constants.MEMBER_LIST, a10constants.PARTITION_PROJECT_LIST],
+                rebind={a10constants.MEMBER_LIST: pool_members},
                 provides=a10constants.SUBNET_LIST))
         delete_member_vrid_subflow.add(
             a10_database_tasks.GetVRIDForLoadbalancerResource(
+                name='get_vrid_for_loadbalancer_resource' + pool,
                 requires=a10constants.PARTITION_PROJECT_LIST,
                 provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(
             a10_network_tasks.DeleteMultipleVRIDPort(
+                name='delete_multiple_vrid_port' + pool,
                 requires=[
                     a10constants.VTHUNDER,
                     a10constants.VRID_LIST,
                     a10constants.SUBNET_LIST],
                 provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(a10_database_tasks.DeleteMultiVRIDEntry(
+            name='delete_multi_vrid_entry' + pool,
             requires=a10constants.VRID_LIST))
         return delete_member_vrid_subflow
 
