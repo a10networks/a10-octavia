@@ -25,6 +25,7 @@ from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_member_flows
 from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.controller.worker.tasks import persist_tasks
 from a10_octavia.controller.worker.tasks import service_group_tasks
 from a10_octavia.controller.worker.tasks import virtual_port_tasks
@@ -103,6 +104,26 @@ class PoolFlows(object):
             requires=[constants.POOL, a10constants.VTHUNDER]))
         delete_pool_flow.add(database_tasks.DeletePoolInDB(
             requires=constants.POOL))
+        # Interface delete.
+        delete_pool_flow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.LOADBALANCERS_LIST))
+        delete_pool_flow.add(a10_network_tasks.CalculateDelta(
+            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
+            provides=constants.DELTAS))
+        delete_pool_flow.add(a10_network_tasks.HandleNetworkDeltas(
+            requires=constants.DELTAS, provides=constants.ADDED_PORTS))
+        delete_pool_flow.add(
+            vthunder_tasks.AmphoraePostNetworkUnplug(
+                requires=(
+                    constants.LOADBALANCER,
+                    constants.ADDED_PORTS,
+                    a10constants.VTHUNDER)))
+        delete_pool_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPHORA))
+        delete_pool_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         delete_pool_flow.add(database_tasks.DecrementPoolQuota(
             requires=[constants.POOL, constants.POOL_CHILD_COUNT]))
         delete_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
