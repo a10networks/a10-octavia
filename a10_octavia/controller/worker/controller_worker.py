@@ -572,10 +572,15 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                  constants.HEALTH_MON: health_monitor,
                  a10constants.MEMBER_COUNT: mem_count}
 
-        delete_pool_tf = self._taskflow_load(
-            self._pool_flows.get_delete_pool_flow(
-                members, health_monitor, store),
-            store=store)
+        if pool.project_id in CONF.hardware_thunder.devices:
+            delete_pool_tf = self._taskflow_load(
+                self._pool_flows.get_delete_pool_rack_flow(
+                    members, health_monitor, store), store=store)
+        else:
+            delete_pool_tf = self._taskflow_load(
+                self._pool_flows.get_delete_pool_flow(
+                    members, health_monitor, store), store=store)
+
         with tf_logging.DynamicLoggingListener(delete_pool_tf,
                                                log=LOG):
             delete_pool_tf.run()
