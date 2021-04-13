@@ -277,7 +277,7 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             name=a10constants.SET_THUNDER_UPDATE_AT,
             requires=a10constants.VTHUNDER))
-        delete_LB_flow.add(network_tasks.DeallocateVIP(
+        delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name=a10constants.MARK_VTHUNDER_BACKUP_DELETED_IN_DB,
