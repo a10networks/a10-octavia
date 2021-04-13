@@ -147,18 +147,19 @@ class PoolFlows(object):
                     self.hm_flow.get_delete_health_monitor_vthunder_subflow())
         return delete_hm_vthunder_subflow
 
-    def _get_delete_member_vthunder_subflow(self, members, store):
+    def _get_delete_member_vthunder_subflow(self, members, store, pool=constants.POOL):
         delete_member_vthunder_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBERS_SUBFLOW_WITH_POOL_DELETE_FLOW)
         member_store = {}
         for member in members:
             member_store[member.id] = member
             delete_member_vthunder_subflow.add(
-                self.member_flow.get_delete_member_vthunder_internal_subflow(member.id))
+                self.member_flow.get_delete_member_vthunder_internal_subflow(member.id, pool))
         if members:
-            store.update({a10constants.MEMBER_LIST: members})
+            pool_members = pool + 'members'
+            store.update({pool_members: members})
             delete_member_vthunder_subflow.add(
-                self.member_flow.get_delete_member_vrid_internal_subflow())
+                self.member_flow.get_delete_member_vrid_internal_subflow(pool, pool_members))
         store.update(member_store)
         return delete_member_vthunder_subflow
 
@@ -246,10 +247,7 @@ class PoolFlows(object):
             rebind={constants.OBJECT: pool_name}))
         # Delete pool children
         delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon, True))
-        (members_delete, member_store) = self._get_cascade_delete_member_vthunder_subflow(
-            members, pool_name)
-        store.update(member_store)
-        delete_pool_flow.add(members_delete)
+        delete_pool_flow.add(self._get_delete_member_vthunder_subflow(members, store, pool_name))
         delete_pool_flow.add(service_group_tasks.PoolDelete(
             name='pool_delete_' + pool_name,
             requires=[constants.POOL, a10constants.VTHUNDER],
@@ -264,15 +262,3 @@ class PoolFlows(object):
             rebind={constants.POOL: pool_name}))
 
         return (delete_pool_flow, store)
-
-    def _get_cascade_delete_member_vthunder_subflow(self, members, pool):
-        delete_member_vthunder_cascade_subflow = linear_flow.Flow(
-            a10constants.DELETE_MEMBERS_SUBFLOW_WITH_POOL_DELETE_FLOW)
-        store = {}
-        for member in members:
-            member_name = 'member' + member.id
-            store[member_name] = member
-            delete_member_vthunder_cascade_subflow.add(
-                self.member_flow.get_delete_member_vthunder_internal_subflow(
-                    member_name, pool))
-        return (delete_member_vthunder_cascade_subflow, store)
