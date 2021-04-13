@@ -322,10 +322,15 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         if vthunder:
             deleteCompute = self._vthunder_repo.get_delete_compute_flag(db_apis.get_session(),
                                                                         vthunder.compute_id)
+
         if cascade:
-            (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute, True)
+            cascade = True
+        if lb.project_id in CONF.hardware_thunder.devices:
+            (flow, store) = self._lb_flows.get_delete_rack_vthunder_load_balancer_flow(
+                lb, deleteCompute, cascade)
         else:
-            (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute, False)
+            (flow, store) = self._lb_flows.get_delete_load_balancer_flow(
+                lb, deleteCompute, cascade)
 
         store.update({constants.LOADBALANCER: lb,
                       constants.VIP: lb.vip,

@@ -542,6 +542,86 @@ class LoadBalancerFlows(object):
             requires=a10constants.VTHUNDER))
         return lb_create_flow
 
+    def get_delete_rack_vthunder_load_balancer_flow(self, lb, deleteCompute, cascade):
+        """Flow to delete rack load balancer"""
+
+        store = {}
+        delete_LB_flow = linear_flow.Flow(constants.DELETE_LOADBALANCER_FLOW)
+        delete_LB_flow.add(lifecycle_tasks.LoadBalancerToErrorOnRevertTask(
+            requires=constants.LOADBALANCER))
+        delete_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
+            requires=a10constants.VTHUNDER,
+            inject={"status": constants.PENDING_DELETE}))
+        delete_LB_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.VTHUNDER))
+        delete_LB_flow.add(compute_tasks.NovaServerGroupDelete(
+            requires=constants.SERVER_GROUP_ID))
+        delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
+            requires=constants.LOADBALANCER))
+        if cascade:
+            (pools_listeners_delete, store) = self._get_cascade_delete_pools_listeners_flow(lb)
+            delete_LB_flow.add(pools_listeners_delete)
+        delete_LB_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR_DATA))
+        delete_LB_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+            provides=a10constants.LB_COUNT))
+        delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
+        if CONF.a10_global.network_type == 'vlan':
+            delete_LB_flow.add(
+                vthunder_tasks.DeleteInterfaceTagIfNotInUseForLB(
+                    requires=[
+                        constants.LOADBALANCER,
+                        a10constants.VTHUNDER]))
+
+        # delete_LB_flow.add(listeners_delete)
+        # delete_LB_flow.add(network_tasks.UnplugVIP(
+        #    requires=constants.LOADBALANCER))
+        delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
+        delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
+            requires=constants.LOADBALANCER))
+        delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
+            requires=(constants.LOADBALANCER,
+                      a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
+        if deleteCompute:
+            delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
+                requires=constants.LOADBALANCER))
+        delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
+            name=a10constants.MARK_VTHUNDER_MASTER_DELETED_IN_DB,
+            requires=a10constants.VTHUNDER,
+            inject={"status": constants.DELETED}))
+        delete_LB_flow.add(database_tasks.MarkLBAmphoraeDeletedInDB(
+            requires=constants.LOADBALANCER))
+        delete_LB_flow.add(database_tasks.DisableLBAmphoraeHealthMonitoring(
+            requires=constants.LOADBALANCER))
+        delete_LB_flow.add(database_tasks.MarkLBDeletedInDB(
+            requires=constants.LOADBALANCER))
+        delete_LB_flow.add(database_tasks.DecrementLoadBalancerQuota(
+            requires=constants.LOADBALANCER))
+        if deleteCompute:
+            delete_LB_flow.add(vthunder_tasks.WriteMemory(
+                requires=a10constants.VTHUNDER))
+        delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            name=a10constants.SET_THUNDER_UPDATE_AT,
+            requires=a10constants.VTHUNDER))
+        delete_LB_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.BACKUP_VTHUNDER))
+        delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
+            name=a10constants.MARK_VTHUNDER_BACKUP_DELETED_IN_DB,
+            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+            inject={"status": constants.DELETED}))
+        delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
+            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+        return (delete_LB_flow, store)
+
     def get_post_lb_rack_vthunder_association_flow(self, prefix, topology,
                                                    mark_active=True):
         """Flow to manage networking after rack lb creation"""
