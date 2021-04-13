@@ -145,7 +145,7 @@ class EnableInterface(VThunderBaseTask):
     """Task to configure vThunder ports"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, loadbalancer, ifnum_master=None, ifnum_backup=None, added_ports={}):
+    def execute(self, vthunder, loadbalancer, added_ports, ifnum_master=None, ifnum_backup=None):
         topology = CONF.a10_controller_worker.loadbalancer_topology
         amphora_id = loadbalancer.amphorae[0].id
         compute_id = loadbalancer.amphorae[0].compute_id
@@ -1020,6 +1020,7 @@ class GetMasterVThunder(VThunderBaseTask):
     @axapi_client_decorator
     def execute(self, vthunder):
         try:
+            time.sleep(20)
             vcs_summary = {}
             vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
             vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
