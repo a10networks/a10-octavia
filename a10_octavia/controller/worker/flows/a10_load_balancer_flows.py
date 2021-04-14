@@ -204,17 +204,6 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.LB_COUNT))
-        delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
-        if CONF.a10_global.network_type == 'vlan':
-            delete_LB_flow.add(
-                vthunder_tasks.DeleteInterfaceTagIfNotInUseForLB(
-                    requires=[
-                        constants.LOADBALANCER,
-                        a10constants.VTHUNDER]))
-
-        # delete_LB_flow.add(listeners_delete)
-        # delete_LB_flow.add(network_tasks.UnplugVIP(
-        #    requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
@@ -230,6 +219,10 @@ class LoadBalancerFlows(object):
                 provides=constants.DELTAS))
             delete_LB_flow.add(a10_network_tasks.HandleNetworkDeltas(
                 requires=constants.DELTAS, provides=constants.ADDED_PORTS))
+            delete_LB_flow.add(
+                vthunder_tasks.VThunderComputeConnectivityWait(
+                    name=a10constants.VTHUNDER_CONNECTIVITY_WAIT + "unplug_network",
+                    requires=(a10constants.VTHUNDER, constants.AMPHORA)))
             delete_LB_flow.add(vthunder_tasks.AmphoraePostNetworkUnplug(
                 name=a10constants.AMPHORA_POST_NETWORK_UNPLUG,
                 requires=(constants.LOADBALANCER, constants.ADDED_PORTS, a10constants.VTHUNDER)))
@@ -251,6 +244,13 @@ class LoadBalancerFlows(object):
                     name=a10constants.GET_VTHUNDER_MASTER,
                     requires=a10constants.VTHUNDER,
                     provides=a10constants.VTHUNDER))
+        delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
+        if CONF.a10_global.network_type == 'vlan':
+            delete_LB_flow.add(
+                vthunder_tasks.DeleteInterfaceTagIfNotInUseForLB(
+                    requires=[
+                        constants.LOADBALANCER,
+                        a10constants.VTHUNDER]))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
@@ -292,18 +292,6 @@ class LoadBalancerFlows(object):
         """Subflow to setup networking for amphora"""
         new_LB_net_subflow = linear_flow.Flow(constants.
                                               LOADBALANCER_NETWORKING_SUBFLOW)
-        new_LB_net_subflow.add(a10_network_tasks.PlugVIP(
-            requires=constants.LOADBALANCER,
-            provides=constants.AMPS_DATA))
-        new_LB_net_subflow.add(a10_network_tasks.ApplyQos(
-            requires=(constants.LOADBALANCER, constants.AMPS_DATA,
-                      constants.UPDATE_DICT)))
-        new_LB_net_subflow.add(database_tasks.UpdateAmphoraeVIPData(
-            requires=constants.AMPS_DATA))
-        new_LB_net_subflow.add(database_tasks.ReloadLoadBalancer(
-            name=constants.RELOAD_LB_AFTER_PLUG_VIP,
-            requires=constants.LOADBALANCER_ID,
-            provides=constants.LOADBALANCER))
         new_LB_net_subflow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
@@ -450,6 +438,17 @@ class LoadBalancerFlows(object):
                 name=a10constants.MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                 inject={a10constants.STATUS: constants.ACTIVE}))
+        new_LB_net_subflow.add(a10_network_tasks.PlugVIP(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPS_DATA))
+        new_LB_net_subflow.add(a10_network_tasks.ApplyQos(
+            requires=(constants.LOADBALANCER, constants.AMPS_DATA, constants.UPDATE_DICT)))
+        new_LB_net_subflow.add(database_tasks.UpdateAmphoraeVIPData(
+            requires=constants.AMPS_DATA))
+        new_LB_net_subflow.add(database_tasks.ReloadLoadBalancer(
+            name=constants.RELOAD_LB_AFTER_PLUG_VIP,
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
         return new_LB_net_subflow
 
     def get_update_load_balancer_flow(self):
