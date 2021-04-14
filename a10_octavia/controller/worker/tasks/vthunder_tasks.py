@@ -72,6 +72,9 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
                 axapi_client = a10_utils.get_axapi_client(vthunder)
                 LOG.info("Attempting to connect vThunder device for connection.")
                 attempts = 30
+                # TODO(ytsai): use another new config option for vthunder booting wait retry
+                if CONF.a10_controller_worker.amp_active_retries > attempts:
+                    attempts = CONF.a10_controller_worker.amp_active_retries
                 while attempts >= 0:
                     try:
                         attempts = attempts - 1
@@ -80,7 +83,11 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
                     except (req_exceptions.ConnectionError, acos_errors.ACOSException,
                             http_client.BadStatusLine, req_exceptions.ReadTimeout):
                         attemptid = 21 - attempts
-                        time.sleep(20)
+                        sleep_time = 20
+                        # TODO(ytsai): use another new config option for vthunder booting wait sec
+                        if CONF.a10_controller_worker.amp_active_wait_sec > sleep_time:
+                            sleep_time = CONF.a10_controller_worker.amp_active_wait_sec
+                        time.sleep(sleep_time)
                         LOG.debug("VThunder connection attempt - " + str(attemptid))
                         pass
                 if attempts < 0:
