@@ -292,15 +292,6 @@ class LoadBalancerFlows(object):
         """Subflow to setup networking for amphora"""
         new_LB_net_subflow = linear_flow.Flow(constants.
                                               LOADBALANCER_NETWORKING_SUBFLOW)
-        new_LB_net_subflow.add(a10_network_tasks.ApplyQos(
-            requires=(constants.LOADBALANCER, constants.AMPS_DATA,
-                      constants.UPDATE_DICT)))
-        new_LB_net_subflow.add(database_tasks.UpdateAmphoraeVIPData(
-            requires=constants.AMPS_DATA))
-        new_LB_net_subflow.add(database_tasks.ReloadLoadBalancer(
-            name=constants.RELOAD_LB_AFTER_PLUG_VIP,
-            requires=constants.LOADBALANCER_ID,
-            provides=constants.LOADBALANCER))
         new_LB_net_subflow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
@@ -447,6 +438,17 @@ class LoadBalancerFlows(object):
                 name=a10constants.MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                 inject={a10constants.STATUS: constants.ACTIVE}))
+        new_LB_net_subflow.add(a10_network_tasks.PlugVIP(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPS_DATA))
+        new_LB_net_subflow.add(a10_network_tasks.ApplyQos(
+            requires=(constants.LOADBALANCER, constants.AMPS_DATA, constants.UPDATE_DICT)))
+        new_LB_net_subflow.add(database_tasks.UpdateAmphoraeVIPData(
+            requires=constants.AMPS_DATA))
+        new_LB_net_subflow.add(database_tasks.ReloadLoadBalancer(
+            name=constants.RELOAD_LB_AFTER_PLUG_VIP,
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
         return new_LB_net_subflow
 
     def get_update_load_balancer_flow(self):
