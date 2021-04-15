@@ -546,7 +546,7 @@ class LoadBalancerFlows(object):
             requires=a10constants.VTHUNDER))
         return lb_create_flow
 
-    def get_delete_rack_vthunder_load_balancer_flow(self, lb, deleteCompute, cascade):
+    def get_delete_rack_vthunder_load_balancer_flow(self, lb, cascade):
         """Flow to delete rack load balancer"""
 
         store = {}
@@ -593,9 +593,6 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
             requires=(constants.LOADBALANCER,
                       a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
-        if deleteCompute:
-            delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
-                requires=constants.LOADBALANCER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name=a10constants.MARK_VTHUNDER_MASTER_DELETED_IN_DB,
             requires=a10constants.VTHUNDER,
@@ -608,9 +605,8 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.DecrementLoadBalancerQuota(
             requires=constants.LOADBALANCER))
-        if deleteCompute:
-            delete_LB_flow.add(vthunder_tasks.WriteMemory(
-                requires=a10constants.VTHUNDER))
+        delete_LB_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             name=a10constants.SET_THUNDER_UPDATE_AT,
             requires=a10constants.VTHUNDER))
