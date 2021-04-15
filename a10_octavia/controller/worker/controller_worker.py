@@ -322,10 +322,15 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         if vthunder:
             deleteCompute = self._vthunder_repo.get_delete_compute_flag(db_apis.get_session(),
                                                                         vthunder.compute_id)
+
         if cascade:
-            (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute, True)
+            cascade = True
+        if lb.project_id in CONF.hardware_thunder.devices:
+            (flow, store) = self._lb_flows.get_delete_rack_vthunder_load_balancer_flow(
+                lb, deleteCompute, cascade)
         else:
-            (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute, False)
+            (flow, store) = self._lb_flows.get_delete_load_balancer_flow(
+                lb, deleteCompute, cascade)
 
         store.update({constants.LOADBALANCER: lb,
                       constants.VIP: lb.vip,
@@ -572,10 +577,15 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                  constants.HEALTH_MON: health_monitor,
                  a10constants.MEMBER_COUNT: mem_count}
 
-        delete_pool_tf = self._taskflow_load(
-            self._pool_flows.get_delete_pool_flow(
-                members, health_monitor, store),
-            store=store)
+        if pool.project_id in CONF.hardware_thunder.devices:
+            delete_pool_tf = self._taskflow_load(
+                self._pool_flows.get_delete_pool_rack_flow(
+                    members, health_monitor, store), store=store)
+        else:
+            delete_pool_tf = self._taskflow_load(
+                self._pool_flows.get_delete_pool_flow(
+                    members, health_monitor, store), store=store)
+
         with tf_logging.DynamicLoggingListener(delete_pool_tf,
                                                log=LOG):
             delete_pool_tf.run()
