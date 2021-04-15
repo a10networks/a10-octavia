@@ -204,6 +204,17 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.LB_COUNT))
+        delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
+        if CONF.a10_global.network_type == 'vlan':
+            delete_LB_flow.add(
+                vthunder_tasks.DeleteInterfaceTagIfNotInUseForLB(
+                    requires=[
+                        constants.LOADBALANCER,
+                        a10constants.VTHUNDER]))
+
+        # delete_LB_flow.add(listeners_delete)
+        # delete_LB_flow.add(network_tasks.UnplugVIP(
+        #    requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
@@ -219,10 +230,6 @@ class LoadBalancerFlows(object):
                 provides=constants.DELTAS))
             delete_LB_flow.add(a10_network_tasks.HandleNetworkDeltas(
                 requires=constants.DELTAS, provides=constants.ADDED_PORTS))
-            delete_LB_flow.add(
-                vthunder_tasks.VThunderComputeConnectivityWait(
-                    name=a10constants.VTHUNDER_CONNECTIVITY_WAIT + "unplug_network",
-                    requires=(a10constants.VTHUNDER, constants.AMPHORA)))
             delete_LB_flow.add(vthunder_tasks.AmphoraePostNetworkUnplug(
                 name=a10constants.AMPHORA_POST_NETWORK_UNPLUG,
                 requires=(constants.LOADBALANCER, constants.ADDED_PORTS, a10constants.VTHUNDER)))
@@ -244,13 +251,6 @@ class LoadBalancerFlows(object):
                     name=a10constants.GET_VTHUNDER_MASTER,
                     requires=a10constants.VTHUNDER,
                     provides=a10constants.VTHUNDER))
-        delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
-        if CONF.a10_global.network_type == 'vlan':
-            delete_LB_flow.add(
-                vthunder_tasks.DeleteInterfaceTagIfNotInUseForLB(
-                    requires=[
-                        constants.LOADBALANCER,
-                        a10constants.VTHUNDER]))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
