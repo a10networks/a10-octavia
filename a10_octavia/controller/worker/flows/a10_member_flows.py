@@ -75,7 +75,6 @@ class MemberFlows(object):
                     constants.ADDED_PORTS,
                     constants.LOADBALANCER,
                     a10constants.VTHUNDER]))
-        create_member_flow.add(self.handle_vrid_for_member_subflow())
         # configure member flow for HA
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             create_member_flow.add(
@@ -101,6 +100,7 @@ class MemberFlows(object):
                         constants.ADDED_PORTS, constants.LOADBALANCER], rebind={
                         a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
 
+        create_member_flow.add(self.handle_vrid_for_member_subflow())
         create_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP
         ))
