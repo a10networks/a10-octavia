@@ -60,6 +60,9 @@ A10_VTHUNDER_OPTS = [
     cfg.IntOpt('default_axapi_version',
                default=30,
                help=_('VThunder axapi version')),
+    cfg.IntOpt('default_axapi_timeout',
+               default=300,
+               help=_('VThunder axapi timeout')),
 ]
 
 A10_SLB_OPTS = [

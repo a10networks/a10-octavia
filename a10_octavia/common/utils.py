@@ -138,7 +138,7 @@ def get_axapi_client(vthunder):
     api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
     axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
                                       vthunder.username, vthunder.password,
-                                      timeout=30)
+                                      timeout=CONF.vthunder.default_axapi_timeout)
     return axapi_client
 
 
