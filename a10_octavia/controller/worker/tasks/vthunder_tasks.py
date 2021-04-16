@@ -513,7 +513,8 @@ class TagInterfaceBaseTask(VThunderBaseTask):
             api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             device_obj = vthunder.device_network_map[1]
             client = acos_client.Client(device_obj.mgmt_ip_address, api_ver,
-                                        vthunder.username, vthunder.password, timeout=30)
+                                        vthunder.username, vthunder.password,
+                                        timeout=CONF.vthunder.default_axapi_timeout)
             if vthunder.partition_name != "shared":
                 activate_partition(client, vthunder.partition_name)
             close_axapi_client = True

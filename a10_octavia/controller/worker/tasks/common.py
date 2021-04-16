@@ -38,7 +38,7 @@ class BaseVThunderTask(task.Task):
             str(vthunder.axapi_version),
             vthunder.username,
             vthunder.password,
-            timeout=30)
+            timeout=CONF.vthunder.default_axapi_timeout)
         return c
 
     def meta(self, lbaas_obj, key, default):

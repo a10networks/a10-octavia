@@ -39,7 +39,7 @@ def axapi_client_decorator(func):
             api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             self.axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
                                                    vthunder.username, vthunder.password,
-                                                   timeout=30)
+                                                   timeout=CONF.vthunder.default_axapi_timeout)
 
             if use_shared_partition or vthunder.partition_name == 'shared':
                 activate_partition(self.axapi_client, "shared")
@@ -71,7 +71,7 @@ def axapi_client_decorator_for_revert(func):
             api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
             self.axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
                                                    vthunder.username, vthunder.password,
-                                                   timeout=30)
+                                                   timeout=CONF.vthunder.default_axapi_timeout)
 
             try:
                 if use_shared_partition or vthunder.partition_name == 'shared':
