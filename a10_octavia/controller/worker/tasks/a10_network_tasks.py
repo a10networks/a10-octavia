@@ -777,16 +777,15 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                             raise e
                     vrid_floating_ips.append(vrid.vrid_floating_ip)
         else:
-            if vrid_list:
-                for vrid in vrid_list:
-                    try:
-                        self.network_driver.delete_port(vrid.vrid_port_id)
-                    except Exception as e:
-                        LOG.error(
-                            "Failed to delete neutron port for VRID FIP: %s",
-                            vrid.vrid_floating_ip)
-                        raise e
-                    update_vrid_flag = True
+            for vrid in vrid_list:
+                try:
+                    self.network_driver.delete_port(vrid.vrid_port_id)
+                except Exception as e:
+                    LOG.error(
+                        "Failed to delete neutron port for VRID FIP: %s",
+                        vrid.vrid_floating_ip)
+                    raise e
+                update_vrid_flag = True
             vrid_list = []
         if (prev_vrid_value is not None) and (prev_vrid_value != vrid_value):
             self.update_device_vrid_fip(vthunder, [], prev_vrid_value)
@@ -821,9 +820,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                     port.id,
                     str(e))
 
-        # Normalize old vrid entries
-        if vrid_list:
-            vrid_floating_ip_list = [vrid.vrid_floating_ip for vrid in vrid_list]
+        vrid_floating_ip_list = [vrid.vrid_floating_ip for vrid in vrid_list]
 
         if vrid_floating_ip_list:
             vrid_value = CONF.a10_global.vrid

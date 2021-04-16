@@ -400,6 +400,7 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
 class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
     def execute(self, partition_project_list):
+        vrid_list = []
         if partition_project_list:
             try:
                 vrid_list = self.vrid_repo.get_vrid_from_project_ids(
@@ -411,6 +412,7 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
                     partition_project_list,
                     str(e))
                 raise e
+        return vrid_list
 
 
 class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
