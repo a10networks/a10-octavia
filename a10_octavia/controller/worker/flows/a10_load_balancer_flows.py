@@ -278,21 +278,14 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+        delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
+            requires=constants.LOADBALANCER))
         return (delete_LB_flow, store)
 
     def get_new_lb_networking_subflow(self, topology, vthunder):
         """Subflow to setup networking for amphora"""
         new_LB_net_subflow = linear_flow.Flow(constants.
                                               LOADBALANCER_NETWORKING_SUBFLOW)
-        new_LB_net_subflow.add(a10_network_tasks.ApplyQos(
-            requires=(constants.LOADBALANCER, constants.AMPS_DATA,
-                      constants.UPDATE_DICT)))
-        new_LB_net_subflow.add(database_tasks.UpdateAmphoraeVIPData(
-            requires=constants.AMPS_DATA))
-        new_LB_net_subflow.add(database_tasks.ReloadLoadBalancer(
-            name=constants.RELOAD_LB_AFTER_PLUG_VIP,
-            requires=constants.LOADBALANCER_ID,
-            provides=constants.LOADBALANCER))
         new_LB_net_subflow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
@@ -439,6 +432,17 @@ class LoadBalancerFlows(object):
                 name=a10constants.MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                 inject={a10constants.STATUS: constants.ACTIVE}))
+        new_LB_net_subflow.add(a10_network_tasks.PlugVIP(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPS_DATA))
+        new_LB_net_subflow.add(a10_network_tasks.ApplyQos(
+            requires=(constants.LOADBALANCER, constants.AMPS_DATA, constants.UPDATE_DICT)))
+        new_LB_net_subflow.add(database_tasks.UpdateAmphoraeVIPData(
+            requires=constants.AMPS_DATA))
+        new_LB_net_subflow.add(database_tasks.ReloadLoadBalancer(
+            name=constants.RELOAD_LB_AFTER_PLUG_VIP,
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
         return new_LB_net_subflow
 
     def get_update_load_balancer_flow(self):
@@ -536,7 +540,7 @@ class LoadBalancerFlows(object):
             requires=a10constants.VTHUNDER))
         return lb_create_flow
 
-    def get_delete_rack_vthunder_load_balancer_flow(self, lb, deleteCompute, cascade):
+    def get_delete_rack_vthunder_load_balancer_flow(self, lb, cascade):
         """Flow to delete rack load balancer"""
 
         store = {}
@@ -583,9 +587,6 @@ class LoadBalancerFlows(object):
                     requires=[
                         constants.LOADBALANCER,
                         a10constants.VTHUNDER]))
-        if deleteCompute:
-            delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
-                requires=constants.LOADBALANCER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name=a10constants.MARK_VTHUNDER_MASTER_DELETED_IN_DB,
             requires=a10constants.VTHUNDER,
@@ -598,9 +599,8 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.DecrementLoadBalancerQuota(
             requires=constants.LOADBALANCER))
-        if deleteCompute:
-            delete_LB_flow.add(vthunder_tasks.WriteMemory(
-                requires=a10constants.VTHUNDER))
+        delete_LB_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             name=a10constants.SET_THUNDER_UPDATE_AT,
             requires=a10constants.VTHUNDER))
