@@ -382,6 +382,18 @@ class LoadBalancerFlows(object):
                     name=a10constants.MASTER_ENABLE_INTERFACE,
                     requires=(a10constants.VTHUNDER, constants.LOADBALANCER, constants.ADDED_PORTS,
                               a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
+                new_LB_net_subflow.add(vthunder_tasks.GetBackupVThunder(
+                    name=a10constants.GET_BACKUP_VTHUNDER,
+                    requires=a10constants.VTHUNDER,
+                    provides=a10constants.VTHUNDER))
+                new_LB_net_subflow.add(vthunder_tasks.GetVThunderInterface(
+                    name=a10constants.GET_BACKUP_VTHUNDER_INTERFACE,
+                    requires=a10constants.VTHUNDER,
+                    provides=(a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
+                new_LB_net_subflow.add(vthunder_tasks.GetMasterVThunder(
+                    name=a10constants.MASTER_VTHUNDER,
+                    requires=a10constants.VTHUNDER,
+                    provides=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.VCSReload(
                     name=a10constants.VCS_RELOAD,
                     requires=(a10constants.VTHUNDER)))
@@ -395,14 +407,6 @@ class LoadBalancerFlows(object):
                         rebind={
                             a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                         requires=constants.AMPHORA))
-                new_LB_net_subflow.add(vthunder_tasks.GetBackupVThunder(
-                    name=a10constants.GET_BACKUP_VTHUNDER,
-                    requires=a10constants.VTHUNDER,
-                    provides=a10constants.VTHUNDER))
-                new_LB_net_subflow.add(vthunder_tasks.GetVThunderInterface(
-                    name=a10constants.GET_BACKUP_VTHUNDER_INTERFACE,
-                    requires=a10constants.VTHUNDER,
-                    provides=(a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
                 new_LB_net_subflow.add(vthunder_tasks.GetMasterVThunder(
                     name=a10constants.GET_MASTER_VTHUNDER,
                     requires=a10constants.VTHUNDER,

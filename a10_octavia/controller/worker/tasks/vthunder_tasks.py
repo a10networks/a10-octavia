@@ -1048,6 +1048,7 @@ class GetBackupVThunder(VThunderBaseTask):
     @axapi_client_decorator
     def execute(self, vthunder):
         try:
+            time.sleep(20)
             vcs_summary = {}
             vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
             vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
