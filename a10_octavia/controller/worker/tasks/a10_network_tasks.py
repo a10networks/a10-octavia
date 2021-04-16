@@ -825,14 +825,14 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         if vrid_list:
             vrid_floating_ip_list = [vrid.vrid_floating_ip for vrid in vrid_list]
 
-            if vrid_floating_ip_list:
-                vrid_value = CONF.a10_global.vrid
-                try:
-                    self.update_device_vrid_fip(
-                        vthunder, vrid_floating_ip_list, vrid_value)
-                except Exception as e:
-                    LOG.error("Failed to update VRID floating IPs %s due to %s",
-                              vrid_floating_ip_list, str(e))
+        if vrid_floating_ip_list:
+            vrid_value = CONF.a10_global.vrid
+            try:
+                self.update_device_vrid_fip(
+                    vthunder, vrid_floating_ip_list, vrid_value)
+            except Exception as e:
+                LOG.error("Failed to update VRID floating IPs %s due to %s",
+                          vrid_floating_ip_list, str(e))
 
     def update_device_vrid_fip(
             self,
