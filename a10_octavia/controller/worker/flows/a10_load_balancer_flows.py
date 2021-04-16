@@ -205,12 +205,6 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.LB_COUNT))
         delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
-        if CONF.a10_global.network_type == 'vlan':
-            delete_LB_flow.add(
-                vthunder_tasks.DeleteInterfaceTagIfNotInUseForLB(
-                    requires=[
-                        constants.LOADBALANCER,
-                        a10constants.VTHUNDER]))
 
         # delete_LB_flow.add(listeners_delete)
         # delete_LB_flow.add(network_tasks.UnplugVIP(
@@ -576,12 +570,6 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.LB_COUNT))
         delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
-        if CONF.a10_global.network_type == 'vlan':
-            delete_LB_flow.add(
-                vthunder_tasks.DeleteInterfaceTagIfNotInUseForLB(
-                    requires=[
-                        constants.LOADBALANCER,
-                        a10constants.VTHUNDER]))
 
         # delete_LB_flow.add(listeners_delete)
         # delete_LB_flow.add(network_tasks.UnplugVIP(
@@ -593,6 +581,12 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
             requires=(constants.LOADBALANCER,
                       a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
+        if CONF.a10_global.network_type == 'vlan':
+            delete_LB_flow.add(
+                vthunder_tasks.DeleteInterfaceTagIfNotInUseForLB(
+                    requires=[
+                        constants.LOADBALANCER,
+                        a10constants.VTHUNDER]))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name=a10constants.MARK_VTHUNDER_MASTER_DELETED_IN_DB,
             requires=a10constants.VTHUNDER,
