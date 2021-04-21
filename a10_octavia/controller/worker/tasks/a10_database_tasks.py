@@ -25,6 +25,7 @@ from taskflow import task
 from taskflow.types import failure
 
 from octavia.common import constants
+from octavia.common import exceptions as octavia_exceptions
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 
@@ -930,3 +931,19 @@ class GetLoadBalancerListByProjectID(BaseDatabaseTask):
         except Exception as e:
             LOG.exception('Failed to get active Loadbalancers related to vthunder '
                           'due to: {}'.format(str(e)))
+
+
+class CheckExistingVthunderTopology(BaseDatabaseTask):
+
+    def execute(self, loadbalancer, topology):
+        vthunder = self.vthunder_repo.get_vthunder_by_project_id(
+            db_apis.get_session(),
+            loadbalancer.project_id)
+
+        if vthunder is not None:
+            if topology != (vthunder.topology).encode('utf-8'):
+                LOG.error('Other loadbalancer exists in vthunder with: %s topology',
+                          vthunder.topology)
+                msg = ('vthunder has other loadbalancer with {0} ' +
+                       'topology').format(vthunder.topology)
+                raise octavia_exceptions.InvalidTopology(topology=msg)

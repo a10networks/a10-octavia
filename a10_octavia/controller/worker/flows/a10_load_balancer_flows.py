@@ -71,6 +71,14 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(lifecycle_tasks.LoadBalancerIDToErrorOnRevertTask(
             requires=constants.LOADBALANCER_ID))
 
+        lb_create_flow.add(database_tasks.ReloadLoadBalancer(
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
+
+        lb_create_flow.add(a10_database_tasks.CheckExistingVthunderTopology(
+            requires=constants.LOADBALANCER,
+            inject={"topology": topology}))
+
         # Attaching vThunder to LB in database
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             lb_create_flow.add(*self._create_active_standby_topology())
