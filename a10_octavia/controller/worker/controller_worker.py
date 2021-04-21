@@ -50,6 +50,7 @@ RETRY_MAX = 5
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
+
 def flow_notification_handler(state, details, **kwargs):
     key = kwargs.get('ctx_key', None)
     try:
@@ -68,17 +69,18 @@ def flow_notification_handler(state, details, **kwargs):
 
             normal_thrd_num, reload_thrd_num = ctx
             LOG.debug('[state: %s] vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
-                state, key, normal_thrd_num, reload_thrd_num)
+                      state, key, normal_thrd_num, reload_thrd_num)
             if thrd_may_reload_vthunder:
                 reload_thrd_num = reload_thrd_num - 1
             else:
                 normal_thrd_num = normal_thrd_num - 1
             LOG.debug('[state: %s] vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
-                state, key, normal_thrd_num, reload_thrd_num)
+                      state, key, normal_thrd_num, reload_thrd_num)
             ctx_map[key] = (normal_thrd_num, reload_thrd_num)
             ctx_lock.release()
     except Exception:
         LOG.error("Unable to find vThunder instance (%s) context", key)
+
 
 class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
@@ -907,7 +909,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                    constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
                    constants.LOADBALANCER: load_balancer,
-                   a10constants.COMPUTE_BUSY: busy
+                   a10constants.COMPUTE_BUSY: busy,
                    constants.UPDATE_DICT: l7rule_updates})
         self._register_flow_notify_handler(update_l7rule_tf, l7rule.project_id, False, busy)
         with tf_logging.DynamicLoggingListener(update_l7rule_tf,
@@ -1074,14 +1076,14 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         busy = False
         if self._is_rack_flow(key):
             return busy
-        
+
         self.ctx_lock.acquire()
         ctx = self.ctx_map.get(key, None)
         if ctx is None:
             ctx = (0, 0)
         normal_thrd_num, reload_thrd_num = ctx
         LOG.debug('[busy_check] vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
-            key, normal_thrd_num, reload_thrd_num)
+                  key, normal_thrd_num, reload_thrd_num)
         if thrd_may_reload_vthunder:
             if reload_thrd_num > 0 or normal_thrd_num > 0:
                 busy = True
@@ -1093,7 +1095,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             else:
                 normal_thrd_num = normal_thrd_num + 1
         LOG.debug('[busy_check] vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
-            key, normal_thrd_num, reload_thrd_num)
+                  key, normal_thrd_num, reload_thrd_num)
         self.ctx_map[key] = (normal_thrd_num, reload_thrd_num)
         self.ctx_lock.release()
 
@@ -1109,4 +1111,3 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                   'ctx_lock': self.ctx_lock, 'ctx_map': self.ctx_map,
                   'thrd_may_reload_vthunder': thrd_may_reload_vthunder}
         engine.notifier.register('*', flow_notification_handler, kwargs=kwargs)
-

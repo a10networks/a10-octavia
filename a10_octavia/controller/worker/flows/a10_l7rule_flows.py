@@ -100,7 +100,7 @@ class L7RuleFlows(object):
             requires=[constants.L7RULE,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
-        delete_l7rule_flow.add(vthunder_tasks.VthunderInstanceBusy(
+        update_l7rule_flow.add(vthunder_tasks.VthunderInstanceBusy(
             requires=a10constants.COMPUTE_BUSY))
 
         update_l7rule_flow.add(database_tasks.MarkL7RulePendingUpdateInDB(

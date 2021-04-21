@@ -45,18 +45,7 @@ from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
-"""
-VTHUNDER_CTX_MAP = {}
-VTHUNDER_CTX_MAP_LOCK = threading.Lock()
 
-class VthunderCtx():
-
-    def _init__(self):
-        # num of flow threads that may reload vthunder
-        self.reload_thrd_num = 0
-        # num of flow threads that won't reload vthunder
-        self.normal_thrd_num = 0
-"""
 
 class VThunderBaseTask(task.Task):
 
@@ -1106,99 +1095,3 @@ class VthunderInstanceBusy(VThunderBaseTask):
     def execute(self, compute_busy=False):
         if compute_busy:
             raise Exception('vThunder instance is busy now, try again later.')
-
-
-"""
-class VthunderCtxBasic(task.Task):
-    
-    def get_vthunder_ctx(key):
-        try:
-            ctx = VTHUNDER_CTX_MAP.get(key, None)
-            if ctx is None:
-                ctx = VthunderCtx()
-                VTHUNDER_CTX_MAP[project_id] = ctx
-            return ctx
-        except Exception as e:
-            pass
-        return None
-        
-
-
-class VthunderCtxReloadThrdInc(VthunderCtxBasic):
-
-    def execute(self, project_id):
-        VTHUNDER_CTX_MAP_LOCK.acquire()
-        ctx = self.get_vthunder_ctx(project_id)
-        if ctx is None or ctx.reload_thrd_num > 0 or ctx.normal_thrd_num > 0:
-            VTHUNDER_CTX_MAP_LOCK.release()
-            raise Exception('vThunder instance is busy now, try again later.')
-        ctx.reload_thrd_num = ctx.reload_thrd_num + 1
-        VTHUNDER_CTX_MAP_LOCK.release()
-
-class VthunderCtxReloadThrdDecOnRevertTask(VthunderCtxBasic):
-
-    def execute(self, project_id):
-        pass
-
-    def revert(self, project_id):
-        VTHUNDER_CTX_MAP_LOCK.acquire()
-        ctx = self.get_vthunder_ctx(project_id)
-        if ctx is None:
-            LOG.error("Unable to find vThunder instance (%s) context", project_id)
-        else:
-            ctx.reload_thrd_num = ctx.reload_thrd_num - 1
-        VTHUNDER_CTX_MAP_LOCK.release()
-
-
-class VthunderCtxReloadThrdDec(VthunderCtxBasic):
-
-    def execute(self, project_id):
-        VTHUNDER_CTX_MAP_LOCK.acquire()
-        ctx = self.get_vthunder_ctx(project_id)
-        if ctx is None:
-            VTHUNDER_CTX_MAP_LOCK.release()
-            raise Exception("Unexpected Error: Unable to find vThunder instance (%s) context",
-                project_id)
-        ctx.reload_thrd_num = ctx.reload_thrd_num - 1
-        VTHUNDER_CTX_MAP_LOCK.release()
-
-
-class VthunderCtxNormalThrdInc(VthunderCtxBasic):
-
-    def execute(self, project_id):
-        VTHUNDER_CTX_MAP_LOCK.acquire()
-        ctx = self.get_vthunder_ctx(project_id)
-        if ctx is None or ctx.reload_thrd_num > 0:
-            VTHUNDER_CTX_MAP_LOCK.release()
-            raise Exception('vThunder instance is busy now, try again later.')
-        ctx.normal_thrd_num = ctx.normal_thrd_num + 1
-        VTHUNDER_CTX_MAP_LOCK.release()
-
-
-class VthunderCtxNormalThrdDecOnRevertTask(VthunderCtxBasic):
-
-    def execute(self, project_id):
-        pass
-
-    def revert(self, project_id):
-        VTHUNDER_CTX_MAP_LOCK.acquire()
-        ctx = self.get_vthunder_ctx(project_id)
-        if ctx is None:
-            LOG.error("Unable to find vThunder instance (%s) context", project_id)
-        else:
-            ctx.normal_thrd_num = ctx.normal_thrd_num - 1
-        VTHUNDER_CTX_MAP_LOCK.release()
-
-
-class VthunderCtxNormalThrdDec(VthunderCtxBasic):
-
-    def execute(self, project_id):
-        VTHUNDER_CTX_MAP_LOCK.acquire()
-        ctx = self.get_vthunder_ctx(project_id)
-        if ctx is None:
-            VTHUNDER_CTX_MAP_LOCK.release()
-            raise Exception("Unexpected Error: Unable to find vThunder instance (%s) context",
-                project_id)
-        ctx.normal_thrd_num = ctx.normal_thrd_num - 1
-        VTHUNDER_CTX_MAP_LOCK.release()
-"""
