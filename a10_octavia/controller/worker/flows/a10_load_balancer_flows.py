@@ -70,6 +70,8 @@ class LoadBalancerFlows(object):
         lb_create_flow = linear_flow.Flow(f_name)
         lb_create_flow.add(lifecycle_tasks.LoadBalancerIDToErrorOnRevertTask(
             requires=constants.LOADBALANCER_ID))
+        lb_create_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
 
         # Attaching vThunder to LB in database
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
@@ -182,6 +184,8 @@ class LoadBalancerFlows(object):
         delete_LB_flow = linear_flow.Flow(constants.DELETE_LOADBALANCER_FLOW)
         delete_LB_flow.add(lifecycle_tasks.LoadBalancerToErrorOnRevertTask(
             requires=constants.LOADBALANCER))
+        delete_LB_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
         delete_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -455,6 +459,8 @@ class LoadBalancerFlows(object):
         update_LB_flow = linear_flow.Flow(constants.UPDATE_LOADBALANCER_FLOW)
         update_LB_flow.add(lifecycle_tasks.LoadBalancerToErrorOnRevertTask(
             requires=constants.LOADBALANCER))
+        update_LB_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
         update_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))

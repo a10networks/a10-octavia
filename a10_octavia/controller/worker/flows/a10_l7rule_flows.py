@@ -37,6 +37,9 @@ class L7RuleFlows(object):
             requires=[constants.L7RULE,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        create_l7rule_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         create_l7rule_flow.add(database_tasks.MarkL7RulePendingCreateInDB(
             requires=constants.L7RULE))
         create_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
@@ -65,6 +68,9 @@ class L7RuleFlows(object):
             requires=[constants.L7RULE,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        delete_l7rule_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         delete_l7rule_flow.add(database_tasks.MarkL7RulePendingDeleteInDB(
             requires=constants.L7RULE))
         delete_l7rule_flow.add(model_tasks.DeleteModelObject(
@@ -94,6 +100,9 @@ class L7RuleFlows(object):
             requires=[constants.L7RULE,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        delete_l7rule_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         update_l7rule_flow.add(database_tasks.MarkL7RulePendingUpdateInDB(
             requires=constants.L7RULE))
         update_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(

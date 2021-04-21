@@ -25,16 +25,19 @@ from octavia import version
 from a10_octavia.cmd import service as octavia_service
 from a10_octavia.controller.queue import consumer
 
+import multiprocessing
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
-
+mp_mgr = multiprocessing.Manager()
+ctx_map = mp_mgr.dict()
+ctx_lock = mp_mgr.Lock()
 
 def main():
     octavia_service.prepare_service(sys.argv)
     gmr.TextGuruMeditation.setup_autorun(version)
     sm = cotyledon.ServiceManager()
     sm.add(consumer.ConsumerService, workers=CONF.a10_controller_worker.workers,
-           args=(CONF,))
+           args=(CONF, ctx_map, ctx_lock))
     oslo_config_glue.setup(sm, CONF, reload_method="mutate")
     sm.run()

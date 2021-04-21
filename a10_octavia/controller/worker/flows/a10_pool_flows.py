@@ -48,6 +48,9 @@ class PoolFlows(object):
             requires=[constants.POOL,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        create_pool_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         create_pool_flow.add(database_tasks.MarkPoolPendingCreateInDB(
             requires=constants.POOL))
         create_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
@@ -83,6 +86,9 @@ class PoolFlows(object):
             requires=[constants.POOL,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        delete_pool_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         delete_pool_flow.add(database_tasks.MarkPoolPendingDeleteInDB(
             requires=constants.POOL))
         delete_pool_flow.add(database_tasks.CountPoolChildrenForQuota(
@@ -173,6 +179,9 @@ class PoolFlows(object):
             requires=[constants.POOL,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        update_pool_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         update_pool_flow.add(database_tasks.MarkPoolPendingUpdateInDB(
             requires=constants.POOL))
         update_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
