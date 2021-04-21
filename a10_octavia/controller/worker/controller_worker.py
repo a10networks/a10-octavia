@@ -197,6 +197,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         parent_project_list = utils.get_parent_project_list()
         listener_parent_proj = utils.get_parent_project(listener.project_id)
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
         if (listener.project_id in parent_project_list or
                 (listener_parent_proj and listener_parent_proj in parent_project_list)
                 or listener.project_id in CONF.hardware_thunder.devices):
@@ -209,7 +211,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                             listener})
         else:
             create_listener_tf = self._taskflow_load(self._listener_flows.
-                                                     get_create_listener_flow(),
+                                                     get_create_listener_flow(topology=topology),
                                                      store={constants.LOADBALANCER:
                                                             load_balancer,
                                                             constants.LISTENER:
