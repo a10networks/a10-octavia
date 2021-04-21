@@ -68,3 +68,4 @@ MOCK_L7POLICY_ID = "mock-l7-policy-1"
 MOCK_L7RULE_ID = "mock-l7-rule-1"
 
 MOCK_TLS_CERTIFICATE_ID = "mock_tls_certificate_id"
+MOCK_TOPOLOGY_ACTIVE_STANDBY = "ACTIVE_STANDBY"
