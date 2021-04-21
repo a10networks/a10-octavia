@@ -37,7 +37,6 @@ from a10_octavia.controller.worker.tasks import a10_database_tasks as task
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
-
 VTHUNDER = data_models.VThunder()
 HW_THUNDER = data_models.HardwareThunder(
     project_id=a10constants.MOCK_PROJECT_ID,
