@@ -287,6 +287,9 @@ class PoolFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         delete_pool_flow.add(persist_tasks.DeleteSessionPersistence(
             requires=[a10constants.VTHUNDER, constants.POOL]))
+        delete_pool_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.VTHUNDER))
         # Delete pool children
         delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon))
         delete_pool_flow.add(self._get_delete_member_vthunder_subflow(members, store))
