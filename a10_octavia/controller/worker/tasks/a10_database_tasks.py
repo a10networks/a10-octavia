@@ -934,6 +934,7 @@ class GetLoadBalancerListByProjectID(BaseDatabaseTask):
 
 
 class CheckExistingVthunderTopology(BaseDatabaseTask):
+    """This task only meant to use with vthunder flow[amphora]"""
 
     def execute(self, loadbalancer, topology):
         vthunder = self.vthunder_repo.get_vthunder_by_project_id(
