@@ -301,10 +301,6 @@ class MemberFlows(object):
     def get_delete_member_vthunder_internal_subflow(self, member_id, pool):
         delete_member_thunder_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBER_VTHUNDER_INTERNAL_SUBFLOW)
-        delete_member_thunder_subflow.add(vthunder_tasks.SetupDeviceNetworkMap(
-            name='setup_device_network_map_' + member_id,
-            requires=a10constants.VTHUNDER,
-            provides=a10constants.VTHUNDER))
         delete_member_thunder_subflow.add(
             a10_database_tasks.CountMembersWithIPPortProtocol(
                 name='count_members_ip_port_' + member_id,

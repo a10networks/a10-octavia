@@ -32,7 +32,7 @@ from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 class ListenerFlows(object):
 
-    def get_create_listener_flow(self):
+    def get_create_listener_flow(self, topology):
         """Flow to create a listener"""
 
         create_listener_flow = linear_flow.Flow(constants.CREATE_LISTENER_FLOW)
@@ -41,6 +41,11 @@ class ListenerFlows(object):
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            create_listener_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         create_listener_flow.add(self.handle_ssl_cert_flow(flow_type='create'))
         create_listener_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
