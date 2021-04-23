@@ -14,7 +14,6 @@
 
 from sqlalchemy.orm import exc as db_exceptions
 import tenacity
-import threading
 import urllib3
 
 from oslo_config import cfg
@@ -153,7 +152,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                    constants.LOADBALANCER: load_balancer,
                    a10constants.COMPUTE_BUSY: busy,
                    a10constants.WRITE_MEM_SHARED_PART: True})
-        self._register_flow_notify_handler(create_hm_tf, l7policy.project_id, False, busy)
+        self._register_flow_notify_handler(create_hm_tf, health_mon.project_id, False, busy)
         with tf_logging.DynamicLoggingListener(create_hm_tf,
                                                log=LOG):
             create_hm_tf.run()
@@ -523,7 +522,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                        constants.LOADBALANCER: load_balancer, a10constants.COMPUTE_BUSY: busy,
                        constants.POOL: pool}
             )
-            self._register_flow_notify_handler(create_member_tf, member.project_id, True, busy)
+            self._register_flow_notify_handler(delete_member_tf, member.project_id, True, busy)
         with tf_logging.DynamicLoggingListener(delete_member_tf,
                                                log=LOG):
             delete_member_tf.run()
