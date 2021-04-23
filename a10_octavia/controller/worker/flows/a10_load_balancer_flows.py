@@ -204,7 +204,6 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.LB_COUNT))
-        delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
 
         # delete_LB_flow.add(listeners_delete)
         # delete_LB_flow.add(network_tasks.UnplugVIP(
@@ -245,6 +244,7 @@ class LoadBalancerFlows(object):
                     name=a10constants.GET_VTHUNDER_MASTER,
                     requires=a10constants.VTHUNDER,
                     provides=a10constants.VTHUNDER))
+        delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
