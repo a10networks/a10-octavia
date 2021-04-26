@@ -260,7 +260,14 @@ A10_CONTROLLER_WORKER_OPTS = [
                choices=constants.SUPPORTED_LB_TOPOLOGIES,
                help=_('Load balancer topology configuration. '
                       'SINGLE - One vthunder per load balancer. '
-                      'ACTIVE_STANDBY - Two vthunder per load balancer.'))
+                      'ACTIVE_STANDBY - Two vthunder per load balancer.')),
+    cfg.StrOpt('amp_vcs_wait_sec',
+               default=20,
+               help=_('Seconds to wait between checks on whether an VThunder '
+                      'vcs negotiation is ready')),
+    cfg.StrOpt('amp_vcs_retries',
+               default=5,
+               help=_('Retry attempts to wait for VThunder vcs negotiation'))
 ]
 
 A10_HOUSE_KEEPING_OPTS = [

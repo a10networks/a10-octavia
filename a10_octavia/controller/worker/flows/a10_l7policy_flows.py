@@ -37,6 +37,9 @@ class L7PolicyFlows(object):
             requires=[constants.L7POLICY,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        create_l7policy_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         create_l7policy_flow.add(database_tasks.MarkL7PolicyPendingCreateInDB(
             requires=constants.L7POLICY))
         create_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
@@ -64,6 +67,9 @@ class L7PolicyFlows(object):
             requires=[constants.L7POLICY,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        delete_l7policy_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         delete_l7policy_flow.add(database_tasks.MarkL7PolicyPendingDeleteInDB(
             requires=constants.L7POLICY))
         delete_l7policy_flow.add(model_tasks.DeleteModelObject(
@@ -92,6 +98,9 @@ class L7PolicyFlows(object):
             requires=[constants.L7POLICY,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        update_l7policy_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         update_l7policy_flow.add(database_tasks.MarkL7PolicyPendingUpdateInDB(
             requires=constants.L7POLICY))
         update_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(

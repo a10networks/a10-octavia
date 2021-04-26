@@ -1027,20 +1027,33 @@ class GetMasterVThunder(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        try:
-            time.sleep(20)
-            vcs_summary = {}
-            vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
-            vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
-            for i in range(len(vcs_member_list)):
-                role = vcs_member_list[i]['state'].split('(')[0]
-                if role == "vMaster":
-                    vthunder.ip_address = vcs_member_list[i]['ip-list'][0]['ip']
-                    break
-            return vthunder
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
-            LOG.exception("Failed to get Master vThunder: %s", str(e))
-            raise e
+        attempts = CONF.a10_controller_worker.amp_vcs_retries
+        while attempts >= 0:
+            try:
+                attempts = attempts - 1
+                vcs_summary = {}
+                vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
+                vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
+                for i in range(len(vcs_member_list)):
+                    role = vcs_member_list[i]['state'].split('(')[0]
+                    if role == "vMaster":
+                        vthunder.ip_address = vcs_member_list[i]['ip-list'][0]['ip']
+                        break
+                else:
+                    raise acos_errors.AxapiJsonFormatErrora(
+                        msg="vMaster not found in vcs-summary")
+                return vthunder
+            except req_exceptions.ReadTimeout as e:
+                # Don't retry for ReadTimout, since acos-client already already have
+                # tries and timeout for axapi request. And it will take very long to
+                # response this error.
+                LOG.exception("Failed to get Master vThunder: %s", str(e))
+                raise e
+            except Exception as e:
+                if attempts < 0:
+                    LOG.exception("Failed to get Master vThunder: %s", str(e))
+                    raise e
+                time.sleep(CONF.a10_controller_worker.amp_vcs_wait_sec)
 
 
 class GetBackupVThunder(VThunderBaseTask):
@@ -1048,17 +1061,37 @@ class GetBackupVThunder(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        try:
-            time.sleep(20)
-            vcs_summary = {}
-            vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
-            vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
-            for i in range(len(vcs_member_list)):
-                role = vcs_member_list[i]['state'].split('(')[0]
-                if role == "vBlade":
-                    vthunder.ip_address = vcs_member_list[i]['ip-list'][0]['ip']
-                    break
-            return vthunder
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
-            LOG.exception("Failed to get Backup vThunder: %s", str(e))
-            raise e
+        attempts = CONF.a10_controller_worker.amp_vcs_retries
+        while attempts >= 0:
+            try:
+                attempts = attempts - 1
+                vcs_summary = {}
+                vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
+                vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
+                for i in range(len(vcs_member_list)):
+                    role = vcs_member_list[i]['state'].split('(')[0]
+                    if role == "vBlade":
+                        vthunder.ip_address = vcs_member_list[i]['ip-list'][0]['ip']
+                        break
+                else:
+                    raise acos_errors.AxapiJsonFormatErrora(
+                        msg="vBlade not found in vcs-summary")
+                return vthunder
+            except req_exceptions.ReadTimeout as e:
+                # Don't retry for ReadTimout, since acos-client already already have
+                # tries and timeout for axapi request. And it will take very long to
+                # response this error.
+                LOG.exception("Failed to get Master vThunder: %s", str(e))
+                raise e
+            except Exception as e:
+                if attempts < 0:
+                    LOG.exception("Failed to get Backup vThunder: %s", str(e))
+                    raise e
+                time.sleep(CONF.a10_controller_worker.amp_vcs_wait_sec)
+
+
+class VthunderInstanceBusy(VThunderBaseTask):
+
+    def execute(self, compute_busy=False):
+        if compute_busy:
+            raise Exception('vThunder instance is busy now, try again later.')

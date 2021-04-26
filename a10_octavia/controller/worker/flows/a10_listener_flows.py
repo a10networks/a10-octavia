@@ -38,6 +38,8 @@ class ListenerFlows(object):
         create_listener_flow = linear_flow.Flow(constants.CREATE_LISTENER_FLOW)
         create_listener_flow.add(lifecycle_tasks.ListenerToErrorOnRevertTask(
             requires=[constants.LISTENER]))
+        create_listener_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -96,6 +98,8 @@ class ListenerFlows(object):
         delete_listener_flow = linear_flow.Flow(constants.DELETE_LISTENER_FLOW)
         delete_listener_flow.add(lifecycle_tasks.ListenerToErrorOnRevertTask(
             requires=constants.LISTENER))
+        delete_listener_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
         delete_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -168,6 +172,8 @@ class ListenerFlows(object):
         update_listener_flow = linear_flow.Flow(constants.UPDATE_LISTENER_FLOW)
         update_listener_flow.add(lifecycle_tasks.ListenerToErrorOnRevertTask(
             requires=[constants.LISTENER]))
+        update_listener_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
         update_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))

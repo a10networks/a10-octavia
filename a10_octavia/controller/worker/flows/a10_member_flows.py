@@ -43,6 +43,9 @@ class MemberFlows(object):
                       constants.LISTENERS,
                       constants.LOADBALANCER,
                       constants.POOL]))
+        create_member_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         create_member_flow.add(database_tasks.MarkMemberPendingCreateInDB(
             requires=constants.MEMBER))
         create_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
@@ -136,6 +139,9 @@ class MemberFlows(object):
                       constants.LISTENERS,
                       constants.LOADBALANCER,
                       constants.POOL]))
+        delete_member_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         delete_member_flow.add(database_tasks.MarkMemberPendingDeleteInDB(
             requires=constants.MEMBER))
         delete_member_flow.add(model_tasks.
@@ -479,6 +485,9 @@ class MemberFlows(object):
                       constants.LISTENERS,
                       constants.LOADBALANCER,
                       constants.POOL]))
+        update_member_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         update_member_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
             requires=constants.MEMBER))
         update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
