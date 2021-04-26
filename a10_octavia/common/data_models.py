@@ -230,3 +230,11 @@ class NATPool(BaseDataModel):
         self.end_address = end_address
         self.member_ref_count = member_ref_count
         self.port_id = port_id
+
+
+class VrrpSet(BaseDataModel):
+
+    def __init__(self, mgmt_subnet=None, project_id=None, set_id=None):
+        self.mgmt_subnet = mgmt_subnet
+        self.project_id = project_id
+        self.set_id = set_id

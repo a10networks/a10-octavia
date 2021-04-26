@@ -52,6 +52,7 @@ class BaseDatabaseTask(task.Task):
         self.flavor_repo = repo.FlavorRepository()
         self.flavor_profile_repo = repo.FlavorProfileRepository()
         self.nat_pool_repo = a10_repo.NatPoolRepository()
+        self.vrrp_set_repo = a10_repo.VrrpSetRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -930,3 +931,50 @@ class GetLoadBalancerListByProjectID(BaseDatabaseTask):
         except Exception as e:
             LOG.exception('Failed to get active Loadbalancers related to vthunder '
                           'due to: {}'.format(str(e)))
+
+
+class AddProjectSetIdDB(BaseDatabaseTask):
+
+    def execute(self, loadbalancer):
+        set_id = 0
+        if len(CONF.a10_controller_worker.amp_boot_network_list) < 1:
+            raise exceptions.NoVrrpMgmtSubnet()
+        mgmt_subnet = CONF.a10_controller_worker.amp_boot_network_list[0]
+
+        try:
+            project_id = loadbalancer.project_id
+            entry = self.vrrp_set_repo.get(db_apis.get_session(), mgmt_subnet=mgmt_subnet,
+                                           project_id=project_id)
+            if entry is None:
+                # amp_boot_network_list may changed but thunder already created with old subnet
+                entry = self.vrrp_set_repo.get(db_apis.get_session(), project_id=project_id)
+
+            if entry is not None:
+                return entry.set_id
+
+            subnet_set_ids = self.vrrp_set_repo.get_subnet_set_ids(db_apis.get_session(), mgmt_subnet)
+            # ACOS allows set_id from 1-15
+            while set_id < 15:
+                set_id = set_id + 1
+                if set_id not in subnet_set_ids:
+                    break;
+            else:
+                raise exceptions.NoFreeSetId()
+
+            self.vrrp_set_repo.create(
+                db_apis.get_session(), mgmt_subnet=mgmt_subnet, project_id=project_id, set_id=set_id)
+            LOG.info("Successfully created set_id %d for project %s in database.", set_id, project_id)
+        except Exception as e:
+            LOG.exception('Failed to get VRRP-A set_id for project due to :{}'.format(str(e)))
+
+        return set_id
+
+
+class DeleteProjectSetIdDB(BaseDatabaseTask):
+
+    def execute(self, loadbalancer):
+        try:
+            # delete project set_id for all mgmt_subnet
+            self.vrrp_set_repo.delete(db_apis.get_session(), project_id=loadbalancer.project_id)
+        except Exception as e:
+            LOG.exception('Failed to delete VRRP-A set_id for project due to :{}'.format(str(e)))

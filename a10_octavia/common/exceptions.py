@@ -214,3 +214,15 @@ class PortIdMissing(keystone_exceptions.Error):
         msg = ('Unexpected condition, port_id is missing while creating '
                'entry for nat_pool table. ')
         super(PortIdMissing, self).__init__(message=msg)
+
+
+class NoVrrpMgmtSubnet(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('amp_boot_network_list option is missing in configuration.')
+        super(NoVrrpMgmtSubnet, self).__init__(msg=msg)
+    
+
+class NoFreeSetId(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('No free VRRP-A set_id available.')
+        super(NoFreeSetId, self).__init__(msg=msg)

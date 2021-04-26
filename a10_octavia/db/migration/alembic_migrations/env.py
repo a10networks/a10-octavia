@@ -14,8 +14,8 @@ from a10_octavia.db import base_models
 #
 # The below code is required for autogeneration to work
 # ===========================================================
-from a10_octavia.db.models import VThunder, NATPool, VRID
-VALID_AUOTGEN_TABLE_NAMES = ('vthunders', 'nat_pool', 'vrid')
+from a10_octavia.db.models import VThunder, NATPool, VRID, VrrpSet
+VALID_AUOTGEN_TABLE_NAMES = ('vthunders', 'nat_pool', 'vrid', 'vrrp_set')
 # ===========================================================
 
 # this is the Alembic Config object, which provides

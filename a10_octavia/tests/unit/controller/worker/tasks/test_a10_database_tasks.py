@@ -609,3 +609,19 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         lb_task.loadbalancer_repo.update = mock.Mock()
         lb_task.execute(lb_list)
         lb_task.loadbalancer_repo.update.assert_not_called()
+
+    def test_AddProjectSetIdDB(self):
+        self.conf.config(
+            group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+            amp_boot_network_list="mgmt_subnet_1")
+        db_task = task.AddProjectSetIdDB()
+        db_task.vrrp_set_repo.get = mock.Mock()
+        db_task.execute(LB)
+        db_task.vrrp_set_repo.get.assert_called_once_with(mock.ANY, mgmt_subnet='mgmt_subnet_1',
+                                                          project_id=mock.ANY)
+        
+    def test_DeleteProjectSetIdDB(self):
+        db_task = task.DeleteProjectSetIdDB()
+        db_task.vrrp_set_repo.delete = mock.Mock()
+        db_task.execute(LB)
+        db_task.vrrp_set_repo.delete.assert_called_once_with(mock.ANY, project_id=mock.ANY)
