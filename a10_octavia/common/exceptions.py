@@ -220,7 +220,7 @@ class NoVrrpMgmtSubnet(acos_errors.ACOSException):
     def __init__(self):
         msg = ('amp_boot_network_list option is missing in configuration.')
         super(NoVrrpMgmtSubnet, self).__init__(msg=msg)
-    
+
 
 class NoFreeSetId(acos_errors.ACOSException):
     def __init__(self):

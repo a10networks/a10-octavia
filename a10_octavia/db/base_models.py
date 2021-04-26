@@ -33,7 +33,7 @@ class A10Base(models.ModelBase):
         if obj.__class__.__name__ in ['Member', 'Pool', 'LoadBalancer',
                                       'Listener', 'Amphora', 'L7Policy',
                                       'L7Rule', 'VThunder', 'VRID',
-                                      'NATPool', 'VrrpSet']:
+                                      'NATPool']:
             return obj.__class__.__name__ + str(obj.id)
         elif obj.__class__.__name__ in ['SessionPersistence', 'HealthMonitor']:
             return obj.__class__.__name__ + obj.pool_id
@@ -48,6 +48,8 @@ class A10Base(models.ModelBase):
                     obj.listener_id + obj.tls_container_id)
         elif obj.__class__.__name__ in ['Quotas']:
             return obj.__class__.__name__ + obj.project_id
+        elif obj.__class__.__name__ in ['VrrpSet']:
+            return obj.__class__.__name__ + obj.mgmt_subnet + obj.project_id
         else:
             raise NotImplementedError
 
