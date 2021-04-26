@@ -619,7 +619,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         db_task.execute(LB)
         db_task.vrrp_set_repo.get.assert_called_once_with(mock.ANY, mgmt_subnet='mgmt_subnet_1',
                                                           project_id=mock.ANY)
-        
+
     def test_DeleteProjectSetIdDB(self):
         db_task = task.DeleteProjectSetIdDB()
         db_task.vrrp_set_repo.delete = mock.Mock()

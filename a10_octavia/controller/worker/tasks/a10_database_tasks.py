@@ -952,18 +952,21 @@ class AddProjectSetIdDB(BaseDatabaseTask):
             if entry is not None:
                 return entry.set_id
 
-            subnet_set_ids = self.vrrp_set_repo.get_subnet_set_ids(db_apis.get_session(), mgmt_subnet)
+            subnet_set_ids = self.vrrp_set_repo.get_subnet_set_ids(db_apis.get_session(),
+                                                                   mgmt_subnet)
             # ACOS allows set_id from 1-15
             while set_id < 15:
                 set_id = set_id + 1
                 if set_id not in subnet_set_ids:
-                    break;
+                    break
             else:
                 raise exceptions.NoFreeSetId()
 
             self.vrrp_set_repo.create(
-                db_apis.get_session(), mgmt_subnet=mgmt_subnet, project_id=project_id, set_id=set_id)
-            LOG.info("Successfully created set_id %d for project %s in database.", set_id, project_id)
+                db_apis.get_session(), mgmt_subnet=mgmt_subnet, project_id=project_id,
+                set_id=set_id)
+            LOG.info("Successfully created set_id %d for project %s in database.",
+                     set_id, project_id)
         except Exception as e:
             LOG.exception('Failed to get VRRP-A set_id for project due to :{}'.format(str(e)))
 
