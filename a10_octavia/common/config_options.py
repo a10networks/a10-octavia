@@ -270,7 +270,8 @@ A10_CONTROLLER_WORKER_OPTS = [
                help=_('Retry attempts to wait for VThunder vcs negotiation')),
     cfg.IntOpt('amp_busy_wait_sec',
                default=900,
-               help=_('Timeout for waiting when vThunder instance is busy'))
+               help=_('Timeout for waiting when vThunder instance is busy. '
+                      '(0 for no timeout'))
 ]
 
 A10_HOUSE_KEEPING_OPTS = [

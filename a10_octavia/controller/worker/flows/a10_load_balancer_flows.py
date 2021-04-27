@@ -194,6 +194,7 @@ class LoadBalancerFlows(object):
             requires=constants.LOADBALANCER))
         delete_LB_flow.add(vthunder_tasks.VthunderInstanceBusy(
             requires=a10constants.COMPUTE_BUSY))
+
         delete_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -223,8 +224,8 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
-        delete_LB_flow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
-            requires=a10constants.VTHUNDER,
+        delete_LB_flow.add(a10_database_tasks.GetLoadBalancerListForDeletion(
+            requires=(a10constants.VTHUNDER, constants.LOADBALANCER),
             provides=a10constants.LOADBALANCERS_LIST))
         delete_LB_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,

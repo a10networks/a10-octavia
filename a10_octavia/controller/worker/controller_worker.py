@@ -1081,7 +1081,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         timeout = CONF.a10_controller_worker.amp_busy_wait_sec
         while timeout >= 0:
-            timeout = timeout - 5
+            # amp_busy_wait_sec 0 for wait forever
+            if CONF.a10_controller_worker.amp_busy_wait_sec is not 0:
+                timeout = timeout - 5
 
             self.ctx_lock.acquire()
             ctx = self.ctx_map.get(key, None)
