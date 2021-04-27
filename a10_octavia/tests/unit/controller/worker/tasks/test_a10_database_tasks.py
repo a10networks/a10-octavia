@@ -25,6 +25,7 @@ from oslo_config import fixture as oslo_fixture
 from oslo_utils import uuidutils
 
 from octavia.common import data_models as o_data_models
+from octavia.common import exceptions as o_exceptions
 from octavia.network import data_models as n_data_models
 from octavia.tests.common import constants as t_constants
 
@@ -609,3 +610,11 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         lb_task.loadbalancer_repo.update = mock.Mock()
         lb_task.execute(lb_list)
         lb_task.loadbalancer_repo.update.assert_not_called()
+
+    def test_CheckExistingVthunderTopology_execute_raised_exception(self):
+        lb_task = task.CheckExistingVthunderTopology()
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.topology = a10constants.MOCK_TOPOLOGY_ACTIVE_STANDBY
+        lb_task.vthunder_repo = mock.MagicMock()[1:999]
+        lb_task.vthunder_repo.get_vthunder_by_project_id.return_value = vthunder
+        self.assertRaises(o_exceptions.InvalidTopology, lb_task.execute, LB, "SINGLE")
