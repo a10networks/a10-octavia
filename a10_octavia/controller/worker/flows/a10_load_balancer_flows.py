@@ -244,6 +244,11 @@ class LoadBalancerFlows(object):
                     name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
                     requires=(a10constants.VTHUNDER, constants.AMPHORA)))
             if lb.topology == "ACTIVE_STANDBY":
+                delete_LB_flow.add(
+                    vthunder_tasks.VThunderComputeConnectivityWait(
+                        name=a10constants.BACKUP_CONNECTIVITY_WAIT + "-before-unplug",
+                        rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                        requires=constants.AMPHORA))
                 delete_LB_flow.add(vthunder_tasks.AmphoraePostNetworkUnplug(
                     name=a10constants.AMPHORA_POST_NETWORK_UNPLUG_FOR_BACKUP_VTHUNDER,
                     requires=(constants.LOADBALANCER, constants.ADDED_PORTS),
@@ -253,6 +258,9 @@ class LoadBalancerFlows(object):
                         name=a10constants.BACKUP_CONNECTIVITY_WAIT,
                         rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                         requires=constants.AMPHORA))
+                delete_LB_flow.add(vthunder_tasks.VCSSyncWait(
+                    name="vip-unplug-wait-vcs-ready",
+                    requires=a10constants.VTHUNDER))
                 delete_LB_flow.add(vthunder_tasks.GetMasterVThunder(
                     name=a10constants.GET_VTHUNDER_MASTER,
                     requires=a10constants.VTHUNDER,
@@ -371,6 +379,19 @@ class LoadBalancerFlows(object):
                     name=a10constants.AMPHORAE_POST_VIP_PLUG_FOR_MASTER,
                     requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
                               constants.ADDED_PORTS)))
+                new_LB_net_subflow.add(
+                    vthunder_tasks.VThunderComputeConnectivityWait(
+                        name="active-compute-conn-wait-before-plug-backup",
+                        requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+                new_LB_net_subflow.add(
+                    vthunder_tasks.VThunderComputeConnectivityWait(
+                        name="backup-compute-conn-wait-before-plug-backup",
+                        rebind={
+                            a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                        requires=constants.AMPHORA))
+                new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
+                    name="active-plug-wait-vcs-ready",
+                    requires=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
                     name=a10constants.AMPHORAE_POST_VIP_PLUG_FOR_BACKUP,
                     requires=(constants.LOADBALANCER, constants.ADDED_PORTS),
@@ -385,6 +406,9 @@ class LoadBalancerFlows(object):
                         rebind={
                             a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                         requires=constants.AMPHORA))
+                new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
+                    name="backup-plug-wait-vcs-ready",
+                    requires=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.GetVThunderInterface(
                     name=a10constants.GET_MASTER_VTHUNDER_INTERFACE,
                     requires=a10constants.VTHUNDER,
@@ -418,6 +442,9 @@ class LoadBalancerFlows(object):
                         rebind={
                             a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                         requires=constants.AMPHORA))
+                new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
+                    name="vcs-reload-wait-vcs-ready",
+                    requires=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.GetMasterVThunder(
                     name=a10constants.GET_MASTER_VTHUNDER,
                     requires=a10constants.VTHUNDER,
@@ -436,6 +463,9 @@ class LoadBalancerFlows(object):
                         rebind={
                             a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                         requires=constants.AMPHORA))
+                new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
+                    name="int-sync-reload-wait-vcs-ready",
+                    requires=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.GetMasterVThunder(
                     name=a10constants.GET_VTHUNDER_MASTER,
                     requires=a10constants.VTHUNDER,

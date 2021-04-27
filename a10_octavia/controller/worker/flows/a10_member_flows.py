@@ -85,6 +85,10 @@ class MemberFlows(object):
                     name="get_backup_vThunder",
                     requires=constants.LOADBALANCER,
                     provides=a10constants.BACKUP_VTHUNDER))
+            create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+                    name="backup_compute_conn_wait_before_plug",
+                    requires=constants.AMPHORA,
+                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             create_member_flow.add(
                 vthunder_tasks.AmphoraePostMemberNetworkPlug(
                     name="backup_amphora_network_plug", requires=[
@@ -93,10 +97,13 @@ class MemberFlows(object):
             create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
                 name=a10constants.MASTER_CONNECTIVITY_WAIT,
                 requires=(a10constants.VTHUNDER, constants.AMPHORA)))
-            create_member_flow.add(
-                vthunder_tasks.VThunderComputeConnectivityWait(
-                    name="backup_compute_conn_wait", requires=constants.AMPHORA, rebind={
-                        a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+            create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+                name=a10constants.BACKUP_CONNECTIVITY_WAIT,
+                requires=constants.AMPHORA,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+            create_member_flow.add(vthunder_tasks.VCSSyncWait(
+                name="member_net_plug_vcs_sync_wait",
+                requires=a10constants.VTHUNDER))
             create_member_flow.add(
                 vthunder_tasks.EnableInterfaceForMembers(
                     name="backup_enable_interface", requires=[
@@ -190,6 +197,11 @@ class MemberFlows(object):
                     requires=constants.LOADBALANCER,
                     provides=a10constants.BACKUP_VTHUNDER))
             delete_member_flow.add(
+                vthunder_tasks.VThunderComputeConnectivityWait(
+                    name=a10constants.BACKUP_CONNECTIVITY_WAIT + "-before-unplug",
+                    requires=constants.AMPHORA,
+                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+            delete_member_flow.add(
                 vthunder_tasks.AmphoraePostNetworkUnplug(
                     name=a10constants.AMPHORA_POST_NETWORK_UNPLUG_FOR_BACKUP_VTHUNDER,
                     requires=(constants.LOADBALANCER, constants.ADDED_PORTS),
@@ -199,6 +211,9 @@ class MemberFlows(object):
                     name=a10constants.BACKUP_CONNECTIVITY_WAIT,
                     requires=constants.AMPHORA,
                     rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+            delete_member_flow.add(vthunder_tasks.VCSSyncWait(
+                name='member-unplug-' + a10constants.VCS_SYNC_WAIT,
+                requires=a10constants.VTHUNDER))
         delete_member_flow.add(server_tasks.MemberFindNatPool(
             requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                       constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
