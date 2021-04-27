@@ -213,7 +213,7 @@ A10_CONTROLLER_WORKER_OPTS = [
                default=1, min=1,
                help='Number of workers for the controller-worker service.'),
     cfg.IntOpt('amp_active_retries',
-               default=10,
+               default=90,
                help=_('Retry attempts to wait for VThunder to become active')),
     cfg.IntOpt('amp_active_wait_sec',
                default=10,
@@ -262,12 +262,16 @@ A10_CONTROLLER_WORKER_OPTS = [
                       'SINGLE - One vthunder per load balancer. '
                       'ACTIVE_STANDBY - Two vthunder per load balancer.')),
     cfg.IntOpt('amp_vcs_wait_sec',
-               default=20,
+               default=10,
                help=_('Seconds to wait between checks on whether an VThunder '
                       'vcs negotiation is ready')),
     cfg.IntOpt('amp_vcs_retries',
-               default=5,
-               help=_('Retry attempts to wait for VThunder vcs negotiation'))
+               default=30,
+               help=_('Retry attempts to wait for VThunder vcs negotiation')),
+    cfg.IntOpt('amp_busy_wait_sec',
+               default=900,
+               help=_('Timeout for waiting when vThunder instance is busy. '
+                      '(0 for no timeout'))
 ]
 
 A10_HOUSE_KEEPING_OPTS = [

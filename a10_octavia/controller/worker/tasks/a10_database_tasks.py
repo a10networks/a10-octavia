@@ -933,6 +933,21 @@ class GetLoadBalancerListByProjectID(BaseDatabaseTask):
                           'due to: {}'.format(str(e)))
 
 
+class GetLoadBalancerListForDeletion(BaseDatabaseTask):
+
+    def execute(self, vthunder, loadbalancer):
+        try:
+            if vthunder:
+                loadbalancers_list = self.loadbalancer_repo.get_all_ohter_lbs_in_project(
+                    db_apis.get_session(),
+                    vthunder.project_id,
+                    loadbalancer.id)
+                return loadbalancers_list
+        except Exception as e:
+            LOG.exception('Failed to get active Loadbalancers related to vthunder '
+                          'due to: {}'.format(str(e)))
+
+
 class CheckExistingVthunderTopology(BaseDatabaseTask):
     """This task only meant to use with vthunder flow[amphora]"""
 
