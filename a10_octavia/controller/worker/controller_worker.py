@@ -14,6 +14,7 @@
 
 from sqlalchemy.orm import exc as db_exceptions
 import tenacity
+import time
 import urllib3
 
 from oslo_config import cfg
@@ -1078,27 +1079,38 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         if self._is_rack_flow(key):
             return busy
 
-        self.ctx_lock.acquire()
-        ctx = self.ctx_map.get(key, None)
-        if ctx is None:
-            ctx = (0, 0)
-        normal_thrd_num, reload_thrd_num = ctx
-        LOG.debug('[busy_check] vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
-                  key, normal_thrd_num, reload_thrd_num)
-        if thrd_may_reload_vthunder:
-            if reload_thrd_num > 0 or normal_thrd_num > 0:
-                busy = True
+        timeout = CONF.a10_controller_worker.amp_busy_wait_sec
+        while timeout >= 0:
+            timeout = timeout - 5
+
+            self.ctx_lock.acquire()
+            ctx = self.ctx_map.get(key, None)
+            if ctx is None:
+                ctx = (0, 0)
+            normal_thrd_num, reload_thrd_num = ctx
+            LOG.debug('[busy_check] vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
+                      key, normal_thrd_num, reload_thrd_num)
+            if thrd_may_reload_vthunder:
+                if reload_thrd_num > 0 or normal_thrd_num > 0:
+                    busy = True
+                else:
+                    reload_thrd_num = reload_thrd_num + 1
+                    self.ctx_map[key] = (normal_thrd_num, reload_thrd_num)
+                    busy = False
             else:
-                reload_thrd_num = reload_thrd_num + 1
-        else:
-            if reload_thrd_num > 0:
-                busy = True
-            else:
-                normal_thrd_num = normal_thrd_num + 1
-        LOG.debug('[busy_check] vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
-                  key, normal_thrd_num, reload_thrd_num)
-        self.ctx_map[key] = (normal_thrd_num, reload_thrd_num)
-        self.ctx_lock.release()
+                if reload_thrd_num > 0:
+                    busy = True
+                else:
+                    normal_thrd_num = normal_thrd_num + 1
+                    self.ctx_map[key] = (normal_thrd_num, reload_thrd_num)
+                    busy = False
+            self.ctx_lock.release()
+
+            if not busy:
+                LOG.debug('[busy_check] vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
+                          key, normal_thrd_num, reload_thrd_num)
+                break
+            time.sleep(5)
 
         if store is not None:
             store[a10constants.COMPUTE_BUSY] = busy
