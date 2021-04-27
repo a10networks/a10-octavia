@@ -317,7 +317,8 @@ class VThunderRepository(BaseRepository):
             and_(self.model_class.partition_name == partition_name,
                  self.model_class.ip_address == ip_address,
                  or_(self.model_class.role == "STANDALONE",
-                     self.model_class.role == "MASTER")))
+                     self.model_class.role == "MASTER",
+                     self.model_class.role == "BACKUP")))
         list_projects = [project[0] for project in queryset_vthunders]
         return list_projects
 
