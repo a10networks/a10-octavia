@@ -356,6 +356,10 @@ class VThunderFlows(object):
         configure_vrrp_subflow.add(vthunder_tasks.ConfigureaVCSBackup(
             name=sf_name + '-' + a10constants.CONFIGURE_AVCS_SYNC_FOR_BACKUP,
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+        # Wait for aVCS sync
+        configure_vrrp_subflow.add(vthunder_tasks.VCSSyncWait(
+            name=sf_name + '-' + a10constants.VCS_SYNC_WAIT,
+            requires=a10constants.VTHUNDER))
         return configure_vrrp_subflow
 
     def get_rack_vthunder_for_lb_subflow(
