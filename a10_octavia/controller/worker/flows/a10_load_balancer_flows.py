@@ -375,6 +375,17 @@ class LoadBalancerFlows(object):
                     provides=constants.DELTAS))
                 new_LB_net_subflow.add(a10_network_tasks.HandleNetworkDeltas(
                     requires=constants.DELTAS, provides=constants.ADDED_PORTS))
+
+                # Make sure vcs ready before first probe-network-devices on Master
+                new_LB_net_subflow.add(
+                    vthunder_tasks.VThunderComputeConnectivityWait(
+                        name="backup-compute-conn-wait-before-probe-device",
+                        rebind={
+                            a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                        requires=constants.AMPHORA))
+                new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
+                    name="wait-vcs-ready-before-probe-device",
+                    requires=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
                     name=a10constants.AMPHORAE_POST_VIP_PLUG_FOR_MASTER,
                     requires=(constants.LOADBALANCER, a10constants.VTHUNDER,

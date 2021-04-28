@@ -92,7 +92,7 @@ class ListenerFlows(object):
     def _check_ssl_data(self, history):
         return list(history.values())[0]
 
-    def get_delete_listener_flow(self):
+    def get_delete_listener_flow(self, topology):
         """Flow to delete a listener"""
 
         delete_listener_flow = linear_flow.Flow(constants.DELETE_LISTENER_FLOW)
@@ -103,6 +103,11 @@ class ListenerFlows(object):
         delete_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            delete_listener_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         delete_listener_flow.add(self.handle_ssl_cert_flow(flow_type='delete'))
         delete_listener_flow.add(virtual_port_tasks.ListenerDelete(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
@@ -166,7 +171,7 @@ class ListenerFlows(object):
             requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
-    def get_update_listener_flow(self):
+    def get_update_listener_flow(self, topology):
         """Flow to update a listener"""
 
         update_listener_flow = linear_flow.Flow(constants.UPDATE_LISTENER_FLOW)
@@ -177,6 +182,11 @@ class ListenerFlows(object):
         update_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            update_listener_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         update_listener_flow.add(self.handle_ssl_cert_flow(flow_type='update'))
         update_listener_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
