@@ -314,6 +314,7 @@ class ConfigureaVCSBackup(VThunderBaseTask):
                                    floating_ip, floating_ip_mask)
                     attempts = 0
                     LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
+                    break
                 except req_exceptions.ReadTimeout as e:
                     # Don't retry for ReadTimout, since acos-client already already have
                     # tries and timeout for axapi request. And it will take very long to
