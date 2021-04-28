@@ -56,7 +56,7 @@ DELETE_VRID = 'delete_vrid'
 
 ID = 'id'
 SECURITY_GROUPS = 'security_groups'
-VIP_SEC_GROUP_PREFIX = 'vip-port-'
+VRRP_SEC_GROUP_PREFIX = 'vrrp-port-'
 LB_RESOURCE = 'lb_resource'
 
 SUBNET_ID = "subnet_id"

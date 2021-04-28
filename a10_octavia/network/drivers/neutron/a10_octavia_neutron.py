@@ -126,7 +126,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             LOG.exception(message)
 
     def _get_lb_security_group(self, port_id):
-        sec_grp_name =a10_utils.get_vip_security_group_name(port_id)
+        sec_grp_name = a10_utils.get_vip_security_group_name(port_id)
         sec_grps = self.neutron_client.list_security_groups(name=sec_grp_name)
         if sec_grps and sec_grps.get(a10constants.SECURITY_GROUPS):
             return sec_grps.get(a10constants.SECURITY_GROUPS)[0]
@@ -156,7 +156,6 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         return None
 
     def plug_vip(self, load_balancer, vip):
-        self.update_vip_sg(load_balancer, vip)
         plugged_amphorae = []
         subnet = self.get_subnet(vip.subnet_id)
         for amphora in filter(
@@ -167,16 +166,106 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         return plugged_amphorae
 
     def update_vip(self, load_balancer, for_delete=False):
-        sec_grp = self._get_lb_security_group(load_balancer.vip.port_id)
-        if sec_grp:
-            self._update_security_group_rules(load_balancer,
-                                              sec_grp.get(a10constants.ID))
-        elif not for_delete:
-            raise exceptions.MissingVIPSecurityGroup(lb_id=load_balancer.id)
-        else:
-            LOG.warning('VIP security group missing when updating the VIP for '
-                        'delete on load balancer: %s. Skipping update '
-                        'because this is for delete.', load_balancer.id)
+        for amphora in load_balancer.amphorae:
+            sec_grp = self._get_lb_security_group(amphora.vrrp_port_id)
+            if sec_grp:
+                self._update_security_group_rules(load_balancer,
+                                                sec_grp.get(a10constants.ID))
+            elif not for_delete:
+                raise exceptions.MissingVIPSecurityGroup(lb_id=amphora.vrrp_port_id)
+            else:
+                LOG.warning('VIP security group missing when updating the VIP for '
+                            'delete on load balancer: %s. Skipping update '
+                            'because this is for delete.', load_balancer.id)
+
+    def _delete_security_group(self, amphora, port):
+        if self.sec_grp_enabled:
+            sec_grp = self._get_lb_security_group(port.id)
+            if sec_grp:
+                sec_grp_id = sec_grp.get('id')
+                LOG.info(
+                    "Removing security group %(sg)s from port %(port)s",
+                    {'sg': sec_grp_id, 'port': port.id})
+                raw_port = None
+                try:
+                    if port:
+                        raw_port = self.neutron_client.show_port(port.id)
+                except Exception:
+                    LOG.warning('Unable to get port information for port '
+                                '%s. Continuing to delete the security '
+                                'group.', port.id)
+                if raw_port:
+                    sec_grps = raw_port.get(
+                        'port', {}).get('security_groups', [])
+                    if sec_grp_id in sec_grps:
+                        sec_grps.remove(sec_grp_id)
+                        port_update = {'port': {'security_groups': sec_grps}}
+                        try:
+                            self.neutron_client.update_port(port.id,
+                                                            port_update)
+                        except neutron_client_exceptions.PortNotFoundClient:
+                            LOG.warning('Unable to update port information '
+                                        'for port %s. Continuing to delete '
+                                        'the security group since port not '
+                                        'found', port.id)
+
+                try:
+                    self._delete_vip_security_group(sec_grp_id)
+                except base.DeallocateVIPException:
+                    # Try to delete any leftover ports on this security group.
+                    # Because this security group is created and managed by us,
+                    # it *should* only return ports that we own / can delete.
+                    LOG.warning('Failed to delete security group on first '
+                                'pass: %s', sec_grp_id)
+                    extra_ports = self._get_ports_by_security_group(sec_grp_id)
+                    for extra_port in extra_ports:
+                        port_id = extra_port.get('id')
+                        try:
+                            LOG.warning('Deleting extra port %s on security '
+                                        'group %s...', port_id, sec_grp_id)
+                            self.neutron_client.delete_port(port_id)
+                        except Exception:
+                            LOG.warning('Failed to delete extra port %s on '
+                                        'security group %s.',
+                                        port_id, sec_grp_id)
+                    # Now try it again
+                    self._delete_vip_security_group(sec_grp_id)
+
+    def deallocate_vip(self, vip):
+        """Delete the vrrp_port (instance port) in case nova didn't
+        This can happen if a failover has occurred.
+        """
+        for amphora in vip.load_balancer.amphorae:
+            try:
+                port = self.get_port(amphora.vrrp_port_id)
+            except base.PortNotFound:
+                LOG.warning("Can't deallocate VIP because the vip port {0} "
+                            "cannot be found in neutron. "
+                        "   Continuing cleanup.".format(amphora.vrrp_port_id))
+                port = None
+            self._delete_security_group(amphora, port)
+            try:
+                self.neutron_client.delete_port(amphora.vrrp_port_id)
+            except (neutron_client_exceptions.NotFound,
+                    neutron_client_exceptions.PortNotFoundClient):
+                LOG.debug('VIP instance port %s already deleted. Skipping.',
+                          amphora.vrrp_port_id)
+
+        if port and port.device_owner == OCTAVIA_OWNER:
+            try:
+                self.neutron_client.delete_port(vip.port_id)
+            except (neutron_client_exceptions.NotFound,
+                    neutron_client_exceptions.PortNotFoundClient):
+                LOG.debug('VIP port %s already deleted. Skipping.',
+                          vip.port_id)
+            except Exception:
+                message = _('Error deleting VIP port_id {port_id} from '
+                            'neutron').format(port_id=vip.port_id)
+                LOG.exception(message)
+                raise base.DeallocateVIPException(message)
+        elif port:
+            LOG.info("Port %s will not be deleted by Octavia as it was "
+                     "not created by Octavia.", vip.port_id)
 
     def plug_aap_port(self, load_balancer, vip, amphora, subnet):
         interface = self._get_plugged_interface(
@@ -186,7 +275,8 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
 
         self._add_vip_address_pair(interface.port_id, vip.ip_address)
         if self.sec_grp_enabled:
-            self._add_vip_security_group_to_port(interface.port_id, vip.port_id)
+            self.update_vip_sg(load_balancer, vip, interface)
+            self._add_vip_security_group_to_port(interface.port_id, interface.port_id,)
 
         vrrp_ip = None
         for fixed_ip in interface.fixed_ips:
