@@ -25,6 +25,7 @@ from taskflow import task
 from taskflow.types import failure
 
 from octavia.common import constants
+from octavia.common import exceptions as octavia_exceptions
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 
@@ -981,3 +982,35 @@ class DeleteProjectSetIdDB(BaseDatabaseTask):
             self.vrrp_set_repo.delete(db_apis.get_session(), project_id=loadbalancer.project_id)
         except Exception as e:
             LOG.exception('Failed to delete VRRP-A set_id for project due to :{}'.format(str(e)))
+
+
+class GetLoadBalancerListForDeletion(BaseDatabaseTask):
+
+    def execute(self, vthunder, loadbalancer):
+        try:
+            if vthunder:
+                loadbalancers_list = self.loadbalancer_repo.get_all_ohter_lbs_in_project(
+                    db_apis.get_session(),
+                    vthunder.project_id,
+                    loadbalancer.id)
+                return loadbalancers_list
+        except Exception as e:
+            LOG.exception('Failed to get active Loadbalancers related to vthunder '
+                          'due to: {}'.format(str(e)))
+
+
+class CheckExistingVthunderTopology(BaseDatabaseTask):
+    """This task only meant to use with vthunder flow[amphora]"""
+
+    def execute(self, loadbalancer, topology):
+        vthunder = self.vthunder_repo.get_vthunder_by_project_id(
+            db_apis.get_session(),
+            loadbalancer.project_id)
+
+        if vthunder is not None:
+            if topology != (vthunder.topology).encode('utf-8'):
+                LOG.error('Other loadbalancer exists in vthunder with: %s topology',
+                          vthunder.topology)
+                msg = ('vthunder has other loadbalancer with {0} ' +
+                       'topology').format(vthunder.topology)
+                raise octavia_exceptions.InvalidTopology(topology=msg)

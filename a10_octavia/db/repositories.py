@@ -317,7 +317,8 @@ class VThunderRepository(BaseRepository):
             and_(self.model_class.partition_name == partition_name,
                  self.model_class.ip_address == ip_address,
                  or_(self.model_class.role == "STANDALONE",
-                     self.model_class.role == "MASTER")))
+                     self.model_class.role == "MASTER",
+                     self.model_class.role == "BACKUP")))
         list_projects = [project[0] for project in queryset_vthunders]
         return list_projects
 
@@ -381,6 +382,18 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
             or_(self.model_class.provisioning_status == "ACTIVE",
                 self.model_class.provisioning_status == "PENDING_UPDATE",
                 self.model_class.provisioning_status == "PENDING_CREATE"))
+
+        model_list = query.all()
+        for data in model_list:
+            lb_list.append(data.to_data_model())
+        return lb_list
+
+    def get_all_ohter_lbs_in_project(self, session, project_id, id):
+        lb_list = []
+        query = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.id != id,
+                 self.model_class.provisioning_status != "ERROR"))
 
         model_list = query.all()
         for data in model_list:

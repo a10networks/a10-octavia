@@ -66,6 +66,7 @@ FLAT = "flat"
 SUPPORTED_NETWORK_TYPE = [FLAT, VLAN]
 SSL_TEMPLATE = "ssl_template"
 
+COMPUTE_BUSY = "compute_busy"
 # Taskflow flow and task names
 
 BACKUP_AMPHORA_PLUG = 'backup-amphora-plug'
