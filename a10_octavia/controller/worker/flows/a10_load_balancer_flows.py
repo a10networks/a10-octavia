@@ -429,6 +429,9 @@ class LoadBalancerFlows(object):
                     name=a10constants.MASTER_VTHUNDER,
                     requires=a10constants.VTHUNDER,
                     provides=a10constants.VTHUNDER))
+                new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
+                    name="wait-vcs-ready-before-vcs-reload",
+                    requires=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.VCSReload(
                     name=a10constants.VCS_RELOAD,
                     requires=(a10constants.VTHUNDER)))

@@ -1030,7 +1030,7 @@ class VCSSyncWait(VThunderBaseTask):
         attempts = CONF.a10_controller_worker.amp_vcs_retries
         while attempts >= 0:
             vmaster_ready = False
-            vblade_read = False
+            vblade_ready = False
             try:
                 attempts = attempts - 1
                 vcs_summary = {}
@@ -1041,8 +1041,8 @@ class VCSSyncWait(VThunderBaseTask):
                     if role == "vMaster":
                         vmaster_ready = True
                     if role == "vBlade":
-                        vblade_read = True
-                    if vmaster_ready is True and vblade_read is True:
+                        vblade_ready = True
+                    if vmaster_ready is True and vblade_ready is True:
                         break
                 else:
                     raise acos_errors.AxapiJsonFormatErrora(
