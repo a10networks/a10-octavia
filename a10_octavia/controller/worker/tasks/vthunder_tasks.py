@@ -318,10 +318,10 @@ class ConfigureaVCSBackup(VThunderBaseTask):
                     # Don't retry for ReadTimout, since acos-client already already have
                     # tries and timeout for axapi request. And it will take very long to
                     # response this error.
-                    if attempts < 0
+                    if attempts < 0:
                         raise e
                 except Exception as e:
-                    if attempts < 0
+                    if attempts < 0:
                         raise e
                     time.sleep(CONF.a10_controller_worker.amp_vcs_wait_sec)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
