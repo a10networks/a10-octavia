@@ -29,6 +29,7 @@ from keystoneclient.v3 import client as keystone_client
 from octavia.common import keystone
 from stevedore import driver as stevedore_driver
 
+from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
 from a10_octavia.common import exceptions
 
@@ -113,6 +114,12 @@ def convert_to_hardware_thunder_conf(hardware_list):
                                            '\'ip_address:partition_name\' entries: {}'
                                            .format(list(duplicates)))
     return hardware_dict
+
+
+def get_vip_security_group_name(port_id):
+    if port_id:
+        return a10constants.VIP_SEC_GROUP_PREFIX + port_id
+    return None
 
 
 def get_parent_project_list():

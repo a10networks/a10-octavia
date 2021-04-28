@@ -54,6 +54,9 @@ LB_COUNT = 'lb_count'
 MEMBER_COUNT = 'member_count'
 DELETE_VRID = 'delete_vrid'
 
+ID = 'id'
+SECURITY_GROUPS = 'security_groups'
+VIP_SEC_GROUP_PREFIX = 'vip-port-'
 LB_RESOURCE = 'lb_resource'
 
 SUBNET_ID = "subnet_id"
@@ -67,6 +70,7 @@ SUPPORTED_NETWORK_TYPE = [FLAT, VLAN]
 SSL_TEMPLATE = "ssl_template"
 
 COMPUTE_BUSY = "compute_busy"
+
 # Taskflow flow and task names
 
 BACKUP_AMPHORA_PLUG = 'backup-amphora-plug'

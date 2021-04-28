@@ -17,16 +17,19 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from stevedore import driver as stevedore_driver
 
+from octavia.common import constants
+from octavia.common import data_models as o_data_models
 from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron import allowed_address_pairs
 from octavia.network.drivers.neutron import utils
 
+from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
+from a10_octavia.common import utils as a10_utils
 from a10_octavia.network import data_models
 
 LOG = logging.getLogger(__name__)
 PROJECT_ID_ALIAS = 'project-id'
-VIP_SECURITY_GRP_PREFIX = 'lb-'
 OCTAVIA_OWNER = 'Octavia'
 
 CONF = cfg.CONF
@@ -121,6 +124,84 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         except Exception:
             message = "Error deleting subports"
             LOG.exception(message)
+
+    def _get_lb_security_group(self, port_id):
+        sec_grp_name =a10_utils.get_vip_security_group_name(port_id)
+        sec_grps = self.neutron_client.list_security_groups(name=sec_grp_name)
+        if sec_grps and sec_grps.get(a10constants.SECURITY_GROUPS):
+            return sec_grps.get(a10constants.SECURITY_GROUPS)[0]
+        return None
+
+    def _add_vip_security_group_to_port(self, vip_port_id, port_id, sec_grp_id=None):
+        sec_grp_id = (sec_grp_id or
+                      self._get_lb_security_group(port_id).get(a10constants.ID))
+        try:
+            self._add_security_group_to_port(sec_grp_id, port_id)
+        except base.PortNotFound:
+            raise
+        except base.NetworkException as e:
+            raise base.PlugVIPException(str(e))
+
+    def update_vip_sg(self, load_balancer, vip):
+        if self.sec_grp_enabled:
+            sec_grp = self._get_lb_security_group(vip.port_id)
+            if not sec_grp:
+                sec_grp_name = a10_utils.get_vip_security_group_name(
+                    vip.port_id)
+                sec_grp = self._create_security_group(sec_grp_name)
+            self._update_security_group_rules(load_balancer,
+                                              sec_grp.get(a10constants.ID))
+            self._add_vip_security_group_to_port(vip.port_id, vip.port_id, sec_grp.get(a10constants.ID))
+            return sec_grp.get(a10constants.ID)
+        return None
+
+    def plug_vip(self, load_balancer, vip):
+        self.update_vip_sg(load_balancer, vip)
+        plugged_amphorae = []
+        subnet = self.get_subnet(vip.subnet_id)
+        for amphora in filter(
+            lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                load_balancer.amphorae):
+            plugged_amphorae.append(self.plug_aap_port(load_balancer, vip,
+                                                       amphora, subnet))
+        return plugged_amphorae
+
+    def update_vip(self, load_balancer, for_delete=False):
+        sec_grp = self._get_lb_security_group(load_balancer.vip.port_id)
+        if sec_grp:
+            self._update_security_group_rules(load_balancer,
+                                              sec_grp.get(a10constants.ID))
+        elif not for_delete:
+            raise exceptions.MissingVIPSecurityGroup(lb_id=load_balancer.id)
+        else:
+            LOG.warning('VIP security group missing when updating the VIP for '
+                        'delete on load balancer: %s. Skipping update '
+                        'because this is for delete.', load_balancer.id)
+
+    def plug_aap_port(self, load_balancer, vip, amphora, subnet):
+        interface = self._get_plugged_interface(
+            amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+        if not interface:
+            interface = self._plug_amphora_vip(amphora, subnet)
+
+        self._add_vip_address_pair(interface.port_id, vip.ip_address)
+        if self.sec_grp_enabled:
+            self._add_vip_security_group_to_port(interface.port_id, vip.port_id)
+
+        vrrp_ip = None
+        for fixed_ip in interface.fixed_ips:
+            is_correct_subnet = fixed_ip.subnet_id == subnet.id
+            is_management_ip = fixed_ip.ip_address == amphora.lb_network_ip
+            if is_correct_subnet and not is_management_ip:
+                vrrp_ip = fixed_ip.ip_address
+                break
+        return o_data_models.Amphora(
+            id=amphora.id,
+            compute_id=amphora.compute_id,
+            vrrp_ip=vrrp_ip,
+            ha_ip=vip.ip_address,
+            vrrp_port_id=interface.port_id,
+            ha_port_id=vip.port_id)
 
     def get_plugged_parent_port(self, vip):
         parent_port = None
