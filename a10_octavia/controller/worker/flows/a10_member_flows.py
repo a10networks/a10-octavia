@@ -98,6 +98,9 @@ class MemberFlows(object):
                 name="backup_compute_conn_wait_before_plug",
                 requires=constants.AMPHORA,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+            create_member_flow.add(vthunder_tasks.VCSSyncWait(
+                name="member_net_plug_vcs_sync_wait",
+                requires=a10constants.VTHUNDER))
             create_member_flow.add(
                 vthunder_tasks.AmphoraePostMemberNetworkPlug(
                     name="backup_amphora_network_plug", requires=[
@@ -111,7 +114,7 @@ class MemberFlows(object):
                 requires=constants.AMPHORA,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             create_member_flow.add(vthunder_tasks.VCSSyncWait(
-                name="member_net_plug_vcs_sync_wait",
+                name="member_enable_interface_vcs_sync_wait",
                 requires=a10constants.VTHUNDER))
             create_member_flow.add(
                 vthunder_tasks.EnableInterfaceForMembers(
