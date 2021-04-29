@@ -299,10 +299,10 @@ class VThunderFlows(object):
             provides=a10constants.BACKUP_VTHUNDER))
         # Make sure devices are ready
         vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-            name=sf_name + '-' + a10constants.WAIT_FOR_MASTER_SYNC,
+            name=sf_name + '-' + a10constants.WAIT_FOR_MASTER_SYNC + '-for-thunder',
             requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-            name=sf_name + '-' + a10constants.WAIT_FOR_BACKUP_SYNC,
+            name=sf_name + '-' + a10constants.WAIT_FOR_BACKUP_SYNC + '-for-thunder',
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
             requires=(constants.AMPHORA)))
         # VRRP Configuration
@@ -320,7 +320,7 @@ class VThunderFlows(object):
         vrrp_subflow.add(self._get_vrrp_status_subflow(sf_name))
         # Wait for aVCS sync
         vrrp_subflow.add(vthunder_tasks.VCSSyncWait(
-            name=sf_name + '-' + a10constants.VCS_SYNC_WAIT,
+            name=sf_name + '-' + a10constants.VCS_SYNC_WAIT + '-for-thunder',
             requires=a10constants.VTHUNDER))
 
         return vrrp_subflow

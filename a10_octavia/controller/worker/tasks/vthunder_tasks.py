@@ -112,7 +112,7 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
     def execute(self, loadbalancer, vthunder, added_ports):
         """Execute get_info routine for a vThunder until it responds."""
         amphora_id = loadbalancer.amphorae[0].id
-        if added_ports and len(added_ports[amphora_id]) > 0:
+        if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
             try:
                 self.axapi_client.system.action.write_memory()
                 self.axapi_client.system.action.reload_reboot_for_interface_attachment(
@@ -134,7 +134,7 @@ class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
         """Execute get_info routine for a vThunder until it responds."""
         try:
             amphora_id = loadbalancer.amphorae[0].id
-            if len(added_ports[amphora_id]) > 0:
+            if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 self.axapi_client.system.action.write_memory()
                 self.axapi_client.system.action.reload_reboot_for_interface_attachment(
                     vthunder.acos_version)
@@ -167,7 +167,7 @@ class EnableInterface(VThunderBaseTask):
             added_ports[amphora_id].append(nics[1])
 
         try:
-            if added_ports and len(added_ports[amphora_id]) > 0:
+            if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 if (not lb_exists_flag and topology == "ACTIVE_STANDBY") or topology == "SINGLE":
                     interfaces = self.axapi_client.interface.get_list()
                     for i in range(len(interfaces['interface']['ethernet-list'])):
@@ -200,7 +200,7 @@ class EnableInterfaceForMembers(VThunderBaseTask):
             compute_id = loadbalancer.amphorae[0].compute_id
             network_driver = utils.get_network_driver()
             nics = network_driver.get_plugged_networks(compute_id)
-            if len(added_ports[amphora_id]) > 0:
+            if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 configured_interface = False
                 attempts = 5
                 while attempts > 0 and configured_interface is False:
@@ -280,6 +280,7 @@ def configure_avcs(axapi_client, device_id, device_priority, floating_ip, floati
     axapi_client.system.action.set_vcs_device(device_id, device_priority)
     axapi_client.system.action.set_vcs_para(floating_ip, floating_ip_mask)
     axapi_client.system.action.vcs_enable()
+    axapi_client.system.action.write_memory()
     axapi_client.system.action.vcs_reload()
 
 
@@ -962,7 +963,7 @@ class AmphoraePostNetworkUnplug(VThunderBaseTask):
         try:
             if loadbalancer.amphorae:
                 amphora_id = loadbalancer.amphorae[0].id
-                if len(added_ports[amphora_id]) > 0:
+                if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                     self.axapi_client.system.action.write_memory()
                     self.axapi_client.system.action.reload_reboot_for_interface_detachment(
                         vthunder.acos_version)
@@ -1033,6 +1034,9 @@ class VCSSyncWait(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder):
+        if CONF.a10_controller_worker.loadbalancer_topology != "ACTIVE_STANDBY":
+            return
+
         attempts = CONF.a10_controller_worker.amp_vcs_retries
         while attempts >= 0:
             vmaster_ready = False

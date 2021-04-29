@@ -266,7 +266,7 @@ A10_CONTROLLER_WORKER_OPTS = [
                help=_('Seconds to wait between checks on whether an VThunder '
                       'vcs negotiation is ready')),
     cfg.IntOpt('amp_vcs_retries',
-               default=30,
+               default=60,
                help=_('Retry attempts to wait for VThunder vcs negotiation')),
     cfg.IntOpt('amp_busy_wait_sec',
                default=900,
