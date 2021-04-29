@@ -306,11 +306,16 @@ class VThunderFlows(object):
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
             requires=(constants.AMPHORA)))
         # VRRP Configuration
+        vrrp_subflow.add(a10_database_tasks.AddProjectSetIdDB(
+            name=sf_name + '-' + a10constants.ADD_VRRP_SET_ID_INDB,
+            requires=constants.LOADBALANCER,
+            provides=a10constants.SET_ID))
         vrrp_subflow.add(vthunder_tasks.ConfigureVRRPMaster(
             name=sf_name + '-' + a10constants.CONFIGURE_VRRP_FOR_MASTER_VTHUNDER,
-            requires=(a10constants.VTHUNDER)))
+            requires=(a10constants.VTHUNDER, a10constants.SET_ID)))
         vrrp_subflow.add(vthunder_tasks.ConfigureVRRPBackup(
             name=sf_name + '-' + a10constants.CONFIGURE_VRRP_FOR_BACKUP_VTHUNDER,
+            requires=(a10constants.VTHUNDER, a10constants.SET_ID),
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
         vrrp_subflow.add(self._get_vrrp_status_subflow(sf_name))
         # Wait for aVCS sync

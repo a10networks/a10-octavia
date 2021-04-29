@@ -223,9 +223,9 @@ class ConfigureVRRPMaster(VThunderBaseTask):
     """Task to configure Master vThunder VRRP"""
 
     @axapi_client_decorator
-    def execute(self, vthunder):
+    def execute(self, vthunder, set_id=1):
         try:
-            self.axapi_client.system.action.configureVRRP(1, 1)
+            self.axapi_client.system.action.configureVRRP(1, set_id)
             LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure master vThunder VRRP: %s", str(e))
@@ -236,9 +236,9 @@ class ConfigureVRRPBackup(VThunderBaseTask):
     """Task to configure backup vThunder VRRP"""
 
     @axapi_client_decorator
-    def execute(self, vthunder):
+    def execute(self, vthunder, set_id=1):
         try:
-            self.axapi_client.system.action.configureVRRP(2, 1)
+            self.axapi_client.system.action.configureVRRP(2, set_id)
             LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure backup vThunder VRRP: %s", str(e))
