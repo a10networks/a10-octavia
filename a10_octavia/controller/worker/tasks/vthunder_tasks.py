@@ -1051,7 +1051,7 @@ class VCSSyncWait(VThunderBaseTask):
                     if vmaster_ready is True and vblade_ready is True:
                         break
                 else:
-                    raise acos_errors.AxapiJsonFormatErrora(
+                    raise acos_errors.AxapiJsonFormatError(
                         msg="vMaster not found in vcs-summary")
             except req_exceptions.ReadTimeout as e:
                 # Don't retry for ReadTimout, since acos-client already already have

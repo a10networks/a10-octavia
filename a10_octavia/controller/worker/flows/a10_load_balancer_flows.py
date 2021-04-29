@@ -261,10 +261,11 @@ class LoadBalancerFlows(object):
                 delete_LB_flow.add(vthunder_tasks.VCSSyncWait(
                     name="vip-unplug-wait-vcs-ready",
                     requires=a10constants.VTHUNDER))
-                delete_LB_flow.add(vthunder_tasks.GetMasterVThunder(
-                    name=a10constants.GET_VTHUNDER_MASTER,
-                    requires=a10constants.VTHUNDER,
-                    provides=a10constants.VTHUNDER))
+        if lb.topology == "ACTIVE_STANDBY":
+            delete_LB_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_VTHUNDER_MASTER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         delete_LB_flow.add(self.get_delete_lb_vrid_subflow())
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
@@ -493,6 +494,10 @@ class LoadBalancerFlows(object):
                     name=a10constants.CONNECTIVITY_WAIT_FOR_BACKUP_VTHUNDER,
                     rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                     requires=constants.AMPHORA))
+                new_LB_net_subflow.add(vthunder_tasks.GetMasterVThunder(
+                    name=a10constants.GET_VTHUNDER_MASTER,
+                    requires=a10constants.VTHUNDER,
+                    provides=a10constants.VTHUNDER))
             new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
                 name=a10constants.ENABLE_BACKUP_VTHUNDER_INTERFACE,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},

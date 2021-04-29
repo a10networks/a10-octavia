@@ -297,6 +297,14 @@ class VThunderFlows(object):
             name=sf_name + '-' + a10constants.GET_BACKUP_LOADBALANCER_FROM_DB,
             requires=constants.LOADBALANCER,
             provides=a10constants.BACKUP_VTHUNDER))
+        # Make sure devices are ready
+        vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            name=sf_name + '-' + a10constants.WAIT_FOR_MASTER_SYNC,
+            requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            name=sf_name + '-' + a10constants.WAIT_FOR_BACKUP_SYNC,
+            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+            requires=(constants.AMPHORA)))
         # VRRP Configuration
         vrrp_subflow.add(vthunder_tasks.ConfigureVRRPMaster(
             name=sf_name + '-' + a10constants.CONFIGURE_VRRP_FOR_MASTER_VTHUNDER,
@@ -305,6 +313,10 @@ class VThunderFlows(object):
             name=sf_name + '-' + a10constants.CONFIGURE_VRRP_FOR_BACKUP_VTHUNDER,
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
         vrrp_subflow.add(self._get_vrrp_status_subflow(sf_name))
+        # Wait for aVCS sync
+        vrrp_subflow.add(vthunder_tasks.VCSSyncWait(
+            name=sf_name + '-' + a10constants.VCS_SYNC_WAIT,
+            requires=a10constants.VTHUNDER))
 
         return vrrp_subflow
 
