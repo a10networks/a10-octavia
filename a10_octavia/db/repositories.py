@@ -467,3 +467,15 @@ class MemberRepository(repo.MemberRepository):
 
 class NatPoolRepository(BaseRepository):
     model_class = models.NATPool
+
+
+class VrrpSetRepository(BaseRepository):
+    model_class = models.VrrpSet
+
+    def get_subnet_set_ids(self, session, subnet):
+        query = session.query(self.model_class).filter(
+            self.model_class.mgmt_subnet == subnet)
+        query = query.options(noload('*'))
+        model_list = query.all()
+        set_id_list = [model.set_id for model in model_list]
+        return set_id_list

@@ -38,11 +38,12 @@ class PoolFlows(object):
         self.hm_flow = a10_health_monitor_flows.HealthMonitorFlows()
         self.member_flow = a10_member_flows.MemberFlows()
 
-    def get_create_pool_flow(self):
+    def get_create_pool_flow(self, topology):
         """Create a flow to create a pool
 
         :returns: The flow for creating a pool
         """
+
         create_pool_flow = linear_flow.Flow(constants.CREATE_POOL_FLOW)
         create_pool_flow.add(lifecycle_tasks.PoolToErrorOnRevertTask(
             requires=[constants.POOL,
@@ -56,6 +57,11 @@ class PoolFlows(object):
         create_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            create_pool_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         create_pool_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.POOL},
             provides=constants.FLAVOR))
@@ -76,7 +82,7 @@ class PoolFlows(object):
 
         return create_pool_flow
 
-    def get_delete_pool_flow(self, members, health_mon, store):
+    def get_delete_pool_flow(self, members, health_mon, store, topology):
         """Create a flow to delete a pool
 
         :returns: The flow for deleting a pool
@@ -99,6 +105,11 @@ class PoolFlows(object):
         delete_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            delete_pool_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         delete_pool_flow.add(virtual_port_tasks.ListenerUpdateForPool(
             requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
         delete_pool_flow.add(persist_tasks.DeleteSessionPersistence(
@@ -169,7 +180,7 @@ class PoolFlows(object):
         store.update(member_store)
         return delete_member_vthunder_subflow
 
-    def get_update_pool_flow(self):
+    def get_update_pool_flow(self, topology):
         """Create a flow to update a pool
 
         :returns: The flow for updating a pool
@@ -187,6 +198,11 @@ class PoolFlows(object):
         update_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            update_pool_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         update_pool_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.POOL},
             provides=constants.FLAVOR))

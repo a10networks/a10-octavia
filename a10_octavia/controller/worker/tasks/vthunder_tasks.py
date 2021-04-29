@@ -112,7 +112,7 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
     def execute(self, loadbalancer, vthunder, added_ports):
         """Execute get_info routine for a vThunder until it responds."""
         amphora_id = loadbalancer.amphorae[0].id
-        if added_ports and len(added_ports[amphora_id]) > 0:
+        if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
             try:
                 self.axapi_client.system.action.write_memory()
                 self.axapi_client.system.action.reload_reboot_for_interface_attachment(
@@ -134,7 +134,7 @@ class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
         """Execute get_info routine for a vThunder until it responds."""
         try:
             amphora_id = loadbalancer.amphorae[0].id
-            if len(added_ports[amphora_id]) > 0:
+            if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 self.axapi_client.system.action.write_memory()
                 self.axapi_client.system.action.reload_reboot_for_interface_attachment(
                     vthunder.acos_version)
@@ -167,7 +167,7 @@ class EnableInterface(VThunderBaseTask):
             added_ports[amphora_id].append(nics[1])
 
         try:
-            if added_ports and len(added_ports[amphora_id]) > 0:
+            if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 if (not lb_exists_flag and topology == "ACTIVE_STANDBY") or topology == "SINGLE":
                     interfaces = self.axapi_client.interface.get_list()
                     for i in range(len(interfaces['interface']['ethernet-list'])):
@@ -200,7 +200,7 @@ class EnableInterfaceForMembers(VThunderBaseTask):
             compute_id = loadbalancer.amphorae[0].compute_id
             network_driver = utils.get_network_driver()
             nics = network_driver.get_plugged_networks(compute_id)
-            if len(added_ports[amphora_id]) > 0:
+            if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 configured_interface = False
                 attempts = 5
                 while attempts > 0 and configured_interface is False:
@@ -223,9 +223,9 @@ class ConfigureVRRPMaster(VThunderBaseTask):
     """Task to configure Master vThunder VRRP"""
 
     @axapi_client_decorator
-    def execute(self, vthunder):
+    def execute(self, vthunder, set_id=1):
         try:
-            self.axapi_client.system.action.configureVRRP(1, 1)
+            self.axapi_client.system.action.configureVRRP(1, set_id)
             LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure master vThunder VRRP: %s", str(e))
@@ -236,9 +236,9 @@ class ConfigureVRRPBackup(VThunderBaseTask):
     """Task to configure backup vThunder VRRP"""
 
     @axapi_client_decorator
-    def execute(self, vthunder):
+    def execute(self, vthunder, set_id=1):
         try:
-            self.axapi_client.system.action.configureVRRP(2, 1)
+            self.axapi_client.system.action.configureVRRP(2, set_id)
             LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure backup vThunder VRRP: %s", str(e))
@@ -280,6 +280,7 @@ def configure_avcs(axapi_client, device_id, device_priority, floating_ip, floati
     axapi_client.system.action.set_vcs_device(device_id, device_priority)
     axapi_client.system.action.set_vcs_para(floating_ip, floating_ip_mask)
     axapi_client.system.action.vcs_enable()
+    axapi_client.system.action.write_memory()
     axapi_client.system.action.vcs_reload()
 
 
@@ -306,19 +307,25 @@ class ConfigureaVCSBackup(VThunderBaseTask):
     def execute(self, vthunder, device_id=2, device_priority=100,
                 floating_ip="192.168.0.100", floating_ip_mask="255.255.255.0"):
         try:
-            attempts = 30
-            while attempts > 0:
-                # TODO(omkartelee01): Need this loop to be moved in acos_client with
-                # proper exception handling with all other API call loops.
-                # Currently resolves "System is Busy" error
+            attempts = CONF.a10_controller_worker.amp_vcs_retries
+            while attempts >= 0:
                 try:
+                    attempts = attempts - 1
                     configure_avcs(self.axapi_client, device_id, device_priority,
                                    floating_ip, floating_ip_mask)
                     attempts = 0
                     LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
-                except (req_exceptions.ConnectionError, acos_errors.ACOSException,
-                        http_client.BadStatusLine, req_exceptions.ReadTimeout):
-                    attempts = attempts - 1
+                    break
+                except req_exceptions.ReadTimeout as e:
+                    # Don't retry for ReadTimout, since acos-client already already have
+                    # tries and timeout for axapi request. And it will take very long to
+                    # response this error.
+                    if attempts < 0:
+                        raise e
+                except Exception as e:
+                    if attempts < 0:
+                        raise e
+                    time.sleep(CONF.a10_controller_worker.amp_vcs_wait_sec)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure backup vThunder aVCS: %s", str(e))
             raise e
@@ -956,7 +963,7 @@ class AmphoraePostNetworkUnplug(VThunderBaseTask):
         try:
             if loadbalancer.amphorae:
                 amphora_id = loadbalancer.amphorae[0].id
-                if len(added_ports[amphora_id]) > 0:
+                if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                     self.axapi_client.system.action.write_memory()
                     self.axapi_client.system.action.reload_reboot_for_interface_detachment(
                         vthunder.acos_version)
@@ -1022,6 +1029,48 @@ class VCSReload(VThunderBaseTask):
             raise e
 
 
+class VCSSyncWait(VThunderBaseTask):
+    """Task to wait VCS reload, VCS negotiagtion or VCS configuration sync ready."""
+
+    @axapi_client_decorator
+    def execute(self, vthunder):
+        if CONF.a10_controller_worker.loadbalancer_topology != "ACTIVE_STANDBY":
+            return
+
+        attempts = CONF.a10_controller_worker.amp_vcs_retries
+        while attempts >= 0:
+            vmaster_ready = False
+            vblade_ready = False
+            try:
+                attempts = attempts - 1
+                vcs_summary = {}
+                vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
+                vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
+                for i in range(len(vcs_member_list)):
+                    role = vcs_member_list[i]['state'].split('(')[0]
+                    if role == "vMaster":
+                        vmaster_ready = True
+                    if role == "vBlade":
+                        vblade_ready = True
+                    if vmaster_ready is True and vblade_ready is True:
+                        break
+                else:
+                    raise acos_errors.AxapiJsonFormatError(
+                        msg="vMaster not found in vcs-summary")
+            except req_exceptions.ReadTimeout as e:
+                # Don't retry for ReadTimout, since acos-client already already have
+                # tries and timeout for axapi request. And it will take very long to
+                # response this error.
+                if attempts < 0:
+                    LOG.exception("Failed to connect VCS device: %s", str(e))
+                    raise e
+            except Exception as e:
+                if attempts < 0:
+                    LOG.exception("VCS not ready after timeout: %s", str(e))
+                    raise e
+                time.sleep(CONF.a10_controller_worker.amp_vcs_wait_sec)
+
+
 class GetMasterVThunder(VThunderBaseTask):
     """Task to get Master vThunder"""
 
@@ -1047,8 +1096,9 @@ class GetMasterVThunder(VThunderBaseTask):
                 # Don't retry for ReadTimout, since acos-client already already have
                 # tries and timeout for axapi request. And it will take very long to
                 # response this error.
-                LOG.exception("Failed to get Master vThunder: %s", str(e))
-                raise e
+                if attempts < 0:
+                    LOG.exception("Failed to get Master vThunder: %s", str(e))
+                    raise e
             except Exception as e:
                 if attempts < 0:
                     LOG.exception("Failed to get Master vThunder: %s", str(e))
@@ -1081,8 +1131,9 @@ class GetBackupVThunder(VThunderBaseTask):
                 # Don't retry for ReadTimout, since acos-client already already have
                 # tries and timeout for axapi request. And it will take very long to
                 # response this error.
-                LOG.exception("Failed to get Master vThunder: %s", str(e))
-                raise e
+                if attempts < 0:
+                    LOG.exception("Failed to get Master vThunder: %s", str(e))
+                    raise e
             except Exception as e:
                 if attempts < 0:
                     LOG.exception("Failed to get Backup vThunder: %s", str(e))
