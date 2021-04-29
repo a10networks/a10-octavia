@@ -52,11 +52,13 @@ MOCK_PROJECT_ID = 'mock-project-id'
 
 A10_GLOBAL_CONF_SECTION = 'a10_global'
 A10_HARDWARE_THUNDER_CONF_SECTION = 'hardware_thunder'
+A10_CONTROLLER_WORKER_CONF_SECTION = 'a10_controller_worker'
 LISTENER_CONF_SECTION = 'listener'
 SERVICE_GROUP_CONF_SECTION = 'service_group'
 SERVER_CONF_SECTION = 'server'
 VIRTUAL_SERVER_CONFIG_SECTION = 'slb'
 HEALTH_MONITOR_SECTION = 'health_monitor'
+
 
 A10_HOUSE_KEEPING = 'a10_house_keeping'
 

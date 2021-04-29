@@ -82,3 +82,13 @@ class NATPool(base_models.BASE):
     member_ref_count = sa.Column(sa.Integer, default=0, nullable=False)
     port_id = sa.Column(sa.String(64), nullable=False)
 
+
+class VrrpSet(base_models.BASE):
+    __data_model__ = data_models.VrrpSet
+    __tablename__ = 'vrrp_set'
+    __table_args__ = (
+        sa.UniqueConstraint('mgmt_subnet', 'project_id', name='unique_name_project_subnet_set_id'),
+    )
+    mgmt_subnet = sa.Column(sa.String(64), primary_key=True)
+    project_id = sa.Column(sa.String(64), primary_key=True)
+    set_id = sa.Column(sa.Integer, default=0, nullable=False)
