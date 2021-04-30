@@ -113,14 +113,81 @@ class MemberFlows(object):
                 name=a10constants.BACKUP_CONNECTIVITY_WAIT,
                 requires=constants.AMPHORA,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+
+            create_member_flow.add(vthunder_tasks.VCSSyncWait(
+                name="member_net_plug_vcs_sync_wait_1",
+                requires=a10constants.VTHUNDER))
+            # below three task not required
+            create_member_flow.add(vthunder_tasks.GetBackupVThunder(
+                name=a10constants.GET_BACKUP_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
+            create_member_flow.add(vthunder_tasks.GetVThunderInterface(
+                name=a10constants.GET_BACKUP_VTHUNDER_INTERFACE,
+                requires=a10constants.VTHUNDER,
+                provides=(a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
+            create_member_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
+            # create_member_flow.add(vthunder_tasks.VCSSyncWait(
+            #    name="wait-vcs-ready-before-vcs-reload",
+            #    requires=a10constants.VTHUNDER))
+            # create_member_flow.add(vthunder_tasks.VCSReload(
+            #    name=a10constants.VCS_RELOAD,
+            #    requires=(a10constants.VTHUNDER)))
+            # create_member_flow.add(
+            #    vthunder_tasks.VThunderComputeConnectivityWait(
+            #        name=a10constants.WAIT_FOR_MASTER_VCS_RELOAD,
+            #        requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+            # create_member_flow.add(
+            #    vthunder_tasks.VThunderComputeConnectivityWait(
+            #        name=a10constants.WAIT_FOR_BACKUP_VCS_RELOAD,
+            #        rebind={
+            #            a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+            #        requires=constants.AMPHORA))
+            # create_member_flow.add(vthunder_tasks.VCSSyncWait(
+            #    name="vcs-reload-wait-vcs-ready",
+            #    requires=a10constants.VTHUNDER))
+            # create_member_flow.add(vthunder_tasks.GetMasterVThunder(
+            #    name=a10constants.GET_MASTER_VTHUNDER,
+            #    requires=a10constants.VTHUNDER,
+            #    provides=a10constants.VTHUNDER))
+            create_member_flow.add(vthunder_tasks.AmphoraePostVIPPlug(
+                name=a10constants.AMP_POST_VIP_PLUG,
+                requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                          constants.ADDED_PORTS)))
+            create_member_flow.add(
+                vthunder_tasks.VThunderComputeConnectivityWait(
+                    name=a10constants.CONNECTIVITY_WAIT_FOR_MASTER_VTHUNDER,
+                    requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+            create_member_flow.add(
+                vthunder_tasks.VThunderComputeConnectivityWait(
+                    name=a10constants.CONNECTIVITY_WAIT_FOR_BACKUP_VTHUNDER,
+                    rebind={
+                        a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                    requires=constants.AMPHORA))
             create_member_flow.add(vthunder_tasks.VCSSyncWait(
                 name="member_enable_interface_vcs_sync_wait",
                 requires=a10constants.VTHUNDER))
-            create_member_flow.add(
-                vthunder_tasks.EnableInterfaceForMembers(
-                    name="backup_enable_interface", requires=[
-                        constants.ADDED_PORTS, constants.LOADBALANCER], rebind={
-                        a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+            create_member_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_VTHUNDER_MASTER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
+            create_member_flow.add(vthunder_tasks.EnableInterfaceForMembers(
+                name="backup_enable_interface",
+                requires=[
+                    constants.ADDED_PORTS,
+                    constants.LOADBALANCER,
+                    a10constants.VTHUNDER]))
+            # create_member_flow.add(vthunder_tasks.VCSSyncWait(
+            #    name="member_enable_interface_vcs_sync_wait",
+            #    requires=a10constants.VTHUNDER))
+            # create_member_flow.add(
+            #    vthunder_tasks.EnableInterfaceForMembers(
+            #        name="backup_enable_interface", requires=[
+            #            constants.ADDED_PORTS, constants.LOADBALANCER], rebind={
+            #            a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
 
         create_member_flow.add(self.handle_vrid_for_member_subflow())
         create_member_flow.add(a10_database_tasks.CountMembersWithIP(
@@ -236,6 +303,10 @@ class MemberFlows(object):
             requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL]))
         delete_member_flow.add(a10_database_tasks.DeleteNatPoolEntry(
             requires=a10constants.NAT_POOL))
+        delete_member_flow.add(vthunder_tasks.GetMasterVThunder(
+            name=a10constants.GET_VTHUNDER_MASTER,
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.VTHUNDER))
         delete_member_flow.add(
             server_tasks.MemberDelete(
                 requires=(
