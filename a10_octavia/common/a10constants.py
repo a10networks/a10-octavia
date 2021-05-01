@@ -12,7 +12,28 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-GET_VTHUNDER_FOR_LB_SUBFLOW = 'octavia-get-vthunder-for-lb-subflow'
+# ==============
+# Argument Names
+# ==============
+LOADBALANCERS_LIST = 'loadbalancers_list'
+VRID_LIST = 'vrid_list'
+SET_THUNDER_UPDATE_AT = 'set-thunder-update-at'
+SET_THUNDER_BACKUP_UPDATE_AT = 'set-thunder-backup-update-at'
+
+# Member count with specific IP.
+MEMBER_COUNT_IP = 'member_count_ip'
+MEMBER_COUNT_IP_PORT_PROTOCOL = 'member_count_ip_port_protocol'
+POOL_COUNT_IP = 'pool_count_ip'
+WRITE_MEM_SHARED_PART = 'write_mem_shared_part'
+WRITE_MEM_FOR_SHARED_PARTITION = 'write_memory_for_shared_partition'
+WRITE_MEM_FOR_LOCAL_PARTITION = 'write_memory_for_local_partition'
+
+MEMBER_LIST = 'member_list'
+SUBNET_LIST = 'subnet_list'
+
+PARTITION_PROJECT_LIST = 'partition_project_list'
+IFNUM_BACKUP = 'ifnum_backup'
+IFNUM_MASTER = 'ifnum_master'
 
 VTHUNDER = 'vthunder'
 STATUS = 'status'
@@ -51,6 +72,8 @@ PERS_TYPE = ['cookie_persistence', 'src_ip_persistence']
 NO_DEST_NAT_SUPPORTED_PROTOCOL = ['tcp', 'udp']
 PORT = 'port'
 LB_COUNT = 'lb_count'
+LB_COUNT_SUBNET = 'lb_count_subnet'
+LB_COUNT_FLAVOR = 'lb_count_flavor'
 MEMBER_COUNT = 'member_count'
 DELETE_VRID = 'delete_vrid'
 
@@ -71,8 +94,10 @@ SSL_TEMPLATE = "ssl_template"
 
 COMPUTE_BUSY = "compute_busy"
 
+# ============================
 # Taskflow flow and task names
-
+# ============================
+GET_VTHUNDER_FOR_LB_SUBFLOW = 'octavia-get-vthunder-for-lb-subflow'
 BACKUP_AMPHORA_PLUG = 'backup-amphora-plug'
 GET_MASTER_VTHUNDER_INTERFACE = 'get-master-vthunder-intercae'
 GET_BACKUP_VTHUNDER_INTERFACE = 'get-backup-vthunder-intercae'
@@ -151,23 +176,6 @@ SPARE_VTHUNDER_CREATE = 'spare-vthunder-create'
 WRITE_MEMORY_THUNDER_FLOW = 'write-memory-thunder-flow'
 RELOAD_CHECK_THUNDER_FLOW = 'reload-check-thunder-flow'
 LB_TO_VTHUNDER_SUBFLOW = 'lb-to-vthunder-subflow'
-LOADBALANCERS_LIST = 'loadbalancers_list'
-VRID_LIST = 'vrid_list'
-RESOURCE_COUNT = 'resource_count'
-SET_THUNDER_UPDATE_AT = 'set-thunder-update-at'
-SET_THUNDER_BACKUP_UPDATE_AT = 'set-thunder-backup-update-at'
-
-# Member count with specific IP.
-MEMBER_COUNT_IP = 'member_count_ip'
-MEMBER_COUNT_IP_PORT_PROTOCOL = 'member_count_ip_port_protocol'
-POOL_COUNT_IP = 'pool_count_ip'
-WRITE_MEM_SHARED_PART = 'write_mem_shared_part'
-WRITE_MEM_FOR_SHARED_PARTITION = 'write_memory_for_shared_partition'
-WRITE_MEM_FOR_LOCAL_PARTITION = 'write_memory_for_local_partition'
-
-MEMBER_LIST = 'member_list'
-SUBNET_LIST = 'subnet_list'
-
-PARTITION_PROJECT_LIST = 'partition_project_list'
-IFNUM_BACKUP = 'ifnum_backup'
-IFNUM_MASTER = 'ifnum_master'
+GET_LB_RESOURCE = 'get-lb-resource'
+GET_PROJECT_COUNT = 'get-child-parent-project-count'
+GET_LB_COUNT_SUBNET = 'get-lb-count-by-subnet'

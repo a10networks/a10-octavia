@@ -211,16 +211,6 @@ class LoadBalancerFlows(object):
         if cascade:
             (pools_listeners_delete, store) = self._get_cascade_delete_pools_listeners_flow(lb)
             delete_LB_flow.add(pools_listeners_delete)
-        delete_LB_flow.add(a10_database_tasks.GetFlavorData(
-            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
-            provides=constants.FLAVOR_DATA))
-        delete_LB_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
-            requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
-            provides=a10constants.LB_COUNT))
-
-        # delete_LB_flow.add(listeners_delete)
-        # delete_LB_flow.add(network_tasks.UnplugVIP(
-        #    requires=constants.LOADBALANCER))
         delete_LB_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
@@ -261,17 +251,37 @@ class LoadBalancerFlows(object):
                 delete_LB_flow.add(vthunder_tasks.VCSSyncWait(
                     name="vip-unplug-wait-vcs-ready",
                     requires=a10constants.VTHUNDER))
-        if lb.topology == "ACTIVE_STANDBY":
-            delete_LB_flow.add(vthunder_tasks.GetMasterVThunder(
-                name=a10constants.GET_VTHUNDER_MASTER,
-                requires=a10constants.VTHUNDER,
-                provides=a10constants.VTHUNDER))
+                delete_LB_flow.add(vthunder_tasks.GetMasterVThunder(
+                    name=a10constants.GET_VTHUNDER_MASTER,
+                    requires=a10constants.VTHUNDER,
+                    provides=a10constants.VTHUNDER))
+        delete_LB_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
+        delete_LB_flow.add(
+            a10_database_tasks.GetChildProjectsOfParentPartition(
+                requires=[a10constants.VTHUNDER],
+                rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+                provides=a10constants.PARTITION_PROJECT_LIST
+            ))
+        delete_LB_flow.add(
+            a10_database_tasks.CountLoadbalancersInProjectBySubnet(
+                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+                provides=a10constants.LB_COUNT_SUBNET))
         delete_LB_flow.add(self.get_delete_lb_vrid_subflow(deleteCompute))
+        delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
+            requires=[constants.LOADBALANCER, a10constants.LB_COUNT_SUBNET]))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
+        delete_LB_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR_DATA))
+        delete_LB_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+            provides=a10constants.LB_COUNT_FLAVOR))
         delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
-            requires=(constants.LOADBALANCER,
-                      a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                      a10constants.LB_COUNT_FLAVOR, constants.FLAVOR_DATA)))
         if deleteCompute:
             delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
                 requires=constants.LOADBALANCER))
@@ -300,21 +310,6 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-        delete_LB_flow.add(a10_network_tasks.GetLBResourceSubnet(
-            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
-            provides=constants.SUBNET))
-        delete_LB_flow.add(
-            a10_database_tasks.GetChildProjectsOfParentPartition(
-                requires=[a10constants.VTHUNDER],
-                rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
-                provides=a10constants.PARTITION_PROJECT_LIST
-            ))
-        delete_LB_flow.add(
-            a10_database_tasks.CountLoadbalancersInProjectBySubnet(
-                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
-                provides=a10constants.LB_COUNT))
-        delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
-            requires=[constants.LOADBALANCER, a10constants.LB_COUNT]))
         return (delete_LB_flow, store)
 
     def get_new_lb_networking_subflow(self, topology, vthunder):
@@ -649,24 +644,33 @@ class LoadBalancerFlows(object):
         if cascade:
             (pools_listeners_delete, store) = self._get_cascade_delete_pools_listeners_flow(lb)
             delete_LB_flow.add(pools_listeners_delete)
+        delete_LB_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
+        delete_LB_flow.add(
+            a10_database_tasks.GetChildProjectsOfParentPartition(
+                requires=[a10constants.VTHUNDER],
+                rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+                provides=a10constants.PARTITION_PROJECT_LIST
+            ))
+        delete_LB_flow.add(
+            a10_database_tasks.CountLoadbalancersInProjectBySubnet(
+                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+                provides=a10constants.LB_COUNT_SUBNET))
+        delete_LB_flow.add(self.get_delete_rack_lb_vrid_subflow())
+        delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
+            requires=[constants.LOADBALANCER, a10constants.LB_COUNT_SUBNET]))
+        delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         delete_LB_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR_DATA))
         delete_LB_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
-            provides=a10constants.LB_COUNT))
-        delete_LB_flow.add(self.get_delete_rack_lb_vrid_subflow())
-
-        # delete_LB_flow.add(listeners_delete)
-        # delete_LB_flow.add(network_tasks.UnplugVIP(
-        #    requires=constants.LOADBALANCER))
-        delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
-            requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
-        delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
-            requires=constants.LOADBALANCER))
+            provides=a10constants.LB_COUNT_FLAVOR))
         delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
-            requires=(constants.LOADBALANCER,
-                      a10constants.VTHUNDER, a10constants.LB_COUNT, constants.FLAVOR_DATA)))
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                      a10constants.LB_COUNT_FLAVOR, constants.FLAVOR_DATA)))
         if CONF.a10_global.network_type == 'vlan':
             delete_LB_flow.add(
                 vthunder_tasks.DeleteInterfaceTagIfNotInUseForLB(
@@ -737,6 +741,7 @@ class LoadBalancerFlows(object):
             provides=constants.SUBNET))
         handle_vrid_for_lb_subflow.add(
             a10_database_tasks.GetChildProjectsOfParentPartition(
+                requires=[a10constants.VTHUNDER],
                 rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
                 provides=a10constants.PARTITION_PROJECT_LIST
             ))
@@ -762,19 +767,6 @@ class LoadBalancerFlows(object):
     def get_delete_rack_lb_vrid_subflow(self):
         delete_lb_vrid_subflow = linear_flow.Flow(
             a10constants.DELETE_LOADBALANCER_VRID_SUBFLOW)
-        delete_lb_vrid_subflow.add(a10_network_tasks.GetLBResourceSubnet(
-            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
-            provides=constants.SUBNET))
-        delete_lb_vrid_subflow.add(
-            a10_database_tasks.GetChildProjectsOfParentPartition(
-                requires=[a10constants.VTHUNDER],
-                rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
-                provides=a10constants.PARTITION_PROJECT_LIST
-            ))
-        delete_lb_vrid_subflow.add(
-            a10_database_tasks.CountLoadbalancersInProjectBySubnet(
-                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
-                provides=a10constants.LB_COUNT))
         delete_lb_vrid_subflow.add(
             a10_database_tasks.CountMembersInProjectBySubnet(
                 requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
@@ -789,7 +781,7 @@ class LoadBalancerFlows(object):
                     a10constants.VTHUNDER,
                     a10constants.VRID_LIST,
                     constants.SUBNET,
-                    a10constants.LB_COUNT,
+                    a10constants.LB_COUNT_SUBNET,
                     a10constants.MEMBER_COUNT],
                 provides=(
                     a10constants.VRID,
@@ -804,19 +796,6 @@ class LoadBalancerFlows(object):
 
         delete_lb_vrid_subflow = linear_flow.Flow(
             a10constants.DELETE_LOADBALANCER_VRID_SUBFLOW)
-        delete_lb_vrid_subflow.add(a10_network_tasks.GetLBResourceSubnet(
-            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
-            provides=constants.SUBNET))
-        delete_lb_vrid_subflow.add(
-            a10_database_tasks.GetChildProjectsOfParentPartition(
-                requires=[a10constants.VTHUNDER],
-                rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
-                provides=a10constants.PARTITION_PROJECT_LIST
-            ))
-        delete_lb_vrid_subflow.add(
-            a10_database_tasks.CountLoadbalancersInProjectBySubnet(
-                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
-                provides=a10constants.LB_COUNT))
         delete_lb_vrid_subflow.add(
             a10_database_tasks.CountMembersInProjectBySubnet(
                 requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
@@ -831,7 +810,7 @@ class LoadBalancerFlows(object):
                     a10constants.VTHUNDER,
                     a10constants.VRID_LIST,
                     constants.SUBNET,
-                    a10constants.LB_COUNT,
+                    a10constants.LB_COUNT_SUBNET,
                     a10constants.MEMBER_COUNT],
                 provides=(
                     a10constants.VRID,
