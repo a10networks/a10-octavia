@@ -139,43 +139,6 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         except Exception as e:
             raise base.NetworkException(str(e))
 
-    def _delete_security_group(self, load_balancer_id):
-        if self.sec_grp_enabled:
-            sec_grp = self._get_lb_security_group(port.id)
-            if sec_grp:
-                sec_grp_id = sec_grp.get('id')
-                ports = self._get_ports_by_security_group(sec_grp_id)
-                LOG.info(
-                    "Removing security group %(sg)s from port %(port)s",
-                    {'sg': sec_grp_id, 'port': port.id})
-                raw_port = None
-                try:
-                    if port:
-                        raw_port = self.neutron_client.show_port(port.id)
-                except Exception:
-                    LOG.warning('Unable to get port information for port '
-                                '%s. Continuing to delete the security '
-                                'group.', port.id)
-                if raw_port:
-                    sec_grps = raw_port.get(
-                        'port', {}).get('security_groups', [])
-                    if sec_grp_id in sec_grps:
-                        sec_grps.remove(sec_grp_id)
-                        port_update = {'port': {'security_groups': sec_grps}}
-                        try:
-                            self.neutron_client.update_port(port.id,
-                                                            port_update)
-                        except neutron_client_exceptions.PortNotFoundClient:
-                            LOG.warning('Unable to update port information '
-                                        'for port %s. Continuing to delete '
-                                        'the security group since port not '
-                                        'found', port.id)
-
-                try:
-                    self._delete_vip_security_group(sec_grp_id)
-                except base.DeallocateVIPException:
-
-
     def _remove_security_group(self, port, sec_grp_id):
         port['security_groups'].remove(sec_grp_id)
         payload = {'port': {'security_groups': port['security_groups']}}
@@ -212,33 +175,46 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
                     ports.append(port)
         return ports
 
-    def deallocate_vip(self, loadbalancer, lb_count):
+    def _get_ports_by_security_group(self, sec_grp_id):
+
+        # Handle backwards compatibility issue with neutronclient
+        try:
+            all_ports = self.neutron_client.list_ports(project_id=self.project_id)
+        except neutron_client_exceptions.BadRequest:
+            all_ports = self.neutron_client.list_ports(project=self.project_id)
+
+        filtered_ports = []
+        for port in all_ports.get('ports', []):
+            if sec_grp_id in port.get('security_groups', []):
+                filtered_ports.append(port)
+        return filtered_ports
+
+    def deallocate_vip(self, loadbalancer, lb_count_subnet):
         """Delete the vrrp_port (instance port) in case nova didn't
         This can happen if a failover has occurred.
         """
-        vip_port_id = loadbalancer.vip.port_id
-
         ports = []
         sec_grp_id = None
+        vip_port_id = loadbalancer.vip.port_id
         if self.sec_grp_enabled:
-            sec_grp = self._get_lb_security_group(loadbalancer.id)
-            sec_grp_id = sec_grp.id
+            sec_grp_id = self._get_lb_security_group(loadbalancer.id)['id']
             ports = self._get_ports_by_security_group(sec_grp_id)
         else:
             for amphora in loadbalancer.amphorae:
                 self.get_instance_ports_by_subnet(amphora.compute_id, loadbalancer.vip.subnet_id)
 
         for port in ports:
-            if lb_count > 1: # vNIC port is in use by other lbs. Only delete VIP port.
+            if lb_count_subnet > 1: # vNIC port is in use by other lbs. Only delete VIP port.
                 if sec_grp_id:
                     self._remove_security_group(loadbalancer, port, sec_grp_id)
                 if port['id'] == vip_port_id:
                     self._cleanup_port(vip_port_id, port)
-            elif lb_count <= 1: # This is the only lb using vNIC ports
+            elif lb_count_subnet <= 1: # This is the only lb using vNIC ports
                 self._cleanup_port(vip_port_id, port)
 
-            if sec_grp_id:
-                self._delete_security_group(loadbalancer, port, sec_grp_id)
+        if sec_grp_id:
+            self._delete_vip_security_group(sec_grp_id)
+
 
 
     def get_plugged_parent_port(self, vip):
