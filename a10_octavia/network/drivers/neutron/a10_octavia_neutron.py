@@ -169,8 +169,8 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
     def _get_instance_ports_by_subnet(self, compute_id, subnet_id):
         ports = []
         amp_ports = self.neutron_client.list_ports(device_id=compute_id)
-        for port in amp_ports:
-            for fixed_ips in port:
+        for port in amp_ports.get('ports', []):
+            for fixed_ips in port['fixed_ips']:
                 if fixed_ips['subnet_id'] == subnet_id:
                     ports.append(port)
         return ports
@@ -194,26 +194,27 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         This can happen if a failover has occurred.
         """
         ports = []
-        sec_grp_id = None
+        sec_grp = None
         vip_port_id = loadbalancer.vip.port_id
         if self.sec_grp_enabled:
-            sec_grp_id = self._get_lb_security_group(loadbalancer.id)['id']
-            ports = self._get_ports_by_security_group(sec_grp_id)
-        else:
+            sec_grp = self._get_lb_security_group(loadbalancer.id)
+            if sec_grp:
+                ports = self._get_ports_by_security_group(sec_grp['id'])
+        if self.sec_grp_enabled or not ports:
             for amphora in loadbalancer.amphorae:
-                self.get_instance_ports_by_subnet(amphora.compute_id, loadbalancer.vip.subnet_id)
+                self._get_instance_ports_by_subnet(amphora.compute_id, loadbalancer.vip.subnet_id)
 
         for port in ports:
             if lb_count_subnet > 1: # vNIC port is in use by other lbs. Only delete VIP port.
-                if sec_grp_id:
-                    self._remove_security_group(loadbalancer, port, sec_grp_id)
+                if sec_grp:
+                    self._remove_security_group(loadbalancer, port, sec_grp['id'])
                 if port['id'] == vip_port_id:
                     self._cleanup_port(vip_port_id, port)
             elif lb_count_subnet <= 1: # This is the only lb using vNIC ports
                 self._cleanup_port(vip_port_id, port)
 
-        if sec_grp_id:
-            self._delete_vip_security_group(sec_grp_id)
+        if sec_grp:
+            self._delete_vip_security_group(sec_grp['id'])
 
 
 
