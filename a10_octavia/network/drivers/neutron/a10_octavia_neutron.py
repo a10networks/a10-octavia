@@ -174,60 +174,72 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
                 try:
                     self._delete_vip_security_group(sec_grp_id)
                 except base.DeallocateVIPException:
-                    # Try to delete any leftover ports on this security group.
-                    # Because this security group is created and managed by us,
-                    # it *should* only return ports that we own / can delete.
-                    LOG.warning('Failed to delete security group on first '
-                                'pass: %s', sec_grp_id)
-                    extra_ports = self._get_ports_by_security_group(sec_grp_id)
-                    for extra_port in extra_ports:
-                        port_id = extra_port.get('id')
-                        try:
-                            LOG.warning('Deleting extra port %s on security '
-                                        'group %s...', port_id, sec_grp_id)
-                            self.neutron_client.delete_port(port_id)
-                        except Exception:
-                            LOG.warning('Failed to delete extra port %s on '
-                                        'security group %s.',
-                                        port_id, sec_grp_id)
-                    # Now try it again
-                    self._delete_vip_security_group(sec_grp_id)
 
-    def deallocate_vip(self, vip):
+
+    def _remove_security_group(self, port, sec_grp_id):
+        port['security_groups'].remove(sec_grp_id)
+        payload = {'port': {'security_groups': port['security_groups']}}
+        try:
+            self.neutron_client.update_port(port['id'], payload)
+        except neutron_client_exceptions.PortNotFoundClient as e:
+            raise base.PortNotFound(str(e))
+        except Exception as e:
+            raise base.NetworkException(str(e))
+
+    def _cleanup_port(self, vip_port_id, port):
+        try:
+            self.neutron_client.delete_port(port['id'])
+        except (neutron_client_exceptions.NotFound,
+                neutron_client_exceptions.PortNotFoundClient):
+            if port['id'] == vip_port_id:
+                LOG.debug('VIP port %s already deleted. Skipping.', port['id'])
+            else:
+                LOG.warning("Can't deallocate instance port {0} because it "
+                            "cannot be found in neutron. "
+                            "Continuing cleanup.".format(port['id']))
+        except Exception:
+            message = _('Error deleting VIP port_id {port_id} from '
+                        'neutron').format(port_id=port['id'])
+            LOG.exception(message)
+            raise base.DeallocateVIPException(message)
+
+    def _get_instance_ports_by_subnet(self, compute_id, subnet_id):
+        ports = []
+        amp_ports = self.neutron_client.list_ports(device_id=compute_id)
+        for port in amp_ports:
+            for fixed_ips in port:
+                if fixed_ips['subnet_id'] == subnet_id:
+                    ports.append(port)
+        return ports
+
+    def deallocate_vip(self, loadbalancer, lb_count):
         """Delete the vrrp_port (instance port) in case nova didn't
         This can happen if a failover has occurred.
         """
-        for amphora in vip.load_balancer.amphorae:
-            try:
-                port = self.get_port(amphora.vrrp_port_id)
-            except base.PortNotFound:
-                LOG.warning("Can't deallocate VIP because the vip port {0} "
-                            "cannot be found in neutron. "
-                        "   Continuing cleanup.".format(amphora.vrrp_port_id))
-                port = None
-            self._delete_security_group(amphora, port)
-            try:
-                self.neutron_client.delete_port(amphora.vrrp_port_id)
-            except (neutron_client_exceptions.NotFound,
-                    neutron_client_exceptions.PortNotFoundClient):
-                LOG.debug('VIP instance port %s already deleted. Skipping.',
-                          amphora.vrrp_port_id)
+        vip_port_id = loadbalancer.vip.port_id
 
-        if port and port.device_owner == OCTAVIA_OWNER:
-            try:
-                self.neutron_client.delete_port(vip.port_id)
-            except (neutron_client_exceptions.NotFound,
-                    neutron_client_exceptions.PortNotFoundClient):
-                LOG.debug('VIP port %s already deleted. Skipping.',
-                          vip.port_id)
-            except Exception:
-                message = _('Error deleting VIP port_id {port_id} from '
-                            'neutron').format(port_id=vip.port_id)
-                LOG.exception(message)
-                raise base.DeallocateVIPException(message)
-        elif port:
-            LOG.info("Port %s will not be deleted by Octavia as it was "
-                     "not created by Octavia.", vip.port_id)
+        ports = []
+        sec_grp_id = None
+        if self.sec_grp_enabled:
+            sec_grp = self._get_lb_security_group(loadbalancer.id)
+            sec_grp_id = sec_grp.id
+            ports = self._get_ports_by_security_group(sec_grp_id)
+        else:
+            for amphora in loadbalancer.amphorae:
+                self.get_instance_ports_by_subnet(amphora.compute_id, loadbalancer.vip.subnet_id)
+
+        for port in ports:
+            if lb_count > 1: # vNIC port is in use by other lbs. Only delete VIP port.
+                if sec_grp_id:
+                    self._remove_security_group(loadbalancer, port, sec_grp_id)
+                if port['id'] == vip_port_id:
+                    self._cleanup_port(vip_port_id, port)
+            elif lb_count <= 1: # This is the only lb using vNIC ports
+                self._cleanup_port(vip_port_id, port)
+
+            if sec_grp_id:
+                self._delete_security_group(loadbalancer, port, sec_grp_id)
+
 
     def get_plugged_parent_port(self, vip):
         parent_port = None

@@ -300,8 +300,21 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+        delete_LB_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
+        delete_LB_flow.add(
+            a10_database_tasks.GetChildProjectsOfParentPartition(
+                requires=[a10constants.VTHUNDER],
+                rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+                provides=a10constants.PARTITION_PROJECT_LIST
+            ))
+        delete_LB_flow.add(
+            a10_database_tasks.CountLoadbalancersInProjectBySubnet(
+                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+                provides=a10constants.LB_COUNT))
         delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
-            requires=constants.LOADBALANCER))
+            requires=[constants.LOADBALANCER, a10constants.LB_COUNT]))
         return (delete_LB_flow, store)
 
     def get_new_lb_networking_subflow(self, topology, vthunder):
