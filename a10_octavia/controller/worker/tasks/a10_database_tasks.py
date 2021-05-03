@@ -989,7 +989,7 @@ class GetLoadBalancerListForDeletion(BaseDatabaseTask):
     def execute(self, vthunder, loadbalancer):
         try:
             if vthunder:
-                loadbalancers_list = self.loadbalancer_repo.get_all_ohter_lbs_in_project(
+                loadbalancers_list = self.loadbalancer_repo.get_all_other_lbs_in_project(
                     db_apis.get_session(),
                     vthunder.project_id,
                     loadbalancer.id)

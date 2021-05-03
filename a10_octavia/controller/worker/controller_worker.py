@@ -143,10 +143,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         pool.health_monitor = health_mon
         load_balancer = pool.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
         # rack flow _vthunder_busy_check() will always return False
         busy = self._vthunder_busy_check(health_mon.project_id, False, None)
         create_hm_tf = self._taskflow_load(
-            self._health_monitor_flows.get_create_health_monitor_flow(),
+            self._health_monitor_flows.get_create_health_monitor_flow(topology=topology),
             store={constants.HEALTH_MON: health_mon,
                    constants.POOL: pool,
                    constants.LISTENERS: listeners,
@@ -172,10 +174,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = pool.listeners
         load_balancer = pool.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
         # rack flow _vthunder_busy_check() will always return False
         busy = self._vthunder_busy_check(health_mon.project_id, False, None)
         delete_hm_tf = self._taskflow_load(
-            self._health_monitor_flows.get_delete_health_monitor_flow(),
+            self._health_monitor_flows.get_delete_health_monitor_flow(topology=topology),
             store={constants.HEALTH_MON: health_mon,
                    constants.POOL: pool,
                    constants.LISTENERS: listeners,
@@ -212,10 +216,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         pool.health_monitor = health_mon
         load_balancer = pool.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
         # rack flow _vthunder_busy_check() will always return False
         busy = self._vthunder_busy_check(health_mon.project_id, False, None)
         update_hm_tf = self._taskflow_load(
-            self._health_monitor_flows.get_update_health_monitor_flow(),
+            self._health_monitor_flows.get_update_health_monitor_flow(topology=topology),
             store={constants.HEALTH_MON: health_mon,
                    constants.POOL: pool,
                    constants.LISTENERS: listeners,
@@ -752,10 +758,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
         # rack flow _vthunder_busy_check() will always return False
         busy = self._vthunder_busy_check(l7policy.project_id, False, None)
         create_l7policy_tf = self._taskflow_load(
-            self._l7policy_flows.get_create_l7policy_flow(),
+            self._l7policy_flows.get_create_l7policy_flow(topology=topology),
             store={constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
                    constants.LOADBALANCER: load_balancer,
@@ -777,10 +785,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = l7policy.listener.load_balancer
         listeners = [l7policy.listener]
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
         # rack flow _vthunder_busy_check() will always return False
         busy = self._vthunder_busy_check(l7policy.project_id, False, None)
         delete_l7policy_tf = self._taskflow_load(
-            self._l7policy_flows.get_delete_l7policy_flow(),
+            self._l7policy_flows.get_delete_l7policy_flow(topology=topology),
             store={constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
                    constants.LOADBALANCER: load_balancer,
@@ -814,10 +824,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
         # rack flow _vthunder_busy_check() will always return False
         busy = self._vthunder_busy_check(l7policy.project_id, False, None)
         update_l7policy_tf = self._taskflow_load(
-            self._l7policy_flows.get_update_l7policy_flow(),
+            self._l7policy_flows.get_update_l7policy_flow(topology=topology),
             store={constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
                    constants.LOADBALANCER: load_balancer,
@@ -851,10 +863,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
         # rack flow _vthunder_busy_check() will always return False
         busy = self._vthunder_busy_check(l7rule.project_id, False, None)
         create_l7rule_tf = self._taskflow_load(
-            self._l7rule_flows.get_create_l7rule_flow(),
+            self._l7rule_flows.get_create_l7rule_flow(topology=topology),
             store={constants.L7RULE: l7rule,
                    constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
@@ -877,10 +891,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = l7policy.listener.load_balancer
         listeners = [l7policy.listener]
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
         # rack flow _vthunder_busy_check() will always return False
         busy = self._vthunder_busy_check(l7rule.project_id, False, None)
         delete_l7rule_tf = self._taskflow_load(
-            self._l7rule_flows.get_delete_l7rule_flow(),
+            self._l7rule_flows.get_delete_l7rule_flow(topology=topology),
             store={constants.L7RULE: l7rule,
                    constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
@@ -915,10 +931,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
         # rack flow _vthunder_busy_check() will always return False
         busy = self._vthunder_busy_check(l7rule.project_id, False, None)
         update_l7rule_tf = self._taskflow_load(
-            self._l7rule_flows.get_update_l7rule_flow(),
+            self._l7rule_flows.get_update_l7rule_flow(topology=topology),
             store={constants.L7RULE: l7rule,
                    constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,

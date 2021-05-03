@@ -388,7 +388,7 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
             lb_list.append(data.to_data_model())
         return lb_list
 
-    def get_all_ohter_lbs_in_project(self, session, project_id, id):
+    def get_all_other_lbs_in_project(self, session, project_id, id):
         lb_list = []
         query = session.query(self.model_class).filter(
             self.model_class.project_id == project_id).filter(
