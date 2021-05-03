@@ -450,28 +450,8 @@ class LoadBalancerFlows(object):
                     requires=a10constants.VTHUNDER,
                     provides=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
-                    name="wait-vcs-ready-before-vcs-reload",
+                    name="wait-vcs-ready-before-master-reload",
                     requires=a10constants.VTHUNDER))
-                new_LB_net_subflow.add(vthunder_tasks.VCSReload(
-                    name=a10constants.VCS_RELOAD,
-                    requires=(a10constants.VTHUNDER)))
-                new_LB_net_subflow.add(
-                    vthunder_tasks.VThunderComputeConnectivityWait(
-                        name=a10constants.WAIT_FOR_MASTER_VCS_RELOAD,
-                        requires=(a10constants.VTHUNDER, constants.AMPHORA)))
-                new_LB_net_subflow.add(
-                    vthunder_tasks.VThunderComputeConnectivityWait(
-                        name=a10constants.WAIT_FOR_BACKUP_VCS_RELOAD,
-                        rebind={
-                            a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-                        requires=constants.AMPHORA))
-                new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
-                    name="vcs-reload-wait-vcs-ready",
-                    requires=a10constants.VTHUNDER))
-                new_LB_net_subflow.add(vthunder_tasks.GetMasterVThunder(
-                    name=a10constants.GET_MASTER_VTHUNDER,
-                    requires=a10constants.VTHUNDER,
-                    provides=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
                     name=a10constants.AMP_POST_VIP_PLUG,
                     requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
