@@ -27,7 +27,7 @@ from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 class L7PolicyFlows(object):
 
-    def get_create_l7policy_flow(self):
+    def get_create_l7policy_flow(self, topology):
         """Create a flow to create an L7 policy
 
         :returns: The flow for creating an L7 policy
@@ -45,6 +45,11 @@ class L7PolicyFlows(object):
         create_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            create_l7policy_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         create_l7policy_flow.add(l7policy_tasks.CreateL7Policy(
             requires=[constants.L7POLICY, constants.LISTENERS, a10constants.VTHUNDER]))
         create_l7policy_flow.add(database_tasks.MarkL7PolicyActiveInDB(
@@ -57,7 +62,7 @@ class L7PolicyFlows(object):
             requires=a10constants.VTHUNDER))
         return create_l7policy_flow
 
-    def get_delete_l7policy_flow(self):
+    def get_delete_l7policy_flow(self, topology):
         """Create a flow to delete an L7 policy
 
         :returns: The flow for deleting an L7 policy
@@ -77,6 +82,11 @@ class L7PolicyFlows(object):
         delete_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            delete_l7policy_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         delete_l7policy_flow.add(l7policy_tasks.DeleteL7Policy(
             requires=[constants.L7POLICY, a10constants.VTHUNDER]))
         delete_l7policy_flow.add(database_tasks.DeleteL7PolicyInDB(
@@ -89,7 +99,7 @@ class L7PolicyFlows(object):
             requires=a10constants.VTHUNDER))
         return delete_l7policy_flow
 
-    def get_update_l7policy_flow(self):
+    def get_update_l7policy_flow(self, topology):
         """Create a flow to update an L7 policy
         :returns: The flow for updating an L7 policy
         """
@@ -106,6 +116,11 @@ class L7PolicyFlows(object):
         update_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            update_l7policy_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         update_l7policy_flow.add(
             l7policy_tasks.UpdateL7Policy(
                 requires=[
