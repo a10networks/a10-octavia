@@ -198,6 +198,11 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if lb.topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            delete_LB_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             requires=a10constants.VTHUNDER,
             inject={"status": constants.PENDING_DELETE}))
@@ -491,7 +496,7 @@ class LoadBalancerFlows(object):
             provides=constants.LOADBALANCER))
         return new_LB_net_subflow
 
-    def get_update_load_balancer_flow(self):
+    def get_update_load_balancer_flow(self, topology):
         """Flow to update load balancer."""
 
         update_LB_flow = linear_flow.Flow(constants.UPDATE_LOADBALANCER_FLOW)
@@ -502,6 +507,11 @@ class LoadBalancerFlows(object):
         update_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            update_LB_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         update_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             requires=a10constants.VTHUNDER,
             inject={"status": constants.PENDING_UPDATE}))
