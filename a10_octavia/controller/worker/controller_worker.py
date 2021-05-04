@@ -435,10 +435,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             db_apis.get_session(),
             load_balancer_id=load_balancer_id)
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
         # rack flow _vthunder_busy_check() will always return False
         busy = self._vthunder_busy_check(lb.project_id, False, None)
         update_lb_tf = self._taskflow_load(
-            self._lb_flows.get_update_load_balancer_flow(),
+            self._lb_flows.get_update_load_balancer_flow(topology=topology),
             store={constants.LOADBALANCER: lb,
                    constants.VIP: lb.vip,
                    a10constants.COMPUTE_BUSY: busy,
