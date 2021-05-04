@@ -14,10 +14,11 @@
 
 from octavia.tests.unit import base
 
+
 class TestA10NeutronDriver(base.TestCase):
 
     def setUp(self):
-        self.client_mock = mock.Mock()
+        pass
 
     def test_deallocate_vip(self):
         pass

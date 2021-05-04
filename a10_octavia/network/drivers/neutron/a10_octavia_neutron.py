@@ -17,16 +17,12 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from stevedore import driver as stevedore_driver
 
-from octavia.common import constants
-from octavia.common import data_models as o_data_models
 from octavia.network import base
 from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron import allowed_address_pairs
 from octavia.network.drivers.neutron import utils
 
-from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
-from a10_octavia.common import utils as a10_utils
 from a10_octavia.network import data_models
 
 LOG = logging.getLogger(__name__)
@@ -205,12 +201,12 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
                 self._get_instance_ports_by_subnet(amphora.compute_id, loadbalancer.vip.subnet_id)
 
         for port in ports:
-            if lb_count_subnet > 1: # vNIC port is in use by other lbs. Only delete VIP port.
+            if lb_count_subnet > 1:  # vNIC port is in use by other lbs. Only delete VIP port.
                 if sec_grp:
                     self._remove_security_group(loadbalancer, port, sec_grp['id'])
                 if port['id'] == vip_port_id:
                     self._cleanup_port(vip_port_id, port)
-            elif lb_count_subnet <= 1: # This is the only lb using vNIC ports
+            elif lb_count_subnet <= 1:  # This is the only lb using vNIC ports
                 self._cleanup_port(vip_port_id, port)
 
         if sec_grp:
