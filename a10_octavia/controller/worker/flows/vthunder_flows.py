@@ -254,9 +254,25 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.RELOADLOAD_BALANCER,
             requires=constants.LOADBALANCER_ID,
             provides=constants.LOADBALANCER))
+        vthunder_for_amphora_subflow.add(a10_network_tasks.GetLBResourceSubnet(
+            name=sf_name + '-' + a10constants.GET_LB_RESOURCE,
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
+        vthunder_for_amphora_subflow.add(
+            a10_database_tasks.GetChildProjectsOfParentPartition(
+                name=sf_name + '-' + a10constants.GET_PROJECT_COUNT,
+                requires=[a10constants.VTHUNDER],
+                rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+                provides=a10constants.PARTITION_PROJECT_LIST
+            ))
+        vthunder_for_amphora_subflow.add(
+            a10_database_tasks.CountLoadbalancersInProjectBySubnet(
+                name=sf_name + '-' + a10constants.GET_LB_COUNT_SUBNET,
+                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+                provides=a10constants.LB_COUNT_SUBNET))
         vthunder_for_amphora_subflow.add(a10_network_tasks.AllocateVIP(
             name=sf_name + '-' + a10constants.ALLOCATE_VIP,
-            requires=constants.LOADBALANCER,
+            requires=[constants.LOADBALANCER, a10constants.LB_COUNT_SUBNET],
             provides=constants.VIP))
         vthunder_for_amphora_subflow.add(database_tasks.UpdateVIPAfterAllocation(
             name=sf_name + '-' + a10constants.UPDATE_VIP_AFTER_ALLOCATION,

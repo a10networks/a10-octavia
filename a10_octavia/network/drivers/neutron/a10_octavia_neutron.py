@@ -17,6 +17,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from stevedore import driver as stevedore_driver
 
+from octavia.network import base
 from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron import allowed_address_pairs
 from octavia.network.drivers.neutron import utils
@@ -26,7 +27,6 @@ from a10_octavia.network import data_models
 
 LOG = logging.getLogger(__name__)
 PROJECT_ID_ALIAS = 'project-id'
-VIP_SECURITY_GRP_PREFIX = 'lb-'
 OCTAVIA_OWNER = 'Octavia'
 
 CONF = cfg.CONF
@@ -121,6 +121,96 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         except Exception:
             message = "Error deleting subports"
             LOG.exception(message)
+
+    def _add_security_group_to_port(self, sec_grp_id, port_id):
+        port = self.neutron_client.show_port(port_id)
+        port['port']['security_groups'].append(sec_grp_id)
+        sec_grp_list = port['port']['security_groups']
+        payload = {'port': {'security_groups': sec_grp_list}}
+        # Note: Neutron accepts the SG even if it already exists
+        try:
+            self.neutron_client.update_port(port_id, payload)
+        except neutron_client_exceptions.PortNotFoundClient as e:
+            raise base.PortNotFound(str(e))
+        except Exception as e:
+            raise base.NetworkException(str(e))
+
+    def _remove_security_group(self, port, sec_grp_id):
+        port['security_groups'].remove(sec_grp_id)
+        payload = {'port': {'security_groups': port['security_groups']}}
+        try:
+            self.neutron_client.update_port(port['id'], payload)
+        except neutron_client_exceptions.PortNotFoundClient as e:
+            raise base.PortNotFound(str(e))
+        except Exception as e:
+            raise base.NetworkException(str(e))
+
+    def _cleanup_port(self, vip_port_id, port):
+        try:
+            self.neutron_client.delete_port(port['id'])
+        except (neutron_client_exceptions.NotFound,
+                neutron_client_exceptions.PortNotFoundClient):
+            if port['id'] == vip_port_id:
+                LOG.debug('VIP port %s already deleted. Skipping.', port['id'])
+            else:
+                LOG.warning("Can't deallocate instance port {0} because it "
+                            "cannot be found in neutron. "
+                            "Continuing cleanup.".format(port['id']))
+        except Exception:
+            message = _('Error deleting VIP port_id {port_id} from '
+                        'neutron').format(port_id=port['id'])
+            LOG.exception(message)
+            raise base.DeallocateVIPException(message)
+
+    def _get_instance_ports_by_subnet(self, compute_id, subnet_id):
+        ports = []
+        amp_ports = self.neutron_client.list_ports(device_id=compute_id)
+        for port in amp_ports.get('ports', []):
+            for fixed_ips in port.get('fixed_ips', []):
+                if fixed_ips.get('subnet_id') == subnet_id:
+                    ports.append(port)
+        return ports
+
+    def _get_ports_by_security_group(self, sec_grp_id):
+
+        # Handle backwards compatibility issue with neutronclient
+        try:
+            all_ports = self.neutron_client.list_ports(project_id=self.project_id)
+        except neutron_client_exceptions.BadRequest:
+            all_ports = self.neutron_client.list_ports(project=self.project_id)
+
+        filtered_ports = []
+        for port in all_ports.get('ports', []):
+            if sec_grp_id in port.get('security_groups', []):
+                filtered_ports.append(port)
+        return filtered_ports
+
+    def deallocate_vip(self, loadbalancer, lb_count_subnet):
+        """Delete the vrrp_port (instance port) in case nova didn't
+        This can happen if a failover has occurred.
+        """
+        ports = []
+        sec_grp = None
+        vip_port_id = loadbalancer.vip.port_id
+        if self.sec_grp_enabled:
+            sec_grp = self._get_lb_security_group(loadbalancer.id)
+            if sec_grp:
+                ports = self._get_ports_by_security_group(sec_grp['id'])
+        if self.sec_grp_enabled or not ports:
+            for amphora in loadbalancer.amphorae:
+                self._get_instance_ports_by_subnet(amphora.compute_id, loadbalancer.vip.subnet_id)
+
+        for port in ports:
+            if lb_count_subnet > 1:  # vNIC port is in use by other lbs. Only delete VIP port.
+                if sec_grp:
+                    self._remove_security_group(loadbalancer, port, sec_grp['id'])
+                if port['id'] == vip_port_id:
+                    self._cleanup_port(vip_port_id, port)
+            elif lb_count_subnet <= 1:  # This is the only lb using vNIC ports
+                self._cleanup_port(vip_port_id, port)
+
+        if sec_grp:
+            self._delete_vip_security_group(sec_grp['id'])
 
     def get_plugged_parent_port(self, vip):
         parent_port = None

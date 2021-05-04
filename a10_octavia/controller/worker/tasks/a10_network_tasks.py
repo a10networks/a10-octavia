@@ -443,7 +443,7 @@ class UnplugVIP(BaseNetworkTask):
 class AllocateVIP(BaseNetworkTask):
     """Task to allocate a VIP."""
 
-    def execute(self, loadbalancer):
+    def execute(self, loadbalancer, lb_count_subnet):
         """Allocate a vip to the loadbalancer."""
 
         LOG.debug("Allocate_vip port_id %s, subnet_id %s,"
@@ -453,7 +453,7 @@ class AllocateVIP(BaseNetworkTask):
                   loadbalancer.vip.ip_address)
         return self.network_driver.allocate_vip(loadbalancer)
 
-    def revert(self, result, loadbalancer, *args, **kwargs):
+    def revert(self, result, loadbalancer, lb_count_subnet, *args, **kwargs):
         """Handle a failure to allocate vip."""
 
         if isinstance(result, failure.Failure):
@@ -462,7 +462,7 @@ class AllocateVIP(BaseNetworkTask):
         vip = result
         LOG.warning("Deallocating vip %s", vip.ip_address)
         try:
-            self.network_driver.deallocate_vip(vip)
+            self.network_driver.deallocate_vip(vip, lb_count_subnet)
         except Exception as e:
             LOG.error("Failed to deallocate VIP.  Resources may still "
                       "be in use from vip: %(vip)s due to error: %(except)s",
@@ -472,19 +472,10 @@ class AllocateVIP(BaseNetworkTask):
 class DeallocateVIP(BaseNetworkTask):
     """Task to deallocate a VIP."""
 
-    def execute(self, loadbalancer):
+    def execute(self, loadbalancer, lb_count_subnet):
         """Deallocate a VIP."""
-
         LOG.debug("Deallocating a VIP %s", loadbalancer.vip.ip_address)
-
-        # NOTE(blogan): this is kind of ugly but sufficient for now.  Drivers
-        # will need access to the load balancer that the vip is/was attached
-        # to.  However the data model serialization for the vip does not give a
-        # backref to the loadbalancer if accessed through the loadbalancer.
-        vip = loadbalancer.vip
-        vip.load_balancer = loadbalancer
-        self.network_driver.deallocate_vip(vip)
-        return
+        self.network_driver.deallocate_vip(loadbalancer, lb_count_subnet)
 
 
 class UpdateVIP(BaseNetworkTask):
@@ -492,7 +483,6 @@ class UpdateVIP(BaseNetworkTask):
 
     def execute(self, loadbalancer):
         LOG.debug("Updating VIP of load_balancer %s.", loadbalancer.id)
-
         self.network_driver.update_vip(loadbalancer)
 
 
@@ -854,10 +844,10 @@ class DeleteVRIDPort(BaseNetworkTask):
     """Delete VRID Port if the last resource associated with it is deleted"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, vrid_list, subnet, lb_count, member_count):
+    def execute(self, vthunder, vrid_list, subnet, lb_count_subnet, member_count):
         vrid = None
         vrid_floating_ip_list = []
-        resource_count = lb_count + member_count
+        resource_count = lb_count_subnet + member_count
         if resource_count <= 1 and vthunder:
             for vr in vrid_list:
                 if vr.subnet_id == subnet.id:

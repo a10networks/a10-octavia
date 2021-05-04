@@ -102,9 +102,9 @@ class NatPoolDelete(task.Task):
     """Task to delete nat pool"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, vthunder, lb_count, flavor_data=None):
+    def execute(self, loadbalancer, vthunder, lb_count_flavor, flavor_data=None):
         if vthunder:
-            if lb_count <= 1:
+            if lb_count_flavor <= 1:
                 if flavor_data:
                     natpool_flavor_list = flavor_data.get('nat_pool_list')
                     natpool_flavor = flavor_data.get('nat_pool')
