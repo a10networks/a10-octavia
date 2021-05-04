@@ -170,8 +170,8 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         ports = []
         amp_ports = self.neutron_client.list_ports(device_id=compute_id)
         for port in amp_ports.get('ports', []):
-            for fixed_ips in port['fixed_ips']:
-                if fixed_ips['subnet_id'] == subnet_id:
+            for fixed_ips in port.get('fixed_ips', []):
+                if fixed_ips.get('subnet_id') == subnet_id:
                     ports.append(port)
         return ports
 
@@ -215,8 +215,6 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
 
         if sec_grp:
             self._delete_vip_security_group(sec_grp['id'])
-
-
 
     def get_plugged_parent_port(self, vip):
         parent_port = None
