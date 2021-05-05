@@ -196,14 +196,16 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             sec_grp = self._get_lb_security_group(loadbalancer.id)
             if sec_grp:
                 ports = self._get_ports_by_security_group(sec_grp['id'])
-        if self.sec_grp_enabled or not ports:
+
+        if not self.sec_grp_enabled or not ports:
+            ports.append(self.neutron_client.show_port(vip_port_id))
             for amphora in loadbalancer.amphorae:
-                self._get_instance_ports_by_subnet(amphora.compute_id, loadbalancer.vip.subnet_id)
+                ports.extend(self._get_instance_ports_by_subnet(amphora.compute_id, loadbalancer.vip.subnet_id))
 
         for port in ports:
             if lb_count_subnet > 1:  # vNIC port is in use by other lbs. Only delete VIP port.
                 if sec_grp:
-                    self._remove_security_group(loadbalancer, port, sec_grp['id'])
+                    self._remove_security_group(port, sec_grp['id'])
                 if port['id'] == vip_port_id:
                     self._cleanup_port(vip_port_id, port)
             elif lb_count_subnet <= 1:  # This is the only lb using vNIC ports
