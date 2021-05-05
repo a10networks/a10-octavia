@@ -164,7 +164,9 @@ class EnableInterface(VThunderBaseTask):
 
         if not lb_exists_flag:
             added_ports[amphora_id] = []
-            added_ports[amphora_id].append(nics[1])
+            for nic in nics:
+                if nic.network_id == loadbalancer.vip.network_id:
+                    added_ports[amphora_id].append(nic)
 
         try:
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
@@ -1055,6 +1057,10 @@ class VCSSyncWait(VThunderBaseTask):
                     if vmaster_ready is True and vblade_ready is True:
                         break
                 else:
+                    # TODO(ytsai) maybe reload the device and try again
+                    if vmaster_ready:
+                        raise acos_errors.AxapiJsonFormatError(
+                            msg="vBlade not found in vcs-summary")
                     raise acos_errors.AxapiJsonFormatError(
                         msg="vMaster not found in vcs-summary")
             except req_exceptions.ReadTimeout as e:

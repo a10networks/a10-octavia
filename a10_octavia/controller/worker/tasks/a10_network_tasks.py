@@ -63,8 +63,7 @@ class CalculateAmphoraDelta(BaseNetworkTask):
         # Figure out what networks we want
         # seed with lb network(s)
 
-        desired_network_ids = set()
-        desired_network_ids.update(CONF.controller_worker.amp_boot_network_list)
+        desired_network_ids = set(CONF.a10_controller_worker.amp_boot_network_list[:])
         member_networks = []
         for loadbalancer in loadbalancers_list:
             for pool in loadbalancer.pools:

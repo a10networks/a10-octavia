@@ -203,7 +203,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         for port in ports:
             if lb_count_subnet > 1:  # vNIC port is in use by other lbs. Only delete VIP port.
                 if sec_grp:
-                    self._remove_security_group(loadbalancer, port, sec_grp['id'])
+                    self._remove_security_group(port, sec_grp['id'])
                 if port['id'] == vip_port_id:
                     self._cleanup_port(vip_port_id, port)
             elif lb_count_subnet <= 1:  # This is the only lb using vNIC ports

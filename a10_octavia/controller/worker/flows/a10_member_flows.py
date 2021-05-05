@@ -444,7 +444,7 @@ class MemberFlows(object):
         delete_member_vrid_subflow.add(
             a10_database_tasks.CountLoadbalancersInProjectBySubnet(
                 requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
-                provides=a10constants.LB_COUNT))
+                provides=a10constants.LB_COUNT_SUBNET))
         delete_member_vrid_subflow.add(
             a10_database_tasks.CountMembersInProjectBySubnet(
                 requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
@@ -459,7 +459,7 @@ class MemberFlows(object):
                     a10constants.VTHUNDER,
                     a10constants.VRID_LIST,
                     constants.SUBNET,
-                    a10constants.LB_COUNT,
+                    a10constants.LB_COUNT_SUBNET,
                     a10constants.MEMBER_COUNT],
                 provides=(
                     a10constants.VRID,
