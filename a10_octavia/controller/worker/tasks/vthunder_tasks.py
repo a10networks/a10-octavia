@@ -164,9 +164,7 @@ class EnableInterface(VThunderBaseTask):
 
         if not lb_exists_flag:
             added_ports[amphora_id] = []
-            for nic in nics:
-                if nic.network_id == loadbalancer.vip.network_id:
-                    added_ports[amphora_id].append(nic)
+            added_ports[amphora_id].append(nics[1])
 
         try:
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:

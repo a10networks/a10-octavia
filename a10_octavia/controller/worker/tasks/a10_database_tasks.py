@@ -218,11 +218,16 @@ class GetVThunderByLoadBalancer(BaseDatabaseTask):
 class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
     """ Get VThunder details from LoadBalancer"""
 
-    def execute(self, loadbalancer):
+    def execute(self, loadbalancer, vthunder=None):
         loadbalancer_id = loadbalancer.id
-        vthunder = self.vthunder_repo.get_backup_vthunder_from_lb(
+        backup_vthunder = self.vthunder_repo.get_backup_vthunder_from_lb(
             db_apis.get_session(), loadbalancer_id)
-        return vthunder
+
+        # VCS vMaster/vBlade may switched
+        if vthunder and backup_vthunder.ip_address == vthunder.ip_address:
+            backup_vthunder = self.vthunder_repo.get_vthunder_from_lb(
+                db_apis.get_session(), loadbalancer_id)
+        return backup_vthunder
         LOG.info("Successfully fetched vThunder details for LB")
 
 
