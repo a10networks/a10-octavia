@@ -264,16 +264,22 @@ class ConfigureVRRPSync(VThunderBaseTask):
     @axapi_client_decorator
     def execute(self, vthunder, backup_vthunder):
         """Execute to sync up vrrp in two vThunder devices."""
-        try:
-            self.axapi_client.system.action.configSynch(backup_vthunder.ip_address,
-                                                        backup_vthunder.username,
-                                                        backup_vthunder.password)
-            LOG.debug("Waiting 30 seconds for config synch.")
-            time.sleep(30)
-            LOG.debug("Sync up for vThunder master")
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
-            LOG.exception("Failed VRRP sync: %s", str(e))
-            raise e
+        attempts = CONF.a10_controller_worker.amp_active_retries
+        while attempts >= 0:
+            try:
+                attempts = attempts - 1
+                self.axapi_client.system.action.configSynch(backup_vthunder.ip_address,
+                                                            backup_vthunder.username,
+                                                            backup_vthunder.password)
+                LOG.debug("Waiting 30 seconds for config synch.")
+                time.sleep(30)
+                LOG.debug("Sync up for vThunder master")
+                break
+            except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+                if attempts < 0:
+                    LOG.exception("Failed VRRP sync: %s", str(e))
+                    raise e
+                time.sleep(CONF.a10_controller_worker.amp_active_wait_sec)
 
 
 def configure_avcs(axapi_client, device_id, device_priority, floating_ip, floating_ip_mask):
