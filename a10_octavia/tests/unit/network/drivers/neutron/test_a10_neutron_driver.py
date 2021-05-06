@@ -17,12 +17,15 @@ try:
 except ImportError:
     from unittest import mock
 
+from neutronclient.common import exceptions as neutron_client_exceptions
+
 from octavia.common import clients
 from octavia.network.drivers.neutron import base as neutron_base
 from octavia.network.drivers.neutron import allowed_address_pairs
 from octavia.tests.unit import base
 from octavia.tests.common import data_model_helpers as dmh
 
+from a10_octavia.common import a10constants
 from a10_octavia.network.drivers.neutron import a10_octavia_neutron
 
 
@@ -177,22 +180,115 @@ class TestA10NeutronDriver(base.TestCase):
         rem_sec_grp.assert_not_called()
 
     def test_get_ports_by_security_group(self):
-        pass
+        ports = {'ports': [
+                    {'id': 'instance-port-1',
+                     'security_groups': ['sec-grp-1', 'sec-grp-2'],
+                     'device_owner': a10constants.OCTAVIA_OWNER},
+                    {'id': 'instance-port-2',
+                     'security_groups': ['sec-grp-1', 'sec-grp-2'],
+                     'device_owner': a10constants.OCTAVIA_OWNER},
+                    {'id': 'vrrp-port-1',
+                     'security_groups': ['sec-grp-1'],
+                     'device_owner': a10constants.OCTAVIA_OWNER}
+                ]}
+        self.driver.project_id = 'proj-1'
+        self.driver.neutron_client.list_ports.return_value = ports
+        
+        actual_ports = self.driver._get_ports_by_security_group('sec-grp-1')
+        self.assertEqual(ports['ports'], actual_ports)
 
     def test_get_ports_by_security_group_empty_ret(self):
-        pass
+        ports = {}
+        self.driver.project_id = 'proj-1'
+        self.driver.neutron_client.list_ports.return_value = ports
+        
+        actual_ports = self.driver._get_ports_by_security_group('sec-grp-1')
+        self.assertEqual([], actual_ports)
 
     def test_get_ports_by_security_group_empty_secgrps(self):
-        pass
+        ports = {'ports': [
+                    {'id': 'instance-port-1',
+                           'security_groups': [],
+                           'device_owner': a10constants.OCTAVIA_OWNER},
+                    {'id': 'instance-port-2',
+                           'security_groups': [],
+                           'device_owner': a10constants.OCTAVIA_OWNER},
+                    {'id': 'vrrp-port-1',
+                           'security_groups': [],
+                           'device_owner': a10constants.OCTAVIA_OWNER}
+                ]}
+        self.driver.project_id = 'proj-1'
+        self.driver.neutron_client.list_ports.return_value = ports
+        
+        actual_ports = self.driver._get_ports_by_security_group('sec-grp-1')
+        self.assertEqual([], actual_ports)
+
+
+    def test_get_ports_by_security_group_oct_not_owner(self):
+        ports = {'ports': [
+                    {'id': 'instance-port-1',
+                     'security_groups': ['sec-grp-1', 'sec-grp-2'],
+                     'device_owner': 'outis'},
+                    {'id': 'instance-port-2',
+                     'security_groups': ['sec-grp-1', 'sec-grp-2'],
+                     'device_owner': 'outis'},
+                    {'id': 'vrrp-port-1',
+                     'security_groups': ['sec-grp-1'],
+                     'device_owner': 'outis'}
+                ]}
+        self.driver.project_id = 'proj-1'
+        self.driver.neutron_client.list_ports.return_value = ports
+        
+        actual_ports = self.driver._get_ports_by_security_group('sec-grp-1')
+        self.assertEqual([], actual_ports)
 
     def test_get_instance_ports_by_subnet(self):
-        pass
+        ports = {'ports': [
+                    {'id': 'instance-port-1',
+                     'fixed_ips': [{'subnet_id': 'subnet-1'}],
+                     'device_owner': a10constants.OCTAVIA_OWNER},
+                    {'id': 'instance-port-2',
+                     'fixed_ips': [{'subnet_id': 'subnet-1'}],
+                     'device_owner': a10constants.OCTAVIA_OWNER},
+                    {'id': 'instance-port-3',
+                     'fixed_ips': [{'subnet_id': 'subnet-20'}],
+                     'device_owner': a10constants.OCTAVIA_OWNER},
+                ]}
+        self.driver.neutron_client.list_ports.return_value = ports
+
+        actual_ports = self.driver._get_instance_ports_by_subnet('amp-comp-1', 'subnet-1')
+        ports['ports'].pop(2)
+        self.assertEqual(ports['ports'], actual_ports)
+
+    def test_get_instance_ports_by_subnet_oct_not_owner(self):
+        ports = {'ports': [
+                    {'id': 'instance-port-1',
+                     'fixed_ips': [{'subnet_id': 'subnet-1'}],
+                     'device_owner': 'outis'},
+                    {'id': 'instance-port-2',
+                     'fixed_ips': [{'subnet_id': 'subnet-1'}],
+                     'device_owner': 'outis'},
+                ]}
+        self.driver.neutron_client.list_ports.return_value = ports
+
+        actual_ports = self.driver._get_instance_ports_by_subnet('amp-comp-1', 'subnet-1')
+        self.assertEqual([], actual_ports)
 
     def test_cleanup_port(self):
-        pass
+        port = {'id': 'instance-port-1'}
+        vip_port_id = 'vrrp-port-1'
+        delete_port = self.driver.neutron_client.delete_port
+        self.driver._cleanup_port(vip_port_id, port)
+        delete_port.assert_called_with(port['id'])
 
     def test_cleanup_port_vip_port_deleted(self):
-        pass
+        vip_port_id = 'vrrp-port-1'
+        port = {'id': 'instance-port-1'}
+        vip_port_id = 'vrrp-port-1'
+        delete_port = self.driver.neutron_client.delete_port
+        delete_port.side_effect = neutron_client_exceptions.NotFound
+        self.driver._cleanup_port(vip_port_id, port)
+        delete_port.assert_called_with(port['id'])
 
     def test_cleanup_port_when_delete_port_fails(self):
         pass
