@@ -1095,7 +1095,7 @@ class GetMasterVThunder(VThunderBaseTask):
                         vthunder.ip_address = vcs_member_list[i]['ip-list'][0]['ip']
                         break
                 else:
-                    raise acos_errors.AxapiJsonFormatErrora(
+                    raise acos_errors.AxapiJsonFormatError(
                         msg="vMaster not found in vcs-summary")
                 return vthunder
             except req_exceptions.ReadTimeout as e:
