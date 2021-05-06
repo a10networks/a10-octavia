@@ -431,18 +431,11 @@ class LoadBalancerFlows(object):
                     name=a10constants.MASTER_ENABLE_INTERFACE,
                     requires=(a10constants.VTHUNDER, constants.LOADBALANCER, constants.ADDED_PORTS,
                               a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
-                new_LB_net_subflow.add(vthunder_tasks.GetBackupVThunder(
-                    name=a10constants.GET_BACKUP_VTHUNDER,
-                    requires=a10constants.VTHUNDER,
-                    provides=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.GetVThunderInterface(
                     name=a10constants.GET_BACKUP_VTHUNDER_INTERFACE,
                     requires=a10constants.VTHUNDER,
+                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                     provides=(a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
-                new_LB_net_subflow.add(vthunder_tasks.GetMasterVThunder(
-                    name=a10constants.MASTER_VTHUNDER,
-                    requires=a10constants.VTHUNDER,
-                    provides=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
                     name="wait-vcs-ready-before-master-reload",
                     requires=a10constants.VTHUNDER))
