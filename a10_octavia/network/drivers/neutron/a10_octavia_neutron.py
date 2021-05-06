@@ -201,7 +201,8 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         if not self.sec_grp_enabled or not ports:
             ports.append(self.neutron_client.show_port(vip_port_id))
             for amphora in loadbalancer.amphorae:
-                ports.extend(self._get_instance_ports_by_subnet(amphora.compute_id, loadbalancer.vip.subnet_id))
+                ports.extend(self._get_instance_ports_by_subnet(
+                    amphora.compute_id, loadbalancer.vip.subnet_id))
 
         for port in ports:
             port = port.get('port', port)
