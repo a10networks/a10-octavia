@@ -222,9 +222,10 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.GetLoadBalancerListForDeletion(
             requires=(a10constants.VTHUNDER, constants.LOADBALANCER),
             provides=a10constants.LOADBALANCERS_LIST))
-        delete_LB_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
-            requires=constants.LOADBALANCER,
-            provides=a10constants.BACKUP_VTHUNDER))
+        if lb.topology == "ACTIVE_STANDBY":
+            delete_LB_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+                provides=a10constants.BACKUP_VTHUNDER))
         if not deleteCompute:
             delete_LB_flow.add(a10_network_tasks.CalculateDelta(
                 requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
@@ -308,13 +309,14 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             name=a10constants.SET_THUNDER_UPDATE_AT,
             requires=a10constants.VTHUNDER))
-        delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
-            name=a10constants.MARK_VTHUNDER_BACKUP_DELETED_IN_DB,
-            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-            inject={"status": constants.DELETED}))
-        delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
-            name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
-            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+        if lb.topology == "ACTIVE_STANDBY":
+            delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
+                name=a10constants.MARK_VTHUNDER_BACKUP_DELETED_IN_DB,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                inject={"status": constants.DELETED}))
+            delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+                name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
         return (delete_LB_flow, store)
 
     def get_new_lb_networking_subflow(self, topology, vthunder):
@@ -378,7 +380,7 @@ class LoadBalancerFlows(object):
             new_LB_net_subflow.add(
                 a10_database_tasks.GetBackupVThunderByLoadBalancer(
                     name=a10constants.BACKUP_VTHUNDER,
-                    requires=constants.LOADBALANCER,
+                    requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
                     provides=a10constants.BACKUP_VTHUNDER))
             if vthunder:
                 new_LB_net_subflow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
@@ -429,18 +431,11 @@ class LoadBalancerFlows(object):
                     name=a10constants.MASTER_ENABLE_INTERFACE,
                     requires=(a10constants.VTHUNDER, constants.LOADBALANCER, constants.ADDED_PORTS,
                               a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
-                new_LB_net_subflow.add(vthunder_tasks.GetBackupVThunder(
-                    name=a10constants.GET_BACKUP_VTHUNDER,
-                    requires=a10constants.VTHUNDER,
-                    provides=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.GetVThunderInterface(
                     name=a10constants.GET_BACKUP_VTHUNDER_INTERFACE,
                     requires=a10constants.VTHUNDER,
+                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                     provides=(a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
-                new_LB_net_subflow.add(vthunder_tasks.GetMasterVThunder(
-                    name=a10constants.MASTER_VTHUNDER,
-                    requires=a10constants.VTHUNDER,
-                    provides=a10constants.VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
                     name="wait-vcs-ready-before-master-reload",
                     requires=a10constants.VTHUNDER))
@@ -465,6 +460,10 @@ class LoadBalancerFlows(object):
                     name=a10constants.GET_VTHUNDER_MASTER,
                     requires=a10constants.VTHUNDER,
                     provides=a10constants.VTHUNDER))
+                new_LB_net_subflow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                    name="get-backup-vthunder-after-get-master",
+                    requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+                    provides=a10constants.BACKUP_VTHUNDER))
                 new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
                     name=a10constants.BACKUP_ENABLE_INTERFACE,
                     requires=(a10constants.VTHUNDER, constants.LOADBALANCER, constants.ADDED_PORTS,

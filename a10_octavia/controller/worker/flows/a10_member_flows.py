@@ -84,7 +84,7 @@ class MemberFlows(object):
             create_member_flow.add(
                 a10_database_tasks.GetBackupVThunderByLoadBalancer(
                     name="get_backup_vThunder",
-                    requires=constants.LOADBALANCER,
+                    requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
                     provides=a10constants.BACKUP_VTHUNDER))
             create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
                 name="backup_compute_conn_wait_before_probe_device",
@@ -118,6 +118,10 @@ class MemberFlows(object):
                 name=a10constants.GET_MASTER_VTHUNDER,
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
+            create_member_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                name="get_backup_vThunder_after_get_master",
+                requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+                provides=a10constants.BACKUP_VTHUNDER))
             create_member_flow.add(
                 vthunder_tasks.EnableInterfaceForMembers(
                     name=a10constants.ENABLE_MASTER_VTHUNDER_INTERFACE,
@@ -236,7 +240,7 @@ class MemberFlows(object):
             delete_member_flow.add(
                 a10_database_tasks.GetBackupVThunderByLoadBalancer(
                     name=a10constants.GET_BACKUP_VTHUNDER_BY_LB,
-                    requires=constants.LOADBALANCER,
+                    requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
                     provides=a10constants.BACKUP_VTHUNDER))
             delete_member_flow.add(
                 vthunder_tasks.VThunderComputeConnectivityWait(
@@ -444,7 +448,7 @@ class MemberFlows(object):
         delete_member_vrid_subflow.add(
             a10_database_tasks.CountLoadbalancersInProjectBySubnet(
                 requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
-                provides=a10constants.LB_COUNT))
+                provides=a10constants.LB_COUNT_SUBNET))
         delete_member_vrid_subflow.add(
             a10_database_tasks.CountMembersInProjectBySubnet(
                 requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
@@ -459,7 +463,7 @@ class MemberFlows(object):
                     a10constants.VTHUNDER,
                     a10constants.VRID_LIST,
                     constants.SUBNET,
-                    a10constants.LB_COUNT,
+                    a10constants.LB_COUNT_SUBNET,
                     a10constants.MEMBER_COUNT],
                 provides=(
                     a10constants.VRID,

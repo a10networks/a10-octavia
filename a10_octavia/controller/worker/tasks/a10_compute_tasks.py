@@ -37,7 +37,8 @@ class ComputeCreate(BaseComputeTask):
         network_ids = CONF.a10_controller_worker.amp_boot_network_list[:]
         # Injecting VIP network ID
         if loadbalancer:
-            network_ids.append(loadbalancer.vip.network_id)
+            if loadbalancer.vip.network_id not in network_ids:
+                network_ids.append(loadbalancer.vip.network_id)
         LOG.debug("Compute create execute for amphora with id %s", amphora_id)
         key_name = CONF.a10_controller_worker.amp_ssh_key_name
 
