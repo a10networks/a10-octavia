@@ -229,7 +229,7 @@ class TestA10NeutronDriver(base.TestCase):
         self.driver.neutron_client.list_ports.return_value = ports
 
         actual_ports = self.driver._get_ports_by_security_group('sec-grp-1')
-        self.assertEqual([], actual_ports)
+        self.assertEqual(ports['ports'], actual_ports)
 
     def test_get_instance_ports_by_subnet(self):
         ports = {'ports': [{'id': 'instance-port-1',
