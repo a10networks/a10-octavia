@@ -391,6 +391,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         vthunder = self._vthunder_repo.get_vthunder_from_lb(db_apis.get_session(),
                                                             load_balancer_id)
         deleteCompute = False
+        busy = self._vthunder_busy_check(lb.project_id, True, None)
         if vthunder:
             deleteCompute = self._vthunder_repo.get_delete_compute_flag(db_apis.get_session(),
                                                                         vthunder.compute_id)
@@ -405,10 +406,10 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 lb, deleteCompute, cascade)
 
         store.update({constants.LOADBALANCER: lb,
+                      a10constants.COMPUTE_BUSY: busy,
                       constants.VIP: lb.vip,
                       constants.SERVER_GROUP_ID: lb.server_group_id})
 
-        busy = self._vthunder_busy_check(lb.project_id, True, store)
         delete_lb_tf = self._taskflow_load(flow, store=store)
         self._register_flow_notify_handler(delete_lb_tf, lb.project_id, True, busy)
 
