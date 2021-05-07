@@ -311,7 +311,7 @@ class VThunderFlows(object):
             provides=a10constants.VTHUNDER))
         vrrp_subflow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
             name=sf_name + '-' + a10constants.GET_BACKUP_LOADBALANCER_FROM_DB,
-            requires=constants.LOADBALANCER,
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.BACKUP_VTHUNDER))
         # Make sure devices are ready
         vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
