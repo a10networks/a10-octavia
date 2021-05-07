@@ -22,11 +22,13 @@ from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron import allowed_address_pairs
 from octavia.network.drivers.neutron import utils
 
-from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
 from a10_octavia.network import data_models
 
 LOG = logging.getLogger(__name__)
+PROJECT_ID_ALIAS = 'project-id'
+OCTAVIA_OWNER = 'Octavia'
+
 CONF = cfg.CONF
 
 
@@ -161,15 +163,13 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             raise base.DeallocateVIPException(message)
 
     def _get_instance_ports_by_subnet(self, compute_id, subnet_id):
+        ports = []
         amp_ports = self.neutron_client.list_ports(device_id=compute_id)
-
-        filtered_ports = []
         for port in amp_ports.get('ports', []):
             for fixed_ips in port.get('fixed_ips', []):
-                if (fixed_ips.get('subnet_id') == subnet_id and
-                        port.get('device_owner') == a10constants.OCTAVIA_OWNER):
-                    filtered_ports.append(port)
-        return filtered_ports
+                if fixed_ips.get('subnet_id') == subnet_id:
+                    ports.append(port)
+        return ports
 
     def _get_ports_by_security_group(self, sec_grp_id):
 
@@ -181,8 +181,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
 
         filtered_ports = []
         for port in all_ports.get('ports', []):
-            if (sec_grp_id in port.get('security_groups', []) and
-                    port.get('device_owner') == a10constants.OCTAVIA_OWNER):
+            if sec_grp_id in port.get('security_groups', []):
                 filtered_ports.append(port)
         return filtered_ports
 
@@ -197,15 +196,11 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             sec_grp = self._get_lb_security_group(loadbalancer.id)
             if sec_grp:
                 ports = self._get_ports_by_security_group(sec_grp['id'])
-
-        if not self.sec_grp_enabled or not ports:
-            ports.append(self.neutron_client.show_port(vip_port_id))
+        if self.sec_grp_enabled or not ports:
             for amphora in loadbalancer.amphorae:
-                ports.extend(self._get_instance_ports_by_subnet(
-                    amphora.compute_id, loadbalancer.vip.subnet_id))
+                self._get_instance_ports_by_subnet(amphora.compute_id, loadbalancer.vip.subnet_id)
 
         for port in ports:
-            port = port.get('port', port)
             if lb_count_subnet > 1:  # vNIC port is in use by other lbs. Only delete VIP port.
                 if sec_grp:
                     self._remove_security_group(port, sec_grp['id'])
@@ -235,7 +230,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             port = {'port': {'name': 'octavia-port-' + network_id,
                              'network_id': network_id,
                              'admin_state_up': True,
-                             'device_owner': a10constants.OCTAVIA_OWNER,
+                             'device_owner': OCTAVIA_OWNER,
                              'fixed_ips': [{'subnet_id': subnet_id}]}}
             if fixed_ip:
                 port['port']['fixed_ips'][0]['ip_address'] = fixed_ip
@@ -262,7 +257,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             port = {'port': {'name': 'octavia-port-' + subnet.network_id,
                              'network_id': subnet.network_id,
                              'admin_state_up': True,
-                             'device_owner': a10constants.OCTAVIA_OWNER,
+                             'device_owner': OCTAVIA_OWNER,
                              'fixed_ips': []}}
             for addr in addr_list:
                 fixed_ip = {'subnet_id': subnet_id, 'ip_address': addr}
@@ -276,7 +271,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
 
     def get_port_id_from_ip(self, ip):
         try:
-            ports = self.neutron_client.list_ports(device_owner=a10constants.OCTAVIA_OWNER)
+            ports = self.neutron_client.list_ports(device_owner=OCTAVIA_OWNER)
             if not ports or not ports.get('ports'):
                 return None
             for port in ports['ports']:

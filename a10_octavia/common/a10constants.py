@@ -179,9 +179,3 @@ LB_TO_VTHUNDER_SUBFLOW = 'lb-to-vthunder-subflow'
 GET_LB_RESOURCE = 'get-lb-resource'
 GET_PROJECT_COUNT = 'get-child-parent-project-count'
 GET_LB_COUNT_SUBNET = 'get-lb-count-by-subnet'
-
-# ======================
-# Non-Taskflow Constants
-# ======================
-
-OCTAVIA_OWNER = 'Octavia'
