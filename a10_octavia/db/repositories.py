@@ -261,7 +261,7 @@ class VThunderRepository(BaseRepository):
         if compute_id:
             count = session.query(self.model_class).filter(
                 and_(self.model_class.compute_id == compute_id,
-                     self.model_class.status == "ACTIVE")).count()
+                     self.model_class.status != "DELETED")).count()
             if count < 2:
                 return True
 
