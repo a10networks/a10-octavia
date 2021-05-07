@@ -264,7 +264,7 @@ class ConfigureVRRPSync(VThunderBaseTask):
     @axapi_client_decorator
     def execute(self, vthunder, backup_vthunder):
         """Execute to sync up vrrp in two vThunder devices."""
-        attempts = CONF.a10_controller_worker.amp_active_retries
+        attempts = 3
         while attempts >= 0:
             try:
                 attempts = attempts - 1
@@ -279,7 +279,6 @@ class ConfigureVRRPSync(VThunderBaseTask):
                 if attempts < 0:
                     LOG.exception("Failed VRRP sync: %s", str(e))
                     raise e
-                time.sleep(CONF.a10_controller_worker.amp_active_wait_sec)
 
 
 def configure_avcs(axapi_client, device_id, device_priority, floating_ip, floating_ip_mask):
