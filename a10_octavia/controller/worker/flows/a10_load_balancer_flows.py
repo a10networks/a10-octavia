@@ -670,16 +670,17 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             name=a10constants.SET_THUNDER_UPDATE_AT,
             requires=a10constants.VTHUNDER))
-        delete_LB_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
-            requires=constants.LOADBALANCER,
-            provides=a10constants.BACKUP_VTHUNDER))
-        delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
-            name=a10constants.MARK_VTHUNDER_BACKUP_DELETED_IN_DB,
-            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-            inject={"status": constants.DELETED}))
-        delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
-            name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
-            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+        if lb.topology == "ACTIVE_STANDBY":
+            delete_LB_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                requires=constants.LOADBALANCER,
+                provides=a10constants.BACKUP_VTHUNDER))
+            delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
+                name=a10constants.MARK_VTHUNDER_BACKUP_DELETED_IN_DB,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                inject={"status": constants.DELETED}))
+            delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+                name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
         return (delete_LB_flow, store)
 
     def get_post_lb_rack_vthunder_association_flow(self, prefix, topology,
