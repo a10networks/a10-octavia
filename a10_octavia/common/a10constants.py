@@ -150,6 +150,7 @@ WAIT_FOR_MASTER_VCS_RELOAD = 'wait-for-master-vcs-reload'
 WAIT_FOR_BACKUP_VCS_RELOAD = 'wait-for-backup-vcs-reload'
 VCS_SYNC_WAIT = "wait-for-vcs_ready"
 GET_COMPUTE_FOR_PROJECT = 'get-compute-for-project'
+VALIDATE_COMPUTE_FOR_PROJECT = 'validate-compute-for-project'
 CREATE_VTHUNDER_ENTRY = 'create-vthunder-entry'
 UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY = 'update-acos-version-in-vthunder-entry'
 UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER = 'update-acos-version-for-backup-vthunder'

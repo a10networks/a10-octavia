@@ -21,6 +21,9 @@ from taskflow.types import failure
 from octavia.common import constants
 from octavia.common import exceptions
 from octavia.controller.worker.tasks.compute_tasks import BaseComputeTask
+from octavia.db import api as db_apis
+
+from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -82,6 +85,29 @@ class ComputeCreate(BaseComputeTask):
         except Exception as e:
             LOG.exception("Failed to revert creation of compute %s due to %s: ",
                           compute_id, str(e))
+
+
+class ValidateComputeForProject(BaseComputeTask):
+    """Validate compute_id got for the project"""
+
+    def execute(self, loadbalancer, compute_id, role):
+        self.vthunder_repo = a10_repo.VThunderRepository()
+        vthunder_ids = self.vthunder_repo.get_vthunders_by_project_id_and_role(
+            db_apis.get_session(), loadbalancer.project_id, role)
+        for vthunder_id in vthunder_ids:
+            vthunder = self.vthunder_repo.get(
+                db_apis.get_session(),
+                id=vthunder_id)
+            try:
+                amp, fault = self.compute.get_amphora(vthunder.compute_id)
+                if amp.compute_id == vthunder.compute_id:
+                    LOG.debug("Successfully validated comput_id %s for the project %s",
+                              vthunder.compute_id, vthunder.project_id)
+                    break
+            except Exception:
+                pass
+
+        return vthunder.compute_id
 
 
 class ComputeActiveWait(BaseComputeTask):
