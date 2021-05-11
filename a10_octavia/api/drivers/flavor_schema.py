@@ -180,5 +180,9 @@ SUPPORTED_FLAVOR_SCHEMA = {
                 }
             }
         },
+        "device-name": {
+            "type": "string",
+            "description": "Specify vthunder device name that used for this loadbalancer"
+        }
     }
 }
