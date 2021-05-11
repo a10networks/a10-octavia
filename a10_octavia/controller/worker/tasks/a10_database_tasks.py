@@ -224,9 +224,10 @@ class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
             db_apis.get_session(), loadbalancer_id)
 
         # VCS vMaster/vBlade may switched
-        if vthunder and backup_vthunder.ip_address == vthunder.ip_address:
-            backup_vthunder = self.vthunder_repo.get_vthunder_from_lb(
-                db_apis.get_session(), loadbalancer_id)
+        if vthunder is not None:
+            if backup_vthunder.ip_address == vthunder.ip_address:
+                backup_vthunder = self.vthunder_repo.get_vthunder_from_lb(
+                    db_apis.get_session(), loadbalancer_id)
         return backup_vthunder
         LOG.info("Successfully fetched vThunder details for LB")
 

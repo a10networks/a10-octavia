@@ -181,8 +181,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
 
         filtered_ports = []
         for port in all_ports.get('ports', []):
-            if (sec_grp_id in port.get('security_groups', []) and
-                    port.get('device_owner') == a10constants.OCTAVIA_OWNER):
+            if sec_grp_id in port.get('security_groups', []):
                 filtered_ports.append(port)
         return filtered_ports
 
