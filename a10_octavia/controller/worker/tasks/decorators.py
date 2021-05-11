@@ -16,7 +16,6 @@
 import acos_client
 from oslo_config import cfg
 from oslo_log import log as logging
-from requests.exceptions import ConnectionError
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
