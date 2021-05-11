@@ -393,7 +393,8 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
         query = session.query(self.model_class).filter(
             self.model_class.project_id == project_id).filter(
             and_(self.model_class.id != id,
-                 self.model_class.provisioning_status != "ERROR"))
+                 self.model_class.provisioning_status != "ERROR",
+                 self.model_class.provisioning_status != "DELETED"))
 
         model_list = query.all()
         for data in model_list:
