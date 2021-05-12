@@ -680,7 +680,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         super(HandleVRIDFloatingIP, self).__init__(*arg, **kwargs)
 
     @axapi_client_decorator
-    def execute(self, vthunder, lb_resource, vrid_list, subnet):
+    def execute(self, vthunder, lb_resource, vrid_list, subnet, loadbalancer=None):
         """
 
         :param vthunder:
@@ -783,6 +783,10 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         elif update_vrid_flag:
             self.update_device_vrid_fip(
                 vthunder, vrid_floating_ips, vrid_value)
+        if loadbalancer is None:
+            loadbalancer = lb_resource
+        self.network_driver.add_vrid_fip_address_pair(
+            vthunder, loadbalancer, self.added_fip_ports, subnet)
         return vrid_list
 
     @axapi_client_decorator
