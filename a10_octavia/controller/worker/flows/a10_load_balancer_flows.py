@@ -406,6 +406,12 @@ class LoadBalancerFlows(object):
                     name=a10constants.AMPHORAE_POST_VIP_PLUG_FOR_MASTER,
                     requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
                               constants.ADDED_PORTS)))
+                new_LB_net_subflow.add(
+                    vthunder_tasks.VThunderComputeConnectivityWait(
+                        name="make-sure-backup-is-ready-after-reload-master",
+                        rebind={
+                            a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                        requires=constants.AMPHORA))
                 new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
                     name=a10constants.AMPHORAE_POST_VIP_PLUG_FOR_BACKUP,
                     requires=(constants.LOADBALANCER, constants.ADDED_PORTS),
