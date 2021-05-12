@@ -226,3 +226,16 @@ class NoFreeSetId(acos_errors.ACOSException):
     def __init__(self):
         msg = ('No free VRRP-A set_id available.')
         super(NoFreeSetId, self).__init__(msg=msg)
+
+
+class ProjectDeviceNotFound(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('No valid device found for this project, please check your configuration file.')
+        super(NoFreeSetId, self).__init__(msg=msg)
+
+
+class FlavorDevieNotFound(acos_errors.ACOSException):
+    def __init__(self, device):
+        msg = ('[device-name flavor] Device [{0}] not found in the configuration'
+               ' file.').format(device)
+        super(NoFreeSetId, self).__init__(msg=msg)

@@ -548,7 +548,7 @@ class LoadBalancerFlows(object):
         return update_LB_flow
 
     def get_create_rack_vthunder_load_balancer_flow(
-            self, vthunder_conf, topology, listeners=None):
+            self, vthunder_conf, device_dict, topology, listeners=None):
         """Flow to create rack load balancer"""
 
         f_name = constants.CREATE_LOADBALANCER_FLOW
@@ -564,12 +564,15 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR_DATA))
-        # TODO provide vthunder_conf by flavor, check None...
-        
+        lb_create_flow.add(vthunder_tasks.GetVthunderConfByFlavor(
+            inject={a10constants.VTHUNDER_CONFIG: vthunder_conf,
+                    a10constants.DEVICE_CONFIG_DICT: device_dict},
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG,
+                      a10constants.DEVICE_CONFIG_DICT, constants.FLAVOR_DATA),
+            provides=(a10constants.VTHUNDER_CONFIG, a10constants.USE_DEVICE_FLAVOR)))
+
         lb_create_flow.add(
             a10_database_tasks.CheckExistingProjectToThunderMappedEntries(
-                inject={
-                    a10constants.VTHUNDER_CONFIG: vthunder_conf},
                 requires=(
                     constants.LOADBALANCER,
                     a10constants.VTHUNDER_CONFIG),
@@ -578,7 +581,8 @@ class LoadBalancerFlows(object):
             a10_database_tasks.CheckExistingThunderToProjectMappedEntries(
                 requires=(
                     constants.LOADBALANCER,
-                    a10constants.VTHUNDER_CONFIG)))
+                    a10constants.VTHUNDER_CONFIG,
+                    a10constants.USE_DEVICE_FLAVOR)))
         lb_create_flow.add(
             self.vthunder_flows.get_rack_vthunder_for_lb_subflow(
                 vthunder_conf=a10constants.VTHUNDER_CONFIG,

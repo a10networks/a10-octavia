@@ -1120,3 +1120,25 @@ class VthunderInstanceBusy(VThunderBaseTask):
     def execute(self, compute_busy=False):
         if compute_busy:
             raise Exception('vThunder instance is busy now, try again later.')
+
+
+class GetVthunderConfByFlavor(VThunderBaseTask):
+
+    def execute(self, loadbalancer, vthunder_config, device_config_dict, flavor_data=None):
+        if flavor_data is None and vthunder_config is None:
+            raise exceptions.ProjectDeviceNotFound()
+
+        if flavor_data is not None:
+            device_flavor = flavor_data.get('device_name', None)
+            if device_flavor is not None:
+                dev_key = a10constants.DEVICE_KEY_PREFIX + device_flavor
+                if dev_key in device_config_dict:
+                    vthunder_config = device_config_dict[dev_key]
+                    vthunder_config.project_id = loadbalancer.project_id
+                    if vthunder_config.hierarchical_multitenancy == "enable":
+                        vthunder_config.partition_name = loadbalancer.project_id[0:14]
+                    return vthunder_config, True
+                else:
+                    raise exceptions.FlavorDevieNotFound(device_flavor)
+
+        return vthunder_config, False

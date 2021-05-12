@@ -165,7 +165,9 @@ class CheckExistingThunderToProjectMappedEntries(BaseDatabaseTask):
         raise ConfigValueError
     """
 
-    def execute(self, loadbalancer, vthunder_config):
+    def execute(self, loadbalancer, vthunder_config, use_device_flavor=False):
+        if use_device_flavor:
+            return
         hierarchical_mt = vthunder_config.hierarchical_multitenancy
         if hierarchical_mt == 'enable' and CONF.a10_global.use_parent_partition:
             return
