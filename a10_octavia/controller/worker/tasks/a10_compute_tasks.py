@@ -90,7 +90,7 @@ class ComputeCreate(BaseComputeTask):
 class ValidateComputeForProject(BaseComputeTask):
     """Validate compute_id got for the project"""
 
-    def execute(self, loadbalancer, compute_id, role):
+    def execute(self, loadbalancer, role):
         self.vthunder_repo = a10_repo.VThunderRepository()
         vthunder_ids = self.vthunder_repo.get_vthunders_by_project_id_and_role(
             db_apis.get_session(), loadbalancer.project_id, role)
