@@ -240,26 +240,6 @@ class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
 #         LOG.info("Successfully fetched vThunder details for LB")
 
 
-class GetComputeForProject(BaseDatabaseTask):
-    """ Get Compute details form Loadbalancer object -> project ID"""
-
-    def execute(self, loadbalancer, role):
-        vthunder = self.vthunder_repo.get_vthunder_by_project_id_and_role(
-            db_apis.get_session(), loadbalancer.project_id, role)
-        if vthunder is None:
-            vthunder = self.vthunder_repo.get_spare_vthunder(
-                db_apis.get_session())
-            self.vthunder_repo.update(
-                db_apis.get_session(),
-                vthunder.id,
-                status="USED_SPARE",
-                updated_at=datetime.utcnow())
-        amphora_id = vthunder.amphora_id
-        self.amphora_repo.get(db_apis.get_session(), id=amphora_id)
-        compute_id = vthunder.compute_id
-        return compute_id
-
-
 class MapLoadbalancerToAmphora(BaseDatabaseTask):
     """Maps and assigns a load balancer to an amphora in the database."""
 

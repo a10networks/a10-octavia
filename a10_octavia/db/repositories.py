@@ -338,6 +338,15 @@ class VThunderRepository(BaseRepository):
 
         return model.to_data_model()
 
+    def get_vthunders_by_project_id_and_role(self, session, project_id, role):
+        model_list = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.status == "ACTIVE",
+                 self.model_class.role == role))
+
+        id_list = [model.id for model in model_list]
+        return id_list
+
 
 class LoadBalancerRepository(repo.LoadBalancerRepository):
     thunder_model_class = models.VThunder
