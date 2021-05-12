@@ -117,8 +117,8 @@ def convert_to_hardware_thunder_conf(hardware_list):
         if hardware_dict.get(a10constants.DEVICE_KEY_PREFIX + device_name):
             raise cfg.ConfigFileValueError('Supplied duplicate device_name {} '
                                            ' in [hardware_thunder] section'.format(device_name))
-        hardware_device['device_name_as_key'] = True
         vthunder_conf = data_models.HardwareThunder(**hardware_device)
+        vthunder_conf.device_name_as_key = True
         hardware_dict[(a10constants.DEVICE_KEY_PREFIX + device_name)] = vthunder_conf
 
         duplicates = check_duplicate_entries(hardware_dict)
