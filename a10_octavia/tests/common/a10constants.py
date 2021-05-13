@@ -13,7 +13,7 @@
 #    under the License.
 
 
-MOCK_HM_ID = 'mock-hm-1'
+MOCK_HM_ID = 'mock-hm-cd61-49ed-8508-f22a12d770c5'
 MOCK_POOL_ID = 'mock-pool-1'
 MOCK_MEMBER_ID = 'mock-member-1'
 MOCK_LOAD_BALANCER_ID = 'mock-lb-1'
