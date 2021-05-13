@@ -173,12 +173,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
 
     def _get_ports_by_security_group(self, sec_grp_id):
 
-        # Handle backwards compatibility issue with neutronclient
-        try:
-            all_ports = self.neutron_client.list_ports(project_id=self.project_id)
-        except neutron_client_exceptions.BadRequest:
-            all_ports = self.neutron_client.list_ports(project=self.project_id)
-
+        all_ports = self.neutron_client.list_ports()
         filtered_ports = []
         for port in all_ports.get('ports', []):
             if sec_grp_id in port.get('security_groups', []):
