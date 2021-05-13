@@ -1139,6 +1139,6 @@ class GetVthunderConfByFlavor(VThunderBaseTask):
                         vthunder_config.partition_name = loadbalancer.project_id[0:14]
                     return vthunder_config, True
                 else:
-                    raise exceptions.FlavorDevieNotFound(device_flavor)
+                    raise exceptions.FlavorDeviceNotFound(device_flavor)
 
         return vthunder_config, False
