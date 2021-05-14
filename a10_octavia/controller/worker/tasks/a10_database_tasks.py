@@ -695,15 +695,6 @@ class GetChildProjectsOfParentPartition(BaseDatabaseTask):
 
 class GetFlavorData(BaseDatabaseTask):
 
-    def _flavor_search(self, lb_resource):
-        if hasattr(lb_resource, 'flavor_id'):
-            return lb_resource.flavor_id
-        elif hasattr(lb_resource, 'pool'):
-            return self._flavor_search(lb_resource.pool)
-        elif hasattr(lb_resource, 'load_balancer'):
-            return self._flavor_search(lb_resource.load_balancer)
-        return None
-
     def _format_keys(self, flavor_data):
         if type(flavor_data) is list:
             item_list = []
@@ -719,7 +710,7 @@ class GetFlavorData(BaseDatabaseTask):
             return flavor_data
 
     def execute(self, lb_resource):
-        flavor_id = self._flavor_search(lb_resource)
+        flavor_id = utils.attribute_search(lb_resource, 'flavor_id')
         if flavor_id:
             flavor = self.flavor_repo.get(db_apis.get_session(), id=flavor_id)
             if flavor and flavor.flavor_profile_id:

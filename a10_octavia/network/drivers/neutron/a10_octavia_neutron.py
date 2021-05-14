@@ -18,6 +18,7 @@ from oslo_log import log as logging
 from stevedore import driver as stevedore_driver
 
 from octavia.common import constants
+from octavia.i18n import _
 from octavia.network import base
 from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron import allowed_address_pairs
@@ -250,7 +251,8 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
 
         return parent_port
 
-    def create_port(self, network_id, subnet_id=None, fixed_ip=None):
+    def create_port(self, network_id, subnet_id=None, fixed_ip=(),
+                    secondary_ips=()):
         new_port = None
         if not subnet_id:
             subnet_id = self.get_network(network_id).subnets[0]
@@ -261,14 +263,14 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
                              'device_owner': a10constants.OCTAVIA_OWNER,
                              'fixed_ips': [{'subnet_id': subnet_id}]}}
             if fixed_ip:
+                port['port']['fixed_ips'] 
                 port['port']['fixed_ips'][0]['ip_address'] = fixed_ip
             new_port = self.neutron_client.create_port(port)
-            new_port = utils.convert_port_dict_to_model(new_port)
         except Exception:
             message = "Error creating port in network: {0}".format(network_id)
             LOG.exception(message)
             raise exceptions.PortCreationFailedException(message)
-        return new_port
+        return utils.convert_port_dict_to_model(new_port)
 
     def delete_port(self, port_id):
         try:
@@ -339,15 +341,18 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
     def update_vip_sg_1(self, load_balancer, vrid):
         self._add_vip_security_group_to_port(load_balancer.id, vrid.vrid_port_id)
 
-    def add_vrid_fip_address_pair(self, vthunder, load_balancer, vrid_list, subnet):
-        if vthunder.compute_id is not None:
-            for vrid in vrid_list:
-                for amphora in filter(
-                        lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
-                        load_balancer.amphorae):
-                    interface = self._get_plugged_interface(
-                        amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
-                    self._add_vip_address_pair(interface.port_id, vrid.fixed_ips[0].ip_address)
+
+    def allocate_vrid_fip(self):
+        pass
+
+    def add_vrid_fip_address_pair(self, load_balancer, vrid_list, subnet):
+        for vrid in vrid_list:
+            for amphora in filter(
+                    lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                    load_balancer.amphorae):
+                interface = self._get_plugged_interface(
+                    amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+                self._add_vip_address_pair(interface.port_id, vrid.fixed_ips[0].ip_address)
 
     def _remove_ip_address_pair(self, loadbalancer, subnet, ip_address):
         if loadbalancer.amphorae:
