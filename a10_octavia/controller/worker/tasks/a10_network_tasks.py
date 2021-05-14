@@ -80,10 +80,12 @@ class CalculateAmphoraDelta(BaseNetworkTask):
             if loadbalancer.vip.subnet_id
         ]
         desired_network_ids.update(loadbalancer_networks)
+        LOG.debug("[NetIF] desired_network_ids.update{0}".format(desired_network_ids))
 
         nics = self.network_driver.get_plugged_networks(amphora.compute_id)
         # assume we don't have two nics in the same network
         actual_network_nics = dict((nic.network_id, nic) for nic in nics)
+        LOG.debug("[NetIF] actual_network_nics {0}".format(actual_network_nics))
 
         del_ids = set(actual_network_nics) - desired_network_ids
         delete_nics = list(
@@ -293,6 +295,7 @@ class HandleNetworkDeltas(BaseNetworkTask):
         for amp_id, delta in six.iteritems(deltas):
             added_ports[amp_id] = []
             for nic in delta.add_nics:
+                LOG.debug("[NetIF] plug_network %s on %s", nic.network_id, delta.compute_id)
                 interface = self.network_driver.plug_network(delta.compute_id,
                                                              nic.network_id)
                 port = self.network_driver.get_port(interface.port_id)
@@ -303,6 +306,7 @@ class HandleNetworkDeltas(BaseNetworkTask):
                 added_ports[amp_id].append(port)
             for nic in delta.delete_nics:
                 try:
+                    LOG.debug("[NetIF] unplug_network %s on %s", nic.network_id, delta.compute_id)
                     self.network_driver.unplug_network(delta.compute_id,
                                                        nic.network_id)
                     network = self.network_driver.get_network(nic.network_id)
