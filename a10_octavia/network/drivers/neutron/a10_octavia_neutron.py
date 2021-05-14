@@ -17,6 +17,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from stevedore import driver as stevedore_driver
 
+from octavia.common import constants
 from octavia.network import base
 from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron import allowed_address_pairs
@@ -120,6 +121,18 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             message = "Error deleting subports"
             LOG.exception(message)
 
+    def _add_allowed_address_pair_to_port(self, port_id, ip_address):
+        port = self.neutron_client.show_port(port_id)
+        aap1 = {'ip_address': ip_address}
+        port['port']['allowed_address_pairs'].append(aap1)
+        ip_address_list = port['port']['allowed_address_pairs']
+        aap = {
+            'port': {
+                'allowed_address_pairs': ip_address_list
+            }
+        }
+        self.neutron_client.update_port(port_id, aap)
+
     def _add_security_group_to_port(self, sec_grp_id, port_id):
         port = self.neutron_client.show_port(port_id)
         port['port']['security_groups'].append(sec_grp_id)
@@ -132,6 +145,17 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             raise base.PortNotFound(str(e))
         except Exception as e:
             raise base.NetworkException(str(e))
+
+    def _remove_allowed_address_pair_to_port(self, port_id, ip_address):
+        port = self.neutron_client.show_port(port_id)
+        ips = port['port']['allowed_address_pairs']
+        ips = [ip for ip in ips if not (ip_address == ip.get('ip_address'))]
+        aap = {
+            'port': {
+                'allowed_address_pairs': ips
+            }
+        }
+        self.neutron_client.update_port(port_id, aap)
 
     def _remove_security_group(self, port, sec_grp_id):
         port['security_groups'].remove(sec_grp_id)
@@ -187,6 +211,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
         ports = []
         sec_grp = None
         vip_port_id = loadbalancer.vip.port_id
+        vip_ip_address = loadbalancer.vip.ip_address
         if self.sec_grp_enabled:
             sec_grp = self._get_lb_security_group(loadbalancer.id)
             if sec_grp:
@@ -207,6 +232,10 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
                     self._cleanup_port(vip_port_id, port)
             elif lb_count_subnet <= 1:  # This is the only lb using vNIC ports
                 self._cleanup_port(vip_port_id, port)
+
+        if lb_count_subnet > 1:
+            subnet = self.get_subnet(loadbalancer.vip.subnet_id)
+            self._remove_ip_address_pair(loadbalancer, subnet, vip_ip_address)
 
         if sec_grp:
             self._delete_vip_security_group(sec_grp['id'])
@@ -305,3 +334,39 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
                 provider_segmentation_id=network.get('provider:segmentation_id'),
                 router_external=network.get('router:external')))
         return network_list_datamodel
+
+    # might required for adding security group in vrrp port
+    def update_vip_sg_1(self, load_balancer, vrid):
+        self._add_vip_security_group_to_port(load_balancer.id, vrid.vrid_port_id)
+
+    def add_vrid_fip_address_pair(self, vthunder, load_balancer, vrid_list, subnet):
+        if vthunder.compute_id is not None:
+            for vrid in vrid_list:
+                for amphora in filter(
+                        lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                        load_balancer.amphorae):
+                    interface = self._get_plugged_interface(
+                        amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+                    self._add_vip_address_pair(interface.port_id, vrid.fixed_ips[0].ip_address)
+
+    def _remove_ip_address_pair(self, loadbalancer, subnet, ip_address):
+        if loadbalancer.amphorae:
+            for amphora in filter(lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                                  loadbalancer.amphorae):
+                interface = self._get_plugged_interface(amphora.compute_id,
+                                                        subnet.network_id, amphora.lb_network_ip)
+                try:
+                    self._remove_allowed_address_pair_to_port(interface.port_id, ip_address)
+                except neutron_client_exceptions.PortNotFoundClient as e:
+                    raise base.PortNotFound(str(e))
+                except Exception as e:
+                    message = _('Error adding allowed address pair {ip} '
+                                'to port {port_id}.').format(ip=ip_address,
+                                                             port_id=interface.port_id)
+                    LOG.exception(message)
+                    raise base.NetworkException(str(e))
+
+    # might required this function
+    def remove_aap(self, vthunder, loadbalancer, subnet, ip_address):
+        if vthunder.compute_id is not None:
+            self._remove_ip_address_pair(loadbalancer, subnet, ip_address)
