@@ -177,13 +177,15 @@ class EnableInterface(VThunderBaseTask):
                     LOG.debug("Configured the ethernet interface for vThunder: %s", vthunder.id)
                 else:
                     if ifnum_master:
-                        self.axapi_client.system.action.setInterface(ifnum_master)
-                        LOG.debug("Configured the ethernet interface for "
-                                  "master vThunder: %s", vthunder.id)
+                        for i in range(len(ifnum_master)):
+                            self.axapi_client.system.action.setInterface(ifnum_master[i])
+                            LOG.debug("Configured the ethernet interface for "
+                                      "master vThunder: %s", vthunder.id)
                     elif ifnum_backup:
-                        self.axapi_client.system.action.setInterface(ifnum_backup)
-                        LOG.debug("Configured the ethernet interface for "
-                                  "backup vThunder: %s", vthunder.id)
+                        for i in range(len(ifnum_backup)):
+                            self.axapi_client.system.action.setInterface(ifnum_backup[i])
+                            LOG.debug("Configured the ethernet interface for "
+                                      "backup vThunder: %s", vthunder.id)
         except(acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure ethernet interface vThunder: %s", str(e))
             raise e
@@ -989,9 +991,9 @@ class GetVThunderInterface(VThunderBaseTask):
     def execute(self, vthunder):
         try:
             vcs_summary = {}
-            ifnum = None
-            ifnum_master = None
-            ifnum_backup = None
+            ifnum = []
+            ifnum_master = []
+            ifnum_backup = []
 
             vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
             vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
@@ -999,7 +1001,7 @@ class GetVThunderInterface(VThunderBaseTask):
 
             for i in range(len(interfaces['interface']['ethernet-list'])):
                 if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
-                    ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
+                    ifnum = ifnum + [interfaces['interface']['ethernet-list'][i]['ifnum']]
 
             for i in range(len(vcs_member_list)):
                 if vthunder.ip_address in vcs_member_list[i]['ip-list'][0]['ip']:
