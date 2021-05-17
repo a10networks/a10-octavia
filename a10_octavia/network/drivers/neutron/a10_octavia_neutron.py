@@ -188,7 +188,6 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
         ports = []
         sec_grp = None
         vip_port_id = loadbalancer.vip.port_id
-        vip_ip_address = loadbalancer.vip.ip_address
         if self.sec_grp_enabled:
             sec_grp = self._get_lb_security_group(loadbalancer.id)
             if sec_grp:
@@ -210,10 +209,6 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
             elif lb_count_subnet <= 1:  # This is the only lb using vNIC ports
                 self._cleanup_port(vip_port_id, port)
 
-        if lb_count_subnet > 1:
-            subnet = self.get_subnet(loadbalancer.vip.subnet_id)
-            self._remove_ip_address_pair(loadbalancer, subnet, vip_ip_address)
-
         if sec_grp:
             self._delete_vip_security_group(sec_grp['id'])
 
@@ -227,8 +222,7 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
 
         return parent_port
 
-    def create_port(self, network_id, subnet_id=None, fixed_ip=(),
-                    secondary_ips=()):
+    def create_port(self, network_id, subnet_id=None, fixed_ip=None):
         new_port = None
         if not subnet_id:
             subnet_id = self.get_network(network_id).subnets[0]
@@ -239,14 +233,13 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
                              'device_owner': a10constants.OCTAVIA_OWNER,
                              'fixed_ips': [{'subnet_id': subnet_id}]}}
             if fixed_ip:
-                port['port']['fixed_ips'] 
                 port['port']['fixed_ips'][0]['ip_address'] = fixed_ip
             new_port = self.neutron_client.create_port(port)
         except Exception:
             message = "Error creating port in network: {0}".format(network_id)
             LOG.exception(message)
             raise exceptions.PortCreationFailedException(message)
-        return utils.convert_port_dict_to_model(new_port)
+        return new_port
 
     def delete_port(self, port_id):
         try:
