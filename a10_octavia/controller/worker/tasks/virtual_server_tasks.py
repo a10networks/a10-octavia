@@ -129,16 +129,16 @@ class WaitVirtualServerReadyOnBlade(LoadBalancerParent, task.Task):
         while attempts >= 0:
             try:
                 attempts = attempts - 1
-                vip = self.axapi_client.slb.virtual_server.get(loadbalancer.id)
+                self.axapi_client.slb.virtual_server.get(loadbalancer.id)
                 break
-            except exceptions.ReadTimeout as e:
+            except exceptions.ReadTimeout:
                 # Don't retry for ReadTimout, since acos-client already already have
                 # tries and timeout for axapi request. And it will take very long to
                 # response this error.
                 if attempts < 0:
                     # Don't raise, LB creation is success just not sync. to vBlade yet
                     break
-            except Exception as e:
+            except Exception:
                 if attempts < 0:
                     # Don't raise, LB creation is success just not sync. to vBlade yet
                     break
