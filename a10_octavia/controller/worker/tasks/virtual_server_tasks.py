@@ -136,8 +136,10 @@ class WaitVirtualServerReadyOnBlade(LoadBalancerParent, task.Task):
                 # tries and timeout for axapi request. And it will take very long to
                 # response this error.
                 if attempts < 0:
-                    raise e
+                    # Don't raise, LB creation is success just not sync. to vBlade yet
+                    break
             except Exception as e:
                 if attempts < 0:
-                    raise e
+                    # Don't raise, LB creation is success just not sync. to vBlade yet
+                    break
                 time.sleep(CONF.a10_controller_worker.amp_vcs_wait_sec)
