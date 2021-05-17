@@ -729,18 +729,13 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             self._delete_vrid_port(vrid.vrid_port_id)
 
         try:
-            fip_obj = self.network_driver.create_port(
-                subnet.network_id, subnet.id, fixed_ip=conf_floating_ip)
-            self.added_fip_ports.append(fip_obj)
-            vrid.vrid_floating_ip = fip_obj.fixed_ips[0].ip_address
+            amphorae = a10_utils.attribute_search(lb_resource, 'amphorae')
+            fip_obj = self.network_driver.allocate_vrid_fip(vrid,
+                subnet.network_id, amphorae, conf_floating_ip)
             vrid.vrid_port_id = fip_obj.id
-
-            loadbalancer = a10_utils.attribute_search(lb_resource, 'loadbalancer')
-
-            self.network_driver.add_vrid_fip_address_pair(
-                loadbalancer, fip_obj, subnet)
+            self.added_fip_ports.append(fip_obj)
         except Exception as e:
-            msg = "Failed to create neutron port for loadbalancer resource: %s "
+            msg = "Failed to create neutron port for SLB resource: %s "
             if conf_floating_ip:
                 msg += "with floating IP {}".format(conf_floating_ip)
             LOG.error(msg, lb_resource.id)
@@ -762,7 +757,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         """
 
         vrid_value = CONF.a10_global.vrid
-        prev_vrid_value = copy.deepcopy(vrid_list[0].vrid) if vrid_list else None
+        prev_vrid_value = vrid_list[0].vrid if vrid_list else None
         conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(lb_resource.project_id)
 
         if not conf_floating_ip:
@@ -783,6 +778,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                     subnet.cidr)
                 if not a10_utils.check_ip_in_subnet_range(
                         vrid.vrid_floating_ip, subnet_ip, subnet_mask):
+                    vrid.vrid_floating_ip = subnet_ip
                     vrid = self._replace_vrid_port(vrid, subnet, lb_resource)
                     update_vrid_flag = True        
             else:
@@ -798,11 +794,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             self._update_device_vrid_fip(vthunder.partition_name, vrid_floating_ips, vrid_value)
         elif update_vrid_flag:
             self._update_device_vrid_fip(vthunder.partition_name, vrid_floating_ips, vrid_value)
-
-        if loadbalancer is None:
-            loadbalancer = lb_resource
-        self.network_driver.add_vrid_fip_address_pair(
-            vthunder, loadbalancer, self.added_fip_ports, subnet)
 
         return vrid_list
 
