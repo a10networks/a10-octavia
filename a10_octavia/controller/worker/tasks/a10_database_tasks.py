@@ -445,6 +445,7 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                 try:
                     self.vrid_repo.create(
                         db_apis.get_session(),
+                        id=vrid.id,
                         project_id=vrid.project_id,
                         vrid_floating_ip=vrid.vrid_floating_ip,
                         vrid_port_id=vrid.vrid_port_id,

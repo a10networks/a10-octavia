@@ -12,12 +12,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 #
-from json import load
 import acos_client.errors as acos_errors
-import copy
 from neutronclient.common import exceptions as neutron_exceptions
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import uuidutils
 from requests import exceptions as req_exceptions
 import six
 import socket
@@ -34,7 +33,7 @@ from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
-
+from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -690,6 +689,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         if not filtered_vrid_list:
             vrid_list.append(
                 data_models.VRID(
+                    id=uuidutils.generate_uuid(),
                     vrid=vrid_value,
                     project_id=project_id,
                     vrid_port_id=None,
@@ -729,7 +729,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             self._delete_vrid_port(vrid.vrid_port_id)
 
         try:
-            amphorae = a10_utils.attribute_search(lb_resource, 'amphorae')
+            amphorae = a10_task_utils.attribute_search(lb_resource, 'amphorae')
             fip_obj = self.network_driver.allocate_vrid_fip(vrid,
                 subnet.network_id, amphorae, conf_floating_ip)
             vrid.vrid_port_id = fip_obj.id
