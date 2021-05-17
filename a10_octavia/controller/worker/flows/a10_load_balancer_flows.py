@@ -95,9 +95,14 @@ class LoadBalancerFlows(object):
 
         # IMP: Now creating vThunder config here
         post_amp_prefix = constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
+        lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
+        vthunder = self._vthunder_repo.get_vthunder_by_project_id(db_apis.get_session(),
+                                                                  lb.project_id)
+
         lb_create_flow.add(
             self.get_post_lb_vthunder_association_flow(
-                post_amp_prefix, load_balancer_id, topology, mark_active=(not listeners)))
+                post_amp_prefix, load_balancer_id, topology, vthunder,
+                mark_active=(not listeners)))
         lb_create_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR_DATA))
@@ -111,6 +116,17 @@ class LoadBalancerFlows(object):
             requires=a10constants.VTHUNDER))
         lb_create_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
+
+        # For first LB, vcs just setup and need sync. config and reload vBlade severial times.
+        if not vthunder and topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            lb_create_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                name="get-blade-thunder-for-checking",
+                requires=constants.LOADBALANCER,
+                provides=a10constants.BACKUP_VTHUNDER))
+            lb_create_flow.add(virtual_server_tasks.WaitVirtualServerReadyOnBlade(
+                requires=(constants.LOADBALANCER),
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+
         return lb_create_flow
 
     def _create_single_topology(self):
@@ -149,12 +165,8 @@ class LoadBalancerFlows(object):
         return flows + [amps_flow]
 
     def get_post_lb_vthunder_association_flow(self, prefix, load_balancer_id, topology,
-                                              mark_active=True):
+                                              vthunder, mark_active=True):
         """Flow to manage networking after lb creation"""
-
-        lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
-        vthunder = self._vthunder_repo.get_vthunder_by_project_id(db_apis.get_session(),
-                                                                  lb.project_id)
         sf_name = prefix + '-' + constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
         post_create_lb_flow = linear_flow.Flow(sf_name)
         post_create_lb_flow.add(
