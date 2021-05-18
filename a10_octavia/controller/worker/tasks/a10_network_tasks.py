@@ -685,7 +685,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
     def _add_vrid_to_list(self, vrid_list, subnet, project_id):
         vrid_value = CONF.a10_global.vrid
-        filtered_vrid_list = list(filter(lambda x: x == subnet.id, vrid_list))
+        filtered_vrid_list = list(filter(lambda x: x.subnet_id == subnet.id, vrid_list))
         if not filtered_vrid_list:
             vrid_list.append(
                 data_models.VRID(
@@ -785,6 +785,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 new_ip = a10_utils.get_patched_ip_address(
                     conf_floating_ip, subnet.cidr)
                 if new_ip != vrid.vrid_floating_ip:
+                    vrid.vrid_floating_ip = new_ip
                     vrid = self._replace_vrid_port(vrid, subnet, lb_resource, new_ip)
                     update_vrid_flag = True
             vrid_floating_ips.append(vrid.vrid_floating_ip)
@@ -822,10 +823,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             except Exception as e:
                 LOG.error("Failed to update VRID floating IPs %s due to %s",
                           vrid_floating_ip_list, str(e))
-
-
-class HandleRackVRIDFloatingIP(HandleVRIDFloatingIP):
-    pass
 
 
 class DeleteVRIDPort(BaseNetworkTask):

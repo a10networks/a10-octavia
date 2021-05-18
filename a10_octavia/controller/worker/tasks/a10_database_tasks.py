@@ -32,6 +32,7 @@ from octavia.db import repositories as repo
 from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
 from a10_octavia.common import utils
+from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF
@@ -711,7 +712,7 @@ class GetFlavorData(BaseDatabaseTask):
             return flavor_data
 
     def execute(self, lb_resource):
-        flavor_id = utils.attribute_search(lb_resource, 'flavor_id')
+        flavor_id = a10_task_utils.attribute_search(lb_resource, 'flavor_id')
         if flavor_id:
             flavor = self.flavor_repo.get(db_apis.get_session(), id=flavor_id)
             if flavor and flavor.flavor_profile_id:
