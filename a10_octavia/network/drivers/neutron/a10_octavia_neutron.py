@@ -306,6 +306,17 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
                 router_external=network.get('router:external')))
         return network_list_datamodel
 
+    def _add_allowed_address_pair_to_port(self, port_id, ip_address):
+        port = self.neutron_client.show_port(port_id)
+        aap_ips = port['port']['allowed_address_pairs']
+        aap_ips.append({'ip_address': ip_address})
+        aap = {
+            'port': {
+                'allowed_address_pairs': aap_ips
+            }
+        }
+        self.neutron_client.update_port(port_id, aap)
+
     def allocate_vrid_fip(self, vrid, network_id, amphorae, fixed_ip=None):
 
         fixed_ip_json = {}
@@ -353,3 +364,24 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
             self._add_allowed_address_pair_to_port(interface.port_id, fixed_ip)
 
         return new_port
+
+    def _remove_allowed_address_pair_from_port(self, port_id, ip_address):
+        port = self.neutron_client.show_port(port_id)
+        aap_ips = port['port']['allowed_address_pairs']
+        aap_ips.remove({'ip_address': ip_address})
+        aap = {
+            'port': {
+                'allowed_address_pairs': aap_ips,
+            }
+        }
+        self.neutron_client.update_port(port_id, aap)
+
+    def deallocate_vrid_fip(self, vrid, subnet, amphorae):
+        self.delete_port(vrid.vrid_port_id)
+        for amphora in filter(
+            lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                    amphorae):
+            interface = self._get_plugged_interface(
+                    amphora.compute_id, subnet.network_id,
+                    amphora.lb_network_ip)
+            self._remove_allowed_address_pair_from_port(interface.port_id, vrid.vrid_floating_ip)

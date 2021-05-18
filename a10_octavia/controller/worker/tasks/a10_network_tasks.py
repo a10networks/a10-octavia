@@ -830,7 +830,8 @@ class DeleteVRIDPort(BaseNetworkTask):
     """Delete VRID Port if the last resource associated with it is deleted"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, vrid_list, subnet, lb_count_subnet, member_count):
+    def execute(self, vthunder, vrid_list, subnet,
+                lb_count_subnet, member_count, lb_resource):
         vrid = None
         vrid_floating_ip_list = []
         resource_count = lb_count_subnet + member_count
@@ -842,7 +843,8 @@ class DeleteVRIDPort(BaseNetworkTask):
                     vrid_floating_ip_list.append(vr.vrid_floating_ip)
             if vrid:
                 try:
-                    self.network_driver.delete_port(vrid.vrid_port_id)
+                    amphorae = a10_task_utils.attribute_search(lb_resource, 'amphorae')
+                    self.network_driver.deallocate_vrid_fip(vrid, subnet, amphorae)
                     if not vthunder.partition_name or vthunder.partition_name == 'shared':
                         self.axapi_client.vrrpa.update(
                             vrid.vrid, floating_ips=vrid_floating_ip_list)
@@ -862,15 +864,18 @@ class DeleteVRIDPort(BaseNetworkTask):
 
 class DeleteMultipleVRIDPort(BaseNetworkTask):
     @axapi_client_decorator
-    def execute(self, vthunder, vrid_list, subnet_list):
+    def execute(self, vthunder, vrid_list, subnet_list, lb_resource):
         try:
             if subnet_list and vthunder and vrid_list:
+                amphorae = a10_task_utils.attribute_search(lb_resource, 'amphorae')
                 vrids = []
                 vrid_floating_ip_list = []
                 for vrid in vrid_list:
-                    if vrid.subnet_id in subnet_list:
+                    subnet_matched = list(filter(lambda x: x.id == vrid.subnet_id,
+                        subnet_list))
+                    if subnet_matched:
                         vrids.append(vrid)
-                        self.network_driver.delete_port(vrid.vrid_port_id)
+                        self.network_driver.deallocate_vrid_fip(vrid, subnet_matched[0], amphorae)
                     else:
                         vrid_floating_ip_list.append(vrid.vrid_floating_ip)
                 if not vthunder.partition_name or vthunder.partition_name == 'shared':
