@@ -670,8 +670,7 @@ class GetSubnetForDeletionInPool(BaseDatabaseTask):
                     lb_count_subnet = self.loadbalancer_repo.get_lb_count_by_subnet(
                         db_apis.get_session(), partition_project_list, member.subnet_id)
                     if pool_count_subnet <= 1 and lb_count_subnet == 0:
-                        subnet = self.network_driver.get_subnet(member.subnet_id)
-                        subnet_list.append(subnet)
+                        subnet_list.append(member.subnet_id)
                     member_subnet.append(member.subnet_id)
             return subnet_list
         except Exception as e:

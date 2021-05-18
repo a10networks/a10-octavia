@@ -818,7 +818,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         if vrid_floating_ip_list:
             vrid_value = CONF.a10_global.vrid
             try:
-                self.update_device_vrid_fip(
+                self._update_device_vrid_fip(
                     vthunder, vrid_floating_ip_list, vrid_value)
             except Exception as e:
                 LOG.error("Failed to update VRID floating IPs %s due to %s",
@@ -871,11 +871,12 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
                 vrids = []
                 vrid_floating_ip_list = []
                 for vrid in vrid_list:
-                    subnet_matched = list(filter(lambda x: x.id == vrid.subnet_id,
+                    subnet_matched = list(filter(lambda x: x == vrid.subnet_id,
                         subnet_list))
                     if subnet_matched:
                         vrids.append(vrid)
-                        self.network_driver.deallocate_vrid_fip(vrid, subnet_matched[0], amphorae)
+                        subnet = self.network_driver.get_subnet(subnet_matched)
+                        self.network_driver.deallocate_vrid_fip(vrid, subnet, amphorae)
                     else:
                         vrid_floating_ip_list.append(vrid.vrid_floating_ip)
                 if not vthunder.partition_name or vthunder.partition_name == 'shared':
