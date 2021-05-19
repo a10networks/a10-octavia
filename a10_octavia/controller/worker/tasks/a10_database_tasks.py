@@ -139,9 +139,6 @@ class CheckExistingProjectToThunderMappedEntries(BaseDatabaseTask):
                     "Hierarchical multitenancy is disabled, use_parent_partition "
                     "configuration will not be applied for loadbalancer: %s",
                     loadbalancer.id)
-        vthunder_ids = self.vthunder_repo.get_vthunders_by_project_id(
-            db_apis.get_session(),
-            project_id=loadbalancer.project_id)
 
         return vthunder_config
 

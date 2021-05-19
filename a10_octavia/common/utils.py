@@ -17,6 +17,7 @@
 
 """
 import acos_client
+import json
 import netaddr
 import socket
 import struct
@@ -27,6 +28,8 @@ from oslo_log import log as logging
 from keystoneauth1.exceptions import http as keystone_exception
 from keystoneclient.v3 import client as keystone_client
 from octavia.common import keystone
+from octavia.db import api as db_apis
+from octavia.db import repositories as repo
 from stevedore import driver as stevedore_driver
 
 from a10_octavia.common import a10constants
@@ -314,3 +317,17 @@ def validate_interface_vlan_map(hardware_device):
         device_network_map.append(device_map)
     validate_vcs_device_info(device_network_map)
     return device_network_map
+
+
+def get_loadbalancer_flavor(loadbalancer):
+    flavor_repo = repo.FlavorRepository()
+    flavor_profile_repo = repo.FlavorProfileRepository()
+    flavor = {}
+    flavor_id = loadbalancer.flavor_id
+    if flavor_id:
+        flavor = flavor_repo.get(db_apis.get_session(), id=flavor_id)
+        if flavor and flavor.flavor_profile_id:
+            flavor_profile = flavor_profile_repo.get(db_apis.get_session(),
+                                                     id=flavor.flavor_profile_id)
+            flavor_data = json.loads(flavor_profile.flavor_data)
+            return flavor_data
