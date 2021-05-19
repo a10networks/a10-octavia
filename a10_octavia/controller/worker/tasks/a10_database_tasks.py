@@ -143,19 +143,6 @@ class CheckExistingProjectToThunderMappedEntries(BaseDatabaseTask):
             db_apis.get_session(),
             project_id=loadbalancer.project_id)
 
-        for vthunder_id in vthunder_ids:
-            vthunder = self.vthunder_repo.get(
-                db_apis.get_session(),
-                id=vthunder_id)
-            if vthunder is None:
-                return
-            existing_ip_addr_partition = '{}:{}'.format(
-                vthunder.ip_address, vthunder.partition_name)
-            config_ip_addr_partition = '{}:{}'.format(
-                vthunder_config.ip_address, vthunder_config.partition_name)
-            if existing_ip_addr_partition != config_ip_addr_partition:
-                raise exceptions.ThunderInUseByExistingProjectError(
-                    config_ip_addr_partition, existing_ip_addr_partition, loadbalancer.project_id)
         return vthunder_config
 
 
