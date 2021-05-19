@@ -358,9 +358,9 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
         fixed_ip = new_port.fixed_ips[0].ip_address
         for amphora in filter(
             lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
-                    amphorae):
+                amphorae):
             interface = self._get_plugged_interface(
-                    amphora.compute_id, network_id, amphora.lb_network_ip)
+                amphora.compute_id, network_id, amphora.lb_network_ip)
             self._add_allowed_address_pair_to_port(interface.port_id, fixed_ip)
 
         return new_port
@@ -380,8 +380,8 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
         self.delete_port(vrid.vrid_port_id)
         for amphora in filter(
             lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
-                    amphorae):
+                amphorae):
             interface = self._get_plugged_interface(
-                    amphora.compute_id, subnet.network_id,
-                    amphora.lb_network_ip)
+                amphora.compute_id, subnet.network_id,
+                amphora.lb_network_ip)
             self._remove_allowed_address_pair_from_port(interface.port_id, vrid.vrid_floating_ip)

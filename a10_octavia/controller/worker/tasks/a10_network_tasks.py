@@ -699,23 +699,23 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
     def _remove_device_vrid_fip(self, partition_name, vrid_value):
         try:
-            is_partition = (partition_name != None and partition_name != 'shared')
+            is_partition = (partition_name is not None and partition_name != 'shared')
             self.axapi_client.vrrpa.update(vrid_value, floating_ips=[], is_partition=is_partition)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to remove VRRP floating IPs for vrid: %s",
-                str(vrid_value))
+                          str(vrid_value))
             raise e
 
     def _update_device_vrid_fip(self, partition_name, vrid_floating_ip_list, vrid_value):
         try:
-            is_partition = (partition_name != None and partition_name != 'shared')
+            is_partition = (partition_name is not None and partition_name != 'shared')
             self.axapi_client.vrrpa.update(
-                    vrid_value, floating_ips=vrid_floating_ip_list, is_partition=is_partition)
+                vrid_value, floating_ips=vrid_floating_ip_list, is_partition=is_partition)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to update VRRP floating IP %s for vrid: %s",
                           vrid_floating_ip_list, str(vrid_value))
             raise e
-    
+
     def _delete_vrid_port(self, vrid_port_id):
         try:
             self.network_driver.delete_port(vrid_port_id)
@@ -730,9 +730,11 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
         try:
             amphorae = a10_task_utils.attribute_search(lb_resource, 'amphorae')
-            fip_obj = self.network_driver.allocate_vrid_fip(vrid,
-                subnet.network_id, amphorae, conf_floating_ip)
+            fip_obj = self.network_driver.allocate_vrid_fip(
+                vrid, subnet.network_id, amphorae,
+                fixed_ip=conf_floating_ip)
             vrid.vrid_port_id = fip_obj.id
+            vrid.vrid_floating_ip = fip_obj.fixed_ips[0].ip_address
             self.added_fip_ports.append(fip_obj)
         except Exception as e:
             msg = "Failed to create neutron port for SLB resource: %s "
@@ -751,7 +753,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         :param subnet: subnet of the resource in question, will be helpful if there is no
         VRID object present for the provided subnet then is should create new VRID
         floating IP instead of updating existing(delete + create -> update)
-        
+
         :return: return the update list of VRID object, If empty the need to remove all VRID
         objects from DB else need update existing ones.
         """
@@ -778,14 +780,12 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                     subnet.cidr)
                 if not a10_utils.check_ip_in_subnet_range(
                         vrid.vrid_floating_ip, subnet_ip, subnet_mask):
-                    vrid.vrid_floating_ip = subnet_ip
                     vrid = self._replace_vrid_port(vrid, subnet, lb_resource)
-                    update_vrid_flag = True        
+                    update_vrid_flag = True
             else:
                 new_ip = a10_utils.get_patched_ip_address(
                     conf_floating_ip, subnet.cidr)
                 if new_ip != vrid.vrid_floating_ip:
-                    vrid.vrid_floating_ip = new_ip
                     vrid = self._replace_vrid_port(vrid, subnet, lb_resource, new_ip)
                     update_vrid_flag = True
             vrid_floating_ips.append(vrid.vrid_floating_ip)
@@ -872,7 +872,7 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
                 vrid_floating_ip_list = []
                 for vrid in vrid_list:
                     subnet_matched = list(filter(lambda x: x == vrid.subnet_id,
-                        subnet_list))
+                                          subnet_list))
                     if subnet_matched:
                         vrids.append(vrid)
                         subnet = self.network_driver.get_subnet(subnet_matched)
