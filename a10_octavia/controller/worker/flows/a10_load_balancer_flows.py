@@ -766,6 +766,7 @@ class LoadBalancerFlows(object):
                     constants.SUBNET,
                     a10constants.LB_COUNT_SUBNET,
                     a10constants.MEMBER_COUNT],
+                rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
                 provides=(
                     a10constants.VRID,
                     a10constants.DELETE_VRID)))
@@ -795,6 +796,7 @@ class LoadBalancerFlows(object):
                     constants.SUBNET,
                     a10constants.LB_COUNT_SUBNET,
                     a10constants.MEMBER_COUNT],
+                rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
                 provides=(
                     a10constants.VRID,
                     a10constants.DELETE_VRID)))
