@@ -17,7 +17,7 @@ depends_on = None
 
 
 def upgrade():
-    op.execute('ALTER TABLE vrid DROP PRIMARY KEY')
+    op.execute('ALTER TABLE vrid DROP PRIMARY KEY, CHANGE id id int(11)')
     op.alter_column('vrid', 'id',
         existing_type=mysql.VARCHAR(length=36),
         type_=sa.String(36))
@@ -30,6 +30,7 @@ def downgrade():
     op.execute('ALTER TABLE vrid DROP PRIMARY KEY')
     op.alter_column('vrid', 'id', type_=sa.Integer)
     op.execute('ALTER TABLE vrid ADD PRIMARY KEY (id)')
+    op.execute('ALTER TABLE vrid MODIFY id INTEGER NOT NULL AUTO_INCREMENT')
     op.alter_column('vrid', 'vrid_floating_ip',
         existing_type=mysql.VARCHAR(length=40),
         nullable=True)
