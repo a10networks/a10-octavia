@@ -26,3 +26,5 @@ class BaseTaskTestCase(base.TestCase):
         super(base.TestCase, self).setUp()
         patch('a10_octavia.controller.worker.tasks.decorators.axapi_client_decorator',
               lambda x: x).start()
+        patch('a10_octavia.controller.worker.tasks.decorators.axapi_client_decorator_for_revert',
+              lambda x: x).start()
