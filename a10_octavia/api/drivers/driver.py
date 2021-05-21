@@ -19,6 +19,7 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 
 from octavia.common import constants
+from octavia_lib.api.drivers import data_models as driver_dm
 from octavia_lib.api.drivers import exceptions
 from octavia_lib.api.drivers import provider_base as driver_base
 
@@ -43,8 +44,19 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         self.client = messaging.RPCClient(self.transport, target=self.target)
 
     # Load Balancer
+    def create_vip_port(self, loadbalancer_id, project_id, vip_dictionary):
+        # raise NotImplementedError to let octavia create port for us.
+        raise exceptions.NotImplementedError(
+            user_fault_string='The a10 provider does not implement custom create_vip_port()',
+            operator_fault_string='The a10 provider does not implement custom create_vip_port()'
+        )
+
     def loadbalancer_create(self, loadbalancer):
         LOG.info('A10 provider load balancer loadbalancer: %s.', loadbalancer.__dict__)
+        if loadbalancer.flavor == driver_dm.Unset:
+            loadbalancer.flavor = None
+        if loadbalancer.availability_zone == driver_dm.Unset:
+            loadbalancer.availability_zone = None
         payload = {constants.LOAD_BALANCER_ID: loadbalancer.loadbalancer_id,
                    constants.FLAVOR: loadbalancer.flavor}
         self.client.cast({}, 'create_load_balancer', **payload)
@@ -149,6 +161,12 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                    constants.MEMBER_UPDATES: member_dict}
         self.client.cast({}, 'update_member', **payload)
 
+    def member_batch_update(self, pool_id, members):
+        raise exceptions.NotImplementedError(
+            user_fault_string='The a10 provider does not support batch member update',
+            operator_fault_string='The a10 provider does not support batch member update'
+        )
+
     # Health Monitor
     def health_monitor_create(self, healthmonitor):
         payload = {constants.HEALTH_MONITOR_ID: healthmonitor.healthmonitor_id}
@@ -238,6 +256,12 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                 operator_fault_string='Failed to get the supported flavor '
                                       'metadata due to: {}'.format(str(e)))
 
+    def _validate_flavor_name_expressions(self, obj_flavor):
+        if 'name-expressions' in obj_flavor:
+            for reg_flavor in obj_flavor['name-expressions']:
+                if 'regex' not in reg_flavor or 'json' not in reg_flavor:
+                    raise Exception('key \'regex\' and \'json\' is mandatory for \'name-expressions\'')
+
     def validate_flavor(self, flavor_dict):
         try:
             validate(flavor_dict, flavor_schema.SUPPORTED_FLAVOR_SCHEMA)
@@ -249,6 +273,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                     raise Exception('axapi key \'name\' is not allowed')
                 if 'ip-address' in flavor:
                     raise Exception('axapi key \'ip-address\' is not supported yet')
+                self._validate_flavor_name_expressions(flavor)
             if 'virtual-port' in flavor_dict:
                 flavor = flavor_dict['virtual-port']
                 if 'name' in flavor:
@@ -257,18 +282,22 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                     raise Exception('axapi key \'port-number\' is not allowed')
                 if 'protocol' in flavor:
                     raise Exception('axapi key \'protocol\' is not allowed')
+                self._validate_flavor_name_expressions(flavor)
             if 'service-group' in flavor_dict:
                 flavor = flavor_dict['service-group']
                 if 'name' in flavor:
                     raise Exception('axapi key \'name\' is not allowed')
+                self._validate_flavor_name_expressions(flavor)
             if 'server' in flavor_dict:
                 flavor = flavor_dict['server']
                 if 'name' in flavor:
                     raise Exception('axapi key \'name\' is not allowed')
+                self._validate_flavor_name_expressions(flavor)
             if 'health-monitor' in flavor_dict:
                 flavor = flavor_dict['health-monitor']
                 if 'name' in flavor:
                     raise Exception('axapi key \'name\' is not allowed')
+                self._validate_flavor_name_expressions(flavor)
 
             # validate nat-pool and nat-pool-list keys
             if 'nat-pool' in flavor_dict:
@@ -304,3 +333,36 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                                   'due to: {}'.format(str(e)),
                 operator_fault_string='Failed to validate the flavor metadata '
                                       'due to: {}'.format(str(e)))
+
+    # Availability Zone
+    def get_supported_availability_zone_metadata(self):
+        """Returns the valid availability zone metadata keys and descriptions.
+
+        This extracts the valid availability zone metadata keys and
+        descriptions from the JSON validation schema and returns it as a
+        dictionary.
+
+        :return: Dictionary of availability zone metadata keys and descriptions
+        :raises DriverError: An unexpected error occurred.
+        """
+        # return empty dictionary for a10-octavia support nothing.
+        props = {}
+        return props
+
+    def validate_availability_zone(self, availability_zone_dict):
+        """Validates availability zone profile data.
+
+        This will validate an availability zone profile dataset against the
+        availability zone settings the amphora driver supports.
+
+        :param availability_zone_dict: The availability zone dict to validate.
+        :type availability_zone_dict: dict
+        :return: None
+        :raises DriverError: An unexpected error occurred.
+        :raises UnsupportedOptionError: If the driver does not support
+          one of the availability zone settings.
+        """
+        raise exceptions.NotImplementedError(
+            user_fault_string='The a10 provider does not support Availability zone feature',
+            operator_fault_string='The a10 provider does not support Availability zone feature'
+        )
