@@ -126,6 +126,14 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
                 raise e
 
 
+class AllowL2DSR(VThunderBaseTask):
+    """Task to add wildcat address in allowed_address_pair for L2DSR"""
+
+    def execute(self, vip):
+        if CONF.vthunder.l2dsr_support:
+            self.network_driver._add_allowed_address_pair_to_port(vip.port_id, '0.0.0.0/0')
+
+
 class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
     """Task to reboot and configure vThunder device"""
 

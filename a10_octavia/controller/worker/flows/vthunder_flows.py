@@ -278,6 +278,7 @@ class VThunderFlows(object):
             name=sf_name + '-' + a10constants.UPDATE_VIP_AFTER_ALLOCATION,
             requires=(constants.LOADBALANCER_ID, constants.VIP),
             provides=constants.LOADBALANCER))
+        vthunder_for_amphora_subflow.add(vthunder_tasks.AllowL2DSR(requires=constants.VIP))
         vthunder_for_amphora_subflow.add(
             database_tasks.MarkAmphoraAllocatedInDB(
                 name=sf_name + '-' + constants.MARK_AMPHORA_ALLOCATED_INDB,
