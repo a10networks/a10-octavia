@@ -368,10 +368,10 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
     def _remove_allowed_address_pair_from_port(self, port_id, ip_address):
         port = self.neutron_client.show_port(port_id)
         aap_ips = port['port']['allowed_address_pairs']
-        aap_ips.remove({'ip_address': ip_address})
+        updated_aap_ips = [aap_ip for aap_ip in aap_ips if aap_ip['ip_address'] != ip_address]
         aap = {
             'port': {
-                'allowed_address_pairs': aap_ips,
+                'allowed_address_pairs': updated_aap_ips,
             }
         }
         self.neutron_client.update_port(port_id, aap)
@@ -384,4 +384,6 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
             interface = self._get_plugged_interface(
                 amphora.compute_id, subnet.network_id,
                 amphora.lb_network_ip)
-            self._remove_allowed_address_pair_from_port(interface.port_id, vrid.vrid_floating_ip)
+            if interface is not None:
+                self._remove_allowed_address_pair_from_port(
+                    interface.port_id, vrid.vrid_floating_ip)
