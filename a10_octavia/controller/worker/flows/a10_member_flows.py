@@ -500,7 +500,7 @@ class MemberFlows(object):
                     a10constants.VTHUNDER,
                     a10constants.VRID_LIST,
                     a10constants.SUBNET_LIST],
-                rebind={a10constants.LB_RESOURCE: constants.MEMBER},
+                rebind={a10constants.LB_RESOURCE: pool},
                 provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(a10_database_tasks.DeleteMultiVRIDEntry(
             name='delete_multi_vrid_entry' + pool,

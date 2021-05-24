@@ -875,7 +875,7 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
                                           subnet_list))
                     if subnet_matched:
                         vrids.append(vrid)
-                        subnet = self.network_driver.get_subnet(subnet_matched)
+                        subnet = self.network_driver.get_subnet(vrid.subnet_id)
                         self.network_driver.deallocate_vrid_fip(vrid, subnet, amphorae)
                     else:
                         vrid_floating_ip_list.append(vrid.vrid_floating_ip)
