@@ -131,7 +131,17 @@ class AllowL2DSR(VThunderBaseTask):
 
     def execute(self, subnet, amphora):
         if CONF.vthunder.l2dsr_support:
-            self.network_driver.l2dsr_support(subnet.network_id, amphora)
+            self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amphora)
+
+
+class AllowLoadbalancerForwardWithAnySource(VThunderBaseTask):
+    """Task to add wildcat address in allowed_address_pair to allow any SNAT"""
+
+    def execute(self, member, amphora):
+        subnet = self.network_driver.get_subnet(member.subnet_id)
+        if CONF.vthunder.slb_no_snat_support:
+            for amp in amphora:
+               self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
 
 
 class AmphoraePostMemberNetworkPlug(VThunderBaseTask):

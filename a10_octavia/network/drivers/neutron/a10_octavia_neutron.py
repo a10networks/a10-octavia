@@ -365,7 +365,7 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
 
         return new_port
 
-    def l2dsr_support(self, network_id, amphora):
+    def allow_use_any_source_ip_on_egress(self, network_id, amphora):
         interface = self._get_plugged_interface(
             amphora.compute_id, network_id, amphora.lb_network_ip)
         port = self.neutron_client.show_port(interface.port_id)
