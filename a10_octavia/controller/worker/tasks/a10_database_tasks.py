@@ -32,6 +32,7 @@ from octavia.db import repositories as repo
 from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
 from a10_octavia.common import utils
+from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF
@@ -224,26 +225,6 @@ class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
 #         vthunder = self.vthunder_repo.get_vthunder_from_lb(db_apis.get_session(), loadbalancer_id)
 #         return vthunder
 #         LOG.info("Successfully fetched vThunder details for LB")
-
-
-class GetComputeForProject(BaseDatabaseTask):
-    """ Get Compute details form Loadbalancer object -> project ID"""
-
-    def execute(self, loadbalancer, role):
-        vthunder = self.vthunder_repo.get_vthunder_by_project_id_and_role(
-            db_apis.get_session(), loadbalancer.project_id, role)
-        if vthunder is None:
-            vthunder = self.vthunder_repo.get_spare_vthunder(
-                db_apis.get_session())
-            self.vthunder_repo.update(
-                db_apis.get_session(),
-                vthunder.id,
-                status="USED_SPARE",
-                updated_at=datetime.utcnow())
-        amphora_id = vthunder.amphora_id
-        self.amphora_repo.get(db_apis.get_session(), id=amphora_id)
-        compute_id = vthunder.compute_id
-        return compute_id
 
 
 class MapLoadbalancerToAmphora(BaseDatabaseTask):
@@ -451,6 +432,7 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                 try:
                     self.vrid_repo.create(
                         db_apis.get_session(),
+                        id=vrid.id,
                         project_id=vrid.project_id,
                         vrid_floating_ip=vrid.vrid_floating_ip,
                         vrid_port_id=vrid.vrid_port_id,
@@ -469,9 +451,13 @@ class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
     def execute(self, subnet, partition_project_list):
         if partition_project_list:
             try:
-                return self.loadbalancer_repo.get_lb_count_by_subnet(
+                count = self.loadbalancer_repo.get_lb_count_by_subnet(
                     db_apis.get_session(),
                     project_ids=partition_project_list, subnet_id=subnet.id)
+                fixed_subnets = CONF.a10_controller_worker.amp_boot_network_list[:]
+                if subnet.network_id in fixed_subnets:
+                    count = count + 1
+                return count
             except Exception as e:
                 LOG.exception("Failed to get LB count for subnet %s due to %s ",
                               subnet.id, str(e))
@@ -697,15 +683,6 @@ class GetChildProjectsOfParentPartition(BaseDatabaseTask):
 
 class GetFlavorData(BaseDatabaseTask):
 
-    def _flavor_search(self, lb_resource):
-        if hasattr(lb_resource, 'flavor_id'):
-            return lb_resource.flavor_id
-        elif hasattr(lb_resource, 'pool'):
-            return self._flavor_search(lb_resource.pool)
-        elif hasattr(lb_resource, 'load_balancer'):
-            return self._flavor_search(lb_resource.load_balancer)
-        return None
-
     def _format_keys(self, flavor_data):
         if type(flavor_data) is list:
             item_list = []
@@ -721,7 +698,7 @@ class GetFlavorData(BaseDatabaseTask):
             return flavor_data
 
     def execute(self, lb_resource):
-        flavor_id = self._flavor_search(lb_resource)
+        flavor_id = a10_task_utils.attribute_search(lb_resource, 'flavor_id')
         if flavor_id:
             flavor = self.flavor_repo.get(db_apis.get_session(), id=flavor_id)
             if flavor and flavor.flavor_profile_id:

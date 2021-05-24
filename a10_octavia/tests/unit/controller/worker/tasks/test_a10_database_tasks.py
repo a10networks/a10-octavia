@@ -288,6 +288,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo.create.assert_called_once_with(
             mock.ANY,
             project_id=MEMBER_1.project_id,
+            id=VRID.id,
             vrid=VRID.vrid,
             vrid_floating_ip=VRID.vrid_floating_ip,
             vrid_port_id=VRID.vrid_port_id,
@@ -382,31 +383,6 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
             assert_called_once_with(mock.ANY, partition_name='mock-partition-name',
                                     ip_address="mock-ip-addr")
 
-    def test_flavor_search_loadbalancer_find_flavor(self):
-        flavor_task = task.GetFlavorData()
-        found_id = flavor_task._flavor_search(LB)
-        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
-
-    def test_flavor_search_listener_find_flavor(self):
-        flavor_task = task.GetFlavorData()
-        found_id = flavor_task._flavor_search(LB)
-        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
-
-    def test_flavor_search_pool_find_flavor(self):
-        flavor_task = task.GetFlavorData()
-        found_id = flavor_task._flavor_search(POOL)
-        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
-
-    def test_flavor_search_member_find_flavor(self):
-        flavor_task = task.GetFlavorData()
-        found_id = flavor_task._flavor_search(MEMBER_1)
-        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
-
-    def test_flavor_search_health_monitor_find_flavor(self):
-        flavor_task = task.GetFlavorData()
-        found_id = flavor_task._flavor_search(HM)
-        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
-
     def test_GetFlavorData_format_flavor_keys(self):
         expected = {"virtual_server": {"arp_disable": 1}}
         flavor = {"virtual-server": {"arp-disable": 1}}
@@ -456,9 +432,10 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         formated_flavor = flavor_task._format_keys(flavor)
         self.assertEqual(formated_flavor, expected)
 
-    def test_GetFlavorData_execute_no_flavor_id(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.a10_database_tasks.a10_task_utils')
+    def test_GetFlavorData_execute_no_flavor_id(self, mock_utils):
+        mock_utils.attribute_search.return_value = None
         flavor_task = task.GetFlavorData()
-        flavor_task._flavor_search = mock.Mock(return_value=None)
         ret_val = flavor_task.execute(LB)
         self.assertEqual(ret_val, None)
 

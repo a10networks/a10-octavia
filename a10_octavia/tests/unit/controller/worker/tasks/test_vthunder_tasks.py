@@ -774,7 +774,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         thunder.ip_address = "10.0.0.1"
         mock_task.execute(thunder)
         self.client_mock.system.action.setInterface.assert_not_called()
-        self.assertEqual(mock_task.execute(thunder), (1, None))
+        self.assertEqual(mock_task.execute(thunder), ([1], []))
 
     def test_GetVThunderInterface_execute_for_vBlade(self):
         thunder = copy.deepcopy(VTHUNDER)
@@ -785,7 +785,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         thunder.ip_address = "10.0.0.2"
         mock_task.execute(thunder)
         self.client_mock.system.action.setInterface.assert_not_called()
-        self.assertEqual(mock_task.execute(thunder), (None, 1))
+        self.assertEqual(mock_task.execute(thunder), ([], [1]))
 
     def test_EnableInterface_execute_for_single_topology(self):
         thunder = copy.deepcopy(VTHUNDER)
