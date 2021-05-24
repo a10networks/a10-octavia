@@ -66,6 +66,8 @@ A10_VTHUNDER_OPTS = [
     cfg.BoolOpt('l2dsr_support', default=False,
                 help=_('For vThunder VIP port, ingres/egress allows any address with VIP '
                        'interface MAC address to pass.')),
+    cfg.BoolOpt('slb_no_snat_support', default=False,
+                help=_('Allow Loadbalancer use any source address to access backend server.')),
 ]
 
 A10_SLB_OPTS = [

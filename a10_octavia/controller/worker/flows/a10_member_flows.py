@@ -160,6 +160,9 @@ class MemberFlows(object):
         create_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP
         ))
+        create_member_flow.add(vthunder_tasks.AllowLoadbalancerForwardWithAnySource(
+            name=a10constants.ALLOW_NO_SNAT,
+            requires=(constants.MEMBER, constants.AMPHORA)))
         create_member_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
