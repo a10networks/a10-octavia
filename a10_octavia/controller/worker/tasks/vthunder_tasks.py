@@ -141,7 +141,7 @@ class AllowLoadbalancerForwardWithAnySource(VThunderBaseTask):
         subnet = self.network_driver.get_subnet(member.subnet_id)
         if CONF.vthunder.slb_no_snat_support:
             for amp in amphora:
-               self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
+                self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
 
 
 class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
