@@ -63,6 +63,9 @@ A10_VTHUNDER_OPTS = [
     cfg.IntOpt('default_axapi_timeout',
                default=300,
                help=_('VThunder axapi timeout')),
+    cfg.BoolOpt('l2dsr_support', default=False,
+                help=_('For vThunder VIP port, ingres/egress allows any address with VIP '
+                       'interface MAC address to pass.')),
 ]
 
 A10_SLB_OPTS = [
