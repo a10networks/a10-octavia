@@ -745,7 +745,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         return vrid
 
     @axapi_client_decorator
-    def execute(self, vthunder, lb_resource, vrid_list, subnet):
+    def execute(self, vthunder, lb_resource, vrid_list, subnet,
+                vthunder_config, use_device_flavor=False):
         """
         :param vthunder:
         :param lb_resource: Can accept LB or member
@@ -760,7 +761,11 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
         vrid_value = CONF.a10_global.vrid
         prev_vrid_value = vrid_list[0].vrid if vrid_list else None
-        conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(lb_resource.project_id)
+        if use_device_flavor and vthunder_config.vrid_floating_ip:
+            conf_floating_ip = vthunder_config.vrid_floating_ip
+        else:
+            conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
+                lb_resource.project_id)
 
         if not conf_floating_ip:
             for vrid in vrid_list:
