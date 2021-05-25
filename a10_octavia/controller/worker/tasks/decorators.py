@@ -16,7 +16,6 @@
 import acos_client
 from oslo_config import cfg
 from oslo_log import log as logging
-from requests.exceptions import ConnectionError
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -53,10 +52,8 @@ def axapi_client_decorator(func):
 
         try:
             self.axapi_client.session.close()
-        except ConnectionError as e:
+        except Exception as e:
             LOG.debug("Failed to close the vThunder session: %s", str(e))
-        except AttributeError:
-            pass
 
         return result
 
@@ -88,10 +85,8 @@ def axapi_client_decorator_for_revert(func):
 
         try:
             self.axapi_client.session.close()
-        except ConnectionError as e:
+        except Exception as e:
             LOG.debug("Failed to close the vThunder session: %s", str(e))
-        except AttributeError:
-            pass
 
         return result
 

@@ -99,3 +99,30 @@ def dash_to_underscore(my_dict):
         return item_dict
     else:
         return my_dict
+
+
+def attribute_search(lb_resource, attr_name):
+    """This helper method will recursively walk up the slb tree
+    starting from the provided lb_resource and find an attribute
+    with the provided name. Though objects like pool refrence a
+    listener and loadbalancer, the following discrete
+    search orders are used:
+
+    1: member -> pool -> listener -> loadbalancer
+    2: healthmonitor -> pool -> listener -> loadbalancer
+
+    :param lb_resource: An slb data model
+    :param obj_type: String name of an slb object
+    (ie 'loadbalancer', 'pool')
+
+    :return: Returns the requested attribute value or none
+    """
+    if hasattr(lb_resource, attr_name):
+        return getattr(lb_resource, attr_name)
+    elif hasattr(lb_resource, 'pool'):
+        return attribute_search(lb_resource.pool, attr_name)
+    elif hasattr(lb_resource, 'listener'):
+        return attribute_search(lb_resource.listener, attr_name)
+    elif hasattr(lb_resource, 'load_balancer'):
+        return attribute_search(lb_resource.load_balancer, attr_name)
+    return None
