@@ -190,6 +190,13 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.RELOAD_AMPHORA,
             requires=constants.AMPHORA_ID,
             provides=constants.AMPHORA))
+        create_amp_for_lb_subflow.add(a10_network_tasks.GetLBResourceSubnet(
+            name=sf_name + '-' + a10constants.GET_LB_RESOURCE,
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
+        create_amp_for_lb_subflow.add(vthunder_tasks.AllowL2DSR(
+            name=sf_name + '-' + a10constants.ALLOW_L2DSR,
+            requires=(constants.SUBNET, constants.AMPHORA)))
         if role == constants.ROLE_MASTER:
             create_amp_for_lb_subflow.add(database_tasks.MarkAmphoraMasterInDB(
                 name=sf_name + '-' + constants.MARK_AMP_MASTER_INDB,
@@ -286,6 +293,9 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.RELOAD_AMPHORA,
             requires=constants.AMPHORA_ID,
             provides=constants.AMPHORA))
+        vthunder_for_amphora_subflow.add(vthunder_tasks.AllowL2DSR(
+            name=sf_name + '-' + a10constants.ALLOW_L2DSR,
+            requires=(constants.SUBNET, constants.AMPHORA)))
         if role == constants.ROLE_MASTER:
             vthunder_for_amphora_subflow.add(database_tasks.MarkAmphoraMasterInDB(
                 name=sf_name + '-' + constants.MARK_AMP_MASTER_INDB,

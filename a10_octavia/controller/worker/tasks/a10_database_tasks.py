@@ -32,6 +32,7 @@ from octavia.db import repositories as repo
 from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
 from a10_octavia.common import utils
+from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF
@@ -445,6 +446,7 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                 try:
                     self.vrid_repo.create(
                         db_apis.get_session(),
+                        id=vrid.id,
                         project_id=vrid.project_id,
                         vrid_floating_ip=vrid.vrid_floating_ip,
                         vrid_port_id=vrid.vrid_port_id,
@@ -695,15 +697,6 @@ class GetChildProjectsOfParentPartition(BaseDatabaseTask):
 
 class GetFlavorData(BaseDatabaseTask):
 
-    def _flavor_search(self, lb_resource):
-        if hasattr(lb_resource, 'flavor_id'):
-            return lb_resource.flavor_id
-        elif hasattr(lb_resource, 'pool'):
-            return self._flavor_search(lb_resource.pool)
-        elif hasattr(lb_resource, 'load_balancer'):
-            return self._flavor_search(lb_resource.load_balancer)
-        return None
-
     def _format_keys(self, flavor_data):
         if type(flavor_data) is list:
             item_list = []
@@ -719,7 +712,7 @@ class GetFlavorData(BaseDatabaseTask):
             return flavor_data
 
     def execute(self, lb_resource):
-        flavor_id = self._flavor_search(lb_resource)
+        flavor_id = a10_task_utils.attribute_search(lb_resource, 'flavor_id')
         if flavor_id:
             flavor = self.flavor_repo.get(db_apis.get_session(), id=flavor_id)
             if flavor and flavor.flavor_profile_id:

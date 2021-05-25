@@ -160,6 +160,9 @@ class MemberFlows(object):
         create_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP
         ))
+        create_member_flow.add(vthunder_tasks.AllowLoadbalancerForwardWithAnySource(
+            name=a10constants.ALLOW_NO_SNAT,
+            requires=(constants.MEMBER, constants.AMPHORA)))
         create_member_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
@@ -465,6 +468,7 @@ class MemberFlows(object):
                     constants.SUBNET,
                     a10constants.LB_COUNT_SUBNET,
                     a10constants.MEMBER_COUNT],
+                rebind={a10constants.LB_RESOURCE: constants.MEMBER},
                 provides=(
                     a10constants.VRID,
                     a10constants.DELETE_VRID)))
@@ -499,6 +503,7 @@ class MemberFlows(object):
                     a10constants.VTHUNDER,
                     a10constants.VRID_LIST,
                     a10constants.SUBNET_LIST],
+                rebind={a10constants.LB_RESOURCE: pool},
                 provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(a10_database_tasks.DeleteMultiVRIDEntry(
             name='delete_multi_vrid_entry' + pool,
