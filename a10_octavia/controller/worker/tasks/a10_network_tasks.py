@@ -745,7 +745,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         return vrid
 
     @axapi_client_decorator
-    def execute(self, vthunder, lb_resource, vrid_list, subnet, vthunder_config, use_device_flavor=False):
+    def execute(self, vthunder, lb_resource, vrid_list, subnet,
+                vthunder_config, use_device_flavor=False):
         """
         :param vthunder:
         :param lb_resource: Can accept LB or member
