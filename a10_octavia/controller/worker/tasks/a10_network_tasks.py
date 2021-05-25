@@ -680,7 +680,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         super(HandleVRIDFloatingIP, self).__init__(*arg, **kwargs)
 
     @axapi_client_decorator
-    def execute(self, vthunder, lb_resource, vrid_list, subnet):
+    def execute(self, vthunder, lb_resource, vrid_list, subnet, vthunder_config, use_device_flavor=False):
         """
 
         :param vthunder:
@@ -695,10 +695,13 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         vrid_floating_ips = []
         update_vrid_flag = False
         vrid_value = CONF.a10_global.vrid
-        conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
-            lb_resource.project_id)
-        prev_vrid_value = copy.deepcopy(
-            vrid_list[0].vrid) if vrid_list else None
+        if use_device_flavor:
+            conf_floating_ip = vthunder_config.vrid_floating_ip
+        else:
+            conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
+                lb_resource.project_id)
+            prev_vrid_value = copy.deepcopy(
+                vrid_list[0].vrid) if vrid_list else None
 
         if conf_floating_ip:
             for vr in vrid_list:
@@ -741,8 +744,11 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             else:
                 for vrid in vrid_list:
                     subnet = self.network_driver.get_subnet(vrid.subnet_id)
-                    conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
-                        lb_resource.project_id)
+                    if use_device_flavor:
+                        conf_floating_ip = vthunder_config.vrid_floating_ip
+                    else:
+                        conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
+                            lb_resource.project_id)
                     conf_floating_ip = a10_utils.get_patched_ip_address(
                         conf_floating_ip, subnet.cidr)
                     vrid.vrid = vrid_value
@@ -793,6 +799,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             lb_resource,
             vrid_list,
             subnet,
+            vthunder_config, use_device_flavor=False,
             *args,
             **kwargs):
 
