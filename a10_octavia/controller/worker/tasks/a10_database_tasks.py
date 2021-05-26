@@ -465,13 +465,9 @@ class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
     def execute(self, subnet, partition_project_list):
         if partition_project_list:
             try:
-                count = self.loadbalancer_repo.get_lb_count_by_subnet(
+                return self.loadbalancer_repo.get_lb_count_by_subnet(
                     db_apis.get_session(),
                     project_ids=partition_project_list, subnet_id=subnet.id)
-                fixed_subnets = CONF.a10_controller_worker.amp_boot_network_list[:]
-                if subnet.network_id in fixed_subnets:
-                    count = count + 1
-                return count
             except Exception as e:
                 LOG.exception("Failed to get LB count for subnet %s due to %s ",
                               subnet.id, str(e))
