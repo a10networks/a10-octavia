@@ -946,7 +946,12 @@ class ReserveSubnetAddressForMember(BaseNetworkTask):
                 while start <= end:
                     addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
                     start += 1
-                port = self.network_driver.reserve_subnet_addresses(member.subnet_id, addr_list)
+                if not CONF.vthunder.slb_no_snat_support:
+                    amphorae = a10_task_utils.attribute_search(member, 'amphorae')
+                else:
+                    amphorae = None
+                port = self.network_driver.reserve_subnet_addresses(
+                    member.subnet_id, addr_list, amphorae)
                 LOG.debug("Successfully allocated addresses for nat pool %s on port %s",
                           nat_flavor['pool_name'], port.id)
                 return port
@@ -971,6 +976,17 @@ class ReleaseSubnetAddressForMember(BaseNetworkTask):
         if nat_pool.member_ref_count == 1:
             try:
                 self.network_driver.delete_port(nat_pool.port_id)
+                if not CONF.vthunder.slb_no_snat_support:
+                    addr_list = []
+                    start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
+                    end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
+                    while start <= end:
+                        addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
+                        start += 1
+                    amphorae = a10_task_utils.attribute_search(member, 'amphorae')
+                    if amphorae is not None:
+                        self.network_driver.release_subnet_addresses(
+                            member.subnet_id, addr_list, amphorae)
             except Exception as e:
                 LOG.exception("Failed to release addresses in NAT pool %s from subnet %s",
                               nat_flavor['pool_name'], member.subnet_id)

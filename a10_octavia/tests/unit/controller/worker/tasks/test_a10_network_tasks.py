@@ -460,12 +460,13 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         self.client_mock.vrrpa.update.assert_not_called()
         self.assertEqual(result, None)
 
-    def test_reserve_subnet_addr_for_member(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.a10_network_tasks.a10_task_utils')
+    def test_reserve_subnet_addr_for_member(self, mock_utils):
         mock_network_task = a10_network_tasks.ReserveSubnetAddressForMember()
         mock_network_task.network_driver = self.client_mock
         mock_network_task.execute(MEMBER, NAT_FLAVOR)
         self.client_mock.reserve_subnet_addresses.assert_called_with(
-            MEMBER.subnet_id, ["1.1.1.1", "1.1.1.2"])
+            MEMBER.subnet_id, ["1.1.1.1", "1.1.1.2"], mock.ANY)
 
     def test_release_subnet_addr_referenced(self):
         mock_network_task = a10_network_tasks.ReleaseSubnetAddressForMember()
@@ -473,7 +474,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         ret_val = mock_network_task.execute(MEMBER, NAT_FLAVOR, NAT_POOL)
         self.assertEqual(ret_val, None)
 
-    def test_release_subnet_addr(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.a10_network_tasks.a10_task_utils')
+    def test_release_subnet_addr(self, mock_utils):
         mock_network_task = a10_network_tasks.ReleaseSubnetAddressForMember()
         mock_network_task.network_driver = self.client_mock
         NAT_POOL.member_ref_count = 1

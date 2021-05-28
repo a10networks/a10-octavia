@@ -250,7 +250,7 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
             message = "Error deleting port: {0}".format(port_id)
             LOG.exception(message)
 
-    def reserve_subnet_addresses(self, subnet_id, addr_list):
+    def reserve_subnet_addresses(self, subnet_id, addr_list, amphorae):
         subnet = self.get_subnet(subnet_id)
         try:
             port = {'port': {'name': 'octavia-port-' + subnet.network_id,
@@ -263,10 +263,31 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
                 port['port']['fixed_ips'].append(fixed_ip)
             new_port = self.neutron_client.create_port(port)
             new_port = utils.convert_port_dict_to_model(new_port)
+            if amphorae is not None:
+                for amphora in filter(
+                        lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                        amphorae):
+                    interface = self._get_plugged_interface(
+                        amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+                    self._add_allowed_address_pair_to_port(interface.port_id, addr_list)
         except Exception as e:
             LOG.exception(str(e))
             raise e
         return new_port
+
+    def release_subnet_addresses(self, subnet_id, addr_list, amphorae):
+        try:
+            subnet = self.get_subnet(subnet_id)
+            for amphora in filter(
+                    lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                    amphorae):
+                interface = self._get_plugged_interface(
+                    amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+                if interface is not None:
+                    self._remove_allowed_address_pair_from_port(interface.port_id, addr_list)
+        except Exception as e:
+            LOG.exception(str(e))
+            raise e
 
     def get_port_id_from_ip(self, ip):
         try:
@@ -309,7 +330,11 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
     def _add_allowed_address_pair_to_port(self, port_id, ip_address):
         port = self.neutron_client.show_port(port_id)
         aap_ips = port['port']['allowed_address_pairs']
-        aap_ips.append({'ip_address': ip_address})
+        if isinstance(ip_address, list):
+            for ip in ip_address:
+                aap_ips.append({'ip_address': ip})
+        else:
+            aap_ips.append({'ip_address': ip_address})
         aap = {
             'port': {
                 'allowed_address_pairs': aap_ips
@@ -379,7 +404,13 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
     def _remove_allowed_address_pair_from_port(self, port_id, ip_address):
         port = self.neutron_client.show_port(port_id)
         aap_ips = port['port']['allowed_address_pairs']
-        updated_aap_ips = [aap_ip for aap_ip in aap_ips if aap_ip['ip_address'] != ip_address]
+        if isinstance(ip_address, list):
+            updated_aap_ips = aap_ips
+            for ip in ip_address:
+                updated_aap_ips = [aap_ip for aap_ip in updated_aap_ips
+                                   if aap_ip['ip_address'] != ip]
+        else:
+            updated_aap_ips = [aap_ip for aap_ip in aap_ips if aap_ip['ip_address'] != ip_address]
         aap = {
             'port': {
                 'allowed_address_pairs': updated_aap_ips,
