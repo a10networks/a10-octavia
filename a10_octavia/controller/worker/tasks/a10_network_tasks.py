@@ -776,24 +776,41 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
         vrid_floating_ips = []
         update_vrid_flag = False
+        existing_fips = []
         vrid_list = self._add_vrid_to_list(vrid_list, subnet, lb_resource.project_id)
         for vrid in vrid_list:
-            subnet = self.network_driver.get_subnet(vrid.subnet_id)
+            try:
+                vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
+            except Exception as e:
+                vrid_summary = {}
+                LOG.exception("Failed to get existing VRID summary due to: %s", str(e))
+
+            if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
+                vrid_fip = vrid_summary['vrid']['floating-ip']
+                if vthunder.partition_name != 'shared':
+                    for i in range(len(vrid_fip['ip-address-part-cfg'])):
+                        existing_fips.append(
+                            vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
+                else:
+                    for i in range(len(vrid_fip['ip-address-cfg'])):
+                        existing_fips.append(vrid_fip['ip-address-cfg'][i]['ip-address'])
+            vrid_subnet = self.network_driver.get_subnet(vrid.subnet_id)
             vrid.vrid = vrid_value
             if conf_floating_ip.lower() == 'dhcp':
                 subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(
-                    subnet.cidr)
+                    vrid_subnet.cidr)
                 if not a10_utils.check_ip_in_subnet_range(
                         vrid.vrid_floating_ip, subnet_ip, subnet_mask):
-                    vrid = self._replace_vrid_port(vrid, subnet, lb_resource)
+                    vrid = self._replace_vrid_port(vrid, vrid_subnet, lb_resource)
                     update_vrid_flag = True
             else:
                 new_ip = a10_utils.get_patched_ip_address(
-                    conf_floating_ip, subnet.cidr)
+                    conf_floating_ip, vrid_subnet.cidr)
                 if new_ip != vrid.vrid_floating_ip:
-                    vrid = self._replace_vrid_port(vrid, subnet, lb_resource, new_ip)
+                    vrid = self._replace_vrid_port(vrid, vrid_subnet, lb_resource, new_ip)
                     update_vrid_flag = True
-            vrid_floating_ips.append(vrid.vrid_floating_ip)
+            if vrid_subnet.id == subnet.id or vrid.vrid_floating_ip in existing_fips:
+                vrid_floating_ips.append(vrid.vrid_floating_ip)
 
         if (prev_vrid_value is not None) and (prev_vrid_value != vrid_value):
             self._remove_device_vrid_fip(vthunder.partition_name, prev_vrid_value)

@@ -485,6 +485,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         member_parent_proj = utils.get_parent_project(
             member.project_id)
 
+        vthunder_conf = CONF.hardware_thunder.devices.get(load_balancer.project_id, None)
+
         if (member.project_id in parent_project_list or
                 (member_parent_proj and member_parent_proj in parent_project_list)
                 or self._is_rack_flow(member.project_id, loadbalancer=load_balancer)):
@@ -494,7 +496,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                     constants.MEMBER: member,
                     constants.LISTENERS: listeners,
                     constants.LOADBALANCER: load_balancer,
-                    constants.POOL: pool})
+                    constants.POOL: pool,
+                    a10constants.VTHUNDER_CONFIG: vthunder_conf,
+                    a10constants.USE_DEVICE_FLAVOR: None})
         else:
             busy = self._vthunder_busy_check(member.project_id, True, None)
             create_member_tf = self._taskflow_load(self._member_flows.
