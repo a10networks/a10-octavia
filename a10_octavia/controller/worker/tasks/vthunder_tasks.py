@@ -449,8 +449,13 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        if vthunder and vthunder.project_id in CONF.hardware_thunder.devices:
-            vthunder_conf = CONF.hardware_thunder.devices[vthunder.project_id]
+        if not vthunder:
+            return
+        device_name = ''.join([a10constants.DEVICE_KEY_PREFIX,
+                               vthunder.device_name]) if vthunder.device_name else ''
+        vthunder_conf = CONF.hardware_thunder.devices.get(
+            vthunder.project_id) or CONF.hardware_thunder.devices.get(device_name)
+        if vthunder_conf:
             device_network_map = vthunder_conf.device_network_map
 
             # Case when device network map is not provided/length is 0
