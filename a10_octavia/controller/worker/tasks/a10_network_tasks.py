@@ -779,8 +779,13 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         existing_fips = []
         vrid_list = self._add_vrid_to_list(vrid_list, subnet, lb_resource.project_id)
         for vrid in vrid_list:
-            vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
-            if 'floating-ip' in vrid_summary['vrid']:
+            try:
+                vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
+            except Exception as e:
+                vrid_summary = {}
+                LOG.exception("Failed to get existing VRID summary due to: %s", str(e))
+
+            if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
                 vrid_fip = vrid_summary['vrid']['floating-ip']
                 if vthunder.partition_name != 'shared':
                     for i in range(len(vrid_fip['ip-address-part-cfg'])):
