@@ -465,7 +465,7 @@ class AllocateVIP(BaseNetworkTask):
         vip = result
         LOG.warning("Deallocating vip %s", vip.ip_address)
         try:
-            self.network_driver.deallocate_vip(vip, lb_count_subnet)
+            self.network_driver.deallocate_vip(loadbalancer, lb_count_subnet)
         except Exception as e:
             LOG.error("Failed to deallocate VIP.  Resources may still "
                       "be in use from vip: %(vip)s due to error: %(except)s",

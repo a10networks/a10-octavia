@@ -398,3 +398,34 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
             if interface is not None:
                 self._remove_allowed_address_pair_from_port(
                     interface.port_id, vrid.vrid_floating_ip)
+
+    def unplug_aap_port(self, vip, amphora, subnet):
+        interface = self._get_plugged_interface(
+            amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+        if not interface:
+            # Thought about raising PluggedVIPNotFound exception but
+            # then that wouldn't evaluate all amphorae, so just continue
+            LOG.debug('Cannot get amphora %s interface, skipped',
+                      amphora.compute_id)
+            return
+        try:
+            self._remove_allowed_address_pair_from_port(interface.port_id, vip.ip_address)
+        except Exception as e:
+            message = _('Error unplugging VIP. Could not clear '
+                        'allowed address pairs from port '
+                        '{port_id}.').format(port_id=vip.port_id)
+            LOG.exception(message)
+            raise base.UnplugVIPException(message)
+
+        # Delete the VRRP port if we created it
+        try:
+            port = self.get_port(amphora.vrrp_port_id)
+            if port.name.startswith('octavia-lb-vrrp-'):
+                self.neutron_client.delete_port(amphora.vrrp_port_id)
+        except (neutron_client_exceptions.NotFound,
+                neutron_client_exceptions.PortNotFoundClient):
+            pass
+        except Exception as e:
+            LOG.error('Failed to delete port.  Resources may still be in '
+                      'use for port: %(port)s due to error: %(except)s',
+                      {constants.PORT: amphora.vrrp_port_id, 'except': str(e)})
