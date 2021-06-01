@@ -410,7 +410,7 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
             return
         try:
             self._remove_allowed_address_pair_from_port(interface.port_id, vip.ip_address)
-        except Exception as e:
+        except Exception:
             message = _('Error unplugging VIP. Could not clear '
                         'allowed address pairs from port '
                         '{port_id}.').format(port_id=vip.port_id)
