@@ -21,6 +21,7 @@ import acos_client.errors as acos_errors
 
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks import utils
 
 
@@ -86,7 +87,7 @@ class MemberCreate(task.Task):
                           member.id, pool.id)
             raise e
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, member, vthunder, pool, member_count_ip, *args, **kwargs):
         if member_count_ip > 1:
             return

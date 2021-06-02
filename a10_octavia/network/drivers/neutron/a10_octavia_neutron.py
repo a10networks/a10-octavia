@@ -17,25 +17,25 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from stevedore import driver as stevedore_driver
 
+from octavia.common import constants
+from octavia.i18n import _
+from octavia.network import base
 from octavia.network import data_models as n_data_models
-from octavia.network.drivers.neutron import allowed_address_pairs
+from octavia.network.drivers.neutron import allowed_address_pairs as aap
 from octavia.network.drivers.neutron import utils
 
+from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
 from a10_octavia.network import data_models
 
 LOG = logging.getLogger(__name__)
-PROJECT_ID_ALIAS = 'project-id'
-VIP_SECURITY_GRP_PREFIX = 'lb-'
-OCTAVIA_OWNER = 'Octavia'
-
 CONF = cfg.CONF
 
 
-class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
+class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
 
     def __init__(self):
-        super(allowed_address_pairs.AllowedAddressPairsDriver, self).__init__()
+        super(aap.AllowedAddressPairsDriver, self).__init__()
         self.compute = stevedore_driver.DriverManager(
             namespace='octavia.compute.drivers',
             name=CONF.controller_worker.compute_driver,
@@ -122,6 +122,96 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             message = "Error deleting subports"
             LOG.exception(message)
 
+    def _add_security_group_to_port(self, sec_grp_id, port_id):
+        port = self.neutron_client.show_port(port_id)
+        port['port']['security_groups'].append(sec_grp_id)
+        sec_grp_list = port['port']['security_groups']
+        payload = {'port': {'security_groups': sec_grp_list}}
+        # Note: Neutron accepts the SG even if it already exists
+        try:
+            self.neutron_client.update_port(port_id, payload)
+        except neutron_client_exceptions.PortNotFoundClient as e:
+            raise base.PortNotFound(str(e))
+        except Exception as e:
+            raise base.NetworkException(str(e))
+
+    def _remove_security_group(self, port, sec_grp_id):
+        port['security_groups'].remove(sec_grp_id)
+        payload = {'port': {'security_groups': port['security_groups']}}
+        try:
+            self.neutron_client.update_port(port['id'], payload)
+        except neutron_client_exceptions.PortNotFoundClient as e:
+            raise base.PortNotFound(str(e))
+        except Exception as e:
+            raise base.NetworkException(str(e))
+
+    def _cleanup_port(self, vip_port_id, port):
+        try:
+            self.neutron_client.delete_port(port['id'])
+        except (neutron_client_exceptions.NotFound,
+                neutron_client_exceptions.PortNotFoundClient):
+            if port['id'] == vip_port_id:
+                LOG.debug('VIP port %s already deleted. Skipping.', port['id'])
+            else:
+                LOG.warning("Can't deallocate instance port {0} because it "
+                            "cannot be found in neutron. "
+                            "Continuing cleanup.".format(port['id']))
+        except Exception:
+            message = _('Error deleting VIP port_id {port_id} from '
+                        'neutron').format(port_id=port['id'])
+            LOG.exception(message)
+            raise base.DeallocateVIPException(message)
+
+    def _get_instance_ports_by_subnet(self, compute_id, subnet_id):
+        amp_ports = self.neutron_client.list_ports(device_id=compute_id)
+
+        filtered_ports = []
+        for port in amp_ports.get('ports', []):
+            for fixed_ips in port.get('fixed_ips', []):
+                if (fixed_ips.get('subnet_id') == subnet_id and
+                        port.get('device_owner') == a10constants.OCTAVIA_OWNER):
+                    filtered_ports.append(port)
+        return filtered_ports
+
+    def _get_ports_by_security_group(self, sec_grp_id):
+        all_ports = self.neutron_client.list_ports()
+        filtered_ports = []
+        for port in all_ports.get('ports', []):
+            if sec_grp_id in port.get('security_groups', []):
+                filtered_ports.append(port)
+        return filtered_ports
+
+    def deallocate_vip(self, loadbalancer, lb_count_subnet):
+        """Delete the vrrp_port (instance port) in case nova didn't
+        This can happen if a failover has occurred.
+        """
+        ports = []
+        sec_grp = None
+        vip_port_id = loadbalancer.vip.port_id
+        if self.sec_grp_enabled:
+            sec_grp = self._get_lb_security_group(loadbalancer.id)
+            if sec_grp:
+                ports = self._get_ports_by_security_group(sec_grp['id'])
+
+        if not self.sec_grp_enabled or not ports:
+            ports.append(self.neutron_client.show_port(vip_port_id))
+            for amphora in loadbalancer.amphorae:
+                ports.extend(self._get_instance_ports_by_subnet(
+                    amphora.compute_id, loadbalancer.vip.subnet_id))
+
+        for port in ports:
+            port = port.get('port', port)
+            if lb_count_subnet > 1:  # vNIC port is in use by other lbs. Only delete VIP port.
+                if sec_grp:
+                    self._remove_security_group(port, sec_grp['id'])
+                if port['id'] == vip_port_id:
+                    self._cleanup_port(vip_port_id, port)
+            elif lb_count_subnet <= 1:  # This is the only lb using vNIC ports
+                self._cleanup_port(vip_port_id, port)
+
+        if sec_grp:
+            self._delete_vip_security_group(sec_grp['id'])
+
     def get_plugged_parent_port(self, vip):
         parent_port = None
         try:
@@ -140,12 +230,11 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             port = {'port': {'name': 'octavia-port-' + network_id,
                              'network_id': network_id,
                              'admin_state_up': True,
-                             'device_owner': OCTAVIA_OWNER,
+                             'device_owner': a10constants.OCTAVIA_OWNER,
                              'fixed_ips': [{'subnet_id': subnet_id}]}}
             if fixed_ip:
                 port['port']['fixed_ips'][0]['ip_address'] = fixed_ip
             new_port = self.neutron_client.create_port(port)
-            new_port = utils.convert_port_dict_to_model(new_port)
         except Exception:
             message = "Error creating port in network: {0}".format(network_id)
             LOG.exception(message)
@@ -167,7 +256,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
             port = {'port': {'name': 'octavia-port-' + subnet.network_id,
                              'network_id': subnet.network_id,
                              'admin_state_up': True,
-                             'device_owner': OCTAVIA_OWNER,
+                             'device_owner': a10constants.OCTAVIA_OWNER,
                              'fixed_ips': []}}
             for addr in addr_list:
                 fixed_ip = {'subnet_id': subnet_id, 'ip_address': addr}
@@ -181,7 +270,7 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
 
     def get_port_id_from_ip(self, ip):
         try:
-            ports = self.neutron_client.list_ports(device_owner=OCTAVIA_OWNER)
+            ports = self.neutron_client.list_ports(device_owner=a10constants.OCTAVIA_OWNER)
             if not ports or not ports.get('ports'):
                 return None
             for port in ports['ports']:
@@ -216,3 +305,96 @@ class A10OctaviaNeutronDriver(allowed_address_pairs.AllowedAddressPairsDriver):
                 provider_segmentation_id=network.get('provider:segmentation_id'),
                 router_external=network.get('router:external')))
         return network_list_datamodel
+
+    def _add_allowed_address_pair_to_port(self, port_id, ip_address):
+        port = self.neutron_client.show_port(port_id)
+        aap_ips = port['port']['allowed_address_pairs']
+        aap_ips.append({'ip_address': ip_address})
+        aap = {
+            'port': {
+                'allowed_address_pairs': aap_ips
+            }
+        }
+        self.neutron_client.update_port(port_id, aap)
+
+    def allocate_vrid_fip(self, vrid, network_id, amphorae, fixed_ip=None):
+
+        fixed_ip_json = {}
+        if vrid.subnet_id:
+            fixed_ip_json['subnet_id'] = vrid.subnet_id
+        if fixed_ip:
+            fixed_ip_json['ip_address'] = fixed_ip
+
+        # Make sure we are backward compatible with older neutron
+        if self._check_extension_enabled(aap.PROJECT_ID_ALIAS):
+            project_id_key = 'project_id'
+        else:
+            project_id_key = 'tenant_id'
+
+        # It can be assumed that network_id exists
+        port = {'port': {'name': 'octavia-vrid-fip-' + vrid.id,
+                         'network_id': network_id,
+                         'admin_state_up': False,
+                         'device_id': 'vrid-{0}'.format(vrid.id),
+                         'device_owner': aap.OCTAVIA_OWNER,
+                         project_id_key: vrid.project_id}}
+        if fixed_ip_json:
+            port['port']['fixed_ips'] = [fixed_ip_json]
+
+        try:
+            new_port = self.neutron_client.create_port(port)
+        except Exception as e:
+            message = _('Error creating neutron port on network '
+                        '{network_id}.').format(
+                network_id=network_id)
+            LOG.exception(message)
+            raise base.AllocateVIPException(
+                message,
+                orig_msg=getattr(e, 'message', None),
+                orig_code=getattr(e, 'status_code', None),
+            )
+        new_port = utils.convert_port_dict_to_model(new_port)
+
+        fixed_ip = new_port.fixed_ips[0].ip_address
+        for amphora in filter(
+            lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                amphorae):
+            interface = self._get_plugged_interface(
+                amphora.compute_id, network_id, amphora.lb_network_ip)
+            self._add_allowed_address_pair_to_port(interface.port_id, fixed_ip)
+
+        return new_port
+
+    def allow_use_any_source_ip_on_egress(self, network_id, amphora):
+        interface = self._get_plugged_interface(
+            amphora.compute_id, network_id, amphora.lb_network_ip)
+        port = self.neutron_client.show_port(interface.port_id)
+        aap_ips = port['port']['allowed_address_pairs']
+        for aap_ip in aap_ips:
+            if aap_ip['ip_address'] == '0.0.0.0/0':
+                break
+        else:
+            self._add_allowed_address_pair_to_port(interface.port_id, '0.0.0.0/0')
+
+    def _remove_allowed_address_pair_from_port(self, port_id, ip_address):
+        port = self.neutron_client.show_port(port_id)
+        aap_ips = port['port']['allowed_address_pairs']
+        updated_aap_ips = [aap_ip for aap_ip in aap_ips if aap_ip['ip_address'] != ip_address]
+        aap = {
+            'port': {
+                'allowed_address_pairs': updated_aap_ips,
+            }
+        }
+        self.neutron_client.update_port(port_id, aap)
+
+    def deallocate_vrid_fip(self, vrid, subnet, amphorae):
+        self.delete_port(vrid.vrid_port_id)
+        for amphora in filter(
+            lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                amphorae):
+            interface = self._get_plugged_interface(
+                amphora.compute_id, subnet.network_id,
+                amphora.lb_network_ip)
+            if interface is not None:
+                self._remove_allowed_address_pair_from_port(
+                    interface.port_id, vrid.vrid_floating_ip)

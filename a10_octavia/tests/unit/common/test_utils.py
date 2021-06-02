@@ -331,6 +331,12 @@ class TestUtils(base.BaseTaskTestCase):
         self.assertEqual(utils.get_vrid_floating_ip_for_project(
             a10constants.MOCK_PROJECT_ID), '10.10.0.75')
 
+    def test_get_vrid_floating_ip_for_project_with_vthunder_flow(self):
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         vrid_floating_ip='10.10.0.72')
+        self.assertEqual(utils.get_vrid_floating_ip_for_project(
+            a10constants.MOCK_PROJECT_ID), '10.10.0.72')
+
     def test_validate_interface_vlan_map(self):
         self.assertEqual(utils.validate_interface_vlan_map(HARDWARE_VLAN_INFO), DEVICE_NETWORK_MAP)
 

@@ -25,6 +25,7 @@ from oslo_config import fixture as oslo_fixture
 from oslo_utils import uuidutils
 
 from octavia.common import data_models as o_data_models
+from octavia.common import exceptions as o_exceptions
 from octavia.network import data_models as n_data_models
 from octavia.tests.common import constants as t_constants
 
@@ -287,6 +288,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo.create.assert_called_once_with(
             mock.ANY,
             project_id=MEMBER_1.project_id,
+            id=VRID.id,
             vrid=VRID.vrid,
             vrid_floating_ip=VRID.vrid_floating_ip,
             vrid_port_id=VRID.vrid_port_id,
@@ -381,31 +383,6 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
             assert_called_once_with(mock.ANY, partition_name='mock-partition-name',
                                     ip_address="mock-ip-addr")
 
-    def test_flavor_search_loadbalancer_find_flavor(self):
-        flavor_task = task.GetFlavorData()
-        found_id = flavor_task._flavor_search(LB)
-        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
-
-    def test_flavor_search_listener_find_flavor(self):
-        flavor_task = task.GetFlavorData()
-        found_id = flavor_task._flavor_search(LB)
-        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
-
-    def test_flavor_search_pool_find_flavor(self):
-        flavor_task = task.GetFlavorData()
-        found_id = flavor_task._flavor_search(POOL)
-        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
-
-    def test_flavor_search_member_find_flavor(self):
-        flavor_task = task.GetFlavorData()
-        found_id = flavor_task._flavor_search(MEMBER_1)
-        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
-
-    def test_flavor_search_health_monitor_find_flavor(self):
-        flavor_task = task.GetFlavorData()
-        found_id = flavor_task._flavor_search(HM)
-        self.assertEqual(found_id, a10constants.MOCK_FLAVOR_ID)
-
     def test_GetFlavorData_format_flavor_keys(self):
         expected = {"virtual_server": {"arp_disable": 1}}
         flavor = {"virtual-server": {"arp-disable": 1}}
@@ -455,9 +432,10 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         formated_flavor = flavor_task._format_keys(flavor)
         self.assertEqual(formated_flavor, expected)
 
-    def test_GetFlavorData_execute_no_flavor_id(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.a10_database_tasks.a10_task_utils')
+    def test_GetFlavorData_execute_no_flavor_id(self, mock_utils):
+        mock_utils.attribute_search.return_value = None
         flavor_task = task.GetFlavorData()
-        flavor_task._flavor_search = mock.Mock(return_value=None)
         ret_val = flavor_task.execute(LB)
         self.assertEqual(ret_val, None)
 
@@ -538,7 +516,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_count_lb = task.CountLoadbalancersWithFlavor()
         mock_count_lb.loadbalancer_repo.get_lb_count_by_flavor = mock.Mock()
         mock_count_lb.loadbalancer_repo.get_lb_count_by_flavor.return_value = 2
-        lb_count = mock_count_lb.execute(LB)
+        lb_count = mock_count_lb.execute(LB, VTHUNDER)
         self.assertEqual(2, lb_count)
 
     def test_SetThunderUpdatedAt_execute_update(self):
@@ -609,3 +587,27 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         lb_task.loadbalancer_repo.update = mock.Mock()
         lb_task.execute(lb_list)
         lb_task.loadbalancer_repo.update.assert_not_called()
+
+    def test_AddProjectSetIdDB(self):
+        self.conf.config(
+            group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+            amp_boot_network_list="mgmt_subnet_1")
+        db_task = task.AddProjectSetIdDB()
+        db_task.vrrp_set_repo.get = mock.Mock()
+        db_task.execute(LB)
+        db_task.vrrp_set_repo.get.assert_called_once_with(mock.ANY, mgmt_subnet='mgmt_subnet_1',
+                                                          project_id=mock.ANY)
+
+    def test_DeleteProjectSetIdDB(self):
+        db_task = task.DeleteProjectSetIdDB()
+        db_task.vrrp_set_repo.delete = mock.Mock()
+        db_task.execute(LB)
+        db_task.vrrp_set_repo.delete.assert_called_once_with(mock.ANY, project_id=mock.ANY)
+
+    def test_CheckExistingVthunderTopology_execute_raised_exception(self):
+        lb_task = task.CheckExistingVthunderTopology()
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.topology = a10constants.MOCK_TOPOLOGY_ACTIVE_STANDBY
+        lb_task.vthunder_repo = mock.MagicMock()[1:999]
+        lb_task.vthunder_repo.get_vthunder_by_project_id.return_value = vthunder
+        self.assertRaises(o_exceptions.InvalidTopology, lb_task.execute, LB, "SINGLE")

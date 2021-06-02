@@ -28,7 +28,7 @@ from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 class HealthMonitorFlows(object):
 
-    def get_create_health_monitor_flow(self):
+    def get_create_health_monitor_flow(self, topology):
         """Create a flow to create a health monitor
 
         :returns: The flow for creating a health monitor
@@ -38,11 +38,19 @@ class HealthMonitorFlows(object):
             requires=[constants.HEALTH_MON,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        create_hm_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         create_hm_flow.add(database_tasks.MarkHealthMonitorPendingCreateInDB(
             requires=constants.HEALTH_MON))
         create_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            create_hm_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         create_hm_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
@@ -65,7 +73,7 @@ class HealthMonitorFlows(object):
             requires=(a10constants.VTHUNDER)))
         return create_hm_flow
 
-    def get_delete_health_monitor_flow(self):
+    def get_delete_health_monitor_flow(self, topology):
         """Create a flow to delete a health monitor
 
         :returns: The flow for deleting a health monitor
@@ -75,6 +83,9 @@ class HealthMonitorFlows(object):
             requires=[constants.HEALTH_MON,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        delete_hm_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         delete_hm_flow.add(database_tasks.MarkHealthMonitorPendingDeleteInDB(
             requires=constants.HEALTH_MON))
         delete_hm_flow.add(model_tasks.
@@ -83,6 +94,11 @@ class HealthMonitorFlows(object):
         delete_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            delete_hm_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         delete_hm_flow.add(self.get_delete_health_monitor_vthunder_subflow())
         delete_hm_flow.add(database_tasks.DeleteHealthMonitorInDB(
             requires=constants.HEALTH_MON))
@@ -106,14 +122,16 @@ class HealthMonitorFlows(object):
             requires=(a10constants.VTHUNDER)))
         return delete_hm_flow
 
-    def get_delete_health_monitor_vthunder_subflow(self):
+    def get_delete_health_monitor_vthunder_subflow(self, health_mon=constants.HEALTH_MON):
         delete_hm_vthunder_subflow = linear_flow.Flow(
             a10constants.DELETE_HEALTH_MONITOR_VTHUNDER_SUBFLOW)
         delete_hm_vthunder_subflow.add(health_monitor_tasks.DeleteHealthMonitor(
-            requires=[constants.HEALTH_MON, a10constants.VTHUNDER]))
+            name="delete_health_monitor_" + health_mon,
+            requires=[constants.HEALTH_MON, a10constants.VTHUNDER],
+            rebind={constants.HEALTH_MON: health_mon}))
         return delete_hm_vthunder_subflow
 
-    def get_update_health_monitor_flow(self):
+    def get_update_health_monitor_flow(self, topology):
         """Create a flow to update a health monitor
 
         :returns: The flow for updating a health monitor
@@ -123,11 +141,19 @@ class HealthMonitorFlows(object):
             requires=[constants.HEALTH_MON,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        update_hm_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         update_hm_flow.add(database_tasks.MarkHealthMonitorPendingUpdateInDB(
             requires=constants.HEALTH_MON))
         update_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            update_hm_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         update_hm_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))

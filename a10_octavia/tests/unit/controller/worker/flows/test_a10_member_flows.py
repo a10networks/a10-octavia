@@ -16,6 +16,7 @@ from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
 from taskflow.patterns import linear_flow as flow
 
+from octavia.common import constants
 from octavia.tests.unit import base
 
 from a10_octavia.common import config_options
@@ -58,5 +59,5 @@ class TestMemberFlows(base.TestCase):
         self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, network_type='vlan')
         self.conf.config(group=a10constants.A10_HARDWARE_THUNDER_CONF_SECTION,
                          devices=[RACK_DEVICE])
-        del_flow = self.flows.get_delete_member_flow()
+        del_flow = self.flows.get_delete_member_flow(constants.TOPOLOGY_SINGLE)
         self.assertIsInstance(del_flow, flow.Flow)

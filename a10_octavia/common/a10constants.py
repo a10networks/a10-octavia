@@ -12,12 +12,34 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-GET_VTHUNDER_FOR_LB_SUBFLOW = 'octavia-get-vthunder-for-lb-subflow'
+# ==============
+# Argument Names
+# ==============
+LOADBALANCERS_LIST = 'loadbalancers_list'
+VRID_LIST = 'vrid_list'
+SET_THUNDER_UPDATE_AT = 'set-thunder-update-at'
+SET_THUNDER_BACKUP_UPDATE_AT = 'set-thunder-backup-update-at'
+
+# Member count with specific IP.
+MEMBER_COUNT_IP = 'member_count_ip'
+MEMBER_COUNT_IP_PORT_PROTOCOL = 'member_count_ip_port_protocol'
+POOL_COUNT_IP = 'pool_count_ip'
+WRITE_MEM_SHARED_PART = 'write_mem_shared_part'
+WRITE_MEM_FOR_SHARED_PARTITION = 'write_memory_for_shared_partition'
+WRITE_MEM_FOR_LOCAL_PARTITION = 'write_memory_for_local_partition'
+
+MEMBER_LIST = 'member_list'
+SUBNET_LIST = 'subnet_list'
+
+PARTITION_PROJECT_LIST = 'partition_project_list'
+IFNUM_BACKUP = 'ifnum_backup'
+IFNUM_MASTER = 'ifnum_master'
 
 VTHUNDER = 'vthunder'
 STATUS = 'status'
 ROLE = 'role'
 BACKUP_VTHUNDER = 'backup_vthunder'
+MASTER_VTHUNDER = 'master_vthunder'
 VRRP_STATUS = 'vrrp_status'
 MASTER_VRRP_STATUS = 'master_vrrp_status'
 BACKUP_VRRP_STATUS = 'backup_vrrp_status'
@@ -50,9 +72,14 @@ PERS_TYPE = ['cookie_persistence', 'src_ip_persistence']
 NO_DEST_NAT_SUPPORTED_PROTOCOL = ['tcp', 'udp']
 PORT = 'port'
 LB_COUNT = 'lb_count'
+LB_COUNT_SUBNET = 'lb_count_subnet'
+LB_COUNT_FLAVOR = 'lb_count_flavor'
 MEMBER_COUNT = 'member_count'
 DELETE_VRID = 'delete_vrid'
 
+ID = 'id'
+SECURITY_GROUPS = 'security_groups'
+VIP_SEC_GROUP_PREFIX = 'lb-'
 LB_RESOURCE = 'lb_resource'
 
 SUBNET_ID = "subnet_id"
@@ -65,14 +92,26 @@ FLAT = "flat"
 SUPPORTED_NETWORK_TYPE = [FLAT, VLAN]
 SSL_TEMPLATE = "ssl_template"
 
-# Taskflow flow and task names
+COMPUTE_BUSY = "compute_busy"
 
+# ============================
+# Taskflow flow and task names
+# ============================
+GET_VTHUNDER_FOR_LB_SUBFLOW = 'octavia-get-vthunder-for-lb-subflow'
 BACKUP_AMPHORA_PLUG = 'backup-amphora-plug'
+GET_MASTER_VTHUNDER_INTERFACE = 'get-master-vthunder-intercae'
+GET_BACKUP_VTHUNDER_INTERFACE = 'get-backup-vthunder-intercae'
 MASTER_CONNECTIVITY_WAIT = 'master-connectivity-wait'
 BACKUP_CONNECTIVITY_WAIT = 'backup-connectivity-wait'
+ENABLE_MASTER_VTHUNDER_INTERFACE = 'enable-master-vthunder-interface'
+ENABLE_BACKUP_VTHUNDER_INTERFACE = 'enable-backup-vthunder-interface'
+ENABLE_VTHUNDER_INTERFACE = 'enable-vthunder-interface'
+MASTER_ENABLE_INTERFACE = 'master-enable-interface'
 BACKUP_ENABLE_INTERFACE = 'backup-enable-interface'
 MARK_VTHUNDER_MASTER_ACTIVE_IN_DB = 'mark-vthunder-master-active-in-db'
 MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB = 'mark-vthunder-backup-active-in-db'
+MARK_VTHUNDER_MASTER_DELETED_IN_DB = 'mark-vthunder-master-deleted-in-db'
+MARK_VTHUNDER_BACKUP_DELETED_IN_DB = 'mark-vthunder-backup-deleted-in-db'
 GET_BACKUP_VTHUNDER_BY_LB = 'get-backup-vthunder-by-lb'
 CREATE_HEALTH_MONITOR_ON_VTHUNDER_MASTER = 'create-health-monitor-on-vthunder-master'
 HANDLE_SESS_PERS = 'handle-session-persistence-delta-subflow'
@@ -91,16 +130,43 @@ CHECK_VRRP_STATUS = 'check-vrrp-status'
 CHECK_VRRP_MASTER_STATUS = 'check-vrrp-master-status'
 CHECK_VRRP_BACKUP_STATUS = 'check-vrrp-backup-status'
 CONFIRM_VRRP_STATUS = 'confirm-vrrp-status'
+ADD_VRRP_SET_ID_INDB = 'add-vrrp-set-id-db'
+DELETE_VRRP_SET_ID_INDB = 'delete-vrrp-set-id-db'
 ALLOCATE_VIP = 'allocate-vip'
 UPDATE_VIP_AFTER_ALLOCATION = 'update-vip-after-allocation'
+ALLOW_L2DSR = 'allow-l2dsr'
+ALLOW_NO_SNAT = 'allow-no-snat'
+AMPHORAE_POST_VIP_PLUG = 'amphorae-post-vip-plug'
+AMPHORA_POST_NETWORK_UNPLUG = 'amphorae-post-network-plug'
+AMPHORA_POST_NETWORK_UNPLUG_FOR_BACKUP_VTHUNDER = 'amphorae-post-network-plug-for-backup-vthunder'
+AMP_POST_VIP_PLUG = 'amp-post-vip-plug'
+AMPHORAE_POST_VIP_PLUG_FOR_MASTER = 'amphorae-post-vip-plug-for-master'
+AMPHORAE_POST_VIP_PLUG_FOR_BACKUP = 'amphorae-post-vip-plug-for-backup'
+VCS_RELOAD = 'vcs-reload'
+GET_BACKUP_VTHUNDER = 'get-backup-vthunder'
+GET_MASTER_VTHUNDER = 'get-master-vthunder'
+CONNECTIVITY_WAIT_FOR_MASTER_VTHUNDER = 'connectivity-wait-for-master-vthunder'
+CONNECTIVITY_WAIT_FOR_BACKUP_VTHUNDER = 'connectivity-wait-for-backup-vthunder'
+GET_VTHUNDER_MASTER = 'get-vthunder-master'
+WAIT_FOR_MASTER_VCS_RELOAD = 'wait-for-master-vcs-reload'
+WAIT_FOR_BACKUP_VCS_RELOAD = 'wait-for-backup-vcs-reload'
+VCS_SYNC_WAIT = "wait-for-vcs_ready"
+GET_COMPUTE_FOR_PROJECT = 'get-compute-for-project'
+VALIDATE_COMPUTE_FOR_PROJECT = 'validate-compute-for-project'
 CREATE_VTHUNDER_ENTRY = 'create-vthunder-entry'
+UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY = 'update-acos-version-in-vthunder-entry'
+UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER = 'update-acos-version-for-backup-vthunder'
 VTHUNDER_BY_LB = 'vthunder-by-loadbalancer'
+GET_VTHUNDER_BY_LB = 'get-vthunder-by-lb'
+VTHUNDER_CONNECTIVITY_WAIT = 'vthunder-connectivity-wait'
+WAIT_FOR_VTHUNDER_CONNECTIVITY = 'wait-for-vthunder-connectivity'
 CHANGE_PARTITION = 'change-partition'
 CREATE_SSL_CERT_FLOW = 'create-ssl-cert-flow'
 DELETE_SSL_CERT_FLOW = 'delete-ssl-cert-flow'
 LISTENER_TYPE_DECIDER_FLOW = 'listener_type_decider_flow'
 DELETE_LOADBALANCER_VRID_SUBFLOW = 'delete-loadbalancer-vrid-subflow'
 HANDLE_VRID_LOADBALANCER_SUBFLOW = 'handle-vrid-loadbalancer-subflow'
+CREATE_MEMBER_SNAT_POOL_SUBFLOW = 'create-member-snat-pool-subflow'
 DELETE_MEMBER_VTHUNDER_INTERNAL_SUBFLOW = 'delete-member-vthunder-internal-subflow'
 DELETE_MEMBER_VRID_SUBFLOW = 'delete-member-vrid-subflow'
 DELETE_MEMBER_VRID_INTERNAL_SUBFLOW = 'delete-member-vrid-internal-subflow'
@@ -113,19 +179,12 @@ SPARE_VTHUNDER_CREATE = 'spare-vthunder-create'
 WRITE_MEMORY_THUNDER_FLOW = 'write-memory-thunder-flow'
 RELOAD_CHECK_THUNDER_FLOW = 'reload-check-thunder-flow'
 LB_TO_VTHUNDER_SUBFLOW = 'lb-to-vthunder-subflow'
-LOADBALANCERS_LIST = 'loadbalancers_list'
-VRID_LIST = 'vrid_list'
-RESOURCE_COUNT = 'resource_count'
+GET_LB_RESOURCE = 'get-lb-resource'
+GET_PROJECT_COUNT = 'get-child-parent-project-count'
+GET_LB_COUNT_SUBNET = 'get-lb-count-by-subnet'
 
-# Member count with specific IP.
-MEMBER_COUNT_IP = 'member_count_ip'
-MEMBER_COUNT_IP_PORT_PROTOCOL = 'member_count_ip_port_protocol'
-POOL_COUNT_IP = 'pool_count_ip'
-WRITE_MEM_SHARED_PART = 'write_mem_shared_part'
-WRITE_MEM_FOR_SHARED_PARTITION = 'write_memory_for_shared_partition'
-WRITE_MEM_FOR_LOCAL_PARTITION = 'write_memory_for_local_partition'
+# ======================
+# Non-Taskflow Constants
+# ======================
 
-MEMBER_LIST = 'member_list'
-SUBNET_LIST = 'subnet_list'
-
-PARTITION_PROJECT_LIST = 'partition_project_list'
+OCTAVIA_OWNER = 'Octavia'

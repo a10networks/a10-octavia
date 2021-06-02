@@ -29,6 +29,7 @@ from keystoneclient.v3 import client as keystone_client
 from octavia.common import keystone
 from stevedore import driver as stevedore_driver
 
+from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
 from a10_octavia.common import exceptions
 
@@ -115,6 +116,12 @@ def convert_to_hardware_thunder_conf(hardware_list):
     return hardware_dict
 
 
+def get_vip_security_group_name(port_id):
+    if port_id:
+        return a10constants.VIP_SEC_GROUP_PREFIX + port_id
+    return None
+
+
 def get_parent_project_list():
     parent_project_list = []
     for project_id in CONF.hardware_thunder.devices:
@@ -138,7 +145,7 @@ def get_axapi_client(vthunder):
     api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
     axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
                                       vthunder.username, vthunder.password,
-                                      timeout=30)
+                                      timeout=CONF.vthunder.default_axapi_timeout)
     return axapi_client
 
 
@@ -219,10 +226,12 @@ def get_patched_ip_address(ip, cidr):
 
 
 def get_vrid_floating_ip_for_project(project_id):
-    device_info = CONF.hardware_thunder.devices.get(project_id)
-    if device_info:
-        vrid_fp = device_info.vrid_floating_ip
-        return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp
+    vrid_fp = None
+    if CONF.hardware_thunder.devices:
+        device_info = CONF.hardware_thunder.devices.get(project_id)
+        if device_info:
+            vrid_fp = device_info.vrid_floating_ip
+    return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp
 
 
 def validate_vcs_device_info(device_network_map):
