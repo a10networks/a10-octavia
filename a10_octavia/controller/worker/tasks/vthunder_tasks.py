@@ -1059,7 +1059,7 @@ class VCSSyncWait(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        if CONF.a10_controller_worker.loadbalancer_topology != "ACTIVE_STANDBY":
+        if not vthunder or CONF.a10_controller_worker.loadbalancer_topology != "ACTIVE_STANDBY":
             return
 
         attempts = CONF.a10_controller_worker.amp_vcs_retries
@@ -1105,34 +1105,37 @@ class GetMasterVThunder(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        attempts = CONF.a10_controller_worker.amp_vcs_retries
-        while attempts >= 0:
-            try:
-                attempts = attempts - 1
-                vcs_summary = {}
-                vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
-                vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
-                for i in range(len(vcs_member_list)):
-                    role = vcs_member_list[i]['state'].split('(')[0]
-                    if role == "vMaster":
-                        vthunder.ip_address = vcs_member_list[i]['ip-list'][0]['ip']
-                        break
-                else:
-                    raise acos_errors.AxapiJsonFormatError(
-                        msg="vMaster not found in vcs-summary")
-                return vthunder
-            except req_exceptions.ReadTimeout as e:
-                # Don't retry for ReadTimout, since acos-client already already have
-                # tries and timeout for axapi request. And it will take very long to
-                # response this error.
-                if attempts < 0:
-                    LOG.exception("Failed to get Master vThunder: %s", str(e))
-                    raise e
-            except Exception as e:
-                if attempts < 0:
-                    LOG.exception("Failed to get Master vThunder: %s", str(e))
-                    raise e
-                time.sleep(CONF.a10_controller_worker.amp_vcs_wait_sec)
+        if vthunder:
+            attempts = CONF.a10_controller_worker.amp_vcs_retries
+            while attempts >= 0:
+                try:
+                    attempts = attempts - 1
+                    vcs_summary = {}
+                    vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
+                    vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
+                    for i in range(len(vcs_member_list)):
+                        role = vcs_member_list[i]['state'].split('(')[0]
+                        if role == "vMaster":
+                            vthunder.ip_address = vcs_member_list[i]['ip-list'][0]['ip']
+                            break
+                    else:
+                        raise acos_errors.AxapiJsonFormatError(
+                            msg="vMaster not found in vcs-summary")
+                    return vthunder
+                except req_exceptions.ReadTimeout as e:
+                    # Don't retry for ReadTimout, since acos-client already already have
+                    # tries and timeout for axapi request. And it will take very long to
+                    # response this error.
+                    if attempts < 0:
+                        LOG.exception("Failed to get Master vThunder: %s", str(e))
+                        raise e
+                except Exception as e:
+                    if attempts < 0:
+                        LOG.exception("Failed to get Master vThunder: %s", str(e))
+                        raise e
+                    time.sleep(CONF.a10_controller_worker.amp_vcs_wait_sec)
+        else:
+            return None
 
 
 class VthunderInstanceBusy(VThunderBaseTask):
