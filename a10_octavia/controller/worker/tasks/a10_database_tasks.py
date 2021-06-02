@@ -140,23 +140,7 @@ class CheckExistingProjectToThunderMappedEntries(BaseDatabaseTask):
                     "Hierarchical multitenancy is disabled, use_parent_partition "
                     "configuration will not be applied for loadbalancer: %s",
                     loadbalancer.id)
-        vthunder_ids = self.vthunder_repo.get_vthunders_by_project_id(
-            db_apis.get_session(),
-            project_id=loadbalancer.project_id)
 
-        for vthunder_id in vthunder_ids:
-            vthunder = self.vthunder_repo.get(
-                db_apis.get_session(),
-                id=vthunder_id)
-            if vthunder is None:
-                return
-            existing_ip_addr_partition = '{}:{}'.format(
-                vthunder.ip_address, vthunder.partition_name)
-            config_ip_addr_partition = '{}:{}'.format(
-                vthunder_config.ip_address, vthunder_config.partition_name)
-            if existing_ip_addr_partition != config_ip_addr_partition:
-                raise exceptions.ThunderInUseByExistingProjectError(
-                    config_ip_addr_partition, existing_ip_addr_partition, loadbalancer.project_id)
         return vthunder_config
 
 
@@ -166,7 +150,9 @@ class CheckExistingThunderToProjectMappedEntries(BaseDatabaseTask):
         raise ConfigValueError
     """
 
-    def execute(self, loadbalancer, vthunder_config):
+    def execute(self, loadbalancer, vthunder_config, use_device_flavor=False):
+        if use_device_flavor:
+            return
         hierarchical_mt = vthunder_config.hierarchical_multitenancy
         if hierarchical_mt == 'enable' and CONF.a10_global.use_parent_partition:
             return
@@ -225,7 +211,7 @@ class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
             db_apis.get_session(), loadbalancer_id)
 
         # VCS vMaster/vBlade may switched
-        if vthunder is not None:
+        if vthunder is not None and backup_vthunder:
             if backup_vthunder.ip_address == vthunder.ip_address:
                 backup_vthunder = self.vthunder_repo.get_vthunder_from_lb(
                     db_apis.get_session(), loadbalancer_id)

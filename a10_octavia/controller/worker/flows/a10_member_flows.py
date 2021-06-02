@@ -532,7 +532,9 @@ class MemberFlows(object):
                 requires=[
                     a10constants.VTHUNDER,
                     a10constants.VRID_LIST,
-                    constants.SUBNET],
+                    constants.SUBNET,
+                    a10constants.VTHUNDER_CONFIG,
+                    a10constants.USE_DEVICE_FLAVOR],
                 rebind={
                     a10constants.LB_RESOURCE: constants.MEMBER},
                 provides=a10constants.VRID_LIST))

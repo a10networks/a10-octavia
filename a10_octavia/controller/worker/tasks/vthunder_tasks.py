@@ -459,8 +459,13 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        if vthunder and vthunder.project_id in CONF.hardware_thunder.devices:
-            vthunder_conf = CONF.hardware_thunder.devices[vthunder.project_id]
+        if not vthunder:
+            return
+        device_name = ''.join([a10constants.DEVICE_KEY_PREFIX,
+                               vthunder.device_name]) if vthunder.device_name else ''
+        vthunder_conf = (CONF.hardware_thunder.devices.get(device_name) or
+                         CONF.hardware_thunder.devices.get(vthunder.project_id))
+        if vthunder_conf:
             device_network_map = vthunder_conf.device_network_map
 
             # Case when device network map is not provided/length is 0
@@ -1143,3 +1148,25 @@ class VthunderInstanceBusy(VThunderBaseTask):
     def execute(self, compute_busy=False):
         if compute_busy:
             raise Exception('vThunder instance is busy now, try again later.')
+
+
+class GetVthunderConfByFlavor(VThunderBaseTask):
+
+    def execute(self, loadbalancer, vthunder_config, device_config_dict, flavor_data=None):
+        if flavor_data is None and vthunder_config is None:
+            raise exceptions.ProjectDeviceNotFound()
+
+        if flavor_data is not None:
+            device_flavor = flavor_data.get('device_name', None)
+            if device_flavor is not None:
+                dev_key = a10constants.DEVICE_KEY_PREFIX + device_flavor
+                if dev_key in device_config_dict:
+                    vthunder_config = device_config_dict[dev_key]
+                    vthunder_config.project_id = loadbalancer.project_id
+                    if vthunder_config.hierarchical_multitenancy == "enable":
+                        vthunder_config.partition_name = loadbalancer.project_id[0:14]
+                    return vthunder_config, True
+                else:
+                    raise exceptions.FlavorDeviceNotFound(device_flavor)
+
+        return vthunder_config, False
