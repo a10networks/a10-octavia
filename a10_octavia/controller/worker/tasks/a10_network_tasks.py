@@ -368,7 +368,7 @@ class PlugVIP(BaseNetworkTask):
                     amphora.vrrp_port_id = amp_data.vrrp_port_id
                     amphora.ha_port_id = amp_data.ha_port_id
 
-            self.network_driver.unplug_vip(loadbalancer, loadbalancer.vip)
+            self.network_driver.unplug_vip_revert(loadbalancer, loadbalancer.vip)
         except Exception as e:
             LOG.error("Failed to unplug VIP.  Resources may still "
                       "be in use from vip: %(vip)s due to error: %(except)s",
@@ -465,7 +465,7 @@ class AllocateVIP(BaseNetworkTask):
         vip = result
         LOG.warning("Deallocating vip %s", vip.ip_address)
         try:
-            self.network_driver.deallocate_vip(loadbalancer, lb_count_subnet)
+            self.network_driver.deallocate_vip(vip, lb_count_subnet)
         except Exception as e:
             LOG.error("Failed to deallocate VIP.  Resources may still "
                       "be in use from vip: %(vip)s due to error: %(except)s",

@@ -399,7 +399,22 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
                 self._remove_allowed_address_pair_from_port(
                     interface.port_id, vrid.vrid_floating_ip)
 
-    def unplug_aap_port(self, vip, amphora, subnet):
+    def unplug_vip_revert(self, load_balancer, vip):
+        "This method is called by revert flow of PlugVip"
+
+        try:
+            subnet = self.get_subnet(vip.subnet_id)
+        except base.SubnetNotFound:
+            msg = ("Can't unplug vip because vip subnet {0} was not "
+                   "found").format(vip.subnet_id)
+            LOG.exception(msg)
+            raise base.PluggedVIPNotFound(msg)
+        for amphora in filter(
+                lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                load_balancer.amphorae):
+            self.unplug_aap_port_revert(vip, amphora, subnet)
+
+    def unplug_aap_port_revert(self, vip, amphora, subnet):
         interface = self._get_plugged_interface(
             amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
         if not interface:
