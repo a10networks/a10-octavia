@@ -997,3 +997,24 @@ class CheckExistingVthunderTopology(BaseDatabaseTask):
                 msg = ('vthunder has other loadbalancer with {0} ' +
                        'topology').format(vthunder.topology)
                 raise octavia_exceptions.InvalidTopology(topology=msg)
+
+
+class ValidateComputeForProject(BaseDatabaseTask):
+    """Validate compute_id got for the project"""
+
+    def execute(self, loadbalancer, role):
+        vthunder_ids = self.vthunder_repo.get_vthunders_by_project_id_and_role(
+            db_apis.get_session(), loadbalancer.project_id, role)
+        for vthunder_id in vthunder_ids:
+            vthunder = self.vthunder_repo.get(
+                db_apis.get_session(),
+                id=vthunder_id)
+            lb = self.loadbalancer_repo.get_lb_excluding_deleted(
+                db_apis.get_session(), vthunder.loadbalancer_id)
+            if lb:
+                amphora = self.amphora_repo.get(db_apis.get_session(), load_balancer_id=lb.id)
+                if amphora.compute_id == vthunder.compute_id:
+                    LOG.debug("Successfully validated comput_id %s for the project %s",
+                              vthunder.compute_id, vthunder.project_id)
+                    break
+        return vthunder.compute_id

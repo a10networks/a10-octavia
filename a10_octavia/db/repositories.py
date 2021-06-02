@@ -410,6 +410,15 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
             lb_list.append(data.to_data_model())
         return lb_list
 
+    def get_lb_excluding_deleted(self, session, lb_id):
+        query = session.query(self.model_class).filter(
+            and_(self.model_class.id == lb_id,
+                 self.model_class.provisioning_status != "DELETED"))
+        model = query.first()
+        if model is None:
+            return None
+        return model.to_data_model()
+
 
 class VRIDRepository(BaseRepository):
     model_class = models.VRID
