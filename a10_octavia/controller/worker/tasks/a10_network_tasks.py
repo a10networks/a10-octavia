@@ -932,12 +932,12 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
                         vrids.append(vrid)
                         subnet = self.network_driver.get_subnet(vrid.subnet_id)
                         self.network_driver.deallocate_vrid_fip(vrid, subnet, amphorae)
-                    else:
+                    elif vrid.vrid_floating_ip in existing_fips:
                         vrid_floating_ip_list.append(vrid.vrid_floating_ip)
                 if not vthunder.partition_name or vthunder.partition_name == 'shared':
                     self.axapi_client.vrrpa.update(
                         vrid.vrid, floating_ips=vrid_floating_ip_list)
-                elif vrid.vrid_floating_ip in existing_fips:
+                else:
                     self.axapi_client.vrrpa.update(
                         vrid.vrid, floating_ips=vrid_floating_ip_list, is_partition=True)
                 LOG.info("VRID floating IP: %s deleted", vrid_floating_ip_list)
