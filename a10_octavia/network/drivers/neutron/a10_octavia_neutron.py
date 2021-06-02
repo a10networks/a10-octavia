@@ -188,6 +188,8 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
         ports = []
         sec_grp = None
         vip_port_id = loadbalancer.vip.port_id
+        fixed_subnets = CONF.a10_controller_worker.amp_boot_network_list[:]
+        subnet = self.get_subnet(loadbalancer.vip.subnet_id)
         if self.sec_grp_enabled:
             sec_grp = self._get_lb_security_group(loadbalancer.id)
             if sec_grp:
@@ -199,17 +201,18 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
                 ports.extend(self._get_instance_ports_by_subnet(
                     amphora.compute_id, loadbalancer.vip.subnet_id))
 
-        for port in ports:
-            port = port.get('port', port)
-            if lb_count_subnet > 1:  # vNIC port is in use by other lbs. Only delete VIP port.
-                if sec_grp:
-                    self._remove_security_group(port, sec_grp['id'])
-                if port['id'] == vip_port_id:
+        if subnet.network_id not in fixed_subnets:
+            for port in ports:
+                port = port.get('port', port)
+                if lb_count_subnet > 1:  # vNIC port is in use by other lbs. Only delete VIP port.
+                    if sec_grp:
+                        self._remove_security_group(port, sec_grp['id'])
+                    if port['id'] == vip_port_id:
+                        self._cleanup_port(vip_port_id, port)
+                elif lb_count_subnet <= 1:  # This is the only lb using vNIC ports
                     self._cleanup_port(vip_port_id, port)
-            elif lb_count_subnet <= 1:  # This is the only lb using vNIC ports
-                self._cleanup_port(vip_port_id, port)
 
-        if sec_grp:
+        if subnet.network_id not in fixed_subnets and sec_grp:
             self._delete_vip_security_group(sec_grp['id'])
 
     def get_plugged_parent_port(self, vip):
