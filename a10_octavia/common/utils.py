@@ -301,3 +301,13 @@ def validate_interface_vlan_map(hardware_device):
         device_network_map.append(device_map)
     validate_vcs_device_info(device_network_map)
     return device_network_map
+
+
+def get_natpool_addr_list(nat_flavor):
+    addr_list = []
+    start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
+    end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
+    while start <= end:
+        addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
+        start += 1
+    return addr_list

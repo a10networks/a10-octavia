@@ -19,8 +19,6 @@ from oslo_log import log as logging
 from oslo_utils import uuidutils
 from requests import exceptions as req_exceptions
 import six
-import socket
-import struct
 from taskflow import task
 from taskflow.types import failure
 
@@ -940,12 +938,7 @@ class ReserveSubnetAddressForMember(BaseNetworkTask):
 
         if nat_pool is None:
             try:
-                addr_list = []
-                start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
-                end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
-                while start <= end:
-                    addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
-                    start += 1
+                addr_list = a10_utils.get_natpool_addr_list(nat_flavor)
                 if not CONF.vthunder.slb_no_snat_support:
                     amphorae = a10_task_utils.attribute_search(member, 'amphorae')
                 else:
@@ -977,12 +970,7 @@ class ReleaseSubnetAddressForMember(BaseNetworkTask):
             try:
                 self.network_driver.delete_port(nat_pool.port_id)
                 if not CONF.vthunder.slb_no_snat_support:
-                    addr_list = []
-                    start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
-                    end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
-                    while start <= end:
-                        addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
-                        start += 1
+                    addr_list = a10_utils.get_natpool_addr_list(nat_flavor)
                     amphorae = a10_task_utils.attribute_search(member, 'amphorae')
                     if amphorae is not None:
                         self.network_driver.release_subnet_addresses(
