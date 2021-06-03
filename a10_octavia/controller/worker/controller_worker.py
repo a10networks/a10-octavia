@@ -358,7 +358,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                  constants.BUILD_TYPE_PRIORITY:
                  constants.LB_CREATE_NORMAL_PRIORITY,
                  constants.FLAVOR: flavor,
-                 constants.AMPS_DATA: []}
+                 constants.AMPS_DATA: [],
+                 a10constants.VTHUNDER_CONFIG: None,
+                 a10constants.USE_DEVICE_FLAVOR: None}
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
@@ -366,10 +368,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             constants.TOPOLOGY: topology
         }
 
-        vthunder_conf = CONF.hardware_thunder.devices.get(lb.project_id, None)
-        device_dict = CONF.hardware_thunder.devices
-
         if self._is_rack_flow(lb.project_id, flavor=flavor):
+            vthunder_conf = CONF.hardware_thunder.devices.get(lb.project_id, None)
+            device_dict = CONF.hardware_thunder.devices
             create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
                 vthunder_conf=vthunder_conf, device_dict=device_dict,
                 topology=topology, listeners=lb.listeners)
@@ -485,11 +486,10 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         member_parent_proj = utils.get_parent_project(
             member.project_id)
 
-        vthunder_conf = CONF.hardware_thunder.devices.get(load_balancer.project_id, None)
-
         if (member.project_id in parent_project_list or
                 (member_parent_proj and member_parent_proj in parent_project_list)
                 or self._is_rack_flow(member.project_id, loadbalancer=load_balancer)):
+            vthunder_conf = CONF.hardware_thunder.devices.get(load_balancer.project_id, None)
             create_member_tf = self._taskflow_load(
                 self._member_flows.get_rack_vthunder_create_member_flow(),
                 store={
@@ -510,7 +510,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                           constants.LOADBALANCER:
                                                           load_balancer,
                                                           a10constants.COMPUTE_BUSY: busy,
-                                                          constants.POOL: pool})
+                                                          constants.POOL: pool,
+                                                          a10constants.VTHUNDER_CONFIG: None,
+                                                          a10constants.USE_DEVICE_FLAVOR: None})
             self._register_flow_notify_handler(create_member_tf, member.project_id, True, busy)
 
         with tf_logging.DynamicLoggingListener(create_member_tf,
