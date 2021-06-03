@@ -50,10 +50,11 @@ def axapi_client_decorator(func):
             self.axapi_client = None
         result = func(self, *args, **kwargs)
 
-        try:
-            self.axapi_client.session.close()
-        except Exception as e:
-            LOG.debug("Failed to close the vThunder session: %s", str(e))
+        if vthunder:
+            try:
+                self.axapi_client.session.close()
+            except Exception as e:
+                LOG.debug("Failed to close the vThunder session: %s", str(e))
 
         return result
 

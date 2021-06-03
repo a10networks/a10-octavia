@@ -39,6 +39,25 @@ RACK_DEVICE = {
     "interface_vlan_map": {"1": {"11": {"use_dhcp": True}, "12": {"use_dhcp": True}}}
 }
 
+RACK_DEVICE_LIST = {
+    "project-rack-vthunder": {
+        "project_id": "project-rack-vthunder",
+        "ip_address": "10.0.0.1",
+        "device_name": "rack_vthunder",
+        "username": "abc",
+        "password": "abc",
+        "interface_vlan_map": {"1": {"11": {"use_dhcp": True}, "12": {"use_dhcp": True}}}
+    },
+    "[dev]rack_vthunder": {
+        "project_id": "project-rack-vthunder",
+        "ip_address": "10.0.0.1",
+        "device_name": "rack_vthunder",
+        "username": "abc",
+        "password": "abc",
+        "interface_vlan_map": {"1": {"11": {"use_dhcp": True}, "12": {"use_dhcp": True}}}
+    }
+}
+
 
 @mock.patch("octavia.controller.worker.tasks.database_tasks.UpdateAmphoraVIPData")
 class TestLoadBalancerFlows(base.TestCase):
@@ -67,7 +86,7 @@ class TestLoadBalancerFlows(base.TestCase):
                                 group=a10constants.A10_GLOBAL_CONF_SECTION)
         self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, network_type='vlan')
         target = self.flows.get_create_rack_vthunder_load_balancer_flow(
-            RACK_DEVICE, constants.TOPOLOGY_SINGLE)
+            RACK_DEVICE, RACK_DEVICE_LIST, constants.TOPOLOGY_SINGLE)
         self.assertIsInstance(target, flow.Flow)
 
     def test_delete_lb_rack_vthunder_vlan_flow(self, mock_net_driver):
