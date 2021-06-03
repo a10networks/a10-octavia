@@ -218,9 +218,6 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             requires=a10constants.VTHUNDER,
             inject={"status": constants.PENDING_DELETE}))
-        delete_LB_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
-            requires=a10constants.VTHUNDER,
-            provides=a10constants.VTHUNDER))
         delete_LB_flow.add(compute_tasks.NovaServerGroupDelete(
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
