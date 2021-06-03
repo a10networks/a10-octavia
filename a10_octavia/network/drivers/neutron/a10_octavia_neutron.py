@@ -401,3 +401,49 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
             if interface is not None:
                 self._remove_allowed_address_pair_from_port(
                     interface.port_id, vrid.vrid_floating_ip)
+
+    def unplug_vip_revert(self, load_balancer, vip):
+        "This method is called by revert flow of PlugVip"
+
+        try:
+            subnet = self.get_subnet(vip.subnet_id)
+        except base.SubnetNotFound:
+            msg = ("Can't unplug vip because vip subnet {0} was not "
+                   "found").format(vip.subnet_id)
+            LOG.exception(msg)
+            raise base.PluggedVIPNotFound(msg)
+        for amphora in filter(
+                lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                load_balancer.amphorae):
+            self.unplug_aap_port_revert(vip, amphora, subnet)
+
+    def unplug_aap_port_revert(self, vip, amphora, subnet):
+        interface = self._get_plugged_interface(
+            amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+        if not interface:
+            # Thought about raising PluggedVIPNotFound exception but
+            # then that wouldn't evaluate all amphorae, so just continue
+            LOG.debug('Cannot get amphora %s interface, skipped',
+                      amphora.compute_id)
+            return
+        try:
+            self._remove_allowed_address_pair_from_port(interface.port_id, vip.ip_address)
+        except Exception:
+            message = _('Error unplugging VIP. Could not clear '
+                        'allowed address pairs from port '
+                        '{port_id}.').format(port_id=vip.port_id)
+            LOG.exception(message)
+            raise base.UnplugVIPException(message)
+
+        # Delete the VRRP port if we created it
+        try:
+            port = self.get_port(amphora.vrrp_port_id)
+            if port.name.startswith('octavia-lb-vrrp-'):
+                self.neutron_client.delete_port(amphora.vrrp_port_id)
+        except (neutron_client_exceptions.NotFound,
+                neutron_client_exceptions.PortNotFoundClient):
+            pass
+        except Exception as e:
+            LOG.error('Failed to delete port.  Resources may still be in '
+                      'use for port: %(port)s due to error: %(except)s',
+                      {constants.PORT: amphora.vrrp_port_id, 'except': str(e)})
