@@ -856,12 +856,28 @@ class DeleteVRIDPort(BaseNetworkTask):
                 lb_count_subnet, member_count, lb_resource):
         vrid = None
         vrid_floating_ip_list = []
+        existing_fips = []
         resource_count = lb_count_subnet + member_count
         if resource_count <= 1 and vthunder:
             for vr in vrid_list:
+                try:
+                    vrid_summary = self.axapi_client.vrrpa.get(vr.vrid)
+                except Exception as e:
+                    vrid_summary = {}
+                    LOG.exception("Failed to get existing VRID summary due to: %s", str(e))
+
+                if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
+                    vrid_fip = vrid_summary['vrid']['floating-ip']
+                    if vthunder.partition_name != 'shared':
+                        for i in range(len(vrid_fip['ip-address-part-cfg'])):
+                            existing_fips.append(
+                                vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
+                    else:
+                        for i in range(len(vrid_fip['ip-address-cfg'])):
+                            existing_fips.append(vrid_fip['ip-address-cfg'][i]['ip-address'])
                 if vr.subnet_id == subnet.id:
                     vrid = vr
-                else:
+                elif vr.vrid_floating_ip in existing_fips:
                     vrid_floating_ip_list.append(vr.vrid_floating_ip)
             if vrid:
                 try:
@@ -892,14 +908,31 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
                 amphorae = a10_task_utils.attribute_search(lb_resource, 'amphorae')
                 vrids = []
                 vrid_floating_ip_list = []
+                existing_fips = []
                 for vrid in vrid_list:
+                    try:
+                        vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
+                    except Exception as e:
+                        vrid_summary = {}
+                        LOG.exception("Failed to get existing VRID summary due to: %s", str(e))
+
+                    if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
+                        vrid_fip = vrid_summary['vrid']['floating-ip']
+                        if vthunder.partition_name != 'shared':
+                            for i in range(len(vrid_fip['ip-address-part-cfg'])):
+                                existing_fips.append(
+                                    vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
+                        else:
+                            for i in range(len(vrid_fip['ip-address-cfg'])):
+                                existing_fips.append(vrid_fip['ip-address-cfg'][i]['ip-address'])
+
                     subnet_matched = list(filter(lambda x: x == vrid.subnet_id,
                                           subnet_list))
                     if subnet_matched:
                         vrids.append(vrid)
                         subnet = self.network_driver.get_subnet(vrid.subnet_id)
                         self.network_driver.deallocate_vrid_fip(vrid, subnet, amphorae)
-                    else:
+                    elif vrid.vrid_floating_ip in existing_fips:
                         vrid_floating_ip_list.append(vrid.vrid_floating_ip)
                 if not vthunder.partition_name or vthunder.partition_name == 'shared':
                     self.axapi_client.vrrpa.update(
