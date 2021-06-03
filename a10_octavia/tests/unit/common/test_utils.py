@@ -141,6 +141,8 @@ HARDWARE_VLAN_INFO = {
     }
 }
 
+NAT_FLAVOR = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.3"}
+
 
 class FakeProject(object):
     def __init__(self, parent_id='default'):
@@ -448,3 +450,7 @@ class TestUtils(base.BaseTaskTestCase):
         device_network_map = [device1_network_map, device2_network_map]
         self.assertRaises(exceptions.MissingMgmtIpConfigError,
                           utils.validate_vcs_device_info, device_network_map)
+
+    def test_get_netpool_addr_list(self):
+        self.assertEqual(utils.get_natpool_addr_list(NAT_FLAVOR),
+                         ['1.1.1.1', '1.1.1.2', '1.1.1.3'])

@@ -319,6 +319,16 @@ def validate_interface_vlan_map(hardware_device):
     return device_network_map
 
 
+def get_natpool_addr_list(nat_flavor):
+    addr_list = []
+    start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
+    end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
+    while start <= end:
+        addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
+        start += 1
+    return addr_list
+
+
 def get_loadbalancer_flavor(loadbalancer):
     flavor_repo = repo.FlavorRepository()
     flavor_profile_repo = repo.FlavorProfileRepository()
