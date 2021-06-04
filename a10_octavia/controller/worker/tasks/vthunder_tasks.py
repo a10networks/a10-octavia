@@ -36,11 +36,11 @@ from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
 from a10_octavia.common import openstack_mappings
 from a10_octavia.common import utils as a10_utils
-from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 from a10_octavia.controller.worker.tasks.decorators import activate_partition
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks.decorators import device_context_switch_decorator
+from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 from a10_octavia.db import repositories as a10_repo
 
 
@@ -78,12 +78,12 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
                         attempts = attempts - 1
                         axapi_client.system.information()
                         break
-                    except a10_task_utils.thunder_busy_exceptions() as e:
+                    except a10_task_utils.thunder_busy_exceptions():
                         # acos-client already wait default_axapi_timeout for these exceptions.
                         axapi_timeout = CONF.vthunder.default_axapi_timeout
                         attempt_wait = CONF.a10_controller_worker.amp_active_wait_sec
                         if axapi_timeout > attempt_wait:
-                            attempts = attempts - (axapi_timeout/attempt_wait - 1)
+                            attempts = attempts - (axapi_timeout / attempt_wait - 1)
                         LOG.debug("VThunder connection retry cnt:" + str(attempts))
                     except (acos_errors.ACOSException, http_client.BadStatusLine):
                         time.sleep(CONF.a10_controller_worker.amp_active_wait_sec)
@@ -344,7 +344,7 @@ class ConfigureaVCSBackup(VThunderBaseTask):
                     axapi_timeout = CONF.vthunder.default_axapi_timeout
                     attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
                     if axapi_timeout > attempt_wait:
-                        attempts = attempts - (axapi_timeout/attempt_wait - 1)
+                        attempts = attempts - (axapi_timeout / attempt_wait - 1)
                     if attempts < 0:
                         raise e
                 except Exception as e:
@@ -1091,7 +1091,7 @@ class VCSSyncWait(VThunderBaseTask):
                 axapi_timeout = CONF.vthunder.default_axapi_timeout
                 attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
                 if axapi_timeout > attempt_wait:
-                    attempts = attempts - (axapi_timeout/attempt_wait - 1)
+                    attempts = attempts - (axapi_timeout / attempt_wait - 1)
                 if attempts < 0:
                     LOG.exception("Failed to connect VCS device: %s", str(e))
                     raise e
@@ -1128,7 +1128,7 @@ class GetMasterVThunder(VThunderBaseTask):
                 axapi_timeout = CONF.vthunder.default_axapi_timeout
                 attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
                 if axapi_timeout > attempt_wait:
-                    attempts = attempts - (axapi_timeout/attempt_wait - 1)
+                    attempts = attempts - (axapi_timeout / attempt_wait - 1)
                 if attempts < 0:
                     LOG.exception("Failed to get Master vThunder: %s", str(e))
                     raise e
