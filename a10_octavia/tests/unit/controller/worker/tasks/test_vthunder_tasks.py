@@ -163,6 +163,22 @@ INTERFACES = {
     }
 }
 
+FLAVOR_DEV1 = a10_data_models.HardwareThunder(project_id="project-1", device_name="rack_thunder_1",
+                                              undercloud=True, username="abc", password="abc",
+                                              ip_address="10.10.10.10", partition_name="shared",
+                                              device_name_as_key=True)
+FLAVOR_DEV2 = a10_data_models.HardwareThunder(project_id="project-2", device_name="rack_thunder_2",
+                                              undercloud=True, username="abc", password="abc",
+                                              ip_address="10.10.10.10", partition_name="shared")
+FLAVOR_DEV3 = a10_data_models.HardwareThunder(project_id="project-1", device_name="rack_thunder_1",
+                                              undercloud=True, username="abc", password="abc",
+                                              ip_address="10.10.10.10", partition_name="shared")
+DEV_CONF_DICT = {'[dev]rack_thunder_1': FLAVOR_DEV1,
+                 'project-1': FLAVOR_DEV3,
+                 '[dev]rack_thunder_2': FLAVOR_DEV2,
+                 'project-2': FLAVOR_DEV2}
+DEV_FLAVOR = {'device_name': 'rack_thunder_1'}
+
 VIP = o_data_models.Vip(ip_address="1.1.1.1")
 AMPHORAE = [o_data_models.Amphora(id=a10constants.MOCK_AMPHORA_ID)]
 LB = o_data_models.LoadBalancer(
@@ -805,3 +821,23 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.execute(added_ports, mock_LB, mock_thunder)
         self.client_mock.system.action.write_memory.assert_not_called()
         self.client_mock.system.action.reload_reboot_for_interface_detachment.assert_not_called()
+
+    def test_GetVthunderConfByFlavor_with_flavor(self):
+        conf = {}
+        use_dev_flavor = False
+        mock_LB = copy.deepcopy(LB)
+        mock_task = task.GetVthunderConfByFlavor()
+        mock_task.axapi_client = self.client_mock
+        conf, use_dev_flavor = mock_task.execute(mock_LB, FLAVOR_DEV2, DEV_CONF_DICT, DEV_FLAVOR)
+        self.assertEqual(use_dev_flavor, True)
+        self.assertEqual(conf, FLAVOR_DEV1)
+
+    def test_GetVthunderConfByFlavor_without_flavor(self):
+        conf = {}
+        use_dev_flavor = False
+        mock_LB = copy.deepcopy(LB)
+        mock_task = task.GetVthunderConfByFlavor()
+        mock_task.axapi_client = self.client_mock
+        conf, use_dev_flavor = mock_task.execute(mock_LB, FLAVOR_DEV2, DEV_CONF_DICT, None)
+        self.assertEqual(use_dev_flavor, False)
+        self.assertEqual(conf, FLAVOR_DEV2)
