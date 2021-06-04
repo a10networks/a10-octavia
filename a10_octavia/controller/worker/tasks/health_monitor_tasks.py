@@ -31,6 +31,15 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
+def _get_hm_name(axapi_client, health_mon):
+    try:
+        hm = axapi_client.slb.hm.get(health_mon.id)
+    except (acos_errors.NotFound):
+        # Backwards compatability with a10-neutron-lbaas
+        hm = axapi_client.slb.hm.get(health_mon.id[0:28])
+    return hm['monitor']['name']
+
+
 class CreateAndAssociateHealthMonitor(task.Task):
     """Task to create a healthmonitor and associate it with provided pool."""
 
@@ -122,8 +131,11 @@ class DeleteHealthMonitor(task.Task):
             raise e
 
         try:
-            self.axapi_client.slb.hm.delete(health_mon.id)
+            hm_name = _get_hm_name(self.axapi_client, health_mon)
+            self.axapi_client.slb.hm.delete(hm_name)
             LOG.debug("Successfully deleted health monitor: %s", health_mon.id)
+        except acos_errors.NotFound:
+            LOG.debug("Health monitor %s was already deleted. Skipping...", health_mon.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to delete health monitor: %s", health_mon.id)
             raise e
@@ -135,7 +147,7 @@ class UpdateHealthMonitor(task.Task):
     @axapi_client_decorator
     def execute(self, listeners, health_mon, vthunder, update_dict, flavor=None):
         """ Execute update health monitor """
-        # TODO(hthompson6) Length of name of healthmonitor for older vThunder devices
+
         health_mon.update(update_dict)
         method = None
         url = None
@@ -158,9 +170,10 @@ class UpdateHealthMonitor(task.Task):
                 args.update({'monitor': flavors})
 
         try:
+            hm_name = _get_hm_name(self.axapi_client, health_mon)
             post_data = CONF.health_monitor.post_data
             self.axapi_client.slb.hm.update(
-                health_mon.id,
+                hm_name,
                 openstack_mappings.hm_type(self.axapi_client, health_mon.type),
                 health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
                 method=method, url=url, expect_code=expect_code, post_data=post_data,
