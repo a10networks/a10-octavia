@@ -52,33 +52,33 @@ LOG = logging.getLogger(__name__)
 
 
 def ctx_cnt_dec(ctx_lock, ctx_map, key, is_reload_thread, flags=None):
-        ctx_lock.acquire()
-        LOG.debug('--------------------------ctx_cnt_dec-----------------------------')
-        try:
-            ctx = ctx_map.get(key)
-            if ctx is None:
-                raise
+    ctx_lock.acquire()
+    LOG.debug('--------------------------ctx_cnt_dec-----------------------------')
+    try:
+        ctx = ctx_map.get(key)
+        if ctx is None:
+            raise
 
-            normal_thrd_num, reload_thrd_num = ctx
-            LOG.debug('vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
-                      key, normal_thrd_num, reload_thrd_num)
+        normal_thrd_num, reload_thrd_num = ctx
+        LOG.debug('vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
+                  key, normal_thrd_num, reload_thrd_num)
 
-            if is_reload_thread:
-                if reload_thrd_num > 0:
-                    reload_thrd_num = reload_thrd_num - 1
-            else:
-                if normal_thrd_num > 0:
-                    normal_thrd_num = normal_thrd_num - 1
-            if flags is not None:
-                flags[0] = True
-            LOG.debug('vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
-                      key, normal_thrd_num, reload_thrd_num)
-            ctx_map[key] = (normal_thrd_num, reload_thrd_num)
-        except Exception:
-            # unexpected error should not happen, reset counters here.
-            LOG.error("Unable to find vThunder instance (%s) context, reset counters.", key)
-            ctx_map[key] = (0, 0)
-        ctx_lock.release()
+        if is_reload_thread:
+            if reload_thrd_num > 0:
+                reload_thrd_num = reload_thrd_num - 1
+        else:
+            if normal_thrd_num > 0:
+                normal_thrd_num = normal_thrd_num - 1
+        if flags is not None:
+            flags[0] = True
+        LOG.debug('vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
+                  key, normal_thrd_num, reload_thrd_num)
+        ctx_map[key] = (normal_thrd_num, reload_thrd_num)
+    except Exception:
+        # unexpected error should not happen, reset counters here.
+        LOG.error("Unable to find vThunder instance (%s) context, reset counters.", key)
+        ctx_map[key] = (0, 0)
+    ctx_lock.release()
 
 
 def flow_notification_handler(state, details, **kwargs):
