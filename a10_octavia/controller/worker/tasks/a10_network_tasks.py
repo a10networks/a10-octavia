@@ -13,6 +13,7 @@
 # under the License.
 #
 import acos_client.errors as acos_errors
+import copy
 from neutronclient.common import exceptions as neutron_exceptions
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -693,7 +694,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                     vrid_port_id=None,
                     vrid_floating_ip=None,
                     subnet_id=subnet.id))
-        return vrid_list
 
     def _remove_device_vrid_fip(self, partition_name, vrid_value):
         try:
@@ -756,9 +756,9 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         :return: return the update list of VRID object, If empty the need to remove all VRID
         objects from DB else need update existing ones.
         """
-
         vrid_value = CONF.a10_global.vrid
         prev_vrid_value = vrid_list[0].vrid if vrid_list else None
+        updated_vrid_list = copy.copy(vrid_list)
         if use_device_flavor and vthunder_config.vrid_floating_ip:
             conf_floating_ip = vthunder_config.vrid_floating_ip
         else:
@@ -766,7 +766,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 lb_resource.project_id)
 
         if not conf_floating_ip:
-            for vrid in vrid_list:
+            for vrid in updated_vrid_list:
                 self._delete_vrid_port(vrid.vrid_port_id)
             vrid_value = prev_vrid_value if prev_vrid_value else vrid_value
             self._remove_device_vrid_fip(vthunder.partition_name, vrid_value)
@@ -775,8 +775,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         vrid_floating_ips = []
         update_vrid_flag = False
         existing_fips = []
-        vrid_list = self._add_vrid_to_list(vrid_list, subnet, lb_resource.project_id)
-        for vrid in vrid_list:
+        self._add_vrid_to_list(updated_vrid_list, subnet, lb_resource.project_id)
+        for vrid in updated_vrid_list:
             try:
                 vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
             except Exception as e:
@@ -816,7 +816,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         elif update_vrid_flag:
             self._update_device_vrid_fip(vthunder.partition_name, vrid_floating_ips, vrid_value)
 
-        return vrid_list
+        return updated_vrid_list
 
     @axapi_client_decorator
     def revert(self, result, vthunder, lb_resource, vrid_list, subnet, *args, **kwargs):
@@ -835,11 +835,11 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
         vrid_floating_ip_list = [vrid.vrid_floating_ip for vrid in vrid_list]
 
-        if vrid_floating_ip_list:
+        if isinstance(vrid_floating_ip_list, list):
             vrid_value = CONF.a10_global.vrid
             try:
                 self._update_device_vrid_fip(
-                    vthunder, vrid_floating_ip_list, vrid_value)
+                    vthunder.partition_name, vrid_floating_ip_list, vrid_value)
             except Exception as e:
                 LOG.error("Failed to update VRID floating IPs %s due to %s",
                           vrid_floating_ip_list, str(e))
