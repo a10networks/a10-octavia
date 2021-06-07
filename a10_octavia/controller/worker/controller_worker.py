@@ -50,9 +50,10 @@ RETRY_MAX = 5
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
+
 def ctx_cnt_dec(ctx_lock, ctx_map, key, is_reload_thread, flags=None):
-        LOG.debug('--------------------------ctx_cnt_dec-----------------------------')
         ctx_lock.acquire()
+        LOG.debug('--------------------------ctx_cnt_dec-----------------------------')
         try:
             ctx = ctx_map.get(key)
             if ctx is None:
@@ -77,7 +78,6 @@ def ctx_cnt_dec(ctx_lock, ctx_map, key, is_reload_thread, flags=None):
             # unexpected error should not happen, reset counters here.
             LOG.error("Unable to find vThunder instance (%s) context, reset counters.", key)
             ctx_map[key] = (0, 0)
-            
         ctx_lock.release()
 
 
