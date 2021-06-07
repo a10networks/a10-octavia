@@ -274,7 +274,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         if (listener.project_id in parent_project_list or
                 (listener_parent_proj and listener_parent_proj in parent_project_list)
-                or listener.project_id in CONF.hardware_thunder.devices):
+                or self._is_rack_flow(listener.project_id, loadbalancer=load_balancer)):
             create_listener_tf = self._taskflow_load(self._listener_flows.
                                                      get_rack_vthunder_create_listener_flow(
                                                          listener.project_id),
@@ -310,7 +310,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
-        if listener.project_id in CONF.hardware_thunder.devices:
+        if self._is_rack_flow(listener.project_id, loadbalancer=load_balancer):
             delete_listener_tf = self._taskflow_load(
                 self._listener_flows.get_delete_rack_listener_flow(),
                 store={constants.LOADBALANCER: load_balancer,
@@ -389,7 +389,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                  constants.BUILD_TYPE_PRIORITY:
                  constants.LB_CREATE_NORMAL_PRIORITY,
                  constants.FLAVOR: flavor,
-                 constants.AMPS_DATA: []}
+                 constants.AMPS_DATA: [],
+                 a10constants.VTHUNDER_CONFIG: None,
+                 a10constants.USE_DEVICE_FLAVOR: None}
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
@@ -397,9 +399,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             constants.TOPOLOGY: topology
         }
 
-        if lb.project_id in CONF.hardware_thunder.devices:
+        if self._is_rack_flow(lb.project_id, flavor=flavor):
+            vthunder_conf = CONF.hardware_thunder.devices.get(lb.project_id, None)
+            device_dict = CONF.hardware_thunder.devices
             create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
-                vthunder_conf=CONF.hardware_thunder.devices[lb.project_id],
+                vthunder_conf=vthunder_conf, device_dict=device_dict,
                 topology=topology, listeners=lb.listeners)
             create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
         else:
@@ -432,7 +436,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         if cascade:
             cascade = True
-        if lb.project_id in CONF.hardware_thunder.devices:
+        if self._is_rack_flow(lb.project_id, loadbalancer=lb):
             (flow, store) = self._lb_flows.get_delete_rack_vthunder_load_balancer_flow(
                 lb, cascade)
         else:
@@ -524,14 +528,17 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         if (member.project_id in parent_project_list or
                 (member_parent_proj and member_parent_proj in parent_project_list)
-                or member.project_id in CONF.hardware_thunder.devices):
+                or self._is_rack_flow(member.project_id, loadbalancer=load_balancer)):
+            vthunder_conf = CONF.hardware_thunder.devices.get(load_balancer.project_id, None)
             create_member_tf = self._taskflow_load(
                 self._member_flows.get_rack_vthunder_create_member_flow(),
                 store={
                     constants.MEMBER: member,
                     constants.LISTENERS: listeners,
                     constants.LOADBALANCER: load_balancer,
-                    constants.POOL: pool})
+                    constants.POOL: pool,
+                    a10constants.VTHUNDER_CONFIG: vthunder_conf,
+                    a10constants.USE_DEVICE_FLAVOR: None})
         else:
             busy = self._vthunder_busy_check(member.project_id, True, None)
             create_member_tf = self._taskflow_load(self._member_flows.
@@ -543,7 +550,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                           constants.LOADBALANCER:
                                                           load_balancer,
                                                           a10constants.COMPUTE_BUSY: busy,
-                                                          constants.POOL: pool})
+                                                          constants.POOL: pool,
+                                                          a10constants.VTHUNDER_CONFIG: None,
+                                                          a10constants.USE_DEVICE_FLAVOR: None})
             self._register_flow_notify_handler(create_member_tf, member.project_id, True, busy)
 
         with tf_logging.DynamicLoggingListener(create_member_tf,
@@ -567,7 +576,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = pool.load_balancer
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
-        if member.project_id in CONF.hardware_thunder.devices:
+        if self._is_rack_flow(member.project_id, loadbalancer=load_balancer):
             delete_member_tf = self._taskflow_load(
                 self._member_flows.get_rack_vthunder_delete_member_flow(),
                 store={constants.MEMBER: member, constants.LISTENERS: listeners,
@@ -622,7 +631,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
-        if member.project_id in CONF.hardware_thunder.devices:
+        if self._is_rack_flow(member.project_id, loadbalancer=load_balancer):
             update_member_tf = self._taskflow_load(self._member_flows.
                                                    get_rack_vthunder_update_member_flow(),
                                                    store={constants.MEMBER: member,
@@ -728,7 +737,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                  constants.HEALTH_MON: health_monitor,
                  a10constants.MEMBER_COUNT: mem_count}
 
-        if pool.project_id in CONF.hardware_thunder.devices:
+        if self._is_rack_flow(pool.project_id, loadbalancer=load_balancer):
             delete_pool_tf = self._taskflow_load(
                 self._pool_flows.get_delete_pool_rack_flow(
                     members, health_monitor, store), store=store)
@@ -1176,11 +1185,19 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self.ctx_map = ctx_map
         self.ctx_lock = ctx_lock
 
-    def _is_rack_flow(self, key):
+    def _is_rack_flow(self, key, loadbalancer=None, flavor=None):
         if self.ctx_map is None or self.ctx_lock is None:
             return True
         if key in CONF.hardware_thunder.devices:
             return True
+        if flavor:
+            if flavor.get('device-name', None) is not None:
+                return True
+        if loadbalancer:
+            flavor_data = utils.get_loadbalancer_flavor(loadbalancer)
+            if flavor_data is not None:
+                if flavor_data.get('device-name', None) is not None:
+                    return True
         return False
 
     def _vthunder_busy_check(self, key, is_reload_thread, store=None):

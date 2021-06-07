@@ -218,9 +218,6 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
             requires=a10constants.VTHUNDER,
             inject={"status": constants.PENDING_DELETE}))
-        delete_LB_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
-            requires=a10constants.VTHUNDER,
-            provides=a10constants.VTHUNDER))
         delete_LB_flow.add(compute_tasks.NovaServerGroupDelete(
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
@@ -566,7 +563,7 @@ class LoadBalancerFlows(object):
         return update_LB_flow
 
     def get_create_rack_vthunder_load_balancer_flow(
-            self, vthunder_conf, topology, listeners=None):
+            self, vthunder_conf, device_dict, topology, listeners=None):
         """Flow to create rack load balancer"""
 
         f_name = constants.CREATE_LOADBALANCER_FLOW
@@ -577,10 +574,20 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(database_tasks.ReloadLoadBalancer(
             requires=constants.LOADBALANCER_ID,
             provides=constants.LOADBALANCER))
+
+        # device-name flavor support
+        lb_create_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR_DATA))
+        lb_create_flow.add(vthunder_tasks.GetVthunderConfByFlavor(
+            inject={a10constants.VTHUNDER_CONFIG: vthunder_conf,
+                    a10constants.DEVICE_CONFIG_DICT: device_dict},
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG,
+                      a10constants.DEVICE_CONFIG_DICT, constants.FLAVOR_DATA),
+            provides=(a10constants.VTHUNDER_CONFIG, a10constants.USE_DEVICE_FLAVOR)))
+
         lb_create_flow.add(
             a10_database_tasks.CheckExistingProjectToThunderMappedEntries(
-                inject={
-                    a10constants.VTHUNDER_CONFIG: vthunder_conf},
                 requires=(
                     constants.LOADBALANCER,
                     a10constants.VTHUNDER_CONFIG),
@@ -589,7 +596,8 @@ class LoadBalancerFlows(object):
             a10_database_tasks.CheckExistingThunderToProjectMappedEntries(
                 requires=(
                     constants.LOADBALANCER,
-                    a10constants.VTHUNDER_CONFIG)))
+                    a10constants.VTHUNDER_CONFIG,
+                    a10constants.USE_DEVICE_FLAVOR)))
         lb_create_flow.add(
             self.vthunder_flows.get_rack_vthunder_for_lb_subflow(
                 vthunder_conf=a10constants.VTHUNDER_CONFIG,
@@ -599,9 +607,6 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(
             self.get_post_lb_rack_vthunder_association_flow(
                 post_amp_prefix, topology, mark_active=(not listeners)))
-        lb_create_flow.add(a10_database_tasks.GetFlavorData(
-            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
-            provides=constants.FLAVOR_DATA))
         lb_create_flow.add(nat_pool_tasks.NatPoolCreate(
             requires=(constants.LOADBALANCER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA)))
@@ -749,7 +754,9 @@ class LoadBalancerFlows(object):
                 requires=[
                     a10constants.VTHUNDER,
                     a10constants.VRID_LIST,
-                    constants.SUBNET],
+                    constants.SUBNET,
+                    a10constants.VTHUNDER_CONFIG,
+                    a10constants.USE_DEVICE_FLAVOR],
                 rebind={
                     a10constants.LB_RESOURCE: constants.LOADBALANCER},
                 provides=a10constants.VRID_LIST))

@@ -19,6 +19,9 @@ except ImportError:
 
 from neutronclient.common import exceptions as neutron_client_exceptions
 
+from oslo_config import cfg
+from oslo_config import fixture as oslo_fixture
+
 from octavia.common import clients
 from octavia.network import base as network_driver_base
 from octavia.network.drivers.neutron import allowed_address_pairs
@@ -27,7 +30,9 @@ from octavia.tests.common import data_model_helpers as dmh
 from octavia.tests.unit import base
 
 from a10_octavia.common import a10constants
+from a10_octavia.common import config_options
 from a10_octavia.network.drivers.neutron import a10_octavia_neutron
+from a10_octavia.tests.common import a10constants as a10_tconstants
 
 
 class TestA10NeutronDriver(base.TestCase):
@@ -48,6 +53,9 @@ class TestA10NeutronDriver(base.TestCase):
                 self.k_session = mock.patch(
                     'keystoneauth1.session.Session').start()
                 self.driver = a10_octavia_neutron.A10OctaviaNeutronDriver()
+        self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
+        self.conf.register_opts(config_options.A10_CONTROLLER_WORKER_OPTS,
+                                group=a10_tconstants.A10_CONTROLLER_WORKER_CONF_SECTION)
 
     def _setup_deallocate_vip_mocks(self):
         self.driver._get_lb_security_group = mock.MagicMock()

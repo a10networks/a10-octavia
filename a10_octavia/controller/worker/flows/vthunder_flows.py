@@ -231,7 +231,7 @@ class VThunderFlows(object):
         vthunder_for_amphora_subflow.add(database_tasks.CreateAmphoraInDB(
             name=sf_name + '-' + constants.CREATE_AMPHORA_INDB,
             provides=constants.AMPHORA_ID))
-        vthunder_for_amphora_subflow.add(compute_tasks.ValidateComputeForProject(
+        vthunder_for_amphora_subflow.add(a10_database_tasks.ValidateComputeForProject(
             name=sf_name + '-' + a10constants.VALIDATE_COMPUTE_FOR_PROJECT,
             requires=constants.LOADBALANCER,
             inject={"role": role},
@@ -380,18 +380,6 @@ class VThunderFlows(object):
         configure_vrrp_subflow.add(vthunder_tasks.ConfigureVRID(
             name=sf_name + '-' + a10constants.CONFIGURE_VRID_FOR_BACKUP_VTHUNDER,
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-        # VRRP synch
-        configure_vrrp_subflow.add(vthunder_tasks.ConfigureVRRPSync(
-            name=sf_name + '-' + a10constants.CONFIGURE_VRRP_SYNC,
-            requires=(a10constants.VTHUNDER, a10constants.BACKUP_VTHUNDER)))
-        # Wait for VRRP synch
-        configure_vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-            name=sf_name + '-' + a10constants.WAIT_FOR_MASTER_SYNC,
-            requires=(a10constants.VTHUNDER, constants.AMPHORA)))
-        configure_vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-            name=sf_name + '-' + a10constants.WAIT_FOR_BACKUP_SYNC,
-            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-            requires=(constants.AMPHORA)))
         # Configure aVCS
         configure_vrrp_subflow.add(vthunder_tasks.ConfigureaVCSMaster(
             name=sf_name + '-' + a10constants.CONFIGURE_AVCS_SYNC_FOR_MASTER,

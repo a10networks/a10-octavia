@@ -19,8 +19,6 @@ from oslo_log import log as logging
 from oslo_utils import uuidutils
 from requests import exceptions as req_exceptions
 import six
-import socket
-import struct
 from taskflow import task
 from taskflow.types import failure
 
@@ -368,7 +366,7 @@ class PlugVIP(BaseNetworkTask):
                     amphora.vrrp_port_id = amp_data.vrrp_port_id
                     amphora.ha_port_id = amp_data.ha_port_id
 
-            self.network_driver.unplug_vip(loadbalancer, loadbalancer.vip)
+            self.network_driver.unplug_vip_revert(loadbalancer, loadbalancer.vip)
         except Exception as e:
             LOG.error("Failed to unplug VIP.  Resources may still "
                       "be in use from vip: %(vip)s due to error: %(except)s",
@@ -745,7 +743,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         return vrid
 
     @axapi_client_decorator
-    def execute(self, vthunder, lb_resource, vrid_list, subnet):
+    def execute(self, vthunder, lb_resource, vrid_list, subnet,
+                vthunder_config, use_device_flavor=False):
         """
         :param vthunder:
         :param lb_resource: Can accept LB or member
@@ -760,7 +759,11 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
         vrid_value = CONF.a10_global.vrid
         prev_vrid_value = vrid_list[0].vrid if vrid_list else None
-        conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(lb_resource.project_id)
+        if use_device_flavor and vthunder_config.vrid_floating_ip:
+            conf_floating_ip = vthunder_config.vrid_floating_ip
+        else:
+            conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
+                lb_resource.project_id)
 
         if not conf_floating_ip:
             for vrid in vrid_list:
@@ -771,24 +774,41 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
         vrid_floating_ips = []
         update_vrid_flag = False
+        existing_fips = []
         vrid_list = self._add_vrid_to_list(vrid_list, subnet, lb_resource.project_id)
         for vrid in vrid_list:
-            subnet = self.network_driver.get_subnet(vrid.subnet_id)
+            try:
+                vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
+            except Exception as e:
+                vrid_summary = {}
+                LOG.exception("Failed to get existing VRID summary due to: %s", str(e))
+
+            if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
+                vrid_fip = vrid_summary['vrid']['floating-ip']
+                if vthunder.partition_name != 'shared':
+                    for i in range(len(vrid_fip['ip-address-part-cfg'])):
+                        existing_fips.append(
+                            vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
+                else:
+                    for i in range(len(vrid_fip['ip-address-cfg'])):
+                        existing_fips.append(vrid_fip['ip-address-cfg'][i]['ip-address'])
+            vrid_subnet = self.network_driver.get_subnet(vrid.subnet_id)
             vrid.vrid = vrid_value
             if conf_floating_ip.lower() == 'dhcp':
                 subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(
-                    subnet.cidr)
+                    vrid_subnet.cidr)
                 if not a10_utils.check_ip_in_subnet_range(
                         vrid.vrid_floating_ip, subnet_ip, subnet_mask):
-                    vrid = self._replace_vrid_port(vrid, subnet, lb_resource)
+                    vrid = self._replace_vrid_port(vrid, vrid_subnet, lb_resource)
                     update_vrid_flag = True
             else:
                 new_ip = a10_utils.get_patched_ip_address(
-                    conf_floating_ip, subnet.cidr)
+                    conf_floating_ip, vrid_subnet.cidr)
                 if new_ip != vrid.vrid_floating_ip:
-                    vrid = self._replace_vrid_port(vrid, subnet, lb_resource, new_ip)
+                    vrid = self._replace_vrid_port(vrid, vrid_subnet, lb_resource, new_ip)
                     update_vrid_flag = True
-            vrid_floating_ips.append(vrid.vrid_floating_ip)
+            if vrid_subnet.id == subnet.id or vrid.vrid_floating_ip in existing_fips:
+                vrid_floating_ips.append(vrid.vrid_floating_ip)
 
         if (prev_vrid_value is not None) and (prev_vrid_value != vrid_value):
             self._remove_device_vrid_fip(vthunder.partition_name, prev_vrid_value)
@@ -834,12 +854,28 @@ class DeleteVRIDPort(BaseNetworkTask):
                 lb_count_subnet, member_count, lb_resource):
         vrid = None
         vrid_floating_ip_list = []
+        existing_fips = []
         resource_count = lb_count_subnet + member_count
         if resource_count <= 1 and vthunder:
             for vr in vrid_list:
+                try:
+                    vrid_summary = self.axapi_client.vrrpa.get(vr.vrid)
+                except Exception as e:
+                    vrid_summary = {}
+                    LOG.exception("Failed to get existing VRID summary due to: %s", str(e))
+
+                if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
+                    vrid_fip = vrid_summary['vrid']['floating-ip']
+                    if vthunder.partition_name != 'shared':
+                        for i in range(len(vrid_fip['ip-address-part-cfg'])):
+                            existing_fips.append(
+                                vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
+                    else:
+                        for i in range(len(vrid_fip['ip-address-cfg'])):
+                            existing_fips.append(vrid_fip['ip-address-cfg'][i]['ip-address'])
                 if vr.subnet_id == subnet.id:
                     vrid = vr
-                else:
+                elif vr.vrid_floating_ip in existing_fips:
                     vrid_floating_ip_list.append(vr.vrid_floating_ip)
             if vrid:
                 try:
@@ -870,14 +906,31 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
                 amphorae = a10_task_utils.attribute_search(lb_resource, 'amphorae')
                 vrids = []
                 vrid_floating_ip_list = []
+                existing_fips = []
                 for vrid in vrid_list:
+                    try:
+                        vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
+                    except Exception as e:
+                        vrid_summary = {}
+                        LOG.exception("Failed to get existing VRID summary due to: %s", str(e))
+
+                    if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
+                        vrid_fip = vrid_summary['vrid']['floating-ip']
+                        if vthunder.partition_name != 'shared':
+                            for i in range(len(vrid_fip['ip-address-part-cfg'])):
+                                existing_fips.append(
+                                    vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
+                        else:
+                            for i in range(len(vrid_fip['ip-address-cfg'])):
+                                existing_fips.append(vrid_fip['ip-address-cfg'][i]['ip-address'])
+
                     subnet_matched = list(filter(lambda x: x == vrid.subnet_id,
                                           subnet_list))
                     if subnet_matched:
                         vrids.append(vrid)
                         subnet = self.network_driver.get_subnet(vrid.subnet_id)
                         self.network_driver.deallocate_vrid_fip(vrid, subnet, amphorae)
-                    else:
+                    elif vrid.vrid_floating_ip in existing_fips:
                         vrid_floating_ip_list.append(vrid.vrid_floating_ip)
                 if not vthunder.partition_name or vthunder.partition_name == 'shared':
                     self.axapi_client.vrrpa.update(
@@ -940,13 +993,13 @@ class ReserveSubnetAddressForMember(BaseNetworkTask):
 
         if nat_pool is None:
             try:
-                addr_list = []
-                start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
-                end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
-                while start <= end:
-                    addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
-                    start += 1
-                port = self.network_driver.reserve_subnet_addresses(member.subnet_id, addr_list)
+                addr_list = a10_utils.get_natpool_addr_list(nat_flavor)
+                if not CONF.vthunder.slb_no_snat_support:
+                    amphorae = a10_task_utils.attribute_search(member, 'amphorae')
+                else:
+                    amphorae = None
+                port = self.network_driver.reserve_subnet_addresses(
+                    member.subnet_id, addr_list, amphorae)
                 LOG.debug("Successfully allocated addresses for nat pool %s on port %s",
                           nat_flavor['pool_name'], port.id)
                 return port
@@ -971,6 +1024,12 @@ class ReleaseSubnetAddressForMember(BaseNetworkTask):
         if nat_pool.member_ref_count == 1:
             try:
                 self.network_driver.delete_port(nat_pool.port_id)
+                if not CONF.vthunder.slb_no_snat_support:
+                    addr_list = a10_utils.get_natpool_addr_list(nat_flavor)
+                    amphorae = a10_task_utils.attribute_search(member, 'amphorae')
+                    if amphorae is not None:
+                        self.network_driver.release_subnet_addresses(
+                            member.subnet_id, addr_list, amphorae)
             except Exception as e:
                 LOG.exception("Failed to release addresses in NAT pool %s from subnet %s",
                               nat_flavor['pool_name'], member.subnet_id)
