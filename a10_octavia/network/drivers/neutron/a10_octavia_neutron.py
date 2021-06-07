@@ -368,13 +368,14 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
     def allow_use_any_source_ip_on_egress(self, network_id, amphora):
         interface = self._get_plugged_interface(
             amphora.compute_id, network_id, amphora.lb_network_ip)
-        port = self.neutron_client.show_port(interface.port_id)
-        aap_ips = port['port']['allowed_address_pairs']
-        for aap_ip in aap_ips:
-            if aap_ip['ip_address'] == '0.0.0.0/0':
-                break
-        else:
-            self._add_allowed_address_pair_to_port(interface.port_id, '0.0.0.0/0')
+        if interface:
+            port = self.neutron_client.show_port(interface.port_id)
+            aap_ips = port['port']['allowed_address_pairs']
+            for aap_ip in aap_ips:
+                if aap_ip['ip_address'] == '0.0.0.0/0':
+                    break
+            else:
+                self._add_allowed_address_pair_to_port(interface.port_id, '0.0.0.0/0')
 
     def _remove_allowed_address_pair_from_port(self, port_id, ip_address):
         port = self.neutron_client.show_port(port_id)
