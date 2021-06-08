@@ -759,11 +759,18 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         vrid_value = CONF.a10_global.vrid
         prev_vrid_value = vrid_list[0].vrid if vrid_list else None
         updated_vrid_list = copy.copy(vrid_list)
+        parent_vrid_fip_flag = False
         if use_device_flavor and vthunder_config.vrid_floating_ip:
             conf_floating_ip = vthunder_config.vrid_floating_ip
         else:
             conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
                 lb_resource.project_id)
+
+        if vthunder_config:
+            hierarchical_mt = vthunder_config.hierarchical_multitenancy
+            use_parent_partition = CONF.a10_global.use_parent_partition
+            if hierarchical_mt == 'enable' and use_parent_partition:
+                parent_vrid_fip_flag = True
 
         if not conf_floating_ip:
             for vrid in updated_vrid_list:
@@ -813,7 +820,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         if (prev_vrid_value is not None) and (prev_vrid_value != vrid_value):
             self._remove_device_vrid_fip(vthunder.partition_name, prev_vrid_value)
             self._update_device_vrid_fip(vthunder.partition_name, vrid_floating_ips, vrid_value)
-        elif update_vrid_flag:
+        elif update_vrid_flag or parent_vrid_fip_flag:
             self._update_device_vrid_fip(vthunder.partition_name, vrid_floating_ips, vrid_value)
 
         return updated_vrid_list
