@@ -708,7 +708,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         has_vrid = True
         try:
             self.axapi_client.vrrpa.get(vrid)
-        except acos_errors.NotFound as e:
+        except acos_errors.NotFound:
             has_vrid = False
 
         try:
