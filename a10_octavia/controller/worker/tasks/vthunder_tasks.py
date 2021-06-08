@@ -129,9 +129,24 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
 class AllowL2DSR(VThunderBaseTask):
     """Task to add wildcat address in allowed_address_pair for L2DSR"""
 
-    def execute(self, subnet, amphora):
-        if CONF.vthunder.l2dsr_support:
-            self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amphora)
+    def execute(self, subnet, amphora, flavor_data=None):
+        if flavor_data:
+            deployment = flavor_data.get('deployment')
+            if deployment and deployment['dsr_type'] == "l2dsr_transparent":
+                for amp in amphora:
+                    self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
+
+
+class DeleteL2DSR(VThunderBaseTask):
+    """Task to delete wildcat address in allowed_address_pair for L2DSR"""
+
+    def execute(self, subnet, amphora, lb_count_flavor, flavor_data=None):
+        if lb_count_flavor <= 1:
+            if flavor_data:
+                deployment = flavor_data.get('deployment')
+                if deployment and deployment['dsr_type'] == "l2dsr_transparent":
+                    for amp in amphora:
+                        self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
 
 
 class AllowLoadbalancerForwardWithAnySource(VThunderBaseTask):

@@ -291,6 +291,10 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                         raise Exception('end-address is required for nat-pool-list flavor')
                     if 'netmask' not in nat:
                         raise Exception('netmask is required for nat-pool-list flavor')
+            if 'deployment' in flavor_dict:
+                deployment = flavor_dict['deployment']
+                if 'dsr_type' not in deployment:
+                    raise Exception('dsr_type is required for deployment flavor')
 
         except js_exceptions.ValidationError as e:
             error_object = ''

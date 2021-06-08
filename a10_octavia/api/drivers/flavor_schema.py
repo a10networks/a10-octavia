@@ -183,6 +183,15 @@ SUPPORTED_FLAVOR_SCHEMA = {
         "device-name": {
             "type": "string",
             "description": "Specify vthunder device name that used for this loadbalancer"
+        },
+        "deployment": {
+            "type": "object",
+            "description": "Specify deployment strategy that used for this loadbalancer",
+            "properties": {
+                "dsr_type": {
+                    "type": "string",
+                }
+            }
         }
     }
 }
