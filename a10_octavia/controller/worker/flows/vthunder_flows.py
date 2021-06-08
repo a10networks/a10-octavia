@@ -373,13 +373,6 @@ class VThunderFlows(object):
 
     def _configure_vrrp_subflow(self, sf_name):
         configure_vrrp_subflow = linear_flow.Flow(sf_name)
-        # VRID Configuration
-        configure_vrrp_subflow.add(vthunder_tasks.ConfigureVRID(
-            name=sf_name + '-' + a10constants.CONFIGURE_VRID_FOR_MASTER_VTHUNDER,
-            requires=(a10constants.VTHUNDER)))
-        configure_vrrp_subflow.add(vthunder_tasks.ConfigureVRID(
-            name=sf_name + '-' + a10constants.CONFIGURE_VRID_FOR_BACKUP_VTHUNDER,
-            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
         # Configure aVCS
         configure_vrrp_subflow.add(vthunder_tasks.ConfigureaVCSMaster(
             name=sf_name + '-' + a10constants.CONFIGURE_AVCS_SYNC_FOR_MASTER,
