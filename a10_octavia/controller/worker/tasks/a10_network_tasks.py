@@ -704,6 +704,20 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                           str(vrid_value))
             raise e
 
+    def _create_vrid(self, vrid):
+        has_vrid = True
+        try:
+            self.axapi_client.vrrpa.get(vrid)
+        except acos_errors.NotFound as e:
+            has_vrid = False
+
+        try:
+            if not has_vrid:
+                self.axapi_client.system.action.configureVRID(vrid)
+        except Exception as e:
+            LOG.exception("Failed to create vrid d: %s", vrid, str(e))
+            raise e
+
     def _update_device_vrid_fip(self, partition_name, vrid_floating_ip_list, vrid_value):
         try:
             is_partition = (partition_name is not None and partition_name != 'shared')
@@ -817,6 +831,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             if vrid_subnet.id == subnet.id or vrid.vrid_floating_ip in existing_fips:
                 vrid_floating_ips.append(vrid.vrid_floating_ip)
 
+        self._create_vrid(vrid_value)
         if (prev_vrid_value is not None) and (prev_vrid_value != vrid_value):
             self._remove_device_vrid_fip(vthunder.partition_name, prev_vrid_value)
             self._update_device_vrid_fip(vthunder.partition_name, vrid_floating_ips, vrid_value)
