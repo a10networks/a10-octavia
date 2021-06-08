@@ -392,6 +392,10 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
 class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
 
+    def __init__(self, *arg, **kwargs):
+        self.vrid_created = []
+        super(UpdateVRIDForLoadbalancerResource, self).__init__(*arg, **kwargs)
+
     def execute(self, lb_resource, vrid_list):
         if not vrid_list:
             # delete all vrids from DB for the lB resource's project.
@@ -430,7 +434,7 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
 
             else:
                 try:
-                    self.vrid_repo.create(
+                    new_vrid = self.vrid_repo.create(
                         db_apis.get_session(),
                         id=vrid.id,
                         project_id=vrid.project_id,
@@ -438,12 +442,21 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                         vrid_port_id=vrid.vrid_port_id,
                         vrid=vrid.vrid,
                         subnet_id=vrid.subnet_id)
+                    self.vrid_created.append(new_vrid)
                 except Exception as e:
                     LOG.error(
                         "Failed to create VRID data for VRID FIP %s due to %s",
                         vrid.vrid_floating_ip,
                         str(e))
                     raise e
+
+    def revert(self, *args, **kwargs):
+        for vrid in self.vrid_created:
+            try:
+                self.vrid_repo.delete(db_apis.get_session(), id=vrid.id)
+            except Exception as e:
+                LOG.error("Failed to update VRID DB entry %s due to %s",
+                          str(vrid.vrid_floating_ip), str(e))
 
 
 class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
