@@ -295,8 +295,8 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                 deployment = flavor_dict['deployment']
                 if ('dsr_type' not in deployment or
                         deployment['dsr_type'] not in ['l2dsr_transparent']):
-                        raise Exception('dsr_type is required for deployment flavor and'
-                                        ' l2dsr_transparent is required value for dsr_type')
+                    raise Exception('dsr_type is required for deployment flavor and'
+                                    ' l2dsr_transparent is required value for dsr_type')
 
         except js_exceptions.ValidationError as e:
             error_object = ''
