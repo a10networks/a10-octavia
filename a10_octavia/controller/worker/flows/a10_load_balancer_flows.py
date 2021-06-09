@@ -727,11 +727,11 @@ class LoadBalancerFlows(object):
                 provides=constants.LOADBALANCER))
         post_create_lb_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
-        post_create_lb_flow.add(self.handle_vrid_for_loadbalancer_subflow())
         if CONF.a10_global.network_type == 'vlan':
             post_create_lb_flow.add(vthunder_tasks.TagInterfaceForLB(
                 requires=[constants.LOADBALANCER,
                           a10constants.VTHUNDER]))
+        post_create_lb_flow.add(self.handle_vrid_for_loadbalancer_subflow())
         if mark_active:
             post_create_lb_flow.add(database_tasks.MarkLBActiveInDB(
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
