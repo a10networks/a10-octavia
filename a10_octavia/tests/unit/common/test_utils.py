@@ -71,17 +71,33 @@ HARDWARE_INFO_WITH_HMT_ENABLED = [{
 VTHUNDER_1 = data_models.HardwareThunder(project_id="project-1", device_name="rack_thunder_1",
                                          undercloud=True, username="abc", password="abc",
                                          ip_address="10.10.10.10", partition_name="shared")
+VTHUNDER_1_DEV = data_models.HardwareThunder(project_id="project-1", device_name="rack_thunder_1",
+                                             undercloud=True, username="abc", password="abc",
+                                             ip_address="10.10.10.10", partition_name="shared",
+                                             device_name_as_key=True)
 VTHUNDER_2 = data_models.HardwareThunder(project_id="project-2", device_name="rack_thunder_2",
                                          undercloud=True, username="def", password="def",
                                          ip_address="12.12.12.12", partition_name="def-sample")
+VTHUNDER_2_DEV = data_models.HardwareThunder(project_id="project-2", device_name="rack_thunder_2",
+                                             undercloud=True, username="def", password="def",
+                                             ip_address="12.12.12.12", partition_name="def-sample",
+                                             device_name_as_key=True)
 VTHUNDER_3 = data_models.HardwareThunder(project_id=a10constants.MOCK_CHILD_PROJECT_ID,
                                          device_name="rack_thunder_3",
                                          undercloud=True, username="usr", password="pwd",
                                          hierarchical_multitenancy='enable',
                                          ip_address="13.13.13.13",
                                          partition_name=a10constants.MOCK_CHILD_PARTITION)
+VTHUNDER_3_DEV = data_models.HardwareThunder(project_id=a10constants.MOCK_CHILD_PROJECT_ID,
+                                             device_name="rack_thunder_3",
+                                             undercloud=True, username="usr", password="pwd",
+                                             hierarchical_multitenancy='enable',
+                                             ip_address="13.13.13.13", device_name_as_key=True,
+                                             partition_name=a10constants.MOCK_CHILD_PARTITION)
 
-DUPLICATE_DICT = {'project_1': VTHUNDER_1,
+DUPLICATE_DICT = {'[dev]rack_thunder_1': VTHUNDER_1_DEV,
+                  '[dev]rack_thunder_2': VTHUNDER_1_DEV,
+                  'project_1': VTHUNDER_1,
                   'project_2': VTHUNDER_1}
 DUP_LIST = ['10.10.10.10:shared']
 NON_DUPLICATE_DICT = {'project_1': VTHUNDER_1, 'project_2': VTHUNDER_2}
@@ -95,10 +111,16 @@ HARDWARE_DEVICE_LIST = [
 ]
 
 DUPLICATE_PARTITION_HARDWARE_DEVICE_LIST = [DUP_PARTITION_HARDWARE_INFO, HARDWARE_INFO]
-RESULT_HARDWARE_DEVICE_LIST = {'project-1': VTHUNDER_1,
+RESULT_HARDWARE_DEVICE_LIST = {'[dev]rack_thunder_1': VTHUNDER_1_DEV,
+                               '[dev]rack_thunder_2': VTHUNDER_2_DEV,
+                               'project-1': VTHUNDER_1,
                                'project-2': VTHUNDER_2}
 
-RESULT_HMT_HARDWARE_DEVICE_LIST = {a10constants.MOCK_CHILD_PROJECT_ID: VTHUNDER_3}
+DEVICE_FLAVOR_KEY = '[dev]rack_thunder_3'
+RESULT_HMT_HARDWARE_DEVICE_LIST = {
+    DEVICE_FLAVOR_KEY: VTHUNDER_3_DEV,
+    a10constants.MOCK_CHILD_PROJECT_ID: VTHUNDER_3
+}
 
 INTERFACE_CONF = {"interface_num": 1,
                   "vlan_map": [
@@ -118,6 +140,8 @@ HARDWARE_VLAN_INFO = {
         }
     }
 }
+
+NAT_FLAVOR = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.3"}
 
 
 class FakeProject(object):
@@ -426,3 +450,7 @@ class TestUtils(base.BaseTaskTestCase):
         device_network_map = [device1_network_map, device2_network_map]
         self.assertRaises(exceptions.MissingMgmtIpConfigError,
                           utils.validate_vcs_device_info, device_network_map)
+
+    def test_get_netpool_addr_list(self):
+        self.assertEqual(utils.get_natpool_addr_list(NAT_FLAVOR),
+                         ['1.1.1.1', '1.1.1.2', '1.1.1.3'])

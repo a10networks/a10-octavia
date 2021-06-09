@@ -366,7 +366,8 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
             and_(self.model_class.project_id.in_(project_ids),
                  base_models.Vip.subnet_id == subnet_id,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
-                     self.model_class.provisioning_status == consts.ACTIVE))).count()
+                     self.model_class.provisioning_status == consts.ACTIVE,
+                     self.model_class.provisioning_status == consts.PENDING_UPDATE))).count()
 
     def get_lb_count_by_flavor(self, session, project_ids, flavor_id):
         return session.query(self.model_class).filter(
@@ -409,6 +410,15 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
         for data in model_list:
             lb_list.append(data.to_data_model())
         return lb_list
+
+    def get_lb_excluding_deleted(self, session, lb_id):
+        query = session.query(self.model_class).filter(
+            and_(self.model_class.id == lb_id,
+                 self.model_class.provisioning_status != "DELETED"))
+        model = query.first()
+        if model is None:
+            return None
+        return model.to_data_model()
 
 
 class VRIDRepository(BaseRepository):

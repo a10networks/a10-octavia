@@ -126,6 +126,24 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
                 raise e
 
 
+class AllowL2DSR(VThunderBaseTask):
+    """Task to add wildcat address in allowed_address_pair for L2DSR"""
+
+    def execute(self, subnet, amphora):
+        if CONF.vthunder.l2dsr_support:
+            self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amphora)
+
+
+class AllowLoadbalancerForwardWithAnySource(VThunderBaseTask):
+    """Task to add wildcat address in allowed_address_pair to allow any SNAT"""
+
+    def execute(self, member, amphora):
+        subnet = self.network_driver.get_subnet(member.subnet_id)
+        if CONF.vthunder.slb_no_snat_support:
+            for amp in amphora:
+                self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
+
+
 class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
     """Task to reboot and configure vThunder device"""
 
@@ -258,29 +276,6 @@ class ConfigureVRID(VThunderBaseTask):
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure VRID on vthunder: %s", str(e))
             raise e
-
-
-class ConfigureVRRPSync(VThunderBaseTask):
-    """Task to sync vThunder VRRP"""
-
-    @axapi_client_decorator
-    def execute(self, vthunder, backup_vthunder):
-        """Execute to sync up vrrp in two vThunder devices."""
-        attempts = 3
-        while attempts >= 0:
-            try:
-                attempts = attempts - 1
-                self.axapi_client.system.action.configSynch(backup_vthunder.ip_address,
-                                                            backup_vthunder.username,
-                                                            backup_vthunder.password)
-                LOG.debug("Waiting 30 seconds for config synch.")
-                time.sleep(30)
-                LOG.debug("Sync up for vThunder master")
-                break
-            except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
-                if attempts < 0:
-                    LOG.exception("Failed VRRP sync: %s", str(e))
-                    raise e
 
 
 def configure_avcs(axapi_client, device_id, device_priority, floating_ip, floating_ip_mask):
@@ -441,8 +436,13 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        if vthunder and vthunder.project_id in CONF.hardware_thunder.devices:
-            vthunder_conf = CONF.hardware_thunder.devices[vthunder.project_id]
+        if not vthunder:
+            return
+        device_name = ''.join([a10constants.DEVICE_KEY_PREFIX,
+                               vthunder.device_name]) if vthunder.device_name else ''
+        vthunder_conf = (CONF.hardware_thunder.devices.get(device_name) or
+                         CONF.hardware_thunder.devices.get(vthunder.project_id))
+        if vthunder_conf:
             device_network_map = vthunder_conf.device_network_map
 
             # Case when device network map is not provided/length is 0
@@ -1041,7 +1041,7 @@ class VCSSyncWait(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        if CONF.a10_controller_worker.loadbalancer_topology != "ACTIVE_STANDBY":
+        if not vthunder or CONF.a10_controller_worker.loadbalancer_topology != "ACTIVE_STANDBY":
             return
 
         attempts = CONF.a10_controller_worker.amp_vcs_retries
@@ -1087,34 +1087,37 @@ class GetMasterVThunder(VThunderBaseTask):
 
     @axapi_client_decorator
     def execute(self, vthunder):
-        attempts = CONF.a10_controller_worker.amp_vcs_retries
-        while attempts >= 0:
-            try:
-                attempts = attempts - 1
-                vcs_summary = {}
-                vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
-                vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
-                for i in range(len(vcs_member_list)):
-                    role = vcs_member_list[i]['state'].split('(')[0]
-                    if role == "vMaster":
-                        vthunder.ip_address = vcs_member_list[i]['ip-list'][0]['ip']
-                        break
-                else:
-                    raise acos_errors.AxapiJsonFormatError(
-                        msg="vMaster not found in vcs-summary")
-                return vthunder
-            except req_exceptions.ReadTimeout as e:
-                # Don't retry for ReadTimout, since acos-client already already have
-                # tries and timeout for axapi request. And it will take very long to
-                # response this error.
-                if attempts < 0:
-                    LOG.exception("Failed to get Master vThunder: %s", str(e))
-                    raise e
-            except Exception as e:
-                if attempts < 0:
-                    LOG.exception("Failed to get Master vThunder: %s", str(e))
-                    raise e
-                time.sleep(CONF.a10_controller_worker.amp_vcs_wait_sec)
+        if vthunder:
+            attempts = CONF.a10_controller_worker.amp_vcs_retries
+            while attempts >= 0:
+                try:
+                    attempts = attempts - 1
+                    vcs_summary = {}
+                    vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
+                    vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
+                    for i in range(len(vcs_member_list)):
+                        role = vcs_member_list[i]['state'].split('(')[0]
+                        if role == "vMaster":
+                            vthunder.ip_address = vcs_member_list[i]['ip-list'][0]['ip']
+                            break
+                    else:
+                        raise acos_errors.AxapiJsonFormatError(
+                            msg="vMaster not found in vcs-summary")
+                    return vthunder
+                except req_exceptions.ReadTimeout as e:
+                    # Don't retry for ReadTimout, since acos-client already already have
+                    # tries and timeout for axapi request. And it will take very long to
+                    # response this error.
+                    if attempts < 0:
+                        LOG.exception("Failed to get Master vThunder: %s", str(e))
+                        raise e
+                except Exception as e:
+                    if attempts < 0:
+                        LOG.exception("Failed to get Master vThunder: %s", str(e))
+                        raise e
+                    time.sleep(CONF.a10_controller_worker.amp_vcs_wait_sec)
+        else:
+            return None
 
 
 class VthunderInstanceBusy(VThunderBaseTask):
@@ -1122,3 +1125,25 @@ class VthunderInstanceBusy(VThunderBaseTask):
     def execute(self, compute_busy=False):
         if compute_busy:
             raise Exception('vThunder instance is busy now, try again later.')
+
+
+class GetVthunderConfByFlavor(VThunderBaseTask):
+
+    def execute(self, loadbalancer, vthunder_config, device_config_dict, flavor_data=None):
+        if flavor_data is None and vthunder_config is None:
+            raise exceptions.ProjectDeviceNotFound()
+
+        if flavor_data is not None:
+            device_flavor = flavor_data.get('device_name', None)
+            if device_flavor is not None:
+                dev_key = a10constants.DEVICE_KEY_PREFIX + device_flavor
+                if dev_key in device_config_dict:
+                    vthunder_config = device_config_dict[dev_key]
+                    vthunder_config.project_id = loadbalancer.project_id
+                    if vthunder_config.hierarchical_multitenancy == "enable":
+                        vthunder_config.partition_name = loadbalancer.project_id[0:14]
+                    return vthunder_config, True
+                else:
+                    raise exceptions.FlavorDeviceNotFound(device_flavor)
+
+        return vthunder_config, False
