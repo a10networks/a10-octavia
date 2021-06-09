@@ -546,10 +546,6 @@ class LoadBalancerFlows(object):
                       constants.FLAVOR_DATA)))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
-        if CONF.a10_global.network_type == 'vlan':
-            update_LB_flow.add(vthunder_tasks.TagInterfaceForLB(
-                requires=[constants.LOADBALANCER,
-                          a10constants.VTHUNDER]))
         update_LB_flow.add(database_tasks.MarkLBActiveInDB(
             requires=constants.LOADBALANCER))
         update_LB_flow.add(vthunder_tasks.WriteMemory(
@@ -806,6 +802,8 @@ class LoadBalancerFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=a10constants.PARTITION_PROJECT_LIST,
                 provides=a10constants.VRID_LIST))
+        handle_vrid_for_lb_subflow.add(vthunder_tasks.ConfigureVRID(
+            requires=a10constants.VTHUNDER))
         handle_vrid_for_lb_subflow.add(
             a10_network_tasks.HandleVRIDFloatingIP(
                 requires=[

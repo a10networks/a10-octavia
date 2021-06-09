@@ -269,9 +269,11 @@ class ConfigureVRID(VThunderBaseTask):
     """Task to configure vThunder VRID"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, vrid=1):
+    def execute(self, vthunder):
         try:
-            self.axapi_client.system.action.configureVRID(vrid)
+            vrid = CONF.a10_global.vrid
+            if not self.axapi_client.vrrpa.exists(vrid):
+                self.axapi_client.system.action.configureVRID(vrid)
             LOG.debug("Configured the master vThunder for VRID")
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure VRID on vthunder: %s", str(e))
