@@ -293,12 +293,10 @@ class A10ProviderDriver(driver_base.ProviderDriver):
                         raise Exception('netmask is required for nat-pool-list flavor')
             if 'deployment' in flavor_dict:
                 deployment = flavor_dict['deployment']
-                if 'dsr_type' not in deployment:
-                    raise Exception('dsr_type is required for deployment flavor')
-                else:
-                    dsr_type = deployment['dsr_type']
-                    if dsr_type not in ['l2dsr_transparent']:
-                        raise Exception('l2dsr_transparent is required value for dsr_type')
+                if ('dsr_type' not in deployment or
+                        deployment['dsr_type'] not in ['l2dsr_transparent']):
+                        raise Exception('dsr_type is required for deployment flavor and'
+                                        ' l2dsr_transparent is required value for dsr_type')
 
         except js_exceptions.ValidationError as e:
             error_object = ''

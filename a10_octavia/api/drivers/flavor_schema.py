@@ -186,7 +186,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
         },
         "deployment": {
             "type": "object",
-            "description": "Specify deployment strategy that used for this loadbalancer",
+            "description": "Specify deployment strategy for the loadbalancer",
             "properties": {
                 "dsr_type": {
                     "type": "string",
