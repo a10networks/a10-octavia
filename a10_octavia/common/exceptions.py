@@ -244,5 +244,5 @@ class FlavorDeviceNotFound(acos_errors.ACOSException):
 class InterfaceNotFound(acos_errors.ACOSException):
     def __init__(self, comput_id, network_id):
         msg = ('vThunder instance {0} has no interface in network {1}.').format(comput_id,
-            network_id)
+                                                                                network_id)
         super(InterfaceNotFound, self).__init__(msg=msg)
