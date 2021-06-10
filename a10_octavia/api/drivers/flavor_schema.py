@@ -190,6 +190,8 @@ SUPPORTED_FLAVOR_SCHEMA = {
             "properties": {
                 "dsr_type": {
                     "type": "string",
+                    "description": "Specify deployment DSR type[l2dsr_transparent]"
+                                   " for the loadbalancer"
                 }
             }
         }

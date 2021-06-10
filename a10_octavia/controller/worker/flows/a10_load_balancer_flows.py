@@ -106,8 +106,12 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR_DATA))
+        lb_create_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+            provides=a10constants.LB_COUNT_FLAVOR))
         lb_create_flow.add(vthunder_tasks.AllowL2DSR(
-            requires=(constants.SUBNET, constants.AMPHORA, constants.FLAVOR_DATA)))
+            requires=(constants.SUBNET, constants.AMPHORA,
+                      a10constants.LB_COUNT_FLAVOR, constants.FLAVOR_DATA)))
         lb_create_flow.add(nat_pool_tasks.NatPoolCreate(
             requires=(constants.LOADBALANCER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA)))
