@@ -546,6 +546,59 @@ class LoadBalancerFlows(object):
                       constants.FLAVOR_DATA)))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
+        update_LB_flow.add(database_tasks.MarkLBActiveInDB(
+            requires=constants.LOADBALANCER))
+        update_LB_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        update_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
+            name="pending_update_to_active",
+            requires=a10constants.VTHUNDER,
+            inject={"status": constants.ACTIVE}))
+        update_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=a10constants.VTHUNDER))
+        return update_LB_flow
+
+    def get_update_rack_load_balancer_flow(self, vthunder_conf, device_dict, topology):
+        """Flow to update load balancer."""
+
+        update_LB_flow = linear_flow.Flow(constants.UPDATE_LOADBALANCER_FLOW)
+        update_LB_flow.add(lifecycle_tasks.LoadBalancerToErrorOnRevertTask(
+            requires=constants.LOADBALANCER))
+
+        # device-name flavor support
+        update_LB_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR_DATA))
+        update_LB_flow.add(vthunder_tasks.GetVthunderConfByFlavor(
+            inject={a10constants.VTHUNDER_CONFIG: vthunder_conf,
+                    a10constants.DEVICE_CONFIG_DICT: device_dict},
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG,
+                      a10constants.DEVICE_CONFIG_DICT, constants.FLAVOR_DATA),
+            provides=(a10constants.VTHUNDER_CONFIG, a10constants.USE_DEVICE_FLAVOR)))
+
+        update_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            update_LB_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
+        update_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
+            requires=a10constants.VTHUNDER,
+            inject={"status": constants.PENDING_UPDATE}))
+        update_LB_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.VTHUNDER))
+        update_LB_flow.add(network_tasks.ApplyQos(
+            requires=(constants.LOADBALANCER, constants.UPDATE_DICT)))
+        update_LB_flow.add(self.handle_vrid_for_loadbalancer_subflow())
+
+        update_LB_flow.add(virtual_server_tasks.UpdateVirtualServerTask(
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                      constants.FLAVOR_DATA)))
+        update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
+            requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         if CONF.a10_global.network_type == 'vlan':
             update_LB_flow.add(vthunder_tasks.TagInterfaceForLB(
                 requires=[constants.LOADBALANCER,
@@ -722,11 +775,11 @@ class LoadBalancerFlows(object):
                 provides=constants.LOADBALANCER))
         post_create_lb_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
-        post_create_lb_flow.add(self.handle_vrid_for_loadbalancer_subflow())
         if CONF.a10_global.network_type == 'vlan':
             post_create_lb_flow.add(vthunder_tasks.TagInterfaceForLB(
                 requires=[constants.LOADBALANCER,
                           a10constants.VTHUNDER]))
+        post_create_lb_flow.add(self.handle_vrid_for_loadbalancer_subflow())
         if mark_active:
             post_create_lb_flow.add(database_tasks.MarkLBActiveInDB(
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
@@ -749,6 +802,8 @@ class LoadBalancerFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=a10constants.PARTITION_PROJECT_LIST,
                 provides=a10constants.VRID_LIST))
+        handle_vrid_for_lb_subflow.add(vthunder_tasks.ConfigureVRID(
+            requires=a10constants.VTHUNDER))
         handle_vrid_for_lb_subflow.add(
             a10_network_tasks.HandleVRIDFloatingIP(
                 requires=[

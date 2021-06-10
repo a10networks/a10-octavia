@@ -389,9 +389,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                  constants.BUILD_TYPE_PRIORITY:
                  constants.LB_CREATE_NORMAL_PRIORITY,
                  constants.FLAVOR: flavor,
-                 constants.AMPS_DATA: [],
-                 a10constants.VTHUNDER_CONFIG: None,
-                 a10constants.USE_DEVICE_FLAVOR: None}
+                 constants.AMPS_DATA: []}
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
@@ -410,6 +408,10 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             busy = self._vthunder_busy_check(lb.project_id, True, store)
             create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
                 load_balancer_id, topology=topology, listeners=lb.listeners)
+            store.update([
+                (a10constants.COMPUTE_BUSY, busy),
+                (a10constants.VTHUNDER_CONFIG, None),
+                (a10constants.USE_DEVICE_FLAVOR, False)])
             create_lb_tf = self._taskflow_load(create_lb_flow, store=store)
             self._register_flow_notify_handler(create_lb_tf, lb.project_id, True, busy)
 
@@ -479,16 +481,29 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
-        # rack flow _vthunder_busy_check() will always return False
-        busy = self._vthunder_busy_check(lb.project_id, False, None)
-        update_lb_tf = self._taskflow_load(
-            self._lb_flows.get_update_load_balancer_flow(topology=topology),
-            store={constants.LOADBALANCER: lb,
-                   constants.VIP: lb.vip,
-                   a10constants.COMPUTE_BUSY: busy,
-                   constants.LISTENERS: listeners,
-                   constants.UPDATE_DICT: load_balancer_updates})
-        self._register_flow_notify_handler(update_lb_tf, lb.project_id, False, busy)
+        if self._is_rack_flow(lb.project_id, loadbalancer=lb):
+            vthunder_conf = CONF.hardware_thunder.devices.get(lb.project_id, None)
+            device_dict = CONF.hardware_thunder.devices
+            update_lb_tf = self._taskflow_load(
+                self._lb_flows.get_update_rack_load_balancer_flow(vthunder_conf=vthunder_conf,
+                                                                  device_dict=device_dict,
+                                                                  topology=topology),
+                store={constants.LOADBALANCER: lb,
+                       constants.VIP: lb.vip,
+                       constants.LISTENERS: listeners,
+                       constants.UPDATE_DICT: load_balancer_updates})
+        else:
+            busy = self._vthunder_busy_check(lb.project_id, False, None)
+            update_lb_tf = self._taskflow_load(
+                self._lb_flows.get_update_load_balancer_flow(topology=topology),
+                store={constants.LOADBALANCER: lb,
+                       constants.VIP: lb.vip,
+                       a10constants.COMPUTE_BUSY: busy,
+                       constants.LISTENERS: listeners,
+                       constants.UPDATE_DICT: load_balancer_updates,
+                       a10constants.VTHUNDER_CONFIG: None,
+                       a10constants.USE_DEVICE_FLAVOR: False})
+            self._register_flow_notify_handler(update_lb_tf, lb.project_id, False, busy)
 
         with tf_logging.DynamicLoggingListener(update_lb_tf,
                                                log=LOG):

@@ -267,9 +267,11 @@ class ConfigureVRID(VThunderBaseTask):
     """Task to configure vThunder VRID"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, vrid=1):
+    def execute(self, vthunder):
         try:
-            self.axapi_client.system.action.configureVRID(vrid)
+            vrid = CONF.a10_global.vrid
+            if not self.axapi_client.vrrpa.exists(vrid):
+                self.axapi_client.system.action.configureVRID(vrid)
             LOG.debug("Configured the master vThunder for VRID")
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure VRID on vthunder: %s", str(e))
@@ -440,9 +442,11 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
             return
         device_name = ''.join([a10constants.DEVICE_KEY_PREFIX,
                                vthunder.device_name]) if vthunder.device_name else ''
-        vthunder_conf = (CONF.hardware_thunder.devices.get(device_name) or
-                         CONF.hardware_thunder.devices.get(vthunder.project_id))
-        if vthunder_conf:
+        vthunder_conf = None
+        if isinstance(CONF.hardware_thunder.devices, dict):
+            vthunder_conf = (CONF.hardware_thunder.devices.get(device_name) or
+                             CONF.hardware_thunder.devices.get(vthunder.project_id))
+        if vthunder_conf is not None:
             device_network_map = vthunder_conf.device_network_map
 
             # Case when device network map is not provided/length is 0
@@ -1068,6 +1072,8 @@ class VCSSyncWait(VThunderBaseTask):
                             msg="vBlade not found in vcs-summary")
                     raise acos_errors.AxapiJsonFormatError(
                         msg="vMaster not found in vcs-summary")
+                if vmaster_ready is True and vblade_ready is True:
+                    break
             except a10_task_utils.thunder_busy_exceptions() as e:
                 # acos-client already wait default_axapi_timeout for these exceptions.
                 axapi_timeout = CONF.vthunder.default_axapi_timeout
