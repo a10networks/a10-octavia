@@ -404,6 +404,8 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
                     break
             else:
                 self._add_allowed_address_pair_to_port(interface.port_id, '0.0.0.0/0')
+        else:
+            raise exceptions.InterfaceNotFound(amphora.compute_id, network_id)
 
     def _remove_allowed_address_pair_from_port(self, port_id, ip_address):
         port = self.neutron_client.show_port(port_id)
