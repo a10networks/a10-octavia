@@ -138,7 +138,7 @@ class AllowL2DSR(VThunderBaseTask):
                         self.network_driver.allow_use_any_source_ip_on_egress(
                             subnet.network_id, amp)
 
-    def revert(self, subnet, amphora, lb_count_flavor, flavor_data=None):
+    def revert(self, subnet, amphora, lb_count_flavor, flavor_data=None, *args, **kwargs):
         if lb_count_flavor > 1:
             return
 
