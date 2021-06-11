@@ -40,6 +40,7 @@ from a10_octavia.controller.worker.tasks.decorators import activate_partition
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks.decorators import device_context_switch_decorator
+from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 from a10_octavia.db import repositories as a10_repo
 
 
@@ -71,25 +72,22 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
             if vthunder:
                 axapi_client = a10_utils.get_axapi_client(vthunder)
                 LOG.info("Attempting to connect vThunder device for connection.")
-                attempts = 30
-                # TODO(ytsai): use another new config option for vthunder booting wait retry
-                if CONF.a10_controller_worker.amp_active_retries > attempts:
-                    attempts = CONF.a10_controller_worker.amp_active_retries
+                attempts = CONF.a10_controller_worker.amp_active_retries
                 while attempts >= 0:
                     try:
                         attempts = attempts - 1
                         axapi_client.system.information()
                         break
-                    except (req_exceptions.ConnectionError, acos_errors.ACOSException,
-                            http_client.BadStatusLine, req_exceptions.ReadTimeout):
-                        attemptid = 21 - attempts
-                        sleep_time = 20
-                        # TODO(ytsai): use another new config option for vthunder booting wait sec
-                        if CONF.a10_controller_worker.amp_active_wait_sec > sleep_time:
-                            sleep_time = CONF.a10_controller_worker.amp_active_wait_sec
-                        time.sleep(sleep_time)
-                        LOG.debug("VThunder connection attempt - " + str(attemptid))
-                        pass
+                    except a10_task_utils.thunder_busy_exceptions():
+                        # acos-client already wait default_axapi_timeout for these exceptions.
+                        axapi_timeout = CONF.vthunder.default_axapi_timeout
+                        attempt_wait = CONF.a10_controller_worker.amp_active_wait_sec
+                        if axapi_timeout > attempt_wait:
+                            attempts = attempts - (axapi_timeout / attempt_wait - 1)
+                        LOG.debug("VThunder connection retry cnt:" + str(attempts))
+                    except (acos_errors.ACOSException, http_client.BadStatusLine):
+                        time.sleep(CONF.a10_controller_worker.amp_active_wait_sec)
+                        LOG.debug("VThunder connection retry cnt:" + str(attempts))
                 if attempts < 0:
                     LOG.error("Failed to connect vThunder in expected amount of boot time: %s",
                               vthunder.id)
@@ -348,10 +346,12 @@ class ConfigureaVCSBackup(VThunderBaseTask):
                     attempts = 0
                     LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
                     break
-                except req_exceptions.ReadTimeout as e:
-                    # Don't retry for ReadTimout, since acos-client already already have
-                    # tries and timeout for axapi request. And it will take very long to
-                    # response this error.
+                except a10_task_utils.thunder_busy_exceptions() as e:
+                    # acos-client already wait default_axapi_timeout for these exceptions.
+                    axapi_timeout = CONF.vthunder.default_axapi_timeout
+                    attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
+                    if axapi_timeout > attempt_wait:
+                        attempts = attempts - (axapi_timeout / attempt_wait - 1)
                     if attempts < 0:
                         raise e
                 except Exception as e:
@@ -1102,10 +1102,12 @@ class VCSSyncWait(VThunderBaseTask):
                         msg="vMaster not found in vcs-summary")
                 if vmaster_ready is True and vblade_ready is True:
                     break
-            except req_exceptions.ReadTimeout as e:
-                # Don't retry for ReadTimout, since acos-client already already have
-                # tries and timeout for axapi request. And it will take very long to
-                # response this error.
+            except a10_task_utils.thunder_busy_exceptions() as e:
+                # acos-client already wait default_axapi_timeout for these exceptions.
+                axapi_timeout = CONF.vthunder.default_axapi_timeout
+                attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
+                if axapi_timeout > attempt_wait:
+                    attempts = attempts - (axapi_timeout / attempt_wait - 1)
                 if attempts < 0:
                     LOG.exception("Failed to connect VCS device: %s", str(e))
                     raise e
@@ -1138,10 +1140,12 @@ class GetMasterVThunder(VThunderBaseTask):
                         raise acos_errors.AxapiJsonFormatError(
                             msg="vMaster not found in vcs-summary")
                     return vthunder
-                except req_exceptions.ReadTimeout as e:
-                    # Don't retry for ReadTimout, since acos-client already already have
-                    # tries and timeout for axapi request. And it will take very long to
-                    # response this error.
+                except a10_task_utils.thunder_busy_exceptions() as e:
+                    # acos-client already wait default_axapi_timeout for these exceptions.
+                    axapi_timeout = CONF.vthunder.default_axapi_timeout
+                    attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
+                    if axapi_timeout > attempt_wait:
+                        attempts = attempts - (axapi_timeout / attempt_wait - 1)
                     if attempts < 0:
                         LOG.exception("Failed to get Master vThunder: %s", str(e))
                         raise e
