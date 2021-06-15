@@ -163,7 +163,7 @@ INTERFACES = {
     }
 }
 
-FLAVOR_DEV1 = a10_data_models.HardwareThunder(project_id="project-1", device_name="rack_thunder_1",
+FLAVOR_DEV1 = a10_data_models.HardwareThunder(device_name="rack_thunder_1",
                                               undercloud=True, username="abc", password="abc",
                                               ip_address="10.10.10.10", partition_name="shared",
                                               device_name_as_key=True)
