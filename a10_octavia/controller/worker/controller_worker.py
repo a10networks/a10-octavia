@@ -52,14 +52,15 @@ LOG = logging.getLogger(__name__)
 
 
 def ctx_cnt_dec(ctx_lock, ctx_map, key, is_reload_thread, flags):
+    if flags is not None and flags[0] is False:
+        return
+
     ctx_lock.acquire()
     LOG.debug('--------------------------ctx_cnt_dec-----------------------------')
     try:
         ctx = ctx_map.get(key)
         if ctx is None:
             raise
-        if flags is not None and flags[0] is False:
-            return
 
         normal_thrd_num, reload_thrd_num = ctx
         LOG.debug('vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
