@@ -407,7 +407,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         else:
             busy = self._vthunder_busy_check(lb.project_id, True, store)
             create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
-                load_balancer_id, topology=topology, listeners=lb.listeners)
+                load_balancer_id, topology, lb.project_id, listeners=lb.listeners)
             store.update([
                 (a10constants.COMPUTE_BUSY, busy),
                 (a10constants.VTHUNDER_CONFIG, None),
