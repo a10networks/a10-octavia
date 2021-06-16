@@ -782,7 +782,10 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         vrid_floating_ips = []
         update_vrid_flag = False
         existing_fips = []
-        self._add_vrid_to_list(updated_vrid_list, subnet, lb_resource.project_id)
+        if use_device_flavor:
+            self._add_vrid_to_list(updated_vrid_list, subnet, vthunder_config.device_name)
+        else:
+            self._add_vrid_to_list(updated_vrid_list, subnet, lb_resource.project_id)
         for vrid in updated_vrid_list:
             try:
                 vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)

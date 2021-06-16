@@ -439,8 +439,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         if cascade:
             cascade = True
         if self._is_rack_flow(lb.project_id, loadbalancer=lb):
+            vthunder_conf = CONF.hardware_thunder.devices.get(lb.project_id, None)
+            device_dict = CONF.hardware_thunder.devices
             (flow, store) = self._lb_flows.get_delete_rack_vthunder_load_balancer_flow(
-                lb, cascade)
+                lb, cascade,
+                vthunder_conf=vthunder_conf, device_dict=device_dict)
         else:
             (flow, store) = self._lb_flows.get_delete_load_balancer_flow(
                 lb, deleteCompute, cascade)

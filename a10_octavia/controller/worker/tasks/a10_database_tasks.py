@@ -374,9 +374,9 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
 
 class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
-    def execute(self, partition_project_list):
+    def execute(self, partition_project_list, vthunder, use_device_flavor):
         vrid_list = []
-        if partition_project_list:
+        if partition_project_list and not use_device_flavor:
             try:
                 vrid_list = self.vrid_repo.get_vrid_from_project_ids(
                     db_apis.get_session(), project_ids=partition_project_list)
@@ -385,6 +385,17 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
                 LOG.exception(
                     "Failed to get VRID list for given project list  %s due to %s",
                     partition_project_list,
+                    str(e))
+                raise e
+        else:
+            try:
+                vrid_list = self.vrid_repo.get_vrid_from_thunder_device(
+                    db_apis.get_session(), device_name=vthunder.device_name)
+                return vrid_list
+            except Exception as e:
+                LOG.exception(
+                    "Failed to get VRID list for given device  %s due to %s",
+                    vthunder.device_name,
                     str(e))
                 raise e
         return vrid_list
@@ -396,7 +407,7 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
         self.vrid_created = []
         super(UpdateVRIDForLoadbalancerResource, self).__init__(*arg, **kwargs)
 
-    def execute(self, lb_resource, vrid_list):
+    def execute(self, lb_resource, vrid_list, vthunder_config, use_device_flavor):
         if not vrid_list:
             # delete all vrids from DB for the lB resource's project.
             try:
@@ -433,22 +444,40 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                     raise e
 
             else:
-                try:
-                    new_vrid = self.vrid_repo.create(
-                        db_apis.get_session(),
-                        id=vrid.id,
-                        project_id=vrid.project_id,
-                        vrid_floating_ip=vrid.vrid_floating_ip,
-                        vrid_port_id=vrid.vrid_port_id,
-                        vrid=vrid.vrid,
-                        subnet_id=vrid.subnet_id)
-                    self.vrid_created.append(new_vrid)
-                except Exception as e:
-                    LOG.error(
-                        "Failed to create VRID data for VRID FIP %s due to %s",
-                        vrid.vrid_floating_ip,
-                        str(e))
-                    raise e
+                if use_device_flavor:
+                    try:
+                        new_vrid = self.vrid_repo.create(
+                            db_apis.get_session(),
+                            id=vrid.id,
+                            project_id=vthunder_config.device_name,
+                            vrid_floating_ip=vrid.vrid_floating_ip,
+                            vrid_port_id=vrid.vrid_port_id,
+                            vrid=vrid.vrid,
+                            subnet_id=vrid.subnet_id)
+                        self.vrid_created.append(new_vrid)
+                    except Exception as e:
+                        LOG.error(
+                            "Failed to create VRID data for VRID FIP %s due to %s",
+                            vrid.vrid_floating_ip,
+                            str(e))
+                        raise e
+                else:
+                    try:
+                        new_vrid = self.vrid_repo.create(
+                            db_apis.get_session(),
+                            id=vrid.id,
+                            project_id=vrid.project_id,
+                            vrid_floating_ip=vrid.vrid_floating_ip,
+                            vrid_port_id=vrid.vrid_port_id,
+                            vrid=vrid.vrid,
+                            subnet_id=vrid.subnet_id)
+                        self.vrid_created.append(new_vrid)
+                    except Exception as e:
+                        LOG.error(
+                            "Failed to create VRID data for VRID FIP %s due to %s",
+                            vrid.vrid_floating_ip,
+                            str(e))
+                        raise e
 
     def revert(self, *args, **kwargs):
         for vrid in self.vrid_created:
@@ -461,8 +490,8 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
 
 class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
 
-    def execute(self, subnet, partition_project_list):
-        if partition_project_list:
+    def execute(self, subnet, partition_project_list, use_device_flavor):
+        if not use_device_flavor and partition_project_list:
             try:
                 return self.loadbalancer_repo.get_lb_count_by_subnet(
                     db_apis.get_session(),
@@ -1013,3 +1042,31 @@ class ValidateComputeForProject(BaseDatabaseTask):
                               vthunder.compute_id, vthunder.project_id)
                     break
         return vthunder.compute_id
+
+
+class CountLoadbalancersOnThunderBySubnet(BaseDatabaseTask):
+
+    def execute(self, vthunder, subnet, use_device_flavor):
+        count = 0
+        if vthunder and use_device_flavor:
+            try:
+                vthunder_ids = self.vthunder_repo.get_rack_vthunders_by_ip_address(
+                    db_apis.get_session(),
+                    ip_address=vthunder.ip_address)
+                for vthunder_id in vthunder_ids:
+                    vthunder = self.vthunder_repo.get(
+                        db_apis.get_session(),
+                        id=vthunder_id)
+
+                    lb = self.loadbalancer_repo.get_lbs_on_thunder_by_subnet(
+                        db_apis.get_session(),
+                        vthunder.loadbalancer_id,
+                        subnet_id=subnet.id)
+                    if lb:
+                        count = count + 1
+                return count
+            except Exception as e:
+                LOG.exception("Failed to get LB count for subnet %s due to %s ",
+                              subnet.id, str(e))
+                raise e
+        return 0

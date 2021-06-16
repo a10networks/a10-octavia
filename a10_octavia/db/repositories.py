@@ -347,6 +347,16 @@ class VThunderRepository(BaseRepository):
         id_list = [model.id for model in model_list]
         return id_list
 
+    def get_rack_vthunders_by_ip_address(self, session, ip_address):
+        model_list = session.query(self.model_class).filter(
+            self.model_class.ip_address == ip_address).filter(
+            and_(self.model_class.role == "MASTER",
+                 or_(self.model_class.status == "ACTIVE",
+                     self.model_class.status == "PENDING_DELETE")))
+
+        id_list = [model.id for model in model_list]
+        return id_list
+
 
 class LoadBalancerRepository(repo.LoadBalancerRepository):
     thunder_model_class = models.VThunder
@@ -420,6 +430,17 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
             return None
         return model.to_data_model()
 
+    def get_lbs_on_thunder_by_subnet(self, session, loadbalancer_id, subnet_id):
+        model = session.query(self.model_class).join(base_models.Vip).filter(
+            and_(self.model_class.id == loadbalancer_id,
+                 base_models.Vip.subnet_id == subnet_id,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE,
+                     self.model_class.provisioning_status == consts.PENDING_UPDATE))).first()
+        if not model:
+            return None
+        return model.to_data_model()
+
 
 class VRIDRepository(BaseRepository):
     model_class = models.VRID
@@ -431,6 +452,16 @@ class VRIDRepository(BaseRepository):
 
         model = session.query(self.model_class).filter(
             self.model_class.project_id.in_(project_ids))
+        for data in model:
+            vrid_obj_list.append(data.to_data_model())
+
+        return vrid_obj_list
+
+    def get_vrid_from_thunder_device(self, session, device_name):
+        vrid_obj_list = []
+
+        model = session.query(self.model_class).filter(
+            self.model_class.project_id == device_name)
         for data in model:
             vrid_obj_list.append(data.to_data_model())
 

@@ -682,7 +682,7 @@ class LoadBalancerFlows(object):
             requires=a10constants.VTHUNDER))
         return lb_create_flow
 
-    def get_delete_rack_vthunder_load_balancer_flow(self, lb, cascade):
+    def get_delete_rack_vthunder_load_balancer_flow(self, lb, cascade, vthunder_conf, device_dict):
         """Flow to delete rack load balancer"""
 
         store = {}
@@ -702,6 +702,15 @@ class LoadBalancerFlows(object):
             requires=constants.SERVER_GROUP_ID))
         delete_LB_flow.add(database_tasks.MarkLBAmphoraeHealthBusy(
             requires=constants.LOADBALANCER))
+        delete_LB_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR_DATA))
+        delete_LB_flow.add(vthunder_tasks.GetVthunderConfByFlavor(
+            inject={a10constants.VTHUNDER_CONFIG: vthunder_conf,
+                    a10constants.DEVICE_CONFIG_DICT: device_dict},
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG,
+                      a10constants.DEVICE_CONFIG_DICT, constants.FLAVOR_DATA),
+            provides=(a10constants.VTHUNDER_CONFIG, a10constants.USE_DEVICE_FLAVOR)))
         if cascade:
             (pools_listeners_delete, store) = self._get_cascade_delete_pools_listeners_flow(lb)
             delete_LB_flow.add(pools_listeners_delete)
@@ -716,16 +725,20 @@ class LoadBalancerFlows(object):
             ))
         delete_LB_flow.add(
             a10_database_tasks.CountLoadbalancersInProjectBySubnet(
-                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+                requires=[
+                    constants.SUBNET,
+                    a10constants.PARTITION_PROJECT_LIST,
+                    a10constants.USE_DEVICE_FLAVOR],
+                provides=a10constants.LB_COUNT_SUBNET))
+        delete_LB_flow.add(
+            a10_database_tasks.CountLoadbalancersOnThunderBySubnet(
+                requires=[a10constants.VTHUNDER, constants.SUBNET, a10constants.USE_DEVICE_FLAVOR],
                 provides=a10constants.LB_COUNT_SUBNET))
         delete_LB_flow.add(self.get_delete_rack_lb_vrid_subflow())
         delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
             requires=[constants.LOADBALANCER, a10constants.LB_COUNT_SUBNET]))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
-        delete_LB_flow.add(a10_database_tasks.GetFlavorData(
-            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
-            provides=constants.FLAVOR_DATA))
         delete_LB_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.LB_COUNT_FLAVOR))
@@ -809,7 +822,10 @@ class LoadBalancerFlows(object):
             ))
         handle_vrid_for_lb_subflow.add(
             a10_database_tasks.GetVRIDForLoadbalancerResource(
-                requires=a10constants.PARTITION_PROJECT_LIST,
+                requires=[
+                    a10constants.PARTITION_PROJECT_LIST,
+                    a10constants.VTHUNDER,
+                    a10constants.USE_DEVICE_FLAVOR],
                 provides=a10constants.VRID_LIST))
         handle_vrid_for_lb_subflow.add(vthunder_tasks.ConfigureVRID(
             requires=a10constants.VTHUNDER))
@@ -826,7 +842,11 @@ class LoadBalancerFlows(object):
                 provides=a10constants.VRID_LIST))
         handle_vrid_for_lb_subflow.add(
             a10_database_tasks.UpdateVRIDForLoadbalancerResource(
-                requires=a10constants.VRID_LIST, rebind={
+                requires=[
+                    a10constants.VRID_LIST,
+                    a10constants.VTHUNDER_CONFIG,
+                    a10constants.USE_DEVICE_FLAVOR],
+                rebind={
                     a10constants.LB_RESOURCE: constants.LOADBALANCER}))
         return handle_vrid_for_lb_subflow
 
@@ -839,7 +859,10 @@ class LoadBalancerFlows(object):
                 provides=a10constants.MEMBER_COUNT))
         delete_lb_vrid_subflow.add(
             a10_database_tasks.GetVRIDForLoadbalancerResource(
-                requires=a10constants.PARTITION_PROJECT_LIST,
+                requires=[
+                    a10constants.PARTITION_PROJECT_LIST,
+                    a10constants.VTHUNDER,
+                    a10constants.USE_DEVICE_FLAVOR],
                 provides=a10constants.VRID_LIST))
         delete_lb_vrid_subflow.add(
             a10_network_tasks.DeleteVRIDPort(
@@ -869,7 +892,10 @@ class LoadBalancerFlows(object):
                 provides=a10constants.MEMBER_COUNT))
         delete_lb_vrid_subflow.add(
             a10_database_tasks.GetVRIDForLoadbalancerResource(
-                requires=a10constants.PARTITION_PROJECT_LIST,
+                requires=[
+                    a10constants.PARTITION_PROJECT_LIST,
+                    a10constants.VTHUNDER,
+                    a10constants.USE_DEVICE_FLAVOR],
                 provides=a10constants.VRID_LIST))
         delete_lb_vrid_subflow.add(
             a10_network_tasks.DeleteVRIDPort(
