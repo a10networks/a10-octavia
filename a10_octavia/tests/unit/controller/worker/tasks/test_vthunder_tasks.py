@@ -787,7 +787,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.setInterface.assert_not_called()
         self.assertEqual(mock_task.execute(thunder), ([], [1]))
 
-    def test_EnableInterface_execute_for_single_topology(self):
+    @mock.patch('stevedore.driver.DriverManager')
+    def test_EnableInterface_execute_for_single_topology(self, mock_drivermgr):
         thunder = copy.deepcopy(VTHUNDER)
         added_ports = {'amphora_id': ''}
         thunder.topology = "SINGLE"
@@ -796,10 +797,14 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.loadbalancer_repo.check_lb_exists_in_project.return_value = True
         mock_task.axapi_client = self.client_mock
         self.client_mock.interface.get_list.return_value = INTERFACES
+        mock_driver = mock.MagicMock()
+        mock_drivermgr.return_value = mock_driver
+        mock_drivermgr.get_plugged_networks.return_value = [NETWORK_11]
         mock_task.execute(thunder, LB, added_ports)
         self.client_mock.system.action.setInterface.assert_not_called()
 
-    def test_EnableInterface_execute_for_active_standby_topology(self):
+    @mock.patch('stevedore.driver.DriverManager')
+    def test_EnableInterface_execute_for_active_standby_topology(self, mock_drivermgr):
         thunder = copy.deepcopy(VTHUNDER)
         added_ports = {'amphora_id': ''}
         thunder.topology = "ACTIVE_STANDBY"
@@ -808,6 +813,9 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.loadbalancer_repo.check_lb_exists_in_project.return_value = True
         mock_task.axapi_client = self.client_mock
         self.client_mock.interface.get_list.return_value = INTERFACES
+        mock_driver = mock.MagicMock()
+        mock_drivermgr.return_value = mock_driver
+        mock_drivermgr.get_plugged_networks.return_value = [NETWORK_11]
         mock_task.execute(thunder, LB, added_ports)
         self.client_mock.system.action.setInterface.assert_not_called()
 
