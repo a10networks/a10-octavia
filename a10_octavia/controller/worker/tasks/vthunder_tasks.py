@@ -440,8 +440,10 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
             return
         device_name = ''.join([a10constants.DEVICE_KEY_PREFIX,
                                vthunder.device_name]) if vthunder.device_name else ''
-        vthunder_conf = (CONF.hardware_thunder.devices.get(device_name) or
-                         CONF.hardware_thunder.devices.get(vthunder.project_id))
+        vthunder_conf = None
+        if isinstance(CONF.hardware_thunder.devices, dict):
+            vthunder_conf = (CONF.hardware_thunder.devices.get(device_name) or
+                             CONF.hardware_thunder.devices.get(vthunder.project_id))
         if vthunder_conf:
             device_network_map = vthunder_conf.device_network_map
 
