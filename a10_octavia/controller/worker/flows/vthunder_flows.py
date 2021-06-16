@@ -251,7 +251,7 @@ class VThunderFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         vthunder_for_amphora_subflow.add(database_tasks.ReloadLoadBalancer(
-            name=sf_name + '-' + constants.RELOADLOAD_BALANCER,
+            name=sf_name + '-' + a10constants.RELOADLOAD_BALANCER,
             requires=constants.LOADBALANCER_ID,
             provides=constants.LOADBALANCER))
         vthunder_for_amphora_subflow.add(a10_network_tasks.GetLBResourceSubnet(

@@ -55,8 +55,9 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER,
             provides=a10constants.LOADBALANCERS_LIST))
         create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER,
+            requires=constants.LOADBALANCER_ID,
             provides=constants.AMPHORA))
+        # requires=constants.LOADBALANCER,
         create_member_flow.add(a10_network_tasks.CalculateDelta(
             requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
             provides=constants.DELTAS))
@@ -204,7 +205,7 @@ class MemberFlows(object):
                                DeleteModelObject(rebind={constants.OBJECT:
                                                          constants.MEMBER}))
         delete_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER,
+            requires=constants.LOADBALANCER_ID,
             provides=constants.AMPHORA))
         delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,

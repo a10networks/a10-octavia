@@ -151,6 +151,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+        time.sleep(60)
         health_mon = self._health_mon_repo.get(db_apis.get_session(),
                                                id=health_monitor_id)
         if not health_mon:
@@ -276,7 +277,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def create_listener(self, listener_id):
         """Function to create listener for A10 provider"""
-
+        time.sleep(60)
         listener = self._listener_repo.get(db_apis.get_session(),
                                            id=listener_id)
         if not listener:
@@ -398,7 +399,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def create_load_balancer(self, load_balancer_id, flavor=None, ctx_map=None, ctx_lock=None):
         """Function to create load balancer for A10 provider"""
-
+        time.sleep(60)
         lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
         if not lb:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
@@ -561,13 +562,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :raises NoSuitablePool: Unable to find the node pool
         """
 
+        time.sleep(60)
         member = self._member_repo.get(db_apis.get_session(),
                                        id=member_id)
         if not member:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'member', member_id)
             raise db_exceptions.NoResultFound
-
         pool = member.pool
         listeners = pool.listeners
         load_balancer = pool.load_balancer
@@ -738,6 +739,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+        time.sleep(60)
         pool = self._pool_repo.get(db_apis.get_session(),
                                    id=pool_id)
         if not pool:
@@ -799,7 +801,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                  constants.LISTENER: default_listener,
                  constants.LOADBALANCER: load_balancer,
                  constants.HEALTH_MON: health_monitor,
-                 a10constants.MEMBER_COUNT: mem_count}
+                 a10constants.MEMBER_COUNT: mem_count,
+                 constants.LOADBALANCER_ID: load_balancer.id}
 
         ctx_flags = [False]
         try:
@@ -893,6 +896,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+        time.sleep(60)
         l7policy = self._l7policy_repo.get(db_apis.get_session(),
                                            id=l7policy_id)
         if not l7policy:
@@ -1012,6 +1016,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
+        time.sleep(60)
         l7rule = self._l7rule_repo.get(db_apis.get_session(),
                                        id=l7rule_id)
         if not l7rule:

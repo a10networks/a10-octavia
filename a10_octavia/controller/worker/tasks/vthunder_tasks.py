@@ -521,7 +521,7 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
         if isinstance(CONF.hardware_thunder.devices, dict):
             vthunder_conf = (CONF.hardware_thunder.devices.get(device_name) or
                              CONF.hardware_thunder.devices.get(vthunder.project_id))
-        if vthunder_conf is not None:
+        if vthunder_conf:
             device_network_map = vthunder_conf.device_network_map
 
             # Case when device network map is not provided/length is 0

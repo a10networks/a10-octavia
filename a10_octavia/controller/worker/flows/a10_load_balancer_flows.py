@@ -20,6 +20,7 @@ from taskflow.patterns import unordered_flow
 from octavia.common import constants
 from octavia.common import exceptions
 
+
 from octavia.controller.worker.v1.flows import amphora_flows
 from octavia.controller.worker.v1.flows import listener_flows
 from octavia.controller.worker.v1.flows import member_flows
@@ -233,7 +234,7 @@ class LoadBalancerFlows(object):
             (pools_listeners_delete, store) = self._get_cascade_delete_pools_listeners_flow(lb)
             delete_LB_flow.add(pools_listeners_delete)
         delete_LB_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER,
+            requires=constants.LOADBALANCER_ID,
             provides=constants.AMPHORA))
         delete_LB_flow.add(a10_database_tasks.GetLoadBalancerListForDeletion(
             requires=(a10constants.VTHUNDER, constants.LOADBALANCER),
