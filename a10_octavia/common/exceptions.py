@@ -234,6 +234,13 @@ class ProjectDeviceNotFound(acos_errors.ACOSException):
         super(ProjectDeviceNotFound, self).__init__(msg=msg)
 
 
+class DeviceIsProjectDevice(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('The device already specify project_id in configuration file, '
+               'device-name flavor can not use it.')
+        super(DeviceIsProjectDevice, self).__init__(msg=msg)
+
+
 class FlavorDeviceNotFound(acos_errors.ACOSException):
     def __init__(self, device):
         msg = ('[device-name flavor] Device [{0}] not found in the configuration'
