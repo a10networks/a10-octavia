@@ -270,7 +270,10 @@ A10_CONTROLLER_WORKER_OPTS = [
     cfg.IntOpt('amp_busy_wait_sec',
                default=900,
                help=_('Timeout for waiting when vThunder instance is busy. '
-                      '(0 for no timeout'))
+                      '(0 for no timeout')),
+    cfg.IntOpt('max_db_timeout',
+               default=60,
+               help=_('Database Timeout for creating a Database entry'))
 ]
 
 A10_HOUSE_KEEPING_OPTS = [
