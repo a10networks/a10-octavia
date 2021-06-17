@@ -151,14 +151,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        time.sleep(60)
-        health_mon = self._health_mon_repo.get(db_apis.get_session(),
-                                               id=health_monitor_id)
+        health_mon = utils.wait_for_db_entry(self._health_mon_repo, health_monitor_id)
         if not health_mon:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'health_monitor', health_monitor_id)
             raise db_exceptions.NoResultFound
-
         pool = health_mon.pool
         listeners = pool.listeners
         pool.health_monitor = health_mon
@@ -277,14 +274,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def create_listener(self, listener_id):
         """Function to create listener for A10 provider"""
-        time.sleep(60)
-        listener = self._listener_repo.get(db_apis.get_session(),
-                                           id=listener_id)
+        listener = utils.wait_for_db_entry(self._listener_repo, listener_id)
         if not listener:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'listener', listener_id)
             raise db_exceptions.NoResultFound
-
         load_balancer = listener.load_balancer
         parent_project_list = utils.get_parent_project_list()
         listener_parent_proj = utils.get_parent_project(listener.project_id)
@@ -399,8 +393,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def create_load_balancer(self, load_balancer_id, flavor=None, ctx_map=None, ctx_lock=None):
         """Function to create load balancer for A10 provider"""
-        time.sleep(60)
-        lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
+        lb = utils.wait_for_db_entry(self._lb_repo, load_balancer_id)
         if not lb:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'load_balancer', load_balancer_id)
@@ -562,13 +555,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :raises NoSuitablePool: Unable to find the node pool
         """
 
-        time.sleep(60)
-        member = self._member_repo.get(db_apis.get_session(),
-                                       id=member_id)
+        member = utils.wait_for_db_entry(self._member_repo, member_id)
         if not member:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'member', member_id)
             raise db_exceptions.NoResultFound
+
         pool = member.pool
         listeners = pool.listeners
         load_balancer = pool.load_balancer
@@ -739,9 +731,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        time.sleep(60)
-        pool = self._pool_repo.get(db_apis.get_session(),
-                                   id=pool_id)
+        pool = utils.wait_for_db_entry(self._pool_repo, pool_id)
         if not pool:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'pool', pool_id)
@@ -896,14 +886,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        time.sleep(60)
-        l7policy = self._l7policy_repo.get(db_apis.get_session(),
-                                           id=l7policy_id)
+        l7policy = utils.wait_for_db_entry(self._l7policy_repo, l7policy_id)
         if not l7policy:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'l7policy', l7policy_id)
             raise db_exceptions.NoResultFound
-
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
 
@@ -1016,14 +1003,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        time.sleep(60)
-        l7rule = self._l7rule_repo.get(db_apis.get_session(),
-                                       id=l7rule_id)
+        l7rule = utils.wait_for_db_entry(self._l7rule_repo, l7rule_id)
         if not l7rule:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'l7rule', l7rule_id)
             raise db_exceptions.NoResultFound
-
         l7policy = l7rule.l7policy
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
