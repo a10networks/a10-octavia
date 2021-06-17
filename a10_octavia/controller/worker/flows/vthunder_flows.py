@@ -130,15 +130,6 @@ class VThunderFlows(object):
             name=sf_name + '-' + a10constants.RELOADLOAD_BALANCER,
             requires=constants.LOADBALANCER_ID,
             provides=constants.LOADBALANCER))
-        create_amp_for_lb_subflow.add(a10_network_tasks.AllocateVIP(
-            name=sf_name + '-' + a10constants.ALLOCATE_VIP,
-            requires=constants.LOADBALANCER,
-            provides=constants.VIP))
-        create_amp_for_lb_subflow.add(database_tasks.UpdateVIPAfterAllocation(
-            name=sf_name + '-' + a10constants.UPDATE_VIP_AFTER_ALLOCATION,
-            requires=(constants.LOADBALANCER_ID, constants.VIP),
-            provides=constants.LOADBALANCER))
-
         require_server_group_id_condition = (
             role in (constants.ROLE_BACKUP, constants.ROLE_MASTER) and
             CONF.a10_nova.enable_anti_affinity)
@@ -188,6 +179,10 @@ class VThunderFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         create_amp_for_lb_subflow.add(
+            vthunder_tasks.VThunderComputeConnectivityWait(
+                name=sf_name + '-' + a10constants.WAIT_FOR_VTHUNDER_CONNECTIVITY,
+                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        create_amp_for_lb_subflow.add(
             database_tasks.MarkAmphoraAllocatedInDB(
                 name=sf_name + '-' + constants.MARK_AMPHORA_ALLOCATED_INDB,
                 requires=(constants.AMPHORA, constants.LOADBALANCER_ID)))
@@ -195,6 +190,13 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.RELOAD_AMPHORA,
             requires=constants.AMPHORA_ID,
             provides=constants.AMPHORA))
+        create_amp_for_lb_subflow.add(a10_network_tasks.GetLBResourceSubnet(
+            name=sf_name + '-' + a10constants.GET_LB_RESOURCE,
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
+        create_amp_for_lb_subflow.add(vthunder_tasks.AllowL2DSR(
+            name=sf_name + '-' + a10constants.ALLOW_L2DSR,
+            requires=(constants.SUBNET, constants.AMPHORA)))
         if role == constants.ROLE_MASTER:
             create_amp_for_lb_subflow.add(database_tasks.MarkAmphoraMasterInDB(
                 name=sf_name + '-' + constants.MARK_AMP_MASTER_INDB,
@@ -229,8 +231,10 @@ class VThunderFlows(object):
         vthunder_for_amphora_subflow.add(database_tasks.CreateAmphoraInDB(
             name=sf_name + '-' + constants.CREATE_AMPHORA_INDB,
             provides=constants.AMPHORA_ID))
-        vthunder_for_amphora_subflow.add(a10_database_tasks.GetComputeForProject(
+        vthunder_for_amphora_subflow.add(a10_database_tasks.ValidateComputeForProject(
+            name=sf_name + '-' + a10constants.VALIDATE_COMPUTE_FOR_PROJECT,
             requires=constants.LOADBALANCER,
+            inject={"role": role},
             provides=constants.COMPUTE_ID))
         vthunder_for_amphora_subflow.add(database_tasks.UpdateAmphoraComputeId(
             name=sf_name + '-' + constants.UPDATE_AMPHORA_COMPUTEID,
@@ -245,12 +249,42 @@ class VThunderFlows(object):
             provides=constants.AMPHORA))
         # create vThunder entry in custom DB
         vthunder_for_amphora_subflow.add(a10_database_tasks.CreateVThunderEntry(
+            name=sf_name + '-' + a10constants.CREATE_VTHUNDER_ENTRY,
             requires=(constants.AMPHORA, constants.LOADBALANCER),
             inject={"role": role, "status": constants.PENDING_CREATE}))
         # Get VThunder details from database
         vthunder_for_amphora_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        vthunder_for_amphora_subflow.add(database_tasks.ReloadLoadBalancer(
+            name=sf_name + '-' + a10constants.RELOADLOAD_BALANCER,
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.LOADBALANCER))
+        vthunder_for_amphora_subflow.add(a10_network_tasks.GetLBResourceSubnet(
+            name=sf_name + '-' + a10constants.GET_LB_RESOURCE,
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
+        vthunder_for_amphora_subflow.add(
+            a10_database_tasks.GetChildProjectsOfParentPartition(
+                name=sf_name + '-' + a10constants.GET_PROJECT_COUNT,
+                requires=[a10constants.VTHUNDER],
+                rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+                provides=a10constants.PARTITION_PROJECT_LIST
+            ))
+        vthunder_for_amphora_subflow.add(
+            a10_database_tasks.CountLoadbalancersInProjectBySubnet(
+                name=sf_name + '-' + a10constants.GET_LB_COUNT_SUBNET,
+                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+                provides=a10constants.LB_COUNT_SUBNET))
+        vthunder_for_amphora_subflow.add(a10_network_tasks.AllocateVIP(
+            name=sf_name + '-' + a10constants.ALLOCATE_VIP,
+            requires=[constants.LOADBALANCER, a10constants.LB_COUNT_SUBNET],
+            provides=constants.VIP))
+        vthunder_for_amphora_subflow.add(database_tasks.UpdateVIPAfterAllocation(
+            name=sf_name + '-' + a10constants.UPDATE_VIP_AFTER_ALLOCATION,
+            requires=(constants.LOADBALANCER_ID, constants.VIP),
+            provides=constants.LOADBALANCER))
         vthunder_for_amphora_subflow.add(
             database_tasks.MarkAmphoraAllocatedInDB(
                 name=sf_name + '-' + constants.MARK_AMPHORA_ALLOCATED_INDB,
@@ -259,6 +293,9 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.RELOAD_AMPHORA,
             requires=constants.AMPHORA_ID,
             provides=constants.AMPHORA))
+        vthunder_for_amphora_subflow.add(vthunder_tasks.AllowL2DSR(
+            name=sf_name + '-' + a10constants.ALLOW_L2DSR,
+            requires=(constants.SUBNET, constants.AMPHORA)))
         if role == constants.ROLE_MASTER:
             vthunder_for_amphora_subflow.add(database_tasks.MarkAmphoraMasterInDB(
                 name=sf_name + '-' + constants.MARK_AMP_MASTER_INDB,
@@ -284,16 +321,33 @@ class VThunderFlows(object):
             provides=a10constants.VTHUNDER))
         vrrp_subflow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
             name=sf_name + '-' + a10constants.GET_BACKUP_LOADBALANCER_FROM_DB,
-            requires=constants.LOADBALANCER,
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.BACKUP_VTHUNDER))
+        # Make sure devices are ready
+        vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            name=sf_name + '-' + a10constants.WAIT_FOR_MASTER_SYNC + '-for-thunder',
+            requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            name=sf_name + '-' + a10constants.WAIT_FOR_BACKUP_SYNC + '-for-thunder',
+            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+            requires=(constants.AMPHORA)))
         # VRRP Configuration
+        vrrp_subflow.add(a10_database_tasks.AddProjectSetIdDB(
+            name=sf_name + '-' + a10constants.ADD_VRRP_SET_ID_INDB,
+            requires=constants.LOADBALANCER,
+            provides=a10constants.SET_ID))
         vrrp_subflow.add(vthunder_tasks.ConfigureVRRPMaster(
             name=sf_name + '-' + a10constants.CONFIGURE_VRRP_FOR_MASTER_VTHUNDER,
-            requires=(a10constants.VTHUNDER)))
+            requires=(a10constants.VTHUNDER, a10constants.SET_ID)))
         vrrp_subflow.add(vthunder_tasks.ConfigureVRRPBackup(
             name=sf_name + '-' + a10constants.CONFIGURE_VRRP_FOR_BACKUP_VTHUNDER,
+            requires=(a10constants.VTHUNDER, a10constants.SET_ID),
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
         vrrp_subflow.add(self._get_vrrp_status_subflow(sf_name))
+        # Wait for aVCS sync
+        vrrp_subflow.add(vthunder_tasks.VCSSyncWait(
+            name=sf_name + '-' + a10constants.VCS_SYNC_WAIT + '-for-thunder',
+            requires=a10constants.VTHUNDER))
 
         return vrrp_subflow
 
@@ -319,25 +373,6 @@ class VThunderFlows(object):
 
     def _configure_vrrp_subflow(self, sf_name):
         configure_vrrp_subflow = linear_flow.Flow(sf_name)
-        # VRID Configuration
-        configure_vrrp_subflow.add(vthunder_tasks.ConfigureVRID(
-            name=sf_name + '-' + a10constants.CONFIGURE_VRID_FOR_MASTER_VTHUNDER,
-            requires=(a10constants.VTHUNDER)))
-        configure_vrrp_subflow.add(vthunder_tasks.ConfigureVRID(
-            name=sf_name + '-' + a10constants.CONFIGURE_VRID_FOR_BACKUP_VTHUNDER,
-            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-        # VRRP synch
-        configure_vrrp_subflow.add(vthunder_tasks.ConfigureVRRPSync(
-            name=sf_name + '-' + a10constants.CONFIGURE_VRRP_SYNC,
-            requires=(a10constants.VTHUNDER, a10constants.BACKUP_VTHUNDER)))
-        # Wait for VRRP synch
-        configure_vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-            name=sf_name + '-' + a10constants.WAIT_FOR_MASTER_SYNC,
-            requires=(a10constants.VTHUNDER, constants.AMPHORA)))
-        configure_vrrp_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-            name=sf_name + '-' + a10constants.WAIT_FOR_BACKUP_SYNC,
-            rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-            requires=(constants.AMPHORA)))
         # Configure aVCS
         configure_vrrp_subflow.add(vthunder_tasks.ConfigureaVCSMaster(
             name=sf_name + '-' + a10constants.CONFIGURE_AVCS_SYNC_FOR_MASTER,
@@ -345,6 +380,10 @@ class VThunderFlows(object):
         configure_vrrp_subflow.add(vthunder_tasks.ConfigureaVCSBackup(
             name=sf_name + '-' + a10constants.CONFIGURE_AVCS_SYNC_FOR_BACKUP,
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+        # Wait for aVCS sync
+        configure_vrrp_subflow.add(vthunder_tasks.VCSSyncWait(
+            name=sf_name + '-' + a10constants.VCS_SYNC_WAIT,
+            requires=a10constants.VTHUNDER))
         return configure_vrrp_subflow
 
     def get_rack_vthunder_for_lb_subflow(
@@ -372,7 +411,7 @@ class VThunderFlows(object):
         """
         return history[history.keys()[0]]
 
-    def get_write_memory_flow(self, vthunder, store):
+    def get_write_memory_flow(self, vthunder, store, deleteCompute):
         """Perform write memory for thunder """
         sf_name = 'a10-house-keeper' + '-' + a10constants.WRITE_MEMORY_THUNDER_FLOW
 
@@ -391,31 +430,40 @@ class VThunderFlows(object):
                 id=vthunder.vthunder_id,
                 flow='MarkLoadBalancersPendingUpdateInDB'),
             requires=a10constants.LOADBALANCERS_LIST))
-        write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
-            requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST,
-                      a10constants.WRITE_MEM_SHARED_PART),
-            rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
-            name='{flow}-{partition}-{id}'.format(
-                id=vthunder.vthunder_id,
-                flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
-                partition=a10constants.WRITE_MEM_FOR_SHARED_PARTITION),
-            provides=a10constants.WRITE_MEM_SHARED))
-        write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
-            requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST),
-            rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
-            name='{flow}-{partition}-{id}'.format(
-                id=vthunder.vthunder_id,
-                flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
-                partition=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION),
-            provides=a10constants.WRITE_MEM_PRIVATE))
-        write_memory_flow.add(a10_database_tasks.SetThunderLastWriteMem(
-            requires=(a10constants.VTHUNDER,
-                      a10constants.WRITE_MEM_SHARED,
-                      a10constants.WRITE_MEM_PRIVATE),
-            rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
-            name='{flow}-{id}'.format(
-                id=vthunder.vthunder_id,
-                flow='SetThunderLastWriteMem')))
+        if not deleteCompute:
+            write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
+                requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST,
+                          a10constants.WRITE_MEM_SHARED_PART),
+                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
+                name='{flow}-{partition}-{id}'.format(
+                    id=vthunder.vthunder_id,
+                    flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
+                    partition=a10constants.WRITE_MEM_FOR_SHARED_PARTITION),
+                provides=a10constants.WRITE_MEM_SHARED))
+            write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
+                requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST),
+                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
+                name='{flow}-{partition}-{id}'.format(
+                    id=vthunder.vthunder_id,
+                    flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
+                    partition=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION),
+                provides=a10constants.WRITE_MEM_PRIVATE))
+            write_memory_flow.add(a10_database_tasks.SetThunderLastWriteMem(
+                requires=(a10constants.VTHUNDER,
+                          a10constants.WRITE_MEM_SHARED,
+                          a10constants.WRITE_MEM_PRIVATE),
+                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
+                name='{flow}-{id}'.format(
+                    id=vthunder.vthunder_id,
+                    flow='SetThunderLastWriteMem')))
+        else:
+            write_memory_flow.add(a10_database_tasks.SetThunderLastWriteMem(
+                requires=(a10constants.VTHUNDER),
+                inject={a10constants.WRITE_MEM_SHARED: True, a10constants.WRITE_MEM_PRIVATE: True},
+                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
+                name='{flow}-{id}'.format(
+                    id=vthunder.vthunder_id,
+                    flow='SetThunderLastWriteMem')))
         write_memory_flow.add(a10_database_tasks.MarkLoadBalancersActiveInDB(
             name='{flow}-{id}'.format(
                 id=vthunder.vthunder_id,

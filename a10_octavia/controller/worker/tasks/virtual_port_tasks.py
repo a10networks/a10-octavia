@@ -22,6 +22,7 @@ from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
@@ -159,6 +160,8 @@ class ListenersParent(object):
                    virtual_port_templates=vport_templates,
                    **config_data)
 
+        listener.protocol = listener.protocol.upper()
+
 
 class ListenerCreate(ListenersParent, task.Task):
     """Task to create listener"""
@@ -173,7 +176,7 @@ class ListenerCreate(ListenersParent, task.Task):
             LOG.exception("Failed to create listener: %s", listener.id)
             raise e
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, loadbalancer, listener, vthunder, *args, **kwargs):
         LOG.warning("Reverting creation of listener: %s", listener.id)
         try:

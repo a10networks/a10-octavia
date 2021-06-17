@@ -39,6 +39,25 @@ RACK_DEVICE = {
     "interface_vlan_map": {"1": {"11": {"use_dhcp": True}, "12": {"use_dhcp": True}}}
 }
 
+RACK_DEVICE_LIST = {
+    "project-rack-vthunder": {
+        "project_id": "project-rack-vthunder",
+        "ip_address": "10.0.0.1",
+        "device_name": "rack_vthunder",
+        "username": "abc",
+        "password": "abc",
+        "interface_vlan_map": {"1": {"11": {"use_dhcp": True}, "12": {"use_dhcp": True}}}
+    },
+    "[dev]rack_vthunder": {
+        "project_id": "project-rack-vthunder",
+        "ip_address": "10.0.0.1",
+        "device_name": "rack_vthunder",
+        "username": "abc",
+        "password": "abc",
+        "interface_vlan_map": {"1": {"11": {"use_dhcp": True}, "12": {"use_dhcp": True}}}
+    }
+}
+
 
 @mock.patch("octavia.controller.worker.v1.tasks.database_tasks.UpdateAmphoraVIPData")
 class TestLoadBalancerFlows(base.TestCase):
@@ -57,16 +76,17 @@ class TestLoadBalancerFlows(base.TestCase):
         self.conf.reset()
 
     def test_create_lb_flows(self, mock_net_driver):
-        target = self.flows.get_create_load_balancer_flow(constants.TOPOLOGY_SINGLE)
-        self.assertIsInstance(target, flow.Flow)
-        self.assertIn("vthunder", target.provides)
+        lb = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
+                                        project_id='project-vthunder')
+        (create_flow, store) = self.flows.get_delete_load_balancer_flow(lb, False, False)
+        self.assertIsInstance(create_flow, flow.Flow)
 
     def test_create_lb_rack_vthunder_vlan_flow(self, mock_net_driver):
         self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
                                 group=a10constants.A10_GLOBAL_CONF_SECTION)
         self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION, network_type='vlan')
         target = self.flows.get_create_rack_vthunder_load_balancer_flow(
-            RACK_DEVICE, constants.TOPOLOGY_SINGLE)
+            RACK_DEVICE, RACK_DEVICE_LIST, constants.TOPOLOGY_SINGLE)
         self.assertIsInstance(target, flow.Flow)
 
     def test_delete_lb_rack_vthunder_vlan_flow(self, mock_net_driver):
@@ -79,5 +99,5 @@ class TestLoadBalancerFlows(base.TestCase):
                          devices=[RACK_DEVICE])
         lb = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
                                         project_id='project-rack-vthunder')
-        (del_flow, store) = self.flows.get_delete_load_balancer_flow(lb, False)
+        (del_flow, store) = self.flows.get_delete_load_balancer_flow(lb, False, False)
         self.assertIsInstance(del_flow, flow.Flow)

@@ -17,9 +17,11 @@
 
 """
 import acos_client
+import json
 import netaddr
 import socket
 import struct
+import time
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -27,8 +29,11 @@ from oslo_log import log as logging
 from keystoneauth1.exceptions import http as keystone_exception
 from keystoneclient.v3 import client as keystone_client
 from octavia.common import keystone
+from octavia.db import api as db_apis
+from octavia.db import repositories as repo
 from stevedore import driver as stevedore_driver
 
+from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
 from a10_octavia.common import exceptions
 
@@ -64,9 +69,8 @@ def validate_partition(hardware_device):
 
 def validate_params(hardware_info):
     """Check for all the required parameters for hardware configurations."""
-    if all(k in hardware_info for k in ('project_id', 'ip_address',
-                                        'username', 'password', 'device_name')):
-        if all(hardware_info[x] is not None for x in ('project_id', 'ip_address',
+    if all(k in hardware_info for k in ('ip_address', 'username', 'password', 'device_name')):
+        if all(hardware_info[x] is not None for x in ('ip_address',
                                                       'username', 'password', 'device_name')):
             validate_ipv4(hardware_info['ip_address'])
             validate_partition(hardware_info)
@@ -79,7 +83,8 @@ def validate_params(hardware_info):
 def check_duplicate_entries(hardware_dict):
     hardware_count_dict = {}
     for hardware_device in hardware_dict.values():
-        if hardware_device.hierarchical_multitenancy != "enable":
+        if (hardware_device.hierarchical_multitenancy != "enable" and
+                hardware_device.device_name_as_key is not True):
             candidate = '{}:{}'.format(hardware_device.ip_address, hardware_device.partition_name)
             hardware_count_dict[candidate] = hardware_count_dict.get(candidate, 0) + 1
     return [k for k, v in hardware_count_dict.items() if v > 1]
@@ -90,29 +95,48 @@ def convert_to_hardware_thunder_conf(hardware_list):
     hardware_dict = {}
     for hardware_device in hardware_list:
         hardware_device = validate_params(hardware_device)
-        project_id = hardware_device['project_id']
-        if hardware_dict.get(project_id):
-            raise cfg.ConfigFileValueError('Supplied duplicate project_id {} '
-                                           ' in [hardware_thunder] section'.format(project_id))
         hardware_device['undercloud'] = True
         if hardware_device.get('interface_vlan_map'):
             hardware_device['device_network_map'] = validate_interface_vlan_map(hardware_device)
             del hardware_device['interface_vlan_map']
-        hierarchical_mt = hardware_device.get('hierarchical_multitenancy')
-        if hierarchical_mt == "enable":
-            hardware_device["partition_name"] = project_id[0:14]
-        if hierarchical_mt and hierarchical_mt not in ('enable', 'disable'):
-            raise cfg.ConfigFileValueError('Option `hierarchical_multitenancy` specified '
-                                           'under project id {} only accepts "enable" and '
-                                           '"disable"'.format(project_id))
+
+        # Add dict entries with project_id as key
+        if 'project_id' in hardware_device:
+            project_id = hardware_device['project_id']
+            if hardware_dict.get(project_id):
+                raise cfg.ConfigFileValueError('Supplied duplicate project_id {} '
+                                               ' in [hardware_thunder] section'.format(project_id))
+            hierarchical_mt = hardware_device.get('hierarchical_multitenancy')
+            if hierarchical_mt == "enable":
+                hardware_device["partition_name"] = project_id[0:14]
+            if hierarchical_mt and hierarchical_mt not in ('enable', 'disable'):
+                raise cfg.ConfigFileValueError('Option `hierarchical_multitenancy` specified '
+                                               'under project id {} only accepts "enable" and '
+                                               '"disable"'.format(project_id))
+            vthunder_conf = data_models.HardwareThunder(**hardware_device)
+            hardware_dict[project_id] = vthunder_conf
+
+        # Add dict entries with dev_name as key
+        device_name = hardware_device['device_name']
+        if hardware_dict.get(a10constants.DEVICE_KEY_PREFIX + device_name):
+            raise cfg.ConfigFileValueError('Supplied duplicate device_name {} '
+                                           ' in [hardware_thunder] section'.format(device_name))
         vthunder_conf = data_models.HardwareThunder(**hardware_device)
-        hardware_dict[project_id] = vthunder_conf
+        vthunder_conf.device_name_as_key = True
+        hardware_dict[(a10constants.DEVICE_KEY_PREFIX + device_name)] = vthunder_conf
+
         duplicates = check_duplicate_entries(hardware_dict)
         if duplicates:
             raise cfg.ConfigFileValueError('Duplicates found for the following '
                                            '\'ip_address:partition_name\' entries: {}'
                                            .format(list(duplicates)))
     return hardware_dict
+
+
+def get_vip_security_group_name(port_id):
+    if port_id:
+        return a10constants.VIP_SEC_GROUP_PREFIX + port_id
+    return None
 
 
 def get_parent_project_list():
@@ -138,7 +162,7 @@ def get_axapi_client(vthunder):
     api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
     axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
                                       vthunder.username, vthunder.password,
-                                      timeout=30)
+                                      timeout=CONF.vthunder.default_axapi_timeout)
     return axapi_client
 
 
@@ -219,10 +243,12 @@ def get_patched_ip_address(ip, cidr):
 
 
 def get_vrid_floating_ip_for_project(project_id):
-    device_info = CONF.hardware_thunder.devices.get(project_id)
-    if device_info:
-        vrid_fp = device_info.vrid_floating_ip
-        return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp
+    vrid_fp = None
+    if CONF.hardware_thunder.devices:
+        device_info = CONF.hardware_thunder.devices.get(project_id)
+        if device_info:
+            vrid_fp = device_info.vrid_floating_ip
+    return CONF.a10_global.vrid_floating_ip if not vrid_fp else vrid_fp
 
 
 def validate_vcs_device_info(device_network_map):
@@ -292,3 +318,40 @@ def validate_interface_vlan_map(hardware_device):
         device_network_map.append(device_map)
     validate_vcs_device_info(device_network_map)
     return device_network_map
+
+
+def get_natpool_addr_list(nat_flavor):
+    addr_list = []
+    start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
+    end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
+    while start <= end:
+        addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
+        start += 1
+    return addr_list
+
+
+def get_loadbalancer_flavor(loadbalancer):
+    flavor_repo = repo.FlavorRepository()
+    flavor_profile_repo = repo.FlavorProfileRepository()
+    flavor = {}
+    flavor_id = loadbalancer.flavor_id
+    if flavor_id:
+        flavor = flavor_repo.get(db_apis.get_session(), id=flavor_id)
+        if flavor and flavor.flavor_profile_id:
+            flavor_profile = flavor_profile_repo.get(db_apis.get_session(),
+                                                     id=flavor.flavor_profile_id)
+            flavor_data = json.loads(flavor_profile.flavor_data)
+            return flavor_data
+
+
+def wait_for_db_entry(db_repo, component_id):
+    attempts = CONF.a10_controller_worker.max_db_timeout
+    LOG.info("Attempting to fetch entry from database")
+    while attempts >= 0:
+        attempts = attempts - 1
+        db_obj = db_repo.get(db_apis.get_session(), id=component_id)
+        if db_obj is not None:
+            break
+        else:
+            time.sleep(1)
+    return db_obj

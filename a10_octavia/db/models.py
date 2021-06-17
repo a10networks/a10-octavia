@@ -46,9 +46,10 @@ class VThunder(base_models.BASE):
     status = sa.Column('status', sa.String(36), default='ACTIVE', nullable=False)
     created_at = sa.Column(u'created_at', sa.DateTime(), nullable=True)
     updated_at = sa.Column(u'updated_at', sa.DateTime(), nullable=True)
-    partition_name = sa.Column(sa.String(14), nullable=True)
-    hierarchical_multitenancy = sa.Column(sa.String(7), nullable=False)
+    partition_name = sa.Column(sa.String(14), default='shared', nullable=False)
+    hierarchical_multitenancy = sa.Column(sa.String(7), default='disable', nullable=False)
     last_write_mem = sa.Column(u'last_write_mem', sa.DateTime(), nullable=True)
+    acos_version = sa.Column(sa.String(36), nullable=True)
 
     @classmethod
     def find_by_loadbalancer_id(cls, loadbalancer_id, db_session=None):
@@ -59,11 +60,11 @@ class VRID(base_models.BASE):
     __data_model__ = data_models.VRID
     __tablename__ = 'vrid'
 
-    id = sa.Column(sa.Integer, primary_key=True)
+    id = sa.Column(sa.String(36), primary_key=True)
     project_id = sa.Column(sa.String(36), nullable=False)
     vrid = sa.Column(sa.Integer, default=0)
     vrid_port_id = sa.Column(sa.String(36), nullable=False)
-    vrid_floating_ip = sa.Column(sa.String(40))
+    vrid_floating_ip = sa.Column(sa.String(40), nullable=False)
     subnet_id = sa.Column(sa.String(36), nullable=False)
 
 
@@ -81,3 +82,13 @@ class NATPool(base_models.BASE):
     member_ref_count = sa.Column(sa.Integer, default=0, nullable=False)
     port_id = sa.Column(sa.String(64), nullable=False)
 
+
+class VrrpSet(base_models.BASE):
+    __data_model__ = data_models.VrrpSet
+    __tablename__ = 'vrrp_set'
+    __table_args__ = (
+        sa.UniqueConstraint('mgmt_subnet', 'project_id', name='unique_name_project_subnet_set_id'),
+    )
+    mgmt_subnet = sa.Column(sa.String(64), primary_key=True)
+    project_id = sa.Column(sa.String(64), primary_key=True)
+    set_id = sa.Column(sa.Integer, default=0, nullable=False)

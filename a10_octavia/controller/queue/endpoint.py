@@ -33,12 +33,13 @@ class Endpoint(object):
         namespace=constants.RPC_NAMESPACE_CONTROLLER_AGENT,
         version='1.0')
 
-    def __init__(self):
+    def __init__(self, ctx_map, ctx_lock):
         self.worker = stevedore_driver.DriverManager(
             namespace='a10.plugins',
             name='a10_octavia_plugin',
             invoke_on_load=True
         ).driver
+        self.worker.a10_worker_ctx_init(ctx_map, ctx_lock)
 
     def create_load_balancer(self, context, load_balancer_id, flavor=None):
         LOG.info('Creating load balancer \'%s\'...', load_balancer_id)

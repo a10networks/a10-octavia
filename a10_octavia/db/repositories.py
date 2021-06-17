@@ -187,6 +187,8 @@ class VThunderRepository(BaseRepository):
         query = session.query(self.model_class).filter(
             or_(self.model_class.updated_at >= self.model_class.last_write_mem,
                 self.model_class.last_write_mem == None)).filter(
+            or_(self.model_class.role == "STANDALONE",
+                self.model_class.role == "MASTER")).filter(
             or_(self.model_class.status == 'ACTIVE', self.model_class.status == 'DELETED'))
         query = query.options(noload('*'))
         return query.all()
@@ -258,7 +260,8 @@ class VThunderRepository(BaseRepository):
     def get_delete_compute_flag(self, session, compute_id):
         if compute_id:
             count = session.query(self.model_class).filter(
-                self.model_class.compute_id == compute_id).count()
+                and_(self.model_class.compute_id == compute_id,
+                     self.model_class.status != "DELETED")).count()
             if count < 2:
                 return True
 
@@ -314,13 +317,35 @@ class VThunderRepository(BaseRepository):
             and_(self.model_class.partition_name == partition_name,
                  self.model_class.ip_address == ip_address,
                  or_(self.model_class.role == "STANDALONE",
-                     self.model_class.role == "MASTER")))
+                     self.model_class.role == "MASTER",
+                     self.model_class.role == "BACKUP")))
         list_projects = [project[0] for project in queryset_vthunders]
         return list_projects
 
     def update_last_write_mem(self, session, ip_address, partition, **model_kwargs):
         with session.begin(subtransactions=True):
-            session.query(self.model_class).filter_by(ip_address=ip_address, partition_name=partition).update(model_kwargs)
+            session.query(self.model_class).filter_by(
+                    ip_address=ip_address, partition_name=partition).update(model_kwargs)
+
+    def get_vthunder_by_project_id_and_role(self, session, project_id, role):
+        model = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.status == "ACTIVE",
+                 self.model_class.role == role)).first()
+
+        if not model:
+            return None
+
+        return model.to_data_model()
+
+    def get_vthunders_by_project_id_and_role(self, session, project_id, role):
+        model_list = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.status == "ACTIVE",
+                 self.model_class.role == role))
+
+        id_list = [model.id for model in model_list]
+        return id_list
 
 
 class LoadBalancerRepository(repo.LoadBalancerRepository):
@@ -341,7 +366,8 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
             and_(self.model_class.project_id.in_(project_ids),
                  base_models.Vip.subnet_id == subnet_id,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
-                     self.model_class.provisioning_status == consts.ACTIVE))).count()
+                     self.model_class.provisioning_status == consts.ACTIVE,
+                     self.model_class.provisioning_status == consts.PENDING_UPDATE))).count()
 
     def get_lb_count_by_flavor(self, session, project_ids, flavor_id):
         return session.query(self.model_class).filter(
@@ -349,6 +375,50 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
                 self.model_class.flavor_id == flavor_id,
                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                     self.model_class.provisioning_status == consts.ACTIVE)).count()
+
+    def check_lb_exists_in_project(self, session, project_id):
+        lb = session.query(self.model_class).join(base_models.Vip).filter(
+            and_(self.model_class.project_id == project_id,
+                 self.model_class.provisioning_status == consts.ACTIVE)).count()
+        if lb == 0:
+            return False
+        else:
+            return True
+
+    def get_lbs_by_project_id(self, session, project_id):
+        lb_list = []
+        query = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            or_(self.model_class.provisioning_status == "ACTIVE",
+                self.model_class.provisioning_status == "PENDING_UPDATE",
+                self.model_class.provisioning_status == "PENDING_CREATE"))
+
+        model_list = query.all()
+        for data in model_list:
+            lb_list.append(data.to_data_model())
+        return lb_list
+
+    def get_all_other_lbs_in_project(self, session, project_id, id):
+        lb_list = []
+        query = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.id != id,
+                 self.model_class.provisioning_status != "ERROR",
+                 self.model_class.provisioning_status != "DELETED"))
+
+        model_list = query.all()
+        for data in model_list:
+            lb_list.append(data.to_data_model())
+        return lb_list
+
+    def get_lb_excluding_deleted(self, session, lb_id):
+        query = session.query(self.model_class).filter(
+            and_(self.model_class.id == lb_id,
+                 self.model_class.provisioning_status != "DELETED"))
+        model = query.first()
+        if model is None:
+            return None
+        return model.to_data_model()
 
 
 class VRIDRepository(BaseRepository):
@@ -414,5 +484,18 @@ class MemberRepository(repo.MemberRepository):
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
 
+
 class NatPoolRepository(BaseRepository):
     model_class = models.NATPool
+
+
+class VrrpSetRepository(BaseRepository):
+    model_class = models.VrrpSet
+
+    def get_subnet_set_ids(self, session, subnet):
+        query = session.query(self.model_class).filter(
+            self.model_class.mgmt_subnet == subnet)
+        query = query.options(noload('*'))
+        model_list = query.all()
+        set_id_list = [model.set_id for model in model_list]
+        return set_id_list

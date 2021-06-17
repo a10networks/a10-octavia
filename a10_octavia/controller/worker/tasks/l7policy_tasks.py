@@ -19,6 +19,7 @@ from taskflow import task
 
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
 from a10_octavia.controller.worker.tasks import utils
 
@@ -87,7 +88,7 @@ class CreateL7Policy(L7PolicyParent, task.Task):
     def execute(self, l7policy, listeners, vthunder):
         self.set(l7policy, listeners)
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, l7policy, listeners, vthunder, *args, **kwargs):
         try:
             self.axapi_client.slb.aflex_policy.delete(l7policy.id)
@@ -117,8 +118,9 @@ class DeleteL7Policy(task.Task):
         c_pers, s_pers = utils.get_sess_pers_templates(
             listener.default_pool)
         kargs = {}
-        listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
-                                                                     listener.protocol)
+        if not (listener.protocol).islower():
+            listener.protocol = openstack_mappings.virtual_port_protocol(
+                self.axapi_client, listener.protocol)
         try:
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.id,

@@ -19,13 +19,25 @@ from oslo_log import log as logging
 from requests.exceptions import ConnectionError
 from taskflow import task
 
+from octavia.common import exceptions
+
 from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
+from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
+
+
+def _get_hm_name(axapi_client, health_mon):
+    try:
+        hm = axapi_client.slb.hm.get(health_mon.id)
+    except (acos_errors.NotFound):
+        # Backwards compatability with a10-neutron-lbaas
+        hm = axapi_client.slb.hm.get(health_mon.id[0:28])
+    return hm['monitor']['name']
 
 
 class CreateAndAssociateHealthMonitor(task.Task):
@@ -55,10 +67,18 @@ class CreateAndAssociateHealthMonitor(task.Task):
                 args.update({'monitor': flavors})
 
         try:
+            health_mon.type = openstack_mappings.hm_type(self.axapi_client, health_mon.type)
+        except Exception:
+            raise exceptions.ProviderUnsupportedOptionError(
+                prov="A10",
+                user_msg=("Failed to create health monitor {}, "
+                          "A health monitor of type {} is not supported "
+                          "by A10 provider").format(health_mon.id, health_mon.type))
+
+        try:
             post_data = CONF.health_monitor.post_data
             self.axapi_client.slb.hm.create(health_mon.id,
-                                            openstack_mappings.hm_type(self.axapi_client,
-                                                                       health_mon.type),
+                                            health_mon.type,
                                             health_mon.delay, health_mon.timeout,
                                             health_mon.rise_threshold, method=method,
                                             port=listeners[0].protocol_port, url=url,
@@ -82,7 +102,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
                 health_mon.id, health_mon.pool_id)
             raise e
 
-    @axapi_client_decorator
+    @axapi_client_decorator_for_revert
     def revert(self, listeners, health_mon, vthunder, *args, **kwargs):
         try:
             self.axapi_client.slb.hm.delete(health_mon.id)
@@ -111,8 +131,11 @@ class DeleteHealthMonitor(task.Task):
             raise e
 
         try:
-            self.axapi_client.slb.hm.delete(health_mon.id)
+            hm_name = _get_hm_name(self.axapi_client, health_mon)
+            self.axapi_client.slb.hm.delete(hm_name)
             LOG.debug("Successfully deleted health monitor: %s", health_mon.id)
+        except acos_errors.NotFound:
+            LOG.debug("Health monitor %s was already deleted. Skipping...", health_mon.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to delete health monitor: %s", health_mon.id)
             raise e
@@ -124,7 +147,7 @@ class UpdateHealthMonitor(task.Task):
     @axapi_client_decorator
     def execute(self, listeners, health_mon, vthunder, update_dict, flavor=None):
         """ Execute update health monitor """
-        # TODO(hthompson6) Length of name of healthmonitor for older vThunder devices
+
         health_mon.update(update_dict)
         method = None
         url = None
@@ -147,9 +170,10 @@ class UpdateHealthMonitor(task.Task):
                 args.update({'monitor': flavors})
 
         try:
+            hm_name = _get_hm_name(self.axapi_client, health_mon)
             post_data = CONF.health_monitor.post_data
             self.axapi_client.slb.hm.update(
-                health_mon.id,
+                hm_name,
                 openstack_mappings.hm_type(self.axapi_client, health_mon.type),
                 health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
                 method=method, url=url, expect_code=expect_code, post_data=post_data,

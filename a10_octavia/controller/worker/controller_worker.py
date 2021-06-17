@@ -14,6 +14,7 @@
 
 from sqlalchemy.orm import exc as db_exceptions
 import tenacity
+import time
 import urllib3
 
 from oslo_config import cfg
@@ -39,7 +40,6 @@ from a10_octavia.controller.worker.flows import a10_pool_flows
 from a10_octavia.controller.worker.flows import vthunder_flows
 from a10_octavia.db import repositories as a10repo
 
-
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 RETRY_ATTEMPTS = 15
@@ -49,6 +49,37 @@ RETRY_MAX = 5
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
+
+
+def flow_notification_handler(state, details, **kwargs):
+    key = kwargs.get('ctx_key', None)
+    try:
+        if state == 'SUCCESS' or state == 'REVERTED' or state == 'FAILURE':
+            thrd_may_reload_vthunder = kwargs.get('thrd_may_reload_vthunder')
+            ctx_lock = kwargs.get('ctx_lock')
+            ctx_map = kwargs.get('ctx_map')
+            if ctx_lock is None or ctx_map is None:
+                raise
+
+            ctx_lock.acquire()
+            ctx = ctx_map.get(key)
+            if ctx is None:
+                ctx_lock.release()
+                raise
+
+            normal_thrd_num, reload_thrd_num = ctx
+            LOG.debug('[state: %s] vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
+                      state, key, normal_thrd_num, reload_thrd_num)
+            if thrd_may_reload_vthunder:
+                reload_thrd_num = reload_thrd_num - 1
+            else:
+                normal_thrd_num = normal_thrd_num - 1
+            LOG.debug('[state: %s] vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
+                      state, key, normal_thrd_num, reload_thrd_num)
+            ctx_map[key] = (normal_thrd_num, reload_thrd_num)
+            ctx_lock.release()
+    except Exception:
+        LOG.error("Unable to find vThunder instance (%s) context", key)
 
 
 class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
@@ -71,6 +102,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._vthunder_flows = vthunder_flows.VThunderFlows()
         self._vthunder_repo = a10repo.VThunderRepository()
         self._exclude_result_logging_tasks = ()
+        self.ctx_map = None
+        self.ctx_lock = None
         super(A10ControllerWorker, self).__init__()
 
     def create_amphora(self):
@@ -98,25 +131,29 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        health_mon = self._health_mon_repo.get(db_apis.get_session(),
-                                               id=health_monitor_id)
+        health_mon = utils.wait_for_db_entry(self._health_mon_repo, health_monitor_id)
         if not health_mon:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'health_monitor', health_monitor_id)
             raise db_exceptions.NoResultFound
-
         pool = health_mon.pool
         listeners = pool.listeners
         pool.health_monitor = health_mon
         load_balancer = pool.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        # rack flow _vthunder_busy_check() will always return False
+        busy = self._vthunder_busy_check(health_mon.project_id, False, None)
         create_hm_tf = self.taskflow_load(
-            self._health_monitor_flows.get_create_health_monitor_flow(),
+            self._health_monitor_flows.get_create_health_monitor_flow(topology=topology),
             store={constants.HEALTH_MON: health_mon,
                    constants.POOL: pool,
                    constants.LISTENERS: listeners,
                    constants.LOADBALANCER: load_balancer,
+                   a10constants.COMPUTE_BUSY: busy,
                    a10constants.WRITE_MEM_SHARED_PART: True})
+        self._register_flow_notify_handler(create_hm_tf, health_mon.project_id, False, busy)
         with tf_logging.DynamicLoggingListener(create_hm_tf,
                                                log=LOG):
             create_hm_tf.run()
@@ -135,13 +172,19 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = pool.listeners
         load_balancer = pool.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        # rack flow _vthunder_busy_check() will always return False
+        busy = self._vthunder_busy_check(health_mon.project_id, False, None)
         delete_hm_tf = self.taskflow_load(
-            self._health_monitor_flows.get_delete_health_monitor_flow(),
+            self._health_monitor_flows.get_delete_health_monitor_flow(topology=topology),
             store={constants.HEALTH_MON: health_mon,
                    constants.POOL: pool,
                    constants.LISTENERS: listeners,
                    constants.LOADBALANCER: load_balancer,
+                   a10constants.COMPUTE_BUSY: busy,
                    a10constants.WRITE_MEM_SHARED_PART: True})
+        self._register_flow_notify_handler(delete_hm_tf, health_mon.project_id, False, busy)
         with tf_logging.DynamicLoggingListener(delete_hm_tf,
                                                log=LOG):
             delete_hm_tf.run()
@@ -171,49 +214,57 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         pool.health_monitor = health_mon
         load_balancer = pool.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        # rack flow _vthunder_busy_check() will always return False
+        busy = self._vthunder_busy_check(health_mon.project_id, False, None)
         update_hm_tf = self.taskflow_load(
-            self._health_monitor_flows.get_update_health_monitor_flow(),
+            self._health_monitor_flows.get_update_health_monitor_flow(topology=topology),
             store={constants.HEALTH_MON: health_mon,
                    constants.POOL: pool,
                    constants.LISTENERS: listeners,
                    constants.LOADBALANCER: load_balancer,
+                   a10constants.COMPUTE_BUSY: busy,
                    constants.UPDATE_DICT: health_monitor_updates,
                    a10constants.WRITE_MEM_SHARED_PART: True})
+        self._register_flow_notify_handler(update_hm_tf, health_mon.project_id, False, busy)
         with tf_logging.DynamicLoggingListener(update_hm_tf,
                                                log=LOG):
             update_hm_tf.run()
 
     def create_listener(self, listener_id):
         """Function to create listener for A10 provider"""
-
-        listener = self._listener_repo.get(db_apis.get_session(),
-                                           id=listener_id)
+        listener = utils.wait_for_db_entry(self._listener_repo, listener_id)
         if not listener:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'listener', listener_id)
             raise db_exceptions.NoResultFound
-
         load_balancer = listener.load_balancer
         parent_project_list = utils.get_parent_project_list()
         listener_parent_proj = utils.get_parent_project(listener.project_id)
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
         if (listener.project_id in parent_project_list or
                 (listener_parent_proj and listener_parent_proj in parent_project_list)
-                or listener.project_id in CONF.hardware_thunder.devices):
+                or self._is_rack_flow(listener.project_id, loadbalancer=load_balancer)):
             create_listener_tf = self.taskflow_load(self._listener_flows.
                                                     get_rack_vthunder_create_listener_flow(
                                                         listener.project_id),
-                                                    store={constants.LOADBALANCER:
-                                                           load_balancer,
+                                                    store={constants.LOADBALANCER: load_balancer,
                                                            constants.LISTENER:
                                                            listener})
         else:
+            busy = self._vthunder_busy_check(listener.project_id, False, None)
             create_listener_tf = self.taskflow_load(self._listener_flows.
-                                                    get_create_listener_flow(),
+                                                    get_create_listener_flow(topology=topology),
                                                     store={constants.LOADBALANCER:
                                                            load_balancer,
+                                                           a10constants.COMPUTE_BUSY: busy,
                                                            constants.LISTENER:
                                                            listener})
+            self._register_flow_notify_handler(create_listener_tf, listener.project_id,
+                                               False, busy)
 
         with tf_logging.DynamicLoggingListener(create_listener_tf,
                                                log=LOG):
@@ -226,16 +277,22 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                            id=listener_id)
         load_balancer = listener.load_balancer
 
-        if listener.project_id in CONF.hardware_thunder.devices:
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        if self._is_rack_flow(listener.project_id, loadbalancer=load_balancer):
             delete_listener_tf = self.taskflow_load(
                 self._listener_flows.get_delete_rack_listener_flow(),
                 store={constants.LOADBALANCER: load_balancer,
                        constants.LISTENER: listener})
         else:
+            busy = self._vthunder_busy_check(listener.project_id, False, None)
             delete_listener_tf = self.taskflow_load(
-                self._listener_flows.get_delete_listener_flow(),
+                self._listener_flows.get_delete_listener_flow(topology),
                 store={constants.LOADBALANCER: load_balancer,
+                       a10constants.COMPUTE_BUSY: busy,
                        constants.LISTENER: listener})
+            self._register_flow_notify_handler(delete_listener_tf, listener.project_id,
+                                               False, busy)
         with tf_logging.DynamicLoggingListener(delete_listener_tf,
                                                log=LOG):
             delete_listener_tf.run()
@@ -257,15 +314,22 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         load_balancer = listener.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        # rack flow _vthunder_busy_check() will always return False
+        busy = self._vthunder_busy_check(listener.project_id, False, None)
         update_listener_tf = self.taskflow_load(self._listener_flows.
-                                                get_update_listener_flow(),
+                                                get_update_listener_flow(topology),
                                                 store={constants.LISTENER:
                                                        listener,
+                                                       a10constants.COMPUTE_BUSY: busy,
                                                        constants.LOADBALANCER:
-                                                           load_balancer,
+                                                       load_balancer,
                                                        constants.UPDATE_DICT:
-                                                           listener_updates
+                                                       listener_updates
                                                        })
+        self._register_flow_notify_handler(update_listener_tf, listener.project_id,
+                                           False, busy)
         with tf_logging.DynamicLoggingListener(update_listener_tf, log=LOG):
             update_listener_tf.run()
 
@@ -274,10 +338,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
-    def create_load_balancer(self, load_balancer_id, flavor=None):
+    def create_load_balancer(self, load_balancer_id, flavor=None, ctx_map=None, ctx_lock=None):
         """Function to create load balancer for A10 provider"""
-
-        lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
+        lb = utils.wait_for_db_entry(self._lb_repo, load_balancer_id)
         if not lb:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'load_balancer', load_balancer_id)
@@ -287,7 +350,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                  constants.VIP: lb.vip,
                  constants.BUILD_TYPE_PRIORITY:
                  constants.LB_CREATE_NORMAL_PRIORITY,
-                 constants.FLAVOR: flavor}
+                 constants.FLAVOR: flavor,
+                 constants.AMPS_DATA: []}
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
@@ -295,15 +359,23 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             constants.TOPOLOGY: topology
         }
 
-        if lb.project_id in CONF.hardware_thunder.devices:
+        if self._is_rack_flow(lb.project_id, flavor=flavor):
+            vthunder_conf = CONF.hardware_thunder.devices.get(lb.project_id, None)
+            device_dict = CONF.hardware_thunder.devices
             create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
-                vthunder_conf=CONF.hardware_thunder.devices[lb.project_id],
+                vthunder_conf=vthunder_conf, device_dict=device_dict,
                 topology=topology, listeners=lb.listeners)
             create_lb_tf = self.taskflow_load(create_lb_flow, store=store)
         else:
+            busy = self._vthunder_busy_check(lb.project_id, True, store)
             create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
-                topology=topology, listeners=lb.listeners)
+                load_balancer_id, topology=topology, listeners=lb.listeners)
+            store.update([
+                (a10constants.COMPUTE_BUSY, busy),
+                (a10constants.VTHUNDER_CONFIG, None),
+                (a10constants.USE_DEVICE_FLAVOR, False)])
             create_lb_tf = self.taskflow_load(create_lb_flow, store=store)
+            self._register_flow_notify_handler(create_lb_tf, lb.project_id, True, busy)
 
         with tf_logging.DynamicLoggingListener(
                 create_lb_tf, log=LOG,
@@ -318,15 +390,28 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         vthunder = self._vthunder_repo.get_vthunder_from_lb(db_apis.get_session(),
                                                             load_balancer_id)
         deleteCompute = False
+        busy = self._vthunder_busy_check(lb.project_id, True, None)
         if vthunder:
             deleteCompute = self._vthunder_repo.get_delete_compute_flag(db_apis.get_session(),
                                                                         vthunder.compute_id)
-        (flow, store) = self._lb_flows.get_delete_load_balancer_flow(lb, deleteCompute)
+
+        if cascade:
+            cascade = True
+        if self._is_rack_flow(lb.project_id, loadbalancer=lb):
+            (flow, store) = self._lb_flows.get_delete_rack_vthunder_load_balancer_flow(
+                lb, cascade)
+        else:
+            (flow, store) = self._lb_flows.get_delete_load_balancer_flow(
+                lb, deleteCompute, cascade)
+
         store.update({constants.LOADBALANCER: lb,
+                      a10constants.COMPUTE_BUSY: busy,
                       constants.VIP: lb.vip,
-                      constants.SERVER_GROUP_ID: lb.server_group_id})
+                      constants.SERVER_GROUP_ID: lb.server_group_id,
+                      constants.LOADBALANCER_ID: lb.id})
 
         delete_lb_tf = self.taskflow_load(flow, store=store)
+        self._register_flow_notify_handler(delete_lb_tf, lb.project_id, True, busy)
 
         with tf_logging.DynamicLoggingListener(delete_lb_tf,
                                                log=LOG):
@@ -351,12 +436,20 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             db_apis.get_session(),
             load_balancer_id=load_balancer_id)
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        # rack flow _vthunder_busy_check() will always return False
+        busy = self._vthunder_busy_check(lb.project_id, False, None)
         update_lb_tf = self.taskflow_load(
-            self._lb_flows.get_update_load_balancer_flow(),
+            self._lb_flows.get_update_load_balancer_flow(topology=topology),
             store={constants.LOADBALANCER: lb,
                    constants.VIP: lb.vip,
+                   a10constants.COMPUTE_BUSY: busy,
                    constants.LISTENERS: listeners,
-                   constants.UPDATE_DICT: load_balancer_updates})
+                   constants.UPDATE_DICT: load_balancer_updates,
+                   a10constants.VTHUNDER_CONFIG: None,
+                   a10constants.USE_DEVICE_FLAVOR: False})
+        self._register_flow_notify_handler(update_lb_tf, lb.project_id, False, busy)
 
         with tf_logging.DynamicLoggingListener(update_lb_tf,
                                                log=LOG):
@@ -375,8 +468,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :raises NoSuitablePool: Unable to find the node pool
         """
 
-        member = self._member_repo.get(db_apis.get_session(),
-                                       id=member_id)
+        member = utils.wait_for_db_entry(self._member_repo, member_id)
         if not member:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'member', member_id)
@@ -393,15 +485,19 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         if (member.project_id in parent_project_list or
                 (member_parent_proj and member_parent_proj in parent_project_list)
-                or member.project_id in CONF.hardware_thunder.devices):
+                or self._is_rack_flow(member.project_id, loadbalancer=load_balancer)):
+            vthunder_conf = CONF.hardware_thunder.devices.get(load_balancer.project_id, None)
             create_member_tf = self.taskflow_load(
                 self._member_flows.get_rack_vthunder_create_member_flow(),
                 store={
                     constants.MEMBER: member,
                     constants.LISTENERS: listeners,
                     constants.LOADBALANCER: load_balancer,
-                    constants.POOL: pool})
+                    constants.POOL: pool,
+                    a10constants.VTHUNDER_CONFIG: vthunder_conf,
+                    a10constants.USE_DEVICE_FLAVOR: None})
         else:
+            busy = self._vthunder_busy_check(member.project_id, True, None)
             create_member_tf = self.taskflow_load(self._member_flows.
                                                   get_create_member_flow(
                                                       topology=topology),
@@ -410,7 +506,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                          listeners,
                                                          constants.LOADBALANCER:
                                                          load_balancer,
-                                                         constants.POOL: pool})
+                                                         a10constants.COMPUTE_BUSY: busy,
+                                                         constants.POOL: pool,
+                                                         a10constants.VTHUNDER_CONFIG: None,
+                                                         a10constants.USE_DEVICE_FLAVOR: None,
+                                                         constants.LOADBALANCER_ID:
+                                                         load_balancer.id})
+            self._register_flow_notify_handler(create_member_tf, member.project_id, True, busy)
 
         with tf_logging.DynamicLoggingListener(create_member_tf,
                                                log=LOG):
@@ -428,19 +530,23 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         pool = member.pool
         listeners = pool.listeners
         load_balancer = pool.load_balancer
+        topology = CONF.a10_controller_worker.loadbalancer_topology
 
-        if member.project_id in CONF.hardware_thunder.devices:
+        if self._is_rack_flow(member.project_id, loadbalancer=load_balancer):
             delete_member_tf = self.taskflow_load(
                 self._member_flows.get_rack_vthunder_delete_member_flow(),
                 store={constants.MEMBER: member, constants.LISTENERS: listeners,
                        constants.LOADBALANCER: load_balancer, constants.POOL: pool}
             )
         else:
+            busy = self._vthunder_busy_check(member.project_id, True, None)
             delete_member_tf = self.taskflow_load(
-                self._member_flows.get_delete_member_flow(),
+                self._member_flows.get_delete_member_flow(topology=topology),
                 store={constants.MEMBER: member, constants.LISTENERS: listeners,
-                       constants.LOADBALANCER: load_balancer, constants.POOL: pool}
+                       constants.LOADBALANCER: load_balancer, a10constants.COMPUTE_BUSY: busy,
+                       constants.POOL: pool, constants.LOADBALANCER_ID: load_balancer.id}
             )
+            self._register_flow_notify_handler(delete_member_tf, member.project_id, True, busy)
         with tf_logging.DynamicLoggingListener(delete_member_tf,
                                                log=LOG):
             delete_member_tf.run()
@@ -476,27 +582,35 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = pool.listeners
         load_balancer = pool.load_balancer
 
-        if member.project_id in CONF.hardware_thunder.devices:
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        if self._is_rack_flow(member.project_id, loadbalancer=load_balancer):
             update_member_tf = self.taskflow_load(self._member_flows.
                                                   get_rack_vthunder_update_member_flow(),
-                                                  store={constants.MEMBER: member,
-                                                         constants.LISTENERS:
-                                                             listeners,
-                                                         constants.LOADBALANCER:
-                                                             load_balancer,
-                                                         constants.POOL: pool,
-                                                         constants.UPDATE_DICT: member_updates})
-        else:
-            update_member_tf = self.taskflow_load(self._member_flows.get_update_member_flow(),
                                                   store={constants.MEMBER: member,
                                                          constants.LISTENERS:
                                                          listeners,
                                                          constants.LOADBALANCER:
                                                          load_balancer,
+                                                         constants.POOL: pool,
+                                                         constants.UPDATE_DICT: member_updates})
+        else:
+            busy = self._vthunder_busy_check(member.project_id, False, None)
+            update_member_tf = self.taskflow_load(self._member_flows.
+                                                  get_update_member_flow(topology=topology),
+                                                  store={constants.MEMBER: member,
+                                                         constants.LISTENERS:
+                                                         listeners,
+                                                         constants.LOADBALANCER:
+                                                         load_balancer,
+                                                         a10constants.COMPUTE_BUSY: busy,
                                                          constants.POOL:
                                                          pool,
                                                          constants.UPDATE_DICT:
-                                                         member_updates})
+                                                         member_updates,
+                                                         a10constants.VTHUNDER_CONFIG: None,
+                                                         a10constants.USE_DEVICE_FLAVOR: None})
+            self._register_flow_notify_handler(update_member_tf, member.project_id, False, busy)
 
         with tf_logging.DynamicLoggingListener(update_member_tf,
                                                log=LOG):
@@ -514,8 +628,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        pool = self._pool_repo.get(db_apis.get_session(),
-                                   id=pool_id)
+        pool = utils.wait_for_db_entry(self._pool_repo, pool_id)
         if not pool:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'pool', pool_id)
@@ -527,14 +640,20 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             default_listener = pool.listeners[0]
         load_balancer = pool.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        # rack flow _vthunder_busy_check() will always return False
+        busy = self._vthunder_busy_check(pool.project_id, False, None)
         create_pool_tf = self.taskflow_load(self._pool_flows.
-                                            get_create_pool_flow(),
+                                            get_create_pool_flow(topology=topology),
                                             store={constants.POOL: pool,
                                                    constants.LISTENERS:
-                                                       listeners,
+                                                   listeners,
                                                    constants.LISTENER: default_listener,
                                                    constants.LOADBALANCER:
-                                                       load_balancer})
+                                                   load_balancer,
+                                                   a10constants.COMPUTE_BUSY: busy})
+        self._register_flow_notify_handler(create_pool_tf, pool.project_id, False, busy)
         with tf_logging.DynamicLoggingListener(create_pool_tf,
                                                log=LOG):
             create_pool_tf.run()
@@ -564,12 +683,21 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                  constants.LISTENER: default_listener,
                  constants.LOADBALANCER: load_balancer,
                  constants.HEALTH_MON: health_monitor,
-                 a10constants.MEMBER_COUNT: mem_count}
+                 a10constants.MEMBER_COUNT: mem_count,
+                 constants.LOADBALANCER_ID: load_balancer.id}
 
-        delete_pool_tf = self.taskflow_load(
-            self._pool_flows.get_delete_pool_flow(
-                members, health_monitor, store),
-            store=store)
+        if self._is_rack_flow(pool.project_id, loadbalancer=load_balancer):
+            delete_pool_tf = self.taskflow_load(
+                self._pool_flows.get_delete_pool_rack_flow(
+                    members, health_monitor, store), store=store)
+        else:
+            topology = CONF.a10_controller_worker.loadbalancer_topology
+            busy = self._vthunder_busy_check(pool.project_id, False, store)
+            delete_pool_tf = self.taskflow_load(
+                self._pool_flows.get_delete_pool_flow(
+                    members, health_monitor, store, topology), store=store)
+            self._register_flow_notify_handler(delete_pool_tf, pool.project_id, False, busy)
+
         with tf_logging.DynamicLoggingListener(delete_pool_tf,
                                                log=LOG):
             delete_pool_tf.run()
@@ -601,16 +729,22 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             default_listener = pool.listeners[0]
         load_balancer = pool.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        # rack flow _vthunder_busy_check() will always return False
+        busy = self._vthunder_busy_check(pool.project_id, False, None)
         update_pool_tf = self.taskflow_load(self._pool_flows.
-                                            get_update_pool_flow(),
+                                            get_update_pool_flow(topology),
                                             store={constants.POOL: pool,
                                                    constants.LISTENERS:
-                                                       listeners,
+                                                   listeners,
                                                    constants.LISTENER: default_listener,
                                                    constants.LOADBALANCER:
-                                                       load_balancer,
+                                                   load_balancer,
+                                                   a10constants.COMPUTE_BUSY: busy,
                                                    constants.UPDATE_DICT:
-                                                       pool_updates})
+                                                   pool_updates})
+        self._register_flow_notify_handler(update_pool_tf, pool.project_id, False, busy)
         with tf_logging.DynamicLoggingListener(update_pool_tf,
                                                log=LOG):
             update_pool_tf.run()
@@ -627,21 +761,25 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        l7policy = self._l7policy_repo.get(db_apis.get_session(),
-                                           id=l7policy_id)
+        l7policy = utils.wait_for_db_entry(self._l7policy_repo, l7policy_id)
         if not l7policy:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'l7policy', l7policy_id)
             raise db_exceptions.NoResultFound
-
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        # rack flow _vthunder_busy_check() will always return False
+        busy = self._vthunder_busy_check(l7policy.project_id, False, None)
         create_l7policy_tf = self.taskflow_load(
-            self._l7policy_flows.get_create_l7policy_flow(),
+            self._l7policy_flows.get_create_l7policy_flow(topology=topology),
             store={constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
-                   constants.LOADBALANCER: load_balancer})
+                   constants.LOADBALANCER: load_balancer,
+                   a10constants.COMPUTE_BUSY: busy})
+        self._register_flow_notify_handler(create_l7policy_tf, l7policy.project_id, False, busy)
         with tf_logging.DynamicLoggingListener(create_l7policy_tf,
                                                log=LOG):
             create_l7policy_tf.run()
@@ -658,11 +796,17 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = l7policy.listener.load_balancer
         listeners = [l7policy.listener]
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        # rack flow _vthunder_busy_check() will always return False
+        busy = self._vthunder_busy_check(l7policy.project_id, False, None)
         delete_l7policy_tf = self.taskflow_load(
-            self._l7policy_flows.get_delete_l7policy_flow(),
+            self._l7policy_flows.get_delete_l7policy_flow(topology=topology),
             store={constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
-                   constants.LOADBALANCER: load_balancer})
+                   constants.LOADBALANCER: load_balancer,
+                   a10constants.COMPUTE_BUSY: busy})
+        self._register_flow_notify_handler(delete_l7policy_tf, l7policy.project_id, False, busy)
         with tf_logging.DynamicLoggingListener(delete_l7policy_tf,
                                                log=LOG):
             delete_l7policy_tf.run()
@@ -691,12 +835,18 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        # rack flow _vthunder_busy_check() will always return False
+        busy = self._vthunder_busy_check(l7policy.project_id, False, None)
         update_l7policy_tf = self.taskflow_load(
-            self._l7policy_flows.get_update_l7policy_flow(),
+            self._l7policy_flows.get_update_l7policy_flow(topology=topology),
             store={constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
                    constants.LOADBALANCER: load_balancer,
+                   a10constants.COMPUTE_BUSY: busy,
                    constants.UPDATE_DICT: l7policy_updates})
+        self._register_flow_notify_handler(update_l7policy_tf, l7policy.project_id, False, busy)
         with tf_logging.DynamicLoggingListener(update_l7policy_tf,
                                                log=LOG):
             update_l7policy_tf.run()
@@ -713,23 +863,27 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        l7rule = self._l7rule_repo.get(db_apis.get_session(),
-                                       id=l7rule_id)
+        l7rule = utils.wait_for_db_entry(self._l7rule_repo, l7rule_id)
         if not l7rule:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'l7rule', l7rule_id)
             raise db_exceptions.NoResultFound
-
         l7policy = l7rule.l7policy
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        # rack flow _vthunder_busy_check() will always return False
+        busy = self._vthunder_busy_check(l7rule.project_id, False, None)
         create_l7rule_tf = self.taskflow_load(
-            self._l7rule_flows.get_create_l7rule_flow(),
+            self._l7rule_flows.get_create_l7rule_flow(topology=topology),
             store={constants.L7RULE: l7rule,
                    constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
-                   constants.LOADBALANCER: load_balancer})
+                   constants.LOADBALANCER: load_balancer,
+                   a10constants.COMPUTE_BUSY: busy})
+        self._register_flow_notify_handler(create_l7rule_tf, l7rule.project_id, False, busy)
         with tf_logging.DynamicLoggingListener(create_l7rule_tf,
                                                log=LOG):
             create_l7rule_tf.run()
@@ -746,12 +900,18 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         load_balancer = l7policy.listener.load_balancer
         listeners = [l7policy.listener]
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        # rack flow _vthunder_busy_check() will always return False
+        busy = self._vthunder_busy_check(l7rule.project_id, False, None)
         delete_l7rule_tf = self.taskflow_load(
-            self._l7rule_flows.get_delete_l7rule_flow(),
+            self._l7rule_flows.get_delete_l7rule_flow(topology=topology),
             store={constants.L7RULE: l7rule,
                    constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
-                   constants.LOADBALANCER: load_balancer})
+                   constants.LOADBALANCER: load_balancer,
+                   a10constants.COMPUTE_BUSY: busy})
+        self._register_flow_notify_handler(delete_l7rule_tf, l7rule.project_id, False, busy)
         with tf_logging.DynamicLoggingListener(delete_l7rule_tf,
                                                log=LOG):
             delete_l7rule_tf.run()
@@ -780,13 +940,19 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         listeners = [l7policy.listener]
         load_balancer = l7policy.listener.load_balancer
 
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+
+        # rack flow _vthunder_busy_check() will always return False
+        busy = self._vthunder_busy_check(l7rule.project_id, False, None)
         update_l7rule_tf = self.taskflow_load(
-            self._l7rule_flows.get_update_l7rule_flow(),
+            self._l7rule_flows.get_update_l7rule_flow(topology=topology),
             store={constants.L7RULE: l7rule,
                    constants.L7POLICY: l7policy,
                    constants.LISTENERS: listeners,
                    constants.LOADBALANCER: load_balancer,
+                   a10constants.COMPUTE_BUSY: busy,
                    constants.UPDATE_DICT: l7rule_updates})
+        self._register_flow_notify_handler(update_l7rule_tf, l7rule.project_id, False, busy)
         with tf_logging.DynamicLoggingListener(update_l7rule_tf,
                                                log=LOG):
             update_l7rule_tf.run()
@@ -902,9 +1068,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         store = {a10constants.WRITE_MEM_SHARED_PART: True}
 
         for vthunder in thunders:
+            delete_compute = False
+            if vthunder.status == 'DELETED' and vthunder.compute_id is not None:
+                delete_compute = self._vthunder_repo.get_delete_compute_flag(db_apis.get_session(),
+                                                                             vthunder.compute_id)
             try:
                 write_mem_tf = self.taskflow_load(
-                    self._vthunder_flows.get_write_memory_flow(vthunder, store),
+                    self._vthunder_flows.get_write_memory_flow(vthunder, store, delete_compute),
                     store=store)
 
                 with tf_logging.DynamicLoggingListener(write_mem_tf,
@@ -931,3 +1101,75 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             except Exception:
                 # continue on other thunders (assume exception is logged)
                 pass
+
+    def a10_worker_ctx_init(self, ctx_map, ctx_lock):
+        self.ctx_map = ctx_map
+        self.ctx_lock = ctx_lock
+
+    def _is_rack_flow(self, key, loadbalancer=None, flavor=None):
+        if self.ctx_map is None or self.ctx_lock is None:
+            return True
+        if key in CONF.hardware_thunder.devices:
+            return True
+        if flavor:
+            if flavor.get('device-name', None) is not None:
+                return True
+        if loadbalancer:
+            flavor_data = utils.get_loadbalancer_flavor(loadbalancer)
+            if flavor_data is not None:
+                if flavor_data.get('device-name', None) is not None:
+                    return True
+        return False
+
+    def _vthunder_busy_check(self, key, thrd_may_reload_vthunder, store=None):
+        busy = False
+        if self._is_rack_flow(key):
+            return busy
+
+        timeout = CONF.a10_controller_worker.amp_busy_wait_sec
+        while timeout >= 0:
+            # amp_busy_wait_sec 0 for wait forever
+            if CONF.a10_controller_worker.amp_busy_wait_sec != 0:
+                timeout = timeout - 5
+
+            self.ctx_lock.acquire()
+            ctx = self.ctx_map.get(key, None)
+            if ctx is None:
+                ctx = (0, 0)
+            normal_thrd_num, reload_thrd_num = ctx
+            LOG.debug('[busy_check] vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
+                      key, normal_thrd_num, reload_thrd_num)
+            if thrd_may_reload_vthunder:
+                if reload_thrd_num > 0 or normal_thrd_num > 0:
+                    busy = True
+                else:
+                    reload_thrd_num = reload_thrd_num + 1
+                    self.ctx_map[key] = (normal_thrd_num, reload_thrd_num)
+                    busy = False
+            else:
+                if reload_thrd_num > 0:
+                    busy = True
+                else:
+                    normal_thrd_num = normal_thrd_num + 1
+                    self.ctx_map[key] = (normal_thrd_num, reload_thrd_num)
+                    busy = False
+            self.ctx_lock.release()
+
+            if not busy:
+                LOG.debug('[busy_check] vthunder %s ctx: normal_thrd(%d), reload_thrd(%d)',
+                          key, normal_thrd_num, reload_thrd_num)
+                break
+            time.sleep(5)
+
+        if store is not None:
+            store[a10constants.COMPUTE_BUSY] = busy
+
+        return busy
+
+    def _register_flow_notify_handler(self, engine, key, thrd_may_reload_vthunder, instance_busy):
+        if self._is_rack_flow(key) or instance_busy:
+            return
+        kwargs = {'ctx_key': key, 'may_reload_vthunder': thrd_may_reload_vthunder,
+                  'ctx_lock': self.ctx_lock, 'ctx_map': self.ctx_map,
+                  'thrd_may_reload_vthunder': thrd_may_reload_vthunder}
+        engine.notifier.register('*', flow_notification_handler, kwargs=kwargs)

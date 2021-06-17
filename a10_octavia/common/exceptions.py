@@ -214,3 +214,28 @@ class PortIdMissing(keystone_exceptions.Error):
         msg = ('Unexpected condition, port_id is missing while creating '
                'entry for nat_pool table. ')
         super(PortIdMissing, self).__init__(message=msg)
+
+
+class NoVrrpMgmtSubnet(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('amp_boot_network_list option is missing in configuration.')
+        super(NoVrrpMgmtSubnet, self).__init__(msg=msg)
+
+
+class NoFreeSetId(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('No free VRRP-A set_id available.')
+        super(NoFreeSetId, self).__init__(msg=msg)
+
+
+class ProjectDeviceNotFound(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('No valid device found for this project, please check your configuration file.')
+        super(ProjectDeviceNotFound, self).__init__(msg=msg)
+
+
+class FlavorDeviceNotFound(acos_errors.ACOSException):
+    def __init__(self, device):
+        msg = ('[device-name flavor] Device [{0}] not found in the configuration'
+               ' file.').format(device)
+        super(FlavorDeviceNotFound, self).__init__(msg=msg)

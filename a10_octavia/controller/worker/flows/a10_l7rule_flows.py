@@ -28,7 +28,7 @@ from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 class L7RuleFlows(object):
 
-    def get_create_l7rule_flow(self):
+    def get_create_l7rule_flow(self, topology):
         """Create a flow to create an L7 rule
         :returns: The flow for creating an L7 rule
         """
@@ -37,11 +37,19 @@ class L7RuleFlows(object):
             requires=[constants.L7RULE,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        create_l7rule_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         create_l7rule_flow.add(database_tasks.MarkL7RulePendingCreateInDB(
             requires=constants.L7RULE))
         create_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            create_l7rule_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         create_l7rule_flow.add(l7rule_tasks.CreateL7Rule(
             requires=[constants.L7RULE, constants.LISTENERS, a10constants.VTHUNDER]))
         create_l7rule_flow.add(database_tasks.MarkL7RuleActiveInDB(
@@ -56,7 +64,7 @@ class L7RuleFlows(object):
             requires=a10constants.VTHUNDER))
         return create_l7rule_flow
 
-    def get_delete_l7rule_flow(self):
+    def get_delete_l7rule_flow(self, topology):
         """Create a flow to delete an L7 rule
         :returns: The flow for deleting an L7 rule
         """
@@ -65,12 +73,20 @@ class L7RuleFlows(object):
             requires=[constants.L7RULE,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        delete_l7rule_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         delete_l7rule_flow.add(database_tasks.MarkL7RulePendingDeleteInDB(
             requires=constants.L7RULE))
         delete_l7rule_flow.add(model_tasks.DeleteModelObject(
             rebind={constants.OBJECT: constants.L7RULE}))
         delete_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER, provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            delete_l7rule_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         delete_l7rule_flow.add(l7rule_tasks.DeleteL7Rule(
             requires=[constants.L7RULE, constants.LISTENERS, a10constants.VTHUNDER]))
         delete_l7rule_flow.add(database_tasks.DeleteL7RuleInDB(
@@ -85,7 +101,7 @@ class L7RuleFlows(object):
             requires=a10constants.VTHUNDER))
         return delete_l7rule_flow
 
-    def get_update_l7rule_flow(self):
+    def get_update_l7rule_flow(self, topology):
         """Create a flow to update an L7 rule
         :returns: The flow for updating an L7 rule
         """
@@ -94,11 +110,18 @@ class L7RuleFlows(object):
             requires=[constants.L7RULE,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
+        update_l7rule_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+
         update_l7rule_flow.add(database_tasks.MarkL7RulePendingUpdateInDB(
             requires=constants.L7RULE))
         update_l7rule_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            update_l7rule_flow.add(vthunder_tasks.GetMasterVThunder(
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         update_l7rule_flow.add(
             l7rule_tasks.UpdateL7Rule(
                 requires=[

@@ -28,7 +28,7 @@ LOG = logging.getLogger(__name__)
 class ConsumerService(cotyledon.Service):
     name = "a10-octavia"
 
-    def __init__(self, worker_id, conf):
+    def __init__(self, worker_id, conf, ctx_map, ctx_lock):
         super(ConsumerService, self).__init__(worker_id)
         self.conf = conf
         self.topic = "a10_octavia"
@@ -36,12 +36,14 @@ class ConsumerService(cotyledon.Service):
         self.endpoints = []
         self.access_policy = dispatcher.DefaultRPCAccessPolicy
         self.message_listener = None
+        self.ctx_map = ctx_map
+        self.ctx_lock = ctx_lock
 
     def run(self):
         LOG.info('Starting consumer...')
         target = messaging.Target(topic=self.topic, server=self.server,
                                   fanout=False)
-        self.endpoints = [endpoint.Endpoint()]
+        self.endpoints = [endpoint.Endpoint(self.ctx_map, self.ctx_lock)]
         self.message_listener = rpc.get_server(
             target, self.endpoints,
             executor='threading',

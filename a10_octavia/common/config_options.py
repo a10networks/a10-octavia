@@ -60,6 +60,14 @@ A10_VTHUNDER_OPTS = [
     cfg.IntOpt('default_axapi_version',
                default=30,
                help=_('VThunder axapi version')),
+    cfg.IntOpt('default_axapi_timeout',
+               default=300,
+               help=_('VThunder axapi timeout')),
+    cfg.BoolOpt('l2dsr_support', default=False,
+                help=_('For vThunder VIP port, ingres/egress allows any address with VIP '
+                       'interface MAC address to pass.')),
+    cfg.BoolOpt('slb_no_snat_support', default=False,
+                help=_('Allow Loadbalancer use any source address to access backend server.')),
 ]
 
 A10_SLB_OPTS = [
@@ -210,7 +218,7 @@ A10_CONTROLLER_WORKER_OPTS = [
                default=1, min=1,
                help='Number of workers for the controller-worker service.'),
     cfg.IntOpt('amp_active_retries',
-               default=10,
+               default=90,
                help=_('Retry attempts to wait for VThunder to become active')),
     cfg.IntOpt('amp_active_wait_sec',
                default=10,
@@ -223,13 +231,7 @@ A10_CONTROLLER_WORKER_OPTS = [
                default='',
                help=_('Glance image tag for the VThunder image to boot. '
                       'Use this option to be able to update the image '
-                      'without reconfiguring Octavia. '
-                      'Ignored if amp_image_id is defined.')),
-    cfg.StrOpt('amp_image_id',
-               default='',
-               deprecated_for_removal=True,
-               deprecated_reason='Superseded by amp_image_tag option.',
-               help=_('Glance image id for the VThunder image to boot')),
+                      'without reconfiguring Octavia. ')),
     cfg.StrOpt('amp_image_owner_id',
                default='',
                help=_('Restrict glance image selection to a specific '
@@ -257,7 +259,21 @@ A10_CONTROLLER_WORKER_OPTS = [
                choices=constants.SUPPORTED_LB_TOPOLOGIES,
                help=_('Load balancer topology configuration. '
                       'SINGLE - One vthunder per load balancer. '
-                      'ACTIVE_STANDBY - Two vthunder per load balancer.'))
+                      'ACTIVE_STANDBY - Two vthunder per load balancer.')),
+    cfg.IntOpt('amp_vcs_wait_sec',
+               default=10,
+               help=_('Seconds to wait between checks on whether an VThunder '
+                      'vcs negotiation is ready')),
+    cfg.IntOpt('amp_vcs_retries',
+               default=60,
+               help=_('Retry attempts to wait for VThunder vcs negotiation')),
+    cfg.IntOpt('amp_busy_wait_sec',
+               default=900,
+               help=_('Timeout for waiting when vThunder instance is busy. '
+                      '(0 for no timeout')),
+    cfg.IntOpt('max_db_timeout',
+               default=60,
+               help=_('Database Timeout for creating a Database entry'))
 ]
 
 A10_HOUSE_KEEPING_OPTS = [

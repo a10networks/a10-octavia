@@ -139,7 +139,8 @@ class Thunder(BaseDataModel):
                  topology="STANDALONE", role="MASTER", last_udp_update=None, status="ACTIVE",
                  created_at=datetime.utcnow(), updated_at=datetime.utcnow(),
                  partition_name="shared", hierarchical_multitenancy="disable",
-                 last_write_mem=None, vrid_floating_ip=None, device_network_map=None):
+                 last_write_mem=None, vrid_floating_ip=None,
+                 device_network_map=None, acos_version=None, device_name_as_key=False):
         self.id = id
         self.vthunder_id = vthunder_id
         self.amphora_id = amphora_id
@@ -163,6 +164,8 @@ class Thunder(BaseDataModel):
         self.last_write_mem = last_write_mem
         self.vrid_floating_ip = vrid_floating_ip
         self.device_network_map = device_network_map or []
+        self.acos_version = acos_version
+        self.device_name_as_key = device_name_as_key
 
 
 class HardwareThunder(Thunder):
@@ -228,3 +231,11 @@ class NATPool(BaseDataModel):
         self.end_address = end_address
         self.member_ref_count = member_ref_count
         self.port_id = port_id
+
+
+class VrrpSet(BaseDataModel):
+
+    def __init__(self, mgmt_subnet=None, project_id=None, set_id=None):
+        self.mgmt_subnet = mgmt_subnet
+        self.project_id = project_id
+        self.set_id = set_id

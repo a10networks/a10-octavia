@@ -48,6 +48,8 @@ class A10Base(models.ModelBase):
                     obj.listener_id + obj.tls_container_id)
         elif obj.__class__.__name__ in ['Quotas']:
             return obj.__class__.__name__ + obj.project_id
+        elif obj.__class__.__name__ in ['VrrpSet']:
+            return obj.__class__.__name__ + obj.mgmt_subnet + obj.project_id
         else:
             raise NotImplementedError
 

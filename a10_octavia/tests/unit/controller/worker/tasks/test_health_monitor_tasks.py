@@ -23,6 +23,8 @@ from octavia.common import data_models as o_data_models
 from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
 
+from acos_client import errors as acos_errors
+
 from a10_octavia.common import config_options
 from a10_octavia.common.data_models import VThunder
 from a10_octavia.controller.worker.tasks import health_monitor_tasks as task
@@ -37,6 +39,7 @@ HM = o_data_models.HealthMonitor(id=a10constants.MOCK_HM_ID,
                                  timeout=3,
                                  rise_threshold=8,
                                  http_method='GET')
+
 ARGS = utils.meta(HM, 'hm', {})
 LISTENERS = [o_data_models.Listener(id=a10constants.MOCK_LISTENER_ID, protocol_port=mock.ANY)]
 
@@ -74,23 +77,25 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
         super(TestHandlerHealthMonitorTasks, self).tearDown()
 
     def test_health_monitor_create_task(self):
-        mock_hm = task.CreateAndAssociateHealthMonitor()
-        mock_hm.axapi_client = self.client_mock
-        mock_hm.execute(LISTENERS, HM, VTHUNDER)
+        hm_task = task.CreateAndAssociateHealthMonitor()
+        hm_task.axapi_client = self.client_mock
+        mock_hm = copy.deepcopy(HM)
+        hm_task.execute(LISTENERS, mock_hm, VTHUNDER)
         self.client_mock.slb.hm.create.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
-                                                          HM.delay, HM.timeout,
-                                                          HM.rise_threshold, method=None,
+                                                          mock_hm.delay, mock_hm.timeout,
+                                                          mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
                                                           expect_code=None, post_data=None,
                                                           **ARGS)
         self.conf.config(group=a10constants.HEALTH_MONITOR_SECTION,
                          post_data='abc=1')
-        mock_hm.execute(LISTENERS, HM, VTHUNDER)
+        mock_hm = copy.deepcopy(HM)
+        hm_task .execute(LISTENERS, mock_hm, VTHUNDER)
         self.client_mock.slb.hm.create.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
-                                                          HM.delay, HM.timeout,
-                                                          HM.rise_threshold, method=None,
+                                                          mock_hm.delay, mock_hm.timeout,
+                                                          mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
                                                           expect_code=None, post_data='abc=1',
                                                           **ARGS)
@@ -106,15 +111,16 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                 }
             }
         }
-        mock_hm = task.CreateAndAssociateHealthMonitor()
-        mock_hm.axapi_client = self.client_mock
-        HM.delay = 30
-        HM.name = "hm1"
-        mock_hm.execute(LISTENERS, HM, VTHUNDER, flavor)
+        hm_task = task.CreateAndAssociateHealthMonitor()
+        hm_task.axapi_client = self.client_mock
+        mock_hm = copy.deepcopy(HM)
+        mock_hm.delay = 30
+        mock_hm.name = "hm1"
+        hm_task.execute(LISTENERS, mock_hm, VTHUNDER, flavor)
         self.client_mock.slb.hm.create.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
-                                                          HM.delay, HM.timeout,
-                                                          HM.rise_threshold, method=None,
+                                                          mock_hm.delay, mock_hm.timeout,
+                                                          mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None, post_data=None,
                                                           expect_code=None, **FLAVOR_ARGS)
 
@@ -129,16 +135,17 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                 }
             }
         }
-        mock_hm = task.CreateAndAssociateHealthMonitor()
-        mock_hm.axapi_client = self.client_mock
-        HM.delay = 30
-        HM.name = "hm1"
+        hm_task = task.CreateAndAssociateHealthMonitor()
+        hm_task.axapi_client = self.client_mock
+        mock_hm = copy.deepcopy(HM)
+        mock_hm.delay = 30
+        mock_hm.name = "hm1"
         self.conf.config(group=a10constants.HEALTH_MONITOR_SECTION, post_data='abc=1')
-        mock_hm.execute(LISTENERS, HM, VTHUNDER, flavor)
+        hm_task.execute(LISTENERS, mock_hm, VTHUNDER, flavor)
         self.client_mock.slb.hm.create.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
-                                                          HM.delay, HM.timeout,
-                                                          HM.rise_threshold, method=None,
+                                                          mock_hm.delay, mock_hm.timeout,
+                                                          mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
                                                           post_data='abc=1',
                                                           expect_code=None, **FLAVOR_ARGS)
@@ -167,15 +174,16 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                 ]
             }
         }
-        mock_hm = task.CreateAndAssociateHealthMonitor()
-        mock_hm.axapi_client = self.client_mock
-        HM.delay = 30
-        HM.name = "hm1"
-        mock_hm.execute(LISTENERS, HM, VTHUNDER, flavor)
+        hm_task = task.CreateAndAssociateHealthMonitor()
+        hm_task.axapi_client = self.client_mock
+        mock_hm = copy.deepcopy(HM)
+        mock_hm.delay = 30
+        mock_hm.name = "hm1"
+        hm_task.execute(LISTENERS, mock_hm, VTHUNDER, flavor)
         self.client_mock.slb.hm.create.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
-                                                          HM.delay, HM.timeout,
-                                                          HM.rise_threshold, method=None,
+                                                          mock_hm.delay, mock_hm.timeout,
+                                                          mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
                                                           expect_code=None, post_data=None,
                                                           **FLAVOR_WITH_REGEX_ARGS)
@@ -205,44 +213,77 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                 ]
             }
         }
-        mock_hm = task.CreateAndAssociateHealthMonitor()
-        mock_hm.axapi_client = self.client_mock
-        HM.delay = 30
-        HM.name = "hm1"
-        mock_hm.execute(LISTENERS, HM, VTHUNDER, flavor)
+        hm_task = task.CreateAndAssociateHealthMonitor()
+        hm_task.axapi_client = self.client_mock
+        mock_hm = copy.deepcopy(HM)
+        mock_hm.delay = 30
+        mock_hm.name = "hm1"
+        hm_task.execute(LISTENERS, mock_hm, VTHUNDER, flavor)
         self.client_mock.slb.hm.create.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
-                                                          HM.delay, HM.timeout,
-                                                          HM.rise_threshold, method=None,
+                                                          mock_hm.delay, mock_hm.timeout,
+                                                          mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
                                                           expect_code=None, post_data=None,
                                                           **FLAVOR_WITH_REGEX_ARGS)
 
-    def test_health_monitor_update_task(self):
-        mock_hm = task.UpdateHealthMonitor()
-        mock_hm.axapi_client = self.client_mock
+    def test_get_hm_name(self):
+        hm = {
+            'monitor': {
+                'name': a10constants.MOCK_HM_ID
+            }
+        }
+        self.client_mock.slb.hm.get.return_value = hm
+        hm_name = task._get_hm_name(self.client_mock, HM)
+        self.assertEqual(a10constants.MOCK_HM_ID, hm_name)
+
+    def test_get_hm_name_backwards_compat(self):
+        hm = {
+            'monitor': {
+                'name': a10constants.MOCK_HM_ID[0:28]
+            }
+        }
+        self.client_mock.slb.hm.get.return_value = hm
+        hm_name = task._get_hm_name(self.client_mock, HM)
+        self.assertEqual(a10constants.MOCK_HM_ID[0:28], hm_name)
+
+    def test_get_hm_name_raise_notfound(self):
+        self.client_mock.slb.hm.get.side_effect = acos_errors.NotFound
+
+        expected_error = acos_errors.NotFound
+        module_func = task._get_hm_name
+        func_args = [self.client_mock, HM]
+        self.assertRaises(expected_error, module_func, *func_args)
+
+    @mock.patch('a10_octavia.controller.worker.tasks.health_monitor_tasks._get_hm_name')
+    def test_health_monitor_update_task(self, mock_hm_name):
+        mock_hm_name.return_value = a10constants.MOCK_HM_ID
+        hm_task = task.UpdateHealthMonitor()
+        hm_task.axapi_client = self.client_mock
         update_dict = {'delay': '10'}
-        hm = copy.deepcopy(HM)
-        mock_hm.execute(LISTENERS, hm, VTHUNDER, update_dict)
+        mock_hm = copy.deepcopy(HM)
+        hm_task.execute(LISTENERS, mock_hm, VTHUNDER, update_dict)
         self.client_mock.slb.hm.update.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
-                                                          hm.delay, hm.timeout,
-                                                          hm.rise_threshold, method=None,
+                                                          mock_hm.delay, mock_hm.timeout,
+                                                          mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
                                                           expect_code=None, post_data=None,
                                                           **ARGS)
         self.conf.config(group=a10constants.HEALTH_MONITOR_SECTION,
                          post_data='abc=1')
-        mock_hm.execute(LISTENERS, hm, VTHUNDER, update_dict)
+        hm_task.execute(LISTENERS, mock_hm, VTHUNDER, update_dict)
         self.client_mock.slb.hm.update.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
-                                                          hm.delay, hm.timeout,
-                                                          hm.rise_threshold, method=None,
+                                                          mock_hm.delay, mock_hm.timeout,
+                                                          mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
                                                           expect_code=None, post_data='abc=1',
                                                           **ARGS)
 
-    def test_health_monitor_update_with_flavor_and_config_task(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.health_monitor_tasks._get_hm_name')
+    def test_health_monitor_update_with_flavor_and_config_task(self, mock_hm_name):
+        mock_hm_name.return_value = a10constants.MOCK_HM_ID
         flavor = {
             "health_monitor": {
                 "retry": 5,
@@ -254,21 +295,24 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
             }
         }
         update_dict = {}
-        mock_hm = task.UpdateHealthMonitor()
-        mock_hm.axapi_client = self.client_mock
-        HM.delay = 30
-        HM.name = "hm1"
+        hm_task = task.UpdateHealthMonitor()
+        hm_task.axapi_client = self.client_mock
+        mock_hm = copy.deepcopy(HM)
+        mock_hm.delay = 30
+        mock_hm.name = "hm1"
         self.conf.config(group=a10constants.HEALTH_MONITOR_SECTION, post_data='abc=1')
-        mock_hm.execute(LISTENERS, HM, VTHUNDER, update_dict, flavor=flavor)
+        hm_task.execute(LISTENERS, mock_hm, VTHUNDER, update_dict, flavor=flavor)
         self.client_mock.slb.hm.update.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
-                                                          HM.delay, HM.timeout,
-                                                          HM.rise_threshold, method=None,
+                                                          mock_hm.delay, mock_hm.timeout,
+                                                          mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
                                                           post_data='abc=1',
                                                           expect_code=None, **FLAVOR_ARGS)
 
-    def test_health_monitor_update_with_flavor_task(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.health_monitor_tasks._get_hm_name')
+    def test_health_monitor_update_with_flavor_task(self, mock_hm_name):
+        mock_hm_name.return_value = a10constants.MOCK_HM_ID
         flavor = {
             "health_monitor": {
                 "retry": 5,
@@ -280,19 +324,22 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
             }
         }
         update_dict = {}
-        mock_hm = task.UpdateHealthMonitor()
-        mock_hm.axapi_client = self.client_mock
-        HM.delay = 30
-        HM.name = "hm1"
-        mock_hm.execute(LISTENERS, HM, VTHUNDER, update_dict, flavor=flavor)
+        hm_task = task.UpdateHealthMonitor()
+        hm_task.axapi_client = self.client_mock
+        mock_hm = copy.deepcopy(HM)
+        mock_hm.delay = 30
+        mock_hm.name = "hm1"
+        hm_task.execute(LISTENERS, mock_hm, VTHUNDER, update_dict, flavor=flavor)
         self.client_mock.slb.hm.update.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
-                                                          HM.delay, HM.timeout,
-                                                          HM.rise_threshold, method=None,
+                                                          mock_hm.delay, mock_hm.timeout,
+                                                          mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None, post_data=None,
                                                           expect_code=None, **FLAVOR_ARGS)
 
-    def test_health_monitor_update_with_flavor_regex_task(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.health_monitor_tasks._get_hm_name')
+    def test_health_monitor_update_with_flavor_regex_task(self, mock_hm_name):
+        mock_hm_name.return_value = a10constants.MOCK_HM_ID
         flavor = {
             "health_monitor": {
                 "retry": 5,
@@ -317,20 +364,23 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
             }
         }
         update_dict = {}
-        mock_hm = task.UpdateHealthMonitor()
-        mock_hm.axapi_client = self.client_mock
-        HM.delay = 30
-        HM.name = "hm1"
-        mock_hm.execute(LISTENERS, HM, VTHUNDER, update_dict, flavor=flavor)
+        hm_task = task.UpdateHealthMonitor()
+        hm_task.axapi_client = self.client_mock
+        mock_hm = copy.deepcopy(HM)
+        mock_hm.delay = 30
+        mock_hm.name = "hm1"
+        hm_task.execute(LISTENERS, mock_hm, VTHUNDER, update_dict, flavor=flavor)
         self.client_mock.slb.hm.update.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
-                                                          HM.delay, HM.timeout,
-                                                          HM.rise_threshold, method=None,
+                                                          mock_hm.delay, mock_hm.timeout,
+                                                          mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
                                                           expect_code=None, post_data=None,
                                                           **FLAVOR_WITH_REGEX_ARGS)
 
-    def test_health_monitor_update_with_regex_overwrite_flavor_task(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.health_monitor_tasks._get_hm_name')
+    def test_health_monitor_update_with_regex_overwrite_flavor_task(self, mock_hm_name):
+        mock_hm_name.return_value = a10constants.MOCK_HM_ID
         flavor = {
             "health_monitor": {
                 "retry": 5,
@@ -356,21 +406,25 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
             }
         }
         update_dict = {}
-        mock_hm = task.UpdateHealthMonitor()
-        mock_hm.axapi_client = self.client_mock
-        HM.delay = 30
-        HM.name = "hm1"
-        mock_hm.execute(LISTENERS, HM, VTHUNDER, update_dict, flavor=flavor)
+        hm_task = task.UpdateHealthMonitor()
+        hm_task.axapi_client = self.client_mock
+        mock_hm = copy.deepcopy(HM)
+        mock_hm.delay = 30
+        mock_hm.name = "hm1"
+        hm_task.execute(LISTENERS, mock_hm, VTHUNDER, update_dict, flavor=flavor)
         self.client_mock.slb.hm.update.assert_called_with(a10constants.MOCK_HM_ID,
                                                           self.client_mock.slb.hm.TCP,
-                                                          HM.delay, HM.timeout,
-                                                          HM.rise_threshold, method=None,
+                                                          mock_hm.delay, mock_hm.timeout,
+                                                          mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
                                                           expect_code=None, post_data=None,
                                                           **FLAVOR_WITH_REGEX_ARGS)
 
-    def test_health_monitor_delete_task(self):
-        mock_hm = task.DeleteHealthMonitor()
-        mock_hm.axapi_client = self.client_mock
-        mock_hm.execute(HM, VTHUNDER)
+    @mock.patch('a10_octavia.controller.worker.tasks.health_monitor_tasks._get_hm_name')
+    def test_health_monitor_delete_task(self, mock_hm_name):
+        mock_hm_name.return_value = a10constants.MOCK_HM_ID
+        hm_task = task.DeleteHealthMonitor()
+        hm_task.axapi_client = self.client_mock
+        mock_hm = copy.deepcopy(HM)
+        hm_task.execute(mock_hm, VTHUNDER)
         self.client_mock.slb.hm.delete.assert_called_with(a10constants.MOCK_HM_ID)
