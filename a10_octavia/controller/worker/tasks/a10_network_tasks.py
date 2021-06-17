@@ -1044,3 +1044,24 @@ class ReleaseSubnetAddressForMember(BaseNetworkTask):
                 LOG.exception("Failed to release addresses in NAT pool %s from subnet %s",
                               nat_flavor['pool_name'], member.subnet_id)
                 raise e
+
+
+class GetMembersOnThunder(BaseNetworkTask):
+
+    @axapi_client_decorator
+    def execute(self, vthunder, use_device_flavor):
+        if vthunder and use_device_flavor:
+            try:
+                member_list = []
+                members = []
+                member_list = self.axapi_client.slb.server.get_all()
+                if member_list:
+                    for member in range(len(member_list['server-list'])):
+                        members.append(member_list['server-list'][member]['host'])
+                return members
+            except Exception as e:
+                LOG.exception("Failed to get members on the vthunder due to %s ",
+                              str(e))
+                raise e
+        else:
+            return

@@ -548,15 +548,15 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 (member_parent_proj and member_parent_proj in parent_project_list)
                 or self._is_rack_flow(member.project_id, loadbalancer=load_balancer)):
             vthunder_conf = CONF.hardware_thunder.devices.get(load_balancer.project_id, None)
+            device_dict = CONF.hardware_thunder.devices
             create_member_tf = self._taskflow_load(
-                self._member_flows.get_rack_vthunder_create_member_flow(),
+                self._member_flows.get_rack_vthunder_create_member_flow(
+                    vthunder_conf=vthunder_conf, device_dict=device_dict),
                 store={
                     constants.MEMBER: member,
                     constants.LISTENERS: listeners,
                     constants.LOADBALANCER: load_balancer,
-                    constants.POOL: pool,
-                    a10constants.VTHUNDER_CONFIG: vthunder_conf,
-                    a10constants.USE_DEVICE_FLAVOR: None})
+                    constants.POOL: pool})
         else:
             busy = self._vthunder_busy_check(member.project_id, True, None)
             create_member_tf = self._taskflow_load(self._member_flows.
@@ -595,8 +595,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
         if self._is_rack_flow(member.project_id, loadbalancer=load_balancer):
+            vthunder_conf = CONF.hardware_thunder.devices.get(load_balancer.project_id, None)
+            device_dict = CONF.hardware_thunder.devices
             delete_member_tf = self._taskflow_load(
-                self._member_flows.get_rack_vthunder_delete_member_flow(),
+                self._member_flows.get_rack_vthunder_delete_member_flow(
+                    vthunder_conf=vthunder_conf, device_dict=device_dict),
                 store={constants.MEMBER: member, constants.LISTENERS: listeners,
                        constants.LOADBALANCER: load_balancer, constants.POOL: pool}
             )

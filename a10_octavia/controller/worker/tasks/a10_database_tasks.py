@@ -1047,9 +1047,9 @@ class ValidateComputeForProject(BaseDatabaseTask):
 class CountLoadbalancersOnThunderBySubnet(BaseDatabaseTask):
 
     def execute(self, vthunder, subnet, use_device_flavor):
-        count = 0
         if vthunder and use_device_flavor:
             try:
+                count = 0
                 vthunder_ids = self.vthunder_repo.get_rack_vthunders_by_ip_address(
                     db_apis.get_session(),
                     ip_address=vthunder.ip_address)
@@ -1066,7 +1066,30 @@ class CountLoadbalancersOnThunderBySubnet(BaseDatabaseTask):
                         count = count + 1
                 return count
             except Exception as e:
-                LOG.exception("Failed to get LB count for subnet %s due to %s ",
+                LOG.exception("Failed to get LB count on thunder for subnet %s due to %s ",
                               subnet.id, str(e))
                 raise e
-        return 0
+        else:
+            return
+
+
+class CountMembersOnThunderBySubnet(BaseDatabaseTask):
+
+    def execute(self, subnet, use_device_flavor, members):
+        if use_device_flavor:
+            try:
+                count = 1
+                if members:
+                    for mem in range(len(members)):
+                        member = self.member_repo.get_members_on_thunder_by_subnet(
+                            db_apis.get_session(),
+                            ip_address=members[mem], subnet_id=subnet.id)
+                        if member:
+                            count = count + 1
+                return count
+            except Exception as e:
+                LOG.exception("Failed to get member count on thunder for subnet %s due to %s ",
+                              subnet.id, str(e))
+                raise e
+        else:
+            return

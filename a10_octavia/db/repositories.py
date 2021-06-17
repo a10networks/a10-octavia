@@ -515,6 +515,17 @@ class MemberRepository(repo.MemberRepository):
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
 
+    def get_members_on_thunder_by_subnet(self, session, ip_address, subnet_id):
+        model = session.query(self.model_class).filter(
+            and_(self.model_class.ip_address == ip_address,
+                 self.model_class.subnet_id == subnet_id,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).first()
+
+        if not model:
+            return None
+        return model.to_data_model()
+
 
 class NatPoolRepository(BaseRepository):
     model_class = models.NATPool
