@@ -63,7 +63,8 @@ class LoadBalancerFlows(object):
         self._vthunder_repo = a10repo.VThunderRepository()
         self.loadbalancer_repo = a10repo.LoadBalancerRepository()
 
-    def get_create_load_balancer_flow(self, load_balancer_id, topology, listeners=None):
+    def get_create_load_balancer_flow(self, load_balancer_id, topology, project_id,
+                                      listeners=None):
         """Flow to create a load balancer"""
 
         f_name = constants.CREATE_LOADBALANCER_FLOW
@@ -95,9 +96,8 @@ class LoadBalancerFlows(object):
 
         # IMP: Now creating vThunder config here
         post_amp_prefix = constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
-        lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
         vthunder = self._vthunder_repo.get_vthunder_by_project_id(db_apis.get_session(),
-                                                                  lb.project_id)
+                                                                  project_id)
 
         lb_create_flow.add(
             self.get_post_lb_vthunder_association_flow(
