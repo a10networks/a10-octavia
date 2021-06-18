@@ -260,7 +260,8 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         if 'name-expressions' in obj_flavor:
             for reg_flavor in obj_flavor['name-expressions']:
                 if 'regex' not in reg_flavor or 'json' not in reg_flavor:
-                    raise Exception('key \'regex\' and \'json\' is mandatory for \'name-expressions\'')
+                    raise Exception(
+                        'key \'regex\' and \'json\' is mandatory for \'name-expressions\'')
 
     def validate_flavor(self, flavor_dict):
         try:
