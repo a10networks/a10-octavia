@@ -967,7 +967,7 @@ class CheckExistingVthunderTopology(BaseDatabaseTask):
             loadbalancer.project_id,
             topology)
 
-        if vthunder is not None:
+        if vthunder is not None and topology != vthunder.topology:
             LOG.error('Other loadbalancer exists in vthunder with: %s topology',
                       vthunder.topology)
             msg = ('vthunder has other loadbalancer with {0} ' +
