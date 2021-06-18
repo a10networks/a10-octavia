@@ -409,7 +409,7 @@ class VThunderFlows(object):
         """Checks whether vrrp is configured
         :returns: True if vrrp is configured
         """
-        return history[history.keys()[0]]
+        return history[list(history.keys())[0]]
 
     def get_write_memory_flow(self, vthunder, store, deleteCompute):
         """Perform write memory for thunder """
