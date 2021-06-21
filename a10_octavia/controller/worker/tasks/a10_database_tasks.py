@@ -387,7 +387,7 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
                     partition_project_list,
                     str(e))
                 raise e
-        else:
+        elif use_device_flavor:
             try:
                 vrid_list = self.vrid_repo.get_vrid_from_thunder_device(
                     db_apis.get_session(), device_name=vthunder.device_name)
@@ -411,10 +411,17 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
         if not vrid_list:
             # delete all vrids from DB for the lB resource's project.
             try:
-                self.vrid_repo.delete(db_apis.get_session(),
-                                      project_id=lb_resource.project_id)
-                LOG.debug("Successfully deleted DB vrid from project %s",
-                          lb_resource.project_id)
+                if not use_device_flavor:
+                    self.vrid_repo.delete(db_apis.get_session(),
+                                          owner=lb_resource.project_id)
+                    LOG.debug("Successfully deleted DB vrid from project %s",
+                              lb_resource.project_id)
+                elif use_device_flavor:
+                    self.vrid_repo.delete(db_apis.get_session(),
+                                          owner=vthunder_config.device_name)
+                    LOG.debug("Successfully deleted DB vrid from device %s",
+                              vthunder_config.device_name)
+
             except Exception as e:
                 LOG.error(
                     "Failed to delete VRID data for project %s due to %s",
@@ -449,7 +456,7 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                         new_vrid = self.vrid_repo.create(
                             db_apis.get_session(),
                             id=vrid.id,
-                            project_id=vthunder_config.device_name,
+                            owner=vthunder_config.device_name,
                             vrid_floating_ip=vrid.vrid_floating_ip,
                             vrid_port_id=vrid.vrid_port_id,
                             vrid=vrid.vrid,
@@ -466,7 +473,7 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                         new_vrid = self.vrid_repo.create(
                             db_apis.get_session(),
                             id=vrid.id,
-                            project_id=vrid.project_id,
+                            owner=vrid.owner,
                             vrid_floating_ip=vrid.vrid_floating_ip,
                             vrid_port_id=vrid.vrid_port_id,
                             vrid=vrid.vrid,
@@ -1069,8 +1076,7 @@ class CountLoadbalancersOnThunderBySubnet(BaseDatabaseTask):
                 LOG.exception("Failed to get LB count on thunder for subnet %s due to %s ",
                               subnet.id, str(e))
                 raise e
-        else:
-            return
+        return 0
 
 
 class CountMembersOnThunderBySubnet(BaseDatabaseTask):
@@ -1078,7 +1084,7 @@ class CountMembersOnThunderBySubnet(BaseDatabaseTask):
     def execute(self, subnet, use_device_flavor, members):
         if use_device_flavor:
             try:
-                count = 1
+                count = 0
                 if members:
                     for mem in range(len(members)):
                         member = self.member_repo.get_members_on_thunder_by_subnet(
@@ -1091,5 +1097,4 @@ class CountMembersOnThunderBySubnet(BaseDatabaseTask):
                 LOG.exception("Failed to get member count on thunder for subnet %s due to %s ",
                               subnet.id, str(e))
                 raise e
-        else:
-            return
+        return 0

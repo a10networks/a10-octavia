@@ -425,7 +425,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
     def delete_load_balancer(self, load_balancer_id, cascade=False):
         """Function to delete load balancer for A10 provider"""
-
         lb = self._lb_repo.get(db_apis.get_session(),
                                id=load_balancer_id)
         vthunder = self._vthunder_repo.get_vthunder_from_lb(db_apis.get_session(),
@@ -444,14 +443,21 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             (flow, store) = self._lb_flows.get_delete_rack_vthunder_load_balancer_flow(
                 lb, cascade,
                 vthunder_conf=vthunder_conf, device_dict=device_dict)
+            store.update({constants.LOADBALANCER: lb,
+                          a10constants.COMPUTE_BUSY: busy,
+                          constants.VIP: lb.vip,
+                          constants.SERVER_GROUP_ID: lb.server_group_id})
         else:
             (flow, store) = self._lb_flows.get_delete_load_balancer_flow(
                 lb, deleteCompute, cascade)
-
-        store.update({constants.LOADBALANCER: lb,
-                      a10constants.COMPUTE_BUSY: busy,
-                      constants.VIP: lb.vip,
-                      constants.SERVER_GROUP_ID: lb.server_group_id})
+            store.update({constants.LOADBALANCER: lb,
+                          a10constants.COMPUTE_BUSY: busy,
+                          constants.VIP: lb.vip,
+                          constants.SERVER_GROUP_ID: lb.server_group_id,
+                          a10constants.VTHUNDER_CONFIG: None,
+                          a10constants.USE_DEVICE_FLAVOR: False,
+                          a10constants.LB_COUNT_THUNDER: None,
+                          a10constants.MEMBER_COUNT_THUNDER: None})
 
         delete_lb_tf = self._taskflow_load(flow, store=store)
         self._register_flow_notify_handler(delete_lb_tf, lb.project_id, True, busy)
@@ -570,7 +576,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                           a10constants.COMPUTE_BUSY: busy,
                                                           constants.POOL: pool,
                                                           a10constants.VTHUNDER_CONFIG: None,
-                                                          a10constants.USE_DEVICE_FLAVOR: None})
+                                                          a10constants.USE_DEVICE_FLAVOR: False})
             self._register_flow_notify_handler(create_member_tf, member.project_id, True, busy)
 
         with tf_logging.DynamicLoggingListener(create_member_tf,
@@ -609,7 +615,10 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 self._member_flows.get_delete_member_flow(topology=topology),
                 store={constants.MEMBER: member, constants.LISTENERS: listeners,
                        constants.LOADBALANCER: load_balancer, a10constants.COMPUTE_BUSY: busy,
-                       constants.POOL: pool}
+                       constants.POOL: pool, a10constants.VTHUNDER_CONFIG: None,
+                       a10constants.USE_DEVICE_FLAVOR: False,
+                       a10constants.LB_COUNT_THUNDER: None,
+                       a10constants.MEMBER_COUNT_THUNDER: None}
             )
             self._register_flow_notify_handler(delete_member_tf, member.project_id, True, busy)
         with tf_logging.DynamicLoggingListener(delete_member_tf,

@@ -338,6 +338,21 @@ class MemberFlows(object):
                       a10constants.DEVICE_CONFIG_DICT),
             rebind={constants.FLAVOR_DATA: constants.FLAVOR},
             provides=(a10constants.VTHUNDER_CONFIG, a10constants.USE_DEVICE_FLAVOR)))
+        delete_member_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            name=a10constants.GET_LB_RESOURCE_SUBNET,
+            rebind={a10constants.LB_RESOURCE: constants.MEMBER},
+            provides=constants.SUBNET))
+        delete_member_flow.add(
+            a10_network_tasks.GetMembersOnThunder(
+                requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
+                provides=a10constants.MEMBERS))
+        delete_member_flow.add(
+            a10_database_tasks.CountMembersOnThunderBySubnet(
+                requires=[
+                    constants.SUBNET,
+                    a10constants.USE_DEVICE_FLAVOR,
+                    a10constants.MEMBERS],
+                provides=a10constants.MEMBER_COUNT_THUNDER))
         delete_member_flow.add(server_tasks.MemberFindNatPool(
             requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                       constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
@@ -465,21 +480,10 @@ class MemberFlows(object):
         delete_member_vrid_subflow.add(
             a10_database_tasks.CountLoadbalancersOnThunderBySubnet(
                 requires=[a10constants.VTHUNDER, constants.SUBNET, a10constants.USE_DEVICE_FLAVOR],
-                provides=a10constants.LB_COUNT_SUBNET))
+                provides=a10constants.LB_COUNT_THUNDER))
         delete_member_vrid_subflow.add(
             a10_database_tasks.CountMembersInProjectBySubnet(
                 requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
-                provides=a10constants.MEMBER_COUNT))
-        delete_member_vrid_subflow.add(
-            a10_network_tasks.GetMembersOnThunder(
-                requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
-                provides=a10constants.MEMBERS))
-        delete_member_vrid_subflow.add(
-            a10_database_tasks.CountMembersOnThunderBySubnet(
-                requires=[
-                    constants.SUBNET,
-                    a10constants.USE_DEVICE_FLAVOR,
-                    a10constants.MEMBERS],
                 provides=a10constants.MEMBER_COUNT))
         delete_member_vrid_subflow.add(
             a10_database_tasks.GetVRIDForLoadbalancerResource(
@@ -494,8 +498,11 @@ class MemberFlows(object):
                     a10constants.VTHUNDER,
                     a10constants.VRID_LIST,
                     constants.SUBNET,
+                    a10constants.USE_DEVICE_FLAVOR,
                     a10constants.LB_COUNT_SUBNET,
-                    a10constants.MEMBER_COUNT],
+                    a10constants.MEMBER_COUNT,
+                    a10constants.LB_COUNT_THUNDER,
+                    a10constants.MEMBER_COUNT_THUNDER],
                 rebind={a10constants.LB_RESOURCE: constants.MEMBER},
                 provides=(
                     a10constants.VRID,

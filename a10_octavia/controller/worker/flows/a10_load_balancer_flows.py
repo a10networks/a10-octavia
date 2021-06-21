@@ -733,7 +733,7 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(
             a10_database_tasks.CountLoadbalancersOnThunderBySubnet(
                 requires=[a10constants.VTHUNDER, constants.SUBNET, a10constants.USE_DEVICE_FLAVOR],
-                provides=a10constants.LB_COUNT_SUBNET))
+                provides=a10constants.LB_COUNT_THUNDER))
         delete_LB_flow.add(self.get_delete_rack_lb_vrid_subflow())
         delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
             requires=[constants.LOADBALANCER, a10constants.LB_COUNT_SUBNET]))
@@ -858,6 +858,17 @@ class LoadBalancerFlows(object):
                 requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
                 provides=a10constants.MEMBER_COUNT))
         delete_lb_vrid_subflow.add(
+            a10_network_tasks.GetMembersOnThunder(
+                requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
+                provides=a10constants.MEMBERS))
+        delete_lb_vrid_subflow.add(
+            a10_database_tasks.CountMembersOnThunderBySubnet(
+                requires=[
+                    constants.SUBNET,
+                    a10constants.USE_DEVICE_FLAVOR,
+                    a10constants.MEMBERS],
+                provides=a10constants.MEMBER_COUNT_THUNDER))
+        delete_lb_vrid_subflow.add(
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
@@ -870,8 +881,11 @@ class LoadBalancerFlows(object):
                     a10constants.VTHUNDER,
                     a10constants.VRID_LIST,
                     constants.SUBNET,
+                    a10constants.USE_DEVICE_FLAVOR,
                     a10constants.LB_COUNT_SUBNET,
-                    a10constants.MEMBER_COUNT],
+                    a10constants.MEMBER_COUNT,
+                    a10constants.LB_COUNT_THUNDER,
+                    a10constants.MEMBER_COUNT_THUNDER],
                 rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
                 provides=(
                     a10constants.VRID,
@@ -903,8 +917,11 @@ class LoadBalancerFlows(object):
                     a10constants.VTHUNDER,
                     a10constants.VRID_LIST,
                     constants.SUBNET,
+                    a10constants.USE_DEVICE_FLAVOR,
                     a10constants.LB_COUNT_SUBNET,
-                    a10constants.MEMBER_COUNT],
+                    a10constants.MEMBER_COUNT,
+                    a10constants.LB_COUNT_THUNDER,
+                    a10constants.MEMBER_COUNT_THUNDER],
                 rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
                 provides=(
                     a10constants.VRID,

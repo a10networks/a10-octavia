@@ -365,7 +365,7 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
                          'admin_state_up': False,
                          'device_id': 'vrid-{0}'.format(vrid.id),
                          'device_owner': aap.OCTAVIA_OWNER,
-                         project_id_key: vrid.project_id}}
+                         project_id_key: vrid.owner}}
         if fixed_ip_json:
             port['port']['fixed_ips'] = [fixed_ip_json]
 
