@@ -32,7 +32,6 @@ class NatPoolCreate(task.Task):
 
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder, flavor_data=None):
-        self._added_pool_list = []
         device_pool = None
         if flavor_data:
             natpool_flavor_list = flavor_data.get('nat_pool_list')
