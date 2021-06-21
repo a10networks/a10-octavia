@@ -51,7 +51,7 @@ LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
 FIXED_IP = n_data_models.FixedIP(ip_address='10.10.10.10')
 PORT = n_data_models.Port(id=uuidutils.generate_uuid(), fixed_ips=[FIXED_IP])
 VRID = data_models.VRID(id=1, vrid=0,
-                        project_id=a10constants.MOCK_PROJECT_ID,
+                        owner=a10constants.MOCK_PROJECT_ID,
                         vrid_port_id=uuidutils.generate_uuid(),
                         vrid_floating_ip='10.0.12.32')
 LISTENER = o_data_models.Listener(id=a10constants.MOCK_LISTENER_ID, load_balancer=LB)
@@ -222,7 +222,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vthunder_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.get_vrid_from_project_ids.return_value = VRID
-        vrid = mock_vrid_entry.execute([a10constants.MOCK_PROJECT_ID])
+        vrid = mock_vrid_entry.execute([a10constants.MOCK_PROJECT_ID], thunder, False)
         self.assertEqual(VRID, vrid)
 
     def test_get_vrid_for_project(self):
@@ -244,7 +244,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vthunder_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.get_vrid_from_project_ids.return_value = VRID
-        vrid = mock_vrid_entry.execute(MEMBER_1)
+        vrid = mock_vrid_entry.execute(MEMBER_1, thunder, False)
         mock_vrid_entry.vthunder_repo.get_partition_for_project.assert_not_called()
         self.assertEqual(VRID, vrid)
 
@@ -260,17 +260,18 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
 
         mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
-        mock_vrid_entry.execute(MEMBER_1, [])
+        mock_vrid_entry.execute(MEMBER_1, [], thunder, False)
         mock_vrid_entry.vrid_repo.delete.assert_called_once_with(
             mock.ANY,
-            project_id=a10constants.MOCK_PROJECT_ID
+            owner=a10constants.MOCK_PROJECT_ID
         )
 
     def test_update_vrid_for_project_member_with_port_and_with_vrid(self):
+        thunder = copy.deepcopy(HW_THUNDER)
         mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.exists.return_value = True
-        mock_vrid_entry.execute(MEMBER_1, [VRID])
+        mock_vrid_entry.execute(MEMBER_1, [VRID], thunder, False)
         mock_vrid_entry.vrid_repo.update.assert_called_once_with(
             mock.ANY,
             VRID.id,
@@ -281,13 +282,14 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo.create.assert_not_called()
 
     def test_update_vrid_for_project_member_with_port_and_no_vrid(self):
+        thunder = copy.deepcopy(HW_THUNDER)
         mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.exists.return_value = False
-        mock_vrid_entry.execute(MEMBER_1, [VRID])
+        mock_vrid_entry.execute(MEMBER_1, [VRID], thunder, False)
         mock_vrid_entry.vrid_repo.create.assert_called_once_with(
             mock.ANY,
-            project_id=MEMBER_1.project_id,
+            owner=MEMBER_1.project_id,
             id=VRID.id,
             vrid=VRID.vrid,
             vrid_floating_ip=VRID.vrid_floating_ip,
