@@ -1041,3 +1041,18 @@ class ReleaseSubnetAddressForMember(BaseNetworkTask):
                 LOG.exception("Failed to release addresses in NAT pool %s from subnet %s",
                               nat_flavor['pool_name'], member.subnet_id)
                 raise e
+
+
+class RemoveVIPFromAAP(BaseNetworkTask):
+    """Task to remove vip from interface AAP."""
+
+    def execute(self, loadbalancer, amphora):
+        """Remove the vip from AAP."""
+
+        LOG.debug("Removing vip from Allowed Address pair")
+        try:
+            self.network_driver.release_subnet_addresses(
+                loadbalancer.vip.subnet_id, loadbalancer.vip.ip_address, amphora)
+        except Exception:
+            LOG.exception("Unable to remove vip %s from Allowed Address pair",
+                          loadbalancer.vip.ip_address)

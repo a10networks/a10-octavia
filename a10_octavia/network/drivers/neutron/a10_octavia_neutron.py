@@ -428,12 +428,13 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
                                    if aap_ip['ip_address'] != ip]
         else:
             updated_aap_ips = [aap_ip for aap_ip in aap_ips if aap_ip['ip_address'] != ip_address]
-        aap = {
-            'port': {
-                'allowed_address_pairs': updated_aap_ips,
+        if len(aap_ips) != len(updated_aap_ips):
+            aap = {
+                'port': {
+                    'allowed_address_pairs': updated_aap_ips,
+                }
             }
-        }
-        self.neutron_client.update_port(port_id, aap)
+            self.neutron_client.update_port(port_id, aap)
 
     def deallocate_vrid_fip(self, vrid, subnet, amphorae):
         self.delete_port(vrid.vrid_port_id)
