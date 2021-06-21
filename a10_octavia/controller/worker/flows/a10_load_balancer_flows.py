@@ -292,9 +292,6 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(self.get_delete_lb_vrid_subflow(deleteCompute))
         delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
             requires=[constants.LOADBALANCER, a10constants.LB_COUNT_SUBNET]))
-        if not deleteCompute:
-            delete_LB_flow.add(a10_network_tasks.RemoveVIPFromAAP(
-                requires=[constants.LOADBALANCER, constants.AMPHORA]))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         delete_LB_flow.add(a10_database_tasks.GetFlavorData(

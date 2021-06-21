@@ -79,10 +79,6 @@ EXISTING_FIP_L3V_PARTITION = {
             u'vrid-val': 0, u'preempt-mode': {u'threshold': 0, u'disable': 0},
             u'a10-url': u'/axapi/v3/vrrp-a/vrid/0'}
 }
-AMPHORA = o_data_models.Amphora(a10constants.MOCK_AMPHORA_ID)
-VIP = o_data_models.Vip(ip_address="1.1.1.1", subnet_id=a10constants.MOCK_SUBNET_ID)
-LOADBALANCER = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
-                                          amphorae=[AMPHORA], vip=VIP)
 
 
 class MockIP(object):
@@ -572,10 +568,3 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         NAT_POOL.member_ref_count = 1
         mock_network_task.execute(MEMBER, NAT_FLAVOR, NAT_POOL)
         self.client_mock.delete_port.assert_called_with(NAT_POOL.port_id)
-
-    def test_remove_vip_from_aap(self):
-        mock_network_task = a10_network_tasks.RemoveVIPFromAAP()
-        mock_network_task.network_driver = self.client_mock
-        mock_network_task.execute(LOADBALANCER, AMPHORA)
-        self.client_mock.release_subnet_addresses.assert_called_once_with(
-            LOADBALANCER.vip.subnet_id, LOADBALANCER.vip.ip_address, AMPHORA)
