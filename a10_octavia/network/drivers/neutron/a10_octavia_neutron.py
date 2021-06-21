@@ -220,6 +220,15 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
         if subnet.network_id not in fixed_subnets and sec_grp:
             self._delete_vip_security_group(sec_grp['id'])
 
+        for amphora in filter(
+                lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                loadbalancer.amphorae):
+            interface = self._get_plugged_interface(
+                amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+            if interface is not None:
+                self._remove_allowed_address_pair_from_port(
+                    interface.port_id, loadbalancer.vip.ip_address)
+
     def get_plugged_parent_port(self, vip):
         parent_port = None
         try:
@@ -428,12 +437,13 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
                                    if aap_ip['ip_address'] != ip]
         else:
             updated_aap_ips = [aap_ip for aap_ip in aap_ips if aap_ip['ip_address'] != ip_address]
-        aap = {
-            'port': {
-                'allowed_address_pairs': updated_aap_ips,
+        if len(aap_ips) != len(updated_aap_ips):
+            aap = {
+                'port': {
+                    'allowed_address_pairs': updated_aap_ips,
+                }
             }
-        }
-        self.neutron_client.update_port(port_id, aap)
+            self.neutron_client.update_port(port_id, aap)
 
     def deallocate_vrid_fip(self, vrid, subnet, amphorae):
         self.delete_port(vrid.vrid_port_id)
