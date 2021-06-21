@@ -192,10 +192,10 @@ class Certificate(BaseDataModel):
 
 class VRID(BaseDataModel):
 
-    def __init__(self, id=None, project_id=None, vrid=None, vrid_port_id=None,
+    def __init__(self, id=None, owner=None, vrid=None, vrid_port_id=None,
                  vrid_floating_ip=None, subnet_id=None):
         self.id = id
-        self.project_id = project_id
+        self.owner = owner
         self.vrid = vrid
         self.vrid_port_id = vrid_port_id
         self.vrid_floating_ip = vrid_floating_ip

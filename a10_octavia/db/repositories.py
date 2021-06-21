@@ -449,9 +449,8 @@ class VRIDRepository(BaseRepository):
     # "to_data_model"
     def get_vrid_from_project_ids(self, session, project_ids):
         vrid_obj_list = []
-
         model = session.query(self.model_class).filter(
-            self.model_class.project_id.in_(project_ids))
+            self.model_class.owner.in_(project_ids))
         for data in model:
             vrid_obj_list.append(data.to_data_model())
 
@@ -461,7 +460,7 @@ class VRIDRepository(BaseRepository):
         vrid_obj_list = []
 
         model = session.query(self.model_class).filter(
-            self.model_class.project_id == device_name)
+            self.model_class.owner == device_name)
         for data in model:
             vrid_obj_list.append(data.to_data_model())
 
