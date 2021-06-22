@@ -191,7 +191,7 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
         fixed_subnets = CONF.a10_controller_worker.amp_boot_network_list[:]
         subnet = self.get_subnet(loadbalancer.vip.subnet_id)
         if subnet.network_id in fixed_subnets and lb_count_subnet != 0:
-                    lb_count_subnet = lb_count_subnet + 1
+            lb_count_subnet = lb_count_subnet + 1
 
         if self.sec_grp_enabled:
             sec_grp = self._get_lb_security_group(loadbalancer.id)
