@@ -682,7 +682,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         self.added_fip_ports = []
         super(HandleVRIDFloatingIP, self).__init__(*arg, **kwargs)
 
-    def _add_vrid_to_list(self, vrid_list, subnet, project_id):
+    def _add_vrid_to_list(self, vrid_list, subnet, owner):
         vrid_value = CONF.a10_global.vrid
         filtered_vrid_list = list(filter(lambda x: x.subnet_id == subnet.id, vrid_list))
         if not filtered_vrid_list:
@@ -690,7 +690,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 data_models.VRID(
                     id=uuidutils.generate_uuid(),
                     vrid=vrid_value,
-                    project_id=project_id,
+                    owner=owner,
                     vrid_port_id=None,
                     vrid_floating_ip=None,
                     subnet_id=subnet.id))
@@ -759,18 +759,11 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         vrid_value = CONF.a10_global.vrid
         prev_vrid_value = vrid_list[0].vrid if vrid_list else None
         updated_vrid_list = copy.copy(vrid_list)
-        parent_vrid_fip_flag = False
         if use_device_flavor and vthunder_config.vrid_floating_ip:
             conf_floating_ip = vthunder_config.vrid_floating_ip
         else:
             conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
                 lb_resource.project_id)
-
-        if vthunder_config:
-            hierarchical_mt = vthunder_config.hierarchical_multitenancy
-            use_parent_partition = CONF.a10_global.use_parent_partition
-            if hierarchical_mt == 'enable' and use_parent_partition:
-                parent_vrid_fip_flag = True
 
         if not conf_floating_ip:
             for vrid in updated_vrid_list:
@@ -782,7 +775,10 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         vrid_floating_ips = []
         update_vrid_flag = False
         existing_fips = []
-        self._add_vrid_to_list(updated_vrid_list, subnet, lb_resource.project_id)
+        if use_device_flavor:
+            self._add_vrid_to_list(updated_vrid_list, subnet, vthunder_config.device_name)
+        else:
+            self._add_vrid_to_list(updated_vrid_list, subnet, lb_resource.project_id)
         for vrid in updated_vrid_list:
             try:
                 vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
@@ -820,7 +816,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         if (prev_vrid_value is not None) and (prev_vrid_value != vrid_value):
             self._remove_device_vrid_fip(vthunder.partition_name, prev_vrid_value)
             self._update_device_vrid_fip(vthunder.partition_name, vrid_floating_ips, vrid_value)
-        elif update_vrid_flag or parent_vrid_fip_flag:
+        elif update_vrid_flag:
             self._update_device_vrid_fip(vthunder.partition_name, vrid_floating_ips, vrid_value)
 
         return updated_vrid_list
@@ -858,11 +854,15 @@ class DeleteVRIDPort(BaseNetworkTask):
 
     @axapi_client_decorator
     def execute(self, vthunder, vrid_list, subnet,
-                lb_count_subnet, member_count, lb_resource):
+                use_device_flavor, lb_count_subnet, member_count,
+                lb_count_thunder, member_count_thunder, lb_resource):
         vrid = None
         vrid_floating_ip_list = []
         existing_fips = []
-        resource_count = lb_count_subnet + member_count
+        if use_device_flavor:
+            resource_count = lb_count_thunder + member_count_thunder
+        else:
+            resource_count = lb_count_subnet + member_count
         if resource_count <= 1 and vthunder:
             for vr in vrid_list:
                 try:
@@ -1041,3 +1041,24 @@ class ReleaseSubnetAddressForMember(BaseNetworkTask):
                 LOG.exception("Failed to release addresses in NAT pool %s from subnet %s",
                               nat_flavor['pool_name'], member.subnet_id)
                 raise e
+
+
+class GetMembersOnThunder(BaseNetworkTask):
+
+    @axapi_client_decorator
+    def execute(self, vthunder, use_device_flavor):
+        if vthunder and use_device_flavor:
+            try:
+                member_list = []
+                members = []
+                member_list = self.axapi_client.slb.server.get_all()
+                if member_list:
+                    for member in range(len(member_list['server-list'])):
+                        members.append(member_list['server-list'][member]['host'])
+                return members
+            except Exception as e:
+                LOG.exception("Failed to get members on the vthunder due to %s ",
+                              str(e))
+                raise e
+        else:
+            return

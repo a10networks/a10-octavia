@@ -506,8 +506,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         vrid.vrid = VRID_VALUE
         mock_network_task.axapi_client = self.client_mock
         self.client_mock.vrrpa.get.return_value = EXISTING_FIP_SHARED_PARTITION
-        result = mock_network_task.execute(VTHUNDER, [vrid], SUBNET_1,
-                                           0, 1, MEMBER)
+        result = mock_network_task.execute(VTHUNDER, [vrid], SUBNET_1, False,
+                                           0, 1, 0, 0, MEMBER)
         self.network_driver_mock.deallocate_vrid_fip.assert_called_with(
             vrid, mock.ANY, mock.ANY)
         self.client_mock.vrrpa.update.assert_called_with(
@@ -517,8 +517,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
     def test_DeleteMemberVRIDPort_member_count_lb_count(self):
         mock_network_task = a10_network_tasks.DeleteVRIDPort()
         mock_network_task.axapi_client = self.client_mock
-        result = mock_network_task.execute(VTHUNDER, [VRID_1], SUBNET_1,
-                                           1, 1, MEMBER)
+        result = mock_network_task.execute(VTHUNDER, [VRID_1], SUBNET_1, False,
+                                           1, 1, 0, 0, MEMBER)
         self.network_driver_mock.deallocate_vrid_fip.assert_not_called()
         self.client_mock.vrrpa.delete.assert_not_called()
         self.assertEqual(result, (None, False))

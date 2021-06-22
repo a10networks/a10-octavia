@@ -61,7 +61,7 @@ class VRID(base_models.BASE):
     __tablename__ = 'vrid'
 
     id = sa.Column(sa.String(36), primary_key=True)
-    project_id = sa.Column(sa.String(36), nullable=False)
+    owner = sa.Column(sa.String(36), nullable=False)
     vrid = sa.Column(sa.Integer, default=0)
     vrid_port_id = sa.Column(sa.String(36), nullable=False)
     vrid_floating_ip = sa.Column(sa.String(40), nullable=False)
