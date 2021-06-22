@@ -1240,14 +1240,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             return True
         if key in CONF.hardware_thunder.devices:
             return True
-        if flavor:
-            if flavor.get('device-name', None) is not None:
-                return True
-        if loadbalancer:
-            flavor_data = utils.get_loadbalancer_flavor(loadbalancer)
-            if flavor_data is not None:
-                if flavor_data.get('device-name', None) is not None:
-                    return True
         return False
 
     def _vthunder_busy_check(self, key, is_reload_thread, flags, store=None):
