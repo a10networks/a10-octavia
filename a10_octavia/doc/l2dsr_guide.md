@@ -16,9 +16,11 @@ deployment and configuration of the vThunder device; however, it is up to the op
 ![alt text](images/l2_dsr_expanded.png)
 
 - 1 Neutron Router deployed **without** SNAT
-- 1 vThunder deployed in transparent 1-arm mode
-- 1 client on private network
-- 2 real servers on private-2 network
+- 1 client created on the private network
+- 2 real servers created on the private-2 network
+
+The vThunder (amphora) is deployed on the private-2 network by A10 Octavia during the loadbalancer creation step.
+
 
 ### 1. Update the A10 Octavia config
 
