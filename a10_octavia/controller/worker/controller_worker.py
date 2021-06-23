@@ -694,18 +694,16 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             else:
                 busy = self._vthunder_busy_check(member.project_id, False, ctx_flags,
                                                  load_balancer)
-                update_member_tf = self._taskflow_load(self._member_flows.
-                                                       get_update_member_flow(topology=topology),
-                                                       store={constants.MEMBER: member,
-                                                              constants.LISTENERS:
-                                                              listeners,
-                                                              constants.LOADBALANCER:
-                                                              load_balancer,
-                                                              a10constants.COMPUTE_BUSY: busy,
-                                                              constants.POOL:
-                                                              pool,
-                                                              constants.UPDATE_DICT:
-                                                              member_updates})
+                update_member_tf = self._taskflow_load(
+                    self._member_flows.get_update_member_flow(topology=topology),
+                    store={constants.MEMBER: member,
+                           constants.LISTENERS: listeners,
+                           constants.LOADBALANCER: load_balancer,
+                           a10constants.COMPUTE_BUSY: busy,
+                           constants.POOL: pool,
+                           constants.UPDATE_DICT: member_updates,
+                           a10constants.VTHUNDER_CONFIG: None,
+                           a10constants.USE_DEVICE_FLAVOR: False})
                 self._register_flow_notify_handler(update_member_tf, member.project_id, False,
                                                    busy, ctx_flags, load_balancer)
 
