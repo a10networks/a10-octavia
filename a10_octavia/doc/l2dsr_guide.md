@@ -185,7 +185,7 @@ $ openstack port show 39a3c109-15d3-49a8-9c79-687d4bfa0309 | grep "allowed_addre
 
 #### 3c. Add the VIP address to the loopbacks
 
-Server 1:
+**Server 1**
 ```
 ip addr add 11.0.0.22/32 dev lo
 ```
@@ -208,7 +208,7 @@ root@server:~# ip a
        valid_lft forever preferred_lft forever
 ```
 
-Server 2:
+**Server 2**
 ```
 ip addr add 11.0.0.22/32 dev lo
 ```
