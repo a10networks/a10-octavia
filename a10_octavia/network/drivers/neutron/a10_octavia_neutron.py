@@ -190,6 +190,9 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
         vip_port_id = loadbalancer.vip.port_id
         fixed_subnets = CONF.a10_controller_worker.amp_boot_network_list[:]
         subnet = self.get_subnet(loadbalancer.vip.subnet_id)
+        if subnet.network_id in fixed_subnets and lb_count_subnet != 0:
+            lb_count_subnet = lb_count_subnet + 1
+
         if self.sec_grp_enabled:
             sec_grp = self._get_lb_security_group(loadbalancer.id)
             if sec_grp:
@@ -201,23 +204,22 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
                 ports.extend(self._get_instance_ports_by_subnet(
                     amphora.compute_id, loadbalancer.vip.subnet_id))
 
-        if subnet.network_id not in fixed_subnets:
-            for port in ports:
-                port = port.get('port', port)
-                """If lb_count_subnet is greater then 1 then
-                vNIC port is in use by other lbs. Only delete VIP port.
-                In-case of deleting lb(ERROR state),
-                vthunder returned value from database is "None" then
-                lb_count_subnet is equal to 0, in this case delete only vip port."""
-                if lb_count_subnet != 1:
-                    if sec_grp:
-                        self._remove_security_group(port, sec_grp['id'])
-                    if port['id'] == vip_port_id:
-                        self._cleanup_port(vip_port_id, port)
-                else:  # This is the only lb using vNIC ports
+        for port in ports:
+            port = port.get('port', port)
+            """If lb_count_subnet is greater then 1 then
+            vNIC port is in use by other lbs. Only delete VIP port.
+            In-case of deleting lb(ERROR state),
+            vthunder returned value from database is "None" then
+            lb_count_subnet is equal to 0, in this case delete only vip port."""
+            if lb_count_subnet != 1:
+                if sec_grp:
+                    self._remove_security_group(port, sec_grp['id'])
+                if port['id'] == vip_port_id:
                     self._cleanup_port(vip_port_id, port)
+            else:  # This is the only lb using vNIC ports
+                self._cleanup_port(vip_port_id, port)
 
-        if subnet.network_id not in fixed_subnets and sec_grp:
+        if sec_grp:
             self._delete_vip_security_group(sec_grp['id'])
 
         for amphora in filter(
