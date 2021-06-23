@@ -388,16 +388,17 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
                     str(e))
                 raise e
         elif use_device_flavor:
-            try:
-                vrid_list = self.vrid_repo.get_vrid_from_thunder_device(
-                    db_apis.get_session(), device_name=vthunder.device_name)
-                return vrid_list
-            except Exception as e:
-                LOG.exception(
-                    "Failed to get VRID list for given device  %s due to %s",
-                    vthunder.device_name,
-                    str(e))
-                raise e
+            if vthunder is not None:
+                try:
+                    vrid_list = self.vrid_repo.get_vrid_from_thunder_device(
+                        db_apis.get_session(), device_name=vthunder.device_name)
+                    return vrid_list
+                except Exception as e:
+                    LOG.exception(
+                        "Failed to get VRID list for given device  %s due to %s",
+                        vthunder.device_name,
+                        str(e))
+                    raise e
         return vrid_list
 
 
