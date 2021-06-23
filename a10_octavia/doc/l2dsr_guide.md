@@ -1,9 +1,7 @@
 # L2DSR Guide (vThunder)
 
 ## Transparent Mode DSR Deployment
-For L2DSR, the vThunder is attached to the same network as the real servers using a singular ethernet connection. This is known as "one-arm" configuration. The A10 Octavia service will handle
-deployment and configuration of the vThunder device; however, it is up to the operator to configure the real servers. Though the following example deployment uses a vThunder deployed with Single topology
-, Active-Standby deployments are supported.
+For L2DSR, the vThunder is attached to the same network as the real servers using a singular ethernet connection. This is known as "one-arm" configuration. The A10 Octavia service will handle the deployment and configuration of the vThunder device; however, it is up to the operator to configure the real servers. Though the following example deployment uses a vThunder deployed with Single topology, Active-Standby deployments are supported.
 
 #### Limitations
 - The vThunder, loadbalancer, and the real servers all must be in the same subnet.
@@ -106,7 +104,7 @@ Be sure to confirm that the flavor_id matches the previously created l2dsr flavo
 openstack loadbalancer listener create --name l1 vs1 --protocol tcp --protocol-port 80
 ```
 
-Confirm that `no_dest_nat` was configured on the virtual port. The `use_rsv_hop_for_resp` and `autosnat` will not be show on the device as
+Confirm that `no_dest_nat` was configured on the virtual port. The `use_rsv_hop_for_resp` and `autosnat` will not be shown on the device as
 they were set to False.
 
 ```
