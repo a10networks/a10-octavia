@@ -684,8 +684,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         ctx_flags = [False]
         try:
             if self._is_rack_flow(member.project_id, loadbalancer=load_balancer):
+                vthunder_conf = CONF.hardware_thunder.devices.get(load_balancer.project_id, None)
+                device_dict = CONF.hardware_thunder.devices
                 update_member_tf = self._taskflow_load(
-                    self._member_flows.get_rack_vthunder_update_member_flow(),
+                    self._member_flows.get_rack_vthunder_update_member_flow(
+                        vthunder_conf=vthunder_conf, device_dict=device_dict),
                     store={constants.MEMBER: member,
                            constants.LISTENERS: listeners,
                            constants.LOADBALANCER: load_balancer,
@@ -791,6 +794,10 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         ctx_flags = [False]
         try:
             if self._is_rack_flow(pool.project_id, loadbalancer=load_balancer):
+                vthunder_conf = CONF.hardware_thunder.devices.get(load_balancer.project_id, None)
+                device_dict = CONF.hardware_thunder.devices
+                store.update([(a10constants.VTHUNDER_CONFIG, vthunder_conf),
+                              (a10constants.DEVICE_CONFIG_DICT, device_dict)])
                 delete_pool_tf = self._taskflow_load(
                     self._pool_flows.get_delete_pool_rack_flow(
                         members, health_monitor, store), store=store)
