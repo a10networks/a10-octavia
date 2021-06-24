@@ -637,7 +637,7 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER))
         return update_member_flow
 
-    def get_rack_vthunder_update_member_flow(self):
+    def get_rack_vthunder_update_member_flow(self, vthunder_conf, device_dict):
         """Flow to update a member in Thunder devices
 
         :returns: The flow for updating a member
@@ -656,11 +656,21 @@ class MemberFlows(object):
         update_member_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
             requires=a10constants.VTHUNDER,
             provides=a10constants.VTHUNDER))
-        # Handle VRID settings
-        update_member_flow.add(self.handle_vrid_for_member_subflow())
+
+        # For device flavor
         update_member_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
+        update_member_flow.add(vthunder_tasks.GetVthunderConfByFlavor(
+            inject={a10constants.VTHUNDER_CONFIG: vthunder_conf,
+                    a10constants.DEVICE_CONFIG_DICT: device_dict},
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG,
+                      a10constants.DEVICE_CONFIG_DICT),
+            rebind={constants.FLAVOR_DATA: constants.FLAVOR},
+            provides=(a10constants.VTHUNDER_CONFIG, a10constants.USE_DEVICE_FLAVOR)))
+
+        # Handle VRID settings
+        update_member_flow.add(self.handle_vrid_for_member_subflow())
         update_member_flow.add(server_tasks.MemberUpdate(
             requires=(constants.MEMBER, a10constants.VTHUNDER,
                       constants.POOL, constants.FLAVOR)))
