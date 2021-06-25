@@ -139,6 +139,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         return create_vthunder_tf.storage.fetch('amphora')
 
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
+        wait=tenacity.wait_incrementing(
+            RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
+        stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def create_health_monitor(self, health_monitor_id):
         """Creates a health monitor.
 
@@ -264,6 +269,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         finally:
             self._set_vthunder_available(health_mon.project_id, False, ctx_flags, load_balancer)
 
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
+        wait=tenacity.wait_incrementing(
+            RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
+        stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def create_listener(self, listener_id):
         """Function to create listener for A10 provider"""
 
