@@ -113,37 +113,6 @@ class CreateVThunderEntry(BaseDatabaseTask):
                 loadbalancer.id)
 
 
-class CheckExistingProjectToThunderMappedEntries(BaseDatabaseTask):
-    """ Check existing Thunder entry with same project id.
-        If exists, ensure the existing IPAddress:Partition
-        is used to configure, otherwise Raise ConfigValueError
-    """
-
-    def execute(self, loadbalancer, vthunder_config):
-        hierarchical_mt = vthunder_config.hierarchical_multitenancy
-        if hierarchical_mt == 'enable':
-            vthunder_config.partition_name = loadbalancer.project_id[:14]
-            if CONF.a10_global.use_parent_partition:
-                parent_project_id = utils.get_parent_project(
-                    vthunder_config.project_id)
-                if parent_project_id:
-                    if parent_project_id != 'default':
-                        vthunder_config.partition_name = parent_project_id[:14]
-                else:
-                    LOG.error(
-                        "The parent project for project %s does not exist. ",
-                        vthunder_config.project_id)
-                    raise exceptions.ParentProjectNotFound(
-                        vthunder_config.project_id)
-            else:
-                LOG.warning(
-                    "Hierarchical multitenancy is disabled, use_parent_partition "
-                    "configuration will not be applied for loadbalancer: %s",
-                    loadbalancer.id)
-
-        return vthunder_config
-
-
 class CheckExistingThunderToProjectMappedEntries(BaseDatabaseTask):
     """ Check for all existing Thunder entries to ensure
         all belong to different projects, otherwise
