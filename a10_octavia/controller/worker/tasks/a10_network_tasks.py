@@ -779,7 +779,10 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         update_vrid_flag = False
         existing_fips = []
         if use_device_flavor:
-            self._add_vrid_to_list(updated_vrid_list, subnet, vthunder_config.device_name)
+            owner = a10_utils.get_device_vrid_owner(
+                vthunder_config.device_name, vthunder_config.partition_name,
+                vthunder_config.hierarchical_multitenancy)
+            self._add_vrid_to_list(updated_vrid_list, subnet, owner)
         else:
             self._add_vrid_to_list(updated_vrid_list, subnet, lb_resource.project_id)
         for vrid in updated_vrid_list:
