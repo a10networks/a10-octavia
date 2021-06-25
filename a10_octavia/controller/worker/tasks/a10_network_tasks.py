@@ -759,8 +759,11 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         vrid_value = CONF.a10_global.vrid
         prev_vrid_value = vrid_list[0].vrid if vrid_list else None
         updated_vrid_list = copy.copy(vrid_list)
-        if use_device_flavor and vthunder_config.vrid_floating_ip:
-            conf_floating_ip = vthunder_config.vrid_floating_ip
+        if use_device_flavor:
+            if vthunder_config.vrid_floating_ip:
+                conf_floating_ip = vthunder_config.vrid_floating_ip
+            else:
+                conf_floating_ip = CONF.a10_global.vrid_floating_ip
         else:
             conf_floating_ip = a10_utils.get_vrid_floating_ip_for_project(
                 lb_resource.project_id)
