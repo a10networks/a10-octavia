@@ -470,13 +470,13 @@ class HandleACOSPartitionChange(VThunderBaseTask):
             partition_name = self._get_hmt_partition_name(loadbalancer)
 
         try:
-            partition = axapi_client.system.partition.get(partition_name[:14])
+            partition = axapi_client.system.partition.get(partition_name)
             partition_name = partition['partition-name']
         except acos_errors.NotFound:
             partition = None
 
         # Check if partition is using old n-lbaas length
-        if partition is None:
+        if partition is None and hierarchical_mt == 'enable':
             try:
                 partition = axapi_client.system.partition.get(partition_name[:13])
                 partition_name = partition['partition-name']
