@@ -443,12 +443,12 @@ class HandleACOSPartitionChange(VThunderBaseTask):
     """Task to switch to specified partition"""
 
     def _get_hmt_partition_name(self, loadbalancer):
-        partition_name = loadbalancer.project_id
+        partition_name = loadbalancer.project_id[:14]
         if CONF.a10_global.use_parent_partition:
             parent_project_id = utils.get_parent_project(loadbalancer.project_id)
             if parent_project_id:
                 if parent_project_id != 'default':
-                    partition_name = parent_project_id
+                    partition_name = parent_project_id[:14]
             else:
                 LOG.error(
                     "The parent project for project %s does not exist. ",
@@ -467,10 +467,11 @@ class HandleACOSPartitionChange(VThunderBaseTask):
         partition_name = vthunder_config.partition_name
         hierarchical_mt = vthunder_config.hierarchical_multitenancy
         if hierarchical_mt == 'enable':
-            partition_name = self._handle_hmt_partition(loadbalancer)
+            partition_name = self._get_hmt_partition_name(loadbalancer)
 
         try:
-            partition = axapi_client.system.partition.get(partition_name)
+            partition = axapi_client.system.partition.get(partition_name[:14])
+            partition_name = partition['partition-name']
         except acos_errors.NotFound:
             partition = None
 
@@ -478,6 +479,7 @@ class HandleACOSPartitionChange(VThunderBaseTask):
         if partition is None:
             try:
                 partition = axapi_client.system.partition.get(partition_name[:13])
+                partition_name = partition['partition-name']
             except acos_errors.NotFound:
                 partition = None
 
@@ -492,7 +494,7 @@ class HandleACOSPartitionChange(VThunderBaseTask):
         elif partition.get("status") == "Not-Active":
             raise exceptions.PartitionNotActiveError(partition, vthunder_config.ip_address)
 
-        vthunder_config.partition_name = partition
+        vthunder_config.partition_name = partition_name
         return vthunder_config
 
 
