@@ -430,7 +430,14 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
             self._remove_allowed_address_pair_from_port(interface.port_id, '0.0.0.0/0')
 
     def _remove_allowed_address_pair_from_port(self, port_id, ip_address):
-        port = self.neutron_client.show_port(port_id)
+        try:
+            port = self.neutron_client.show_port(port_id)
+        except neutron_client_exceptions.PortNotFoundClient:
+            LOG.warning("Can't deallocate AAP from instance port {0} because it "
+                        "cannot be found in neutron. "
+                        "Continuing cleanup.".format(port_id))
+            return
+
         aap_ips = port['port']['allowed_address_pairs']
         if isinstance(ip_address, list):
             updated_aap_ips = aap_ips
