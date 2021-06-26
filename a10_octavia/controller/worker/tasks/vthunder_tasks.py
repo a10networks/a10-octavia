@@ -445,7 +445,7 @@ class HandleACOSPartitionChange(VThunderBaseTask):
     def _get_hmt_partition_name(self, loadbalancer):
         partition_name = loadbalancer.project_id[:14]
         if CONF.a10_global.use_parent_partition:
-            parent_project_id = utils.get_parent_project(loadbalancer.project_id)
+            parent_project_id = a10_utils.get_parent_project(loadbalancer.project_id)
             if parent_project_id:
                 if parent_project_id != 'default':
                     partition_name = parent_project_id[:14]

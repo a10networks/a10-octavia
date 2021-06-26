@@ -648,7 +648,7 @@ class LoadBalancerFlows(object):
                       a10constants.DEVICE_CONFIG_DICT, constants.FLAVOR_DATA),
             provides=(a10constants.VTHUNDER_CONFIG, a10constants.USE_DEVICE_FLAVOR)))
         lb_create_flow.add(vthunder_tasks.HandleACOSPartitionChange(
-            requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG), 
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG),
             provides=a10constants.VTHUNDER_CONFIG))
         lb_create_flow.add(
             a10_database_tasks.CheckExistingThunderToProjectMappedEntries(
