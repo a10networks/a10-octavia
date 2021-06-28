@@ -456,11 +456,11 @@ class VRIDRepository(BaseRepository):
 
         return vrid_obj_list
 
-    def get_vrid_from_thunder_device(self, session, device_name):
+    def get_vrid_from_owner(self, session, owner):
         vrid_obj_list = []
 
         model = session.query(self.model_class).filter(
-            self.model_class.owner == device_name)
+            self.model_class.owner == owner)
         for data in model:
             vrid_obj_list.append(data.to_data_model())
 

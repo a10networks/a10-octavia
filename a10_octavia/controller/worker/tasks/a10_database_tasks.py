@@ -359,8 +359,11 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
         elif use_device_flavor:
             if vthunder is not None:
                 try:
-                    vrid_list = self.vrid_repo.get_vrid_from_thunder_device(
-                        db_apis.get_session(), device_name=vthunder.device_name)
+                    owner = utils.get_device_vrid_owner(
+                        vthunder.device_name, vthunder.partition_name,
+                        vthunder.hierarchical_multitenancy)
+                    vrid_list = self.vrid_repo.get_vrid_from_owner(
+                        db_apis.get_session(), owner=owner)
                     return vrid_list
                 except Exception as e:
                     LOG.exception(
@@ -387,10 +390,11 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                     LOG.debug("Successfully deleted DB vrid from project %s",
                               lb_resource.project_id)
                 elif use_device_flavor:
-                    self.vrid_repo.delete(db_apis.get_session(),
-                                          owner=vthunder_config.device_name)
-                    LOG.debug("Successfully deleted DB vrid from device %s",
-                              vthunder_config.device_name)
+                    owner = utils.get_device_vrid_owner(
+                        vthunder_config.device_name, vthunder_config.partition_name,
+                        vthunder_config.hierarchical_multitenancy)
+                    self.vrid_repo.delete(db_apis.get_session(), owner=owner)
+                    LOG.debug("Successfully deleted DB vrid from device %s", owner)
 
             except Exception as e:
                 LOG.error(
@@ -423,10 +427,14 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
             else:
                 if use_device_flavor:
                     try:
+                        owner = utils.get_device_vrid_owner(
+                            vthunder_config.device_name,
+                            vthunder_config.partition_name,
+                            vthunder_config.hierarchical_multitenancy)
                         new_vrid = self.vrid_repo.create(
                             db_apis.get_session(),
                             id=vrid.id,
-                            owner=vthunder_config.device_name,
+                            owner=owner,
                             vrid_floating_ip=vrid.vrid_floating_ip,
                             vrid_port_id=vrid.vrid_port_id,
                             vrid=vrid.vrid,
@@ -1031,16 +1039,17 @@ class CountLoadbalancersOnThunderBySubnet(BaseDatabaseTask):
                     db_apis.get_session(),
                     ip_address=vthunder.ip_address)
                 for vthunder_id in vthunder_ids:
-                    vthunder = self.vthunder_repo.get(
+                    vth = self.vthunder_repo.get(
                         db_apis.get_session(),
                         id=vthunder_id)
 
-                    lb = self.loadbalancer_repo.get_lbs_on_thunder_by_subnet(
-                        db_apis.get_session(),
-                        vthunder.loadbalancer_id,
-                        subnet_id=subnet.id)
-                    if lb:
-                        count = count + 1
+                    if vthunder.partition_name == vth.partition_name:
+                        lb = self.loadbalancer_repo.get_lbs_on_thunder_by_subnet(
+                            db_apis.get_session(),
+                            vth.loadbalancer_id,
+                            subnet_id=subnet.id)
+                        if lb:
+                            count = count + 1
                 return count
             except Exception as e:
                 LOG.exception("Failed to get LB count on thunder for subnet %s due to %s ",
