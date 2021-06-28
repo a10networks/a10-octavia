@@ -1018,9 +1018,10 @@ class CheckExistingVthunderTopology(BaseDatabaseTask):
     """This task only meant to use with vthunder flow[amphora]"""
 
     def execute(self, loadbalancer, topology):
-        vthunder = self.vthunder_repo.get_vthunder_by_project_id(
+        vthunder = self.vthunder_repo.get_vthunder_with_different_topology(
             db_apis.get_session(),
-            loadbalancer.project_id)
+            loadbalancer.project_id,
+            topology)
 
         if vthunder is not None:
             if topology != (vthunder.topology).encode('utf-8'):

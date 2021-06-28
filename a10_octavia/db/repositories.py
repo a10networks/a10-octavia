@@ -238,6 +238,21 @@ class VThunderRepository(BaseRepository):
 
         return model.to_data_model()
 
+    def get_vthunder_with_different_topology(self, session, project_id, topology):
+        model = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.status == "ACTIVE",
+                 or_(self.model_class.role == "STANDALONE",
+                     self.model_class.role == "MASTER"))).filter(
+                self.model_class.compute_id != None).filter(
+                self.model_class.topology != topology).first()
+
+
+        if not model:
+            return None
+
+        return model.to_data_model()
+
     def get_vthunders_by_project_id(self, session, project_id):
         model_list = session.query(self.model_class).filter(
             self.model_class.project_id == project_id).filter(
