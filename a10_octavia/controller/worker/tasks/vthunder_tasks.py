@@ -1182,7 +1182,7 @@ class GetVthunderConfByFlavor(VThunderBaseTask):
                 dev_key = a10constants.DEVICE_KEY_PREFIX + device_flavor
                 if dev_key in device_config_dict:
                     vthunder_config = device_config_dict[dev_key]
-                    if flow_type is None or flow_type != a10constants.DELETE_FLOW:
+                    if flow_type is None or flow_type == a10constants.CREATE_FLOW:
                         if vthunder_config.project_id is not None:
                             raise exceptions.DeviceIsProjectDevice()
                     vthunder_config.project_id = loadbalancer.project_id
