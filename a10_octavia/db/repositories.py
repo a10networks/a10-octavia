@@ -247,7 +247,6 @@ class VThunderRepository(BaseRepository):
                 self.model_class.compute_id != None).filter(
                 self.model_class.topology != topology).first()
 
-
         if not model:
             return None
 

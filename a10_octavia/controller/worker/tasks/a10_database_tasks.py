@@ -1024,12 +1024,11 @@ class CheckExistingVthunderTopology(BaseDatabaseTask):
             topology)
 
         if vthunder is not None:
-            if topology != (vthunder.topology).encode('utf-8'):
-                LOG.error('Other loadbalancer exists in vthunder with: %s topology',
-                          vthunder.topology)
-                msg = ('vthunder has other loadbalancer with {0} ' +
-                       'topology').format(vthunder.topology)
-                raise octavia_exceptions.InvalidTopology(topology=msg)
+            LOG.error('Other loadbalancer exists in vthunder with: %s topology',
+                      vthunder.topology)
+            msg = ('vthunder has other loadbalancer with {0} ' +
+                   'topology').format(vthunder.topology)
+            raise octavia_exceptions.InvalidTopology(topology=msg)
 
 
 class ValidateComputeForProject(BaseDatabaseTask):
