@@ -99,6 +99,10 @@ SUPPORTED_NETWORK_TYPE = [FLAT, VLAN]
 SSL_TEMPLATE = "ssl_template"
 
 COMPUTE_BUSY = "compute_busy"
+FLOW_TYPE = 'flow_type'
+CREATE_FLOW = 'create'
+DELETE_FLOW = 'delete'
+UPDATE_FLOW = 'update'
 
 # ============================
 # Taskflow flow and task names
