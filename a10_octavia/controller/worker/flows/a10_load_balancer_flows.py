@@ -302,7 +302,9 @@ class LoadBalancerFlows(object):
             provides=a10constants.LB_COUNT_FLAVOR))
         delete_LB_flow.add(vthunder_tasks.DeleteL2DSR(
             requires=(constants.SUBNET, constants.AMPHORA,
-                      a10constants.LB_COUNT_FLAVOR, constants.FLAVOR_DATA)))
+                      a10constants.LB_COUNT_FLAVOR,
+                      a10constants.LB_COUNT_SUBNET,
+                      constants.FLAVOR_DATA)))
         delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
                       a10constants.LB_COUNT_FLAVOR, constants.FLAVOR_DATA)))
