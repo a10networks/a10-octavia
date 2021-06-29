@@ -1017,6 +1017,6 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task = task.DeleteL2DSR()
         mock_task._network_driver = self.client_mock
         lb_count = 1
-        mock_task.execute(SUBNET, AMPHORAE, lb_count, flavor_data=DEPLOYMENT_FLAVOR)
+        mock_task.execute(SUBNET, AMPHORAE, lb_count, lb_count, flavor_data=DEPLOYMENT_FLAVOR)
         self.client_mock.remove_any_source_ip_on_egress.assert_called_with(
             SUBNET.network_id, AMPHORAE[0])
