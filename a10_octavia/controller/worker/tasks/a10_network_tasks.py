@@ -1065,3 +1065,25 @@ class GetMembersOnThunder(BaseNetworkTask):
                 raise e
         else:
             return
+
+
+class GetPoolsOnThunder(BaseNetworkTask):
+
+    @axapi_client_decorator
+    def execute(self, vthunder, use_device_flavor):
+        if vthunder and use_device_flavor:
+            try:
+                server_group_list = []
+                server_groups = []
+                server_group_list = self.axapi_client.slb.service_group.all()
+                if server_group_list:
+                    for server_group in range(len(server_group_list['service-group-list'])):
+                        server_groups.append(
+                            server_group_list['service-group-list'][server_group]['name'])
+                return server_groups
+            except Exception as e:
+                LOG.exception("Failed to get pools on the vthunder due to %s ",
+                              str(e))
+                raise e
+        else:
+            return
