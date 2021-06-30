@@ -522,10 +522,17 @@ class MemberFlows(object):
                 provides=a10constants.PARTITION_PROJECT_LIST
             ))
         delete_member_vrid_subflow.add(
+            a10_network_tasks.GetPoolsOnThunder(
+                requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
+                provides=a10constants.POOLS))
+        delete_member_vrid_subflow.add(
             a10_database_tasks.GetSubnetForDeletionInPool(
                 name='get_subnet_for_deletion_in_pool' + pool,
-                requires=[a10constants.MEMBER_LIST, a10constants.PARTITION_PROJECT_LIST],
                 rebind={a10constants.MEMBER_LIST: pool_members},
+                requires=[
+                    a10constants.PARTITION_PROJECT_LIST,
+                    a10constants.USE_DEVICE_FLAVOR,
+                    a10constants.POOLS],
                 provides=a10constants.SUBNET_LIST))
         delete_member_vrid_subflow.add(
             a10_database_tasks.GetVRIDForLoadbalancerResource(

@@ -660,7 +660,7 @@ class PoolCountforIP(BaseDatabaseTask):
 
 class GetSubnetForDeletionInPool(BaseDatabaseTask):
 
-    def execute(self, member_list, partition_project_list):
+    def execute(self, member_list, partition_project_list, use_device_flavor, pools):
         """
 
         :param member_list: Receives the list of members, under specific pool.
@@ -674,8 +674,12 @@ class GetSubnetForDeletionInPool(BaseDatabaseTask):
             member_subnet = []
             for member in member_list:
                 if member.subnet_id not in member_subnet:
-                    pool_count_subnet = self.member_repo.get_pool_count_subnet(
-                        db_apis.get_session(), partition_project_list, member.subnet_id)
+                    if use_device_flavor:
+                        pool_count_subnet = self.member_repo.get_pool_count_subnet_on_thunder(
+                            db_apis.get_session(), pools, member.subnet_id)
+                    else:
+                        pool_count_subnet = self.member_repo.get_pool_count_subnet(
+                            db_apis.get_session(), partition_project_list, member.subnet_id)
                     lb_count_subnet = self.loadbalancer_repo.get_lb_count_by_subnet(
                         db_apis.get_session(), partition_project_list, member.subnet_id)
                     if pool_count_subnet <= 1 and lb_count_subnet == 0:

@@ -265,23 +265,25 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.assertEqual(2, pool_count)
 
     def test_get_subnet_for_deletion_with_pool_no_lb(self):
+        use_dev_flavor = False
         mock_subnets = task.GetSubnetForDeletionInPool()
         mock_subnets.member_repo.get_pool_count_subnet = mock.Mock()
         mock_subnets.member_repo.get_pool_count_subnet.return_value = 1
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet = mock.Mock()
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet.return_value = 0
         subnet_list = mock_subnets.execute(
-            [MEMBER_1, MEMBER_2], [a10constants.MOCK_PROJECT_ID])
+            [MEMBER_1, MEMBER_2], [a10constants.MOCK_PROJECT_ID], use_dev_flavor, mock.ANY)
         self.assertEqual(['mock-subnet-1', 'mock-subnet-2'], subnet_list)
 
     def test_get_subnet_for_deletion_with_multiple_pool_lb(self):
+        use_dev_flavor = False
         mock_subnets = task.GetSubnetForDeletionInPool()
         mock_subnets.member_repo.get_pool_count_subnet = mock.Mock()
         mock_subnets.member_repo.get_pool_count_subnet.return_value = 2
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet = mock.Mock()
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet.return_value = 2
         subnet_list = mock_subnets.execute(
-            [MEMBER_1, MEMBER_2], [a10constants.MOCK_PROJECT_ID])
+            [MEMBER_1, MEMBER_2], [a10constants.MOCK_PROJECT_ID], use_dev_flavor, mock.ANY)
         self.assertEqual([], subnet_list)
 
     def test_get_child_projects_for_partition(self):
