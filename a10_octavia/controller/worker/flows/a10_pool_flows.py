@@ -270,6 +270,10 @@ class PoolFlows(object):
         delete_pool_flow.add(model_tasks.DeleteModelObject(
             name='delete_model_object_' + pool_name,
             rebind={constants.OBJECT: pool_name}))
+        delete_pool_flow.add(a10_network_tasks.GetPoolsOnThunder(
+            name='get_pools_on_thunder_' + pool_name,
+            requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
+            provides=a10constants.POOLS))
         # Delete pool children
         delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon, True))
         delete_pool_flow.add(self._get_delete_member_vthunder_subflow(members, store, pool_name))

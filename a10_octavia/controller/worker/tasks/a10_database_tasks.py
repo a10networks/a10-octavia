@@ -647,10 +647,14 @@ class CountMembersWithIPPortProtocol(BaseDatabaseTask):
 
 
 class PoolCountforIP(BaseDatabaseTask):
-    def execute(self, member):
+    def execute(self, member, use_device_flavor, pools):
         try:
-            return self.member_repo.get_pool_count_by_ip(
-                db_apis.get_session(), member.ip_address, member.project_id)
+            if use_device_flavor:
+                return self.member_repo.get_pool_count_by_ip_on_thunder(
+                    db_apis.get_session(), member.ip_address, pools)
+            else:
+                return self.member_repo.get_pool_count_by_ip(
+                    db_apis.get_session(), member.ip_address, member.project_id)
         except Exception as e:
             LOG.exception(
                 "Failed to get pool count with same IP address: %s",
