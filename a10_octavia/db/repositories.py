@@ -521,10 +521,9 @@ class MemberRepository(repo.MemberRepository):
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
 
-    def get_pool_count_by_ip_on_thunder(self, session, ip_address, project_id, pool_ids):
+    def get_pool_count_by_ip_on_thunder(self, session, ip_address, pool_ids):
         return session.query(self.model_class.pool_id.distinct()).filter(
             self.model_class.pool_id.in_(pool_ids)).filter(
-            self.model_class.project_id == project_id).filter(
             and_(self.model_class.ip_address == ip_address,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()

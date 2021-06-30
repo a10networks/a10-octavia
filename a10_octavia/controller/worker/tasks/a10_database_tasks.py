@@ -651,7 +651,7 @@ class PoolCountforIP(BaseDatabaseTask):
         try:
             if use_device_flavor:
                 return self.member_repo.get_pool_count_by_ip_on_thunder(
-                    db_apis.get_session(), member.ip_address, member.project_id, pools)
+                    db_apis.get_session(), member.ip_address, pools)
             else:
                 return self.member_repo.get_pool_count_by_ip(
                     db_apis.get_session(), member.ip_address, member.project_id)
