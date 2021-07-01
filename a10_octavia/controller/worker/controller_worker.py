@@ -813,6 +813,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                         members, health_monitor, store), store=store)
             else:
                 topology = CONF.a10_controller_worker.loadbalancer_topology
+                store.update({a10constants.USE_DEVICE_FLAVOR: False,
+                              a10constants.POOLS: None})
                 busy = self._vthunder_busy_check(pool.project_id, False, ctx_flags,
                                                  load_balancer, store)
                 delete_pool_tf = self._taskflow_load(
