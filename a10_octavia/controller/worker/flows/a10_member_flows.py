@@ -410,7 +410,8 @@ class MemberFlows(object):
                     constants.POOL: pool}))
         delete_member_thunder_subflow.add(a10_database_tasks.PoolCountforIP(
             name='pool_count_for_ip_' + member_id,
-            requires=constants.MEMBER, provides=a10constants.POOL_COUNT_IP,
+            requires=[constants.MEMBER, a10constants.USE_DEVICE_FLAVOR, a10constants.POOLS],
+            provides=a10constants.POOL_COUNT_IP,
             rebind={constants.MEMBER: member_id}))
 
         # NAT pools database and pools clean up for flavor
@@ -520,10 +521,6 @@ class MemberFlows(object):
                 rebind={a10constants.LB_RESOURCE: pool},
                 provides=a10constants.PARTITION_PROJECT_LIST
             ))
-        delete_member_vrid_subflow.add(
-            a10_network_tasks.GetPoolsOnThunder(
-                requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
-                provides=a10constants.POOLS))
         delete_member_vrid_subflow.add(
             a10_database_tasks.GetSubnetForDeletionInPool(
                 name='get_subnet_for_deletion_in_pool' + pool,

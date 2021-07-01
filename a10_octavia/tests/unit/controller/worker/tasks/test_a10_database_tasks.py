@@ -254,6 +254,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.assertEqual(2, member_count)
 
     def test_pool_count_accn_ip(self):
+        use_dev_flavor = False
         member_1 = o_data_models.Member(id=uuidutils.generate_uuid(),
                                         project_id=t_constants.MOCK_PROJECT_ID,
                                         ip_address=t_constants.MOCK_IP_ADDRESS,
@@ -261,7 +262,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_count_pool = task.PoolCountforIP()
         mock_count_pool.member_repo.get_pool_count_by_ip = mock.Mock()
         mock_count_pool.member_repo.get_pool_count_by_ip.return_value = 2
-        pool_count = mock_count_pool.execute(member_1)
+        pool_count = mock_count_pool.execute(member_1, use_dev_flavor, mock.ANY)
         self.assertEqual(2, pool_count)
 
     def test_get_subnet_for_deletion_with_pool_no_lb(self):
