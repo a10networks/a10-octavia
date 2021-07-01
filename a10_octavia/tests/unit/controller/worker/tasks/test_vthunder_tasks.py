@@ -680,9 +680,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_utils.get_axapi_client.return_value = mock_client
         mock_thunder = copy.deepcopy(VTHUNDER)
         mock_thunder.partition_name = "PartitionA"
-        expected_error = exceptions.PartitionNotActiveError
         task_function = task.HandleACOSPartitionChange().execute
-        self.assertRaises(expected_error, task_function, LB, mock_thunder)
+        mock_client.system.partition.create.assert_not_called()
 
     @mock.patch('a10_octavia.common.utils.get_parent_project',
                 return_value=None)
@@ -1014,6 +1013,9 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.allow_use_any_source_ip_on_egress.assert_not_called()
 
     def test_deletel2dsr_with_deployment_flavor(self):
+        self.conf.config(
+            group=a10constants.A10_VTHUNDER_OPTS,
+            l2dsr_support=True)
         mock_task = task.DeleteL2DSR()
         mock_task._network_driver = self.client_mock
         lb_count = 1
