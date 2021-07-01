@@ -497,8 +497,6 @@ class HandleACOSPartitionChange(VThunderBaseTask):
             except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
                 LOG.exception("Failed to create parition on vThunder: %s", str(e))
                 raise e
-        elif partition.get("status") == "Not-Active":
-            raise exceptions.PartitionNotActiveError(partition, vthunder_config.ip_address)
 
         vthunder_config.partition_name = partition_name
         return vthunder_config
