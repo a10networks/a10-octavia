@@ -30,6 +30,8 @@ WRITE_MEM_FOR_LOCAL_PARTITION = 'write_memory_for_local_partition'
 
 MEMBER_LIST = 'member_list'
 SUBNET_LIST = 'subnet_list'
+MEMBERS = 'members'
+POOLS = 'pools'
 
 PARTITION_PROJECT_LIST = 'partition_project_list'
 IFNUM_BACKUP = 'ifnum_backup'
@@ -82,6 +84,8 @@ LB_COUNT_SUBNET = 'lb_count_subnet'
 LB_COUNT_FLAVOR = 'lb_count_flavor'
 MEMBER_COUNT = 'member_count'
 DELETE_VRID = 'delete_vrid'
+LB_COUNT_THUNDER = 'lb_count_thunder'
+MEMBER_COUNT_THUNDER = 'member_count_thunder'
 
 ID = 'id'
 SECURITY_GROUPS = 'security_groups'
@@ -99,6 +103,10 @@ SUPPORTED_NETWORK_TYPE = [FLAT, VLAN]
 SSL_TEMPLATE = "ssl_template"
 
 COMPUTE_BUSY = "compute_busy"
+FLOW_TYPE = 'flow_type'
+CREATE_FLOW = 'create'
+DELETE_FLOW = 'delete'
+UPDATE_FLOW = 'update'
 
 # ============================
 # Taskflow flow and task names
@@ -186,6 +194,7 @@ WRITE_MEMORY_THUNDER_FLOW = 'write-memory-thunder-flow'
 RELOAD_CHECK_THUNDER_FLOW = 'reload-check-thunder-flow'
 LB_TO_VTHUNDER_SUBFLOW = 'lb-to-vthunder-subflow'
 GET_LB_RESOURCE = 'get-lb-resource'
+GET_LB_RESOURCE_SUBNET = 'get-lb-resource-subnet'
 GET_PROJECT_COUNT = 'get-child-parent-project-count'
 GET_LB_COUNT_SUBNET = 'get-lb-count-by-subnet'
 

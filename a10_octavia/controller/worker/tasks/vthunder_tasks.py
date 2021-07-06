@@ -40,6 +40,7 @@ from a10_octavia.controller.worker.tasks.decorators import activate_partition
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks.decorators import device_context_switch_decorator
+from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 from a10_octavia.db import repositories as a10_repo
 
 
@@ -71,25 +72,22 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
             if vthunder:
                 axapi_client = a10_utils.get_axapi_client(vthunder)
                 LOG.info("Attempting to connect vThunder device for connection.")
-                attempts = 30
-                # TODO(ytsai): use another new config option for vthunder booting wait retry
-                if CONF.a10_controller_worker.amp_active_retries > attempts:
-                    attempts = CONF.a10_controller_worker.amp_active_retries
+                attempts = CONF.a10_controller_worker.amp_active_retries
                 while attempts >= 0:
                     try:
                         attempts = attempts - 1
                         axapi_client.system.information()
                         break
-                    except (req_exceptions.ConnectionError, acos_errors.ACOSException,
-                            http_client.BadStatusLine, req_exceptions.ReadTimeout):
-                        attemptid = 21 - attempts
-                        sleep_time = 20
-                        # TODO(ytsai): use another new config option for vthunder booting wait sec
-                        if CONF.a10_controller_worker.amp_active_wait_sec > sleep_time:
-                            sleep_time = CONF.a10_controller_worker.amp_active_wait_sec
-                        time.sleep(sleep_time)
-                        LOG.debug("VThunder connection attempt - " + str(attemptid))
-                        pass
+                    except a10_task_utils.thunder_busy_exceptions():
+                        # acos-client already wait default_axapi_timeout for these exceptions.
+                        axapi_timeout = CONF.vthunder.default_axapi_timeout
+                        attempt_wait = CONF.a10_controller_worker.amp_active_wait_sec
+                        if axapi_timeout > attempt_wait:
+                            attempts = attempts - (axapi_timeout / attempt_wait - 1)
+                        LOG.debug("VThunder connection retry cnt:" + str(attempts))
+                    except (acos_errors.ACOSException, http_client.BadStatusLine):
+                        time.sleep(CONF.a10_controller_worker.amp_active_wait_sec)
+                        LOG.debug("VThunder connection retry cnt:" + str(attempts))
                 if attempts < 0:
                     LOG.error("Failed to connect vThunder in expected amount of boot time: %s",
                               vthunder.id)
@@ -129,9 +127,47 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
 class AllowL2DSR(VThunderBaseTask):
     """Task to add wildcat address in allowed_address_pair for L2DSR"""
 
-    def execute(self, subnet, amphora):
+    def execute(self, subnet, amphora, lb_count_flavor, flavor_data=None):
         if CONF.vthunder.l2dsr_support:
-            self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amphora)
+            for amp in amphora:
+                self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
+
+        if flavor_data:
+            deployment = flavor_data.get('deployment')
+            if deployment and 'dsr_type' in deployment:
+                if deployment['dsr_type'] == "l2dsr_transparent":
+                    for amp in amphora:
+                        self.network_driver.allow_use_any_source_ip_on_egress(
+                            subnet.network_id, amp)
+
+    def revert(self, subnet, amphora, lb_count_flavor, flavor_data=None, *args, **kwargs):
+        if lb_count_flavor > 1:
+            return
+
+        if flavor_data:
+            deployment = flavor_data.get('deployment')
+            if deployment and 'dsr_type' in deployment:
+                if deployment['dsr_type'] == "l2dsr_transparent":
+                    for amp in amphora:
+                        self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
+
+
+class DeleteL2DSR(VThunderBaseTask):
+    """Task to delete wildcat address in allowed_address_pair for L2DSR"""
+
+    def execute(self, subnet, amphora, lb_count_flavor, lb_count_subnet, flavor_data=None):
+        if CONF.vthunder.l2dsr_support:
+            if lb_count_subnet <= 1:
+                for amp in amphora:
+                    self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
+        else:
+            if lb_count_flavor <= 1 and flavor_data:
+                deployment = flavor_data.get('deployment')
+                if deployment and 'dsr_type' in deployment:
+                    if deployment['dsr_type'] == "l2dsr_transparent":
+                        for amp in amphora:
+                            self.network_driver.remove_any_source_ip_on_egress(
+                                subnet.network_id, amp)
 
 
 class AllowLoadbalancerForwardWithAnySource(VThunderBaseTask):
@@ -269,9 +305,11 @@ class ConfigureVRID(VThunderBaseTask):
     """Task to configure vThunder VRID"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, vrid=1):
+    def execute(self, vthunder):
         try:
-            self.axapi_client.system.action.configureVRID(vrid)
+            vrid = CONF.a10_global.vrid
+            if not self.axapi_client.vrrpa.exists(vrid):
+                self.axapi_client.system.action.configureVRID(vrid)
             LOG.debug("Configured the master vThunder for VRID")
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure VRID on vthunder: %s", str(e))
@@ -318,10 +356,12 @@ class ConfigureaVCSBackup(VThunderBaseTask):
                     attempts = 0
                     LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
                     break
-                except req_exceptions.ReadTimeout as e:
-                    # Don't retry for ReadTimout, since acos-client already already have
-                    # tries and timeout for axapi request. And it will take very long to
-                    # response this error.
+                except a10_task_utils.thunder_busy_exceptions() as e:
+                    # acos-client already wait default_axapi_timeout for these exceptions.
+                    axapi_timeout = CONF.vthunder.default_axapi_timeout
+                    attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
+                    if axapi_timeout > attempt_wait:
+                        attempts = attempts - (axapi_timeout / attempt_wait - 1)
                     if attempts < 0:
                         raise e
                 except Exception as e:
@@ -408,23 +448,60 @@ class ConfirmVRRPStatus(VThunderBaseTask):
 class HandleACOSPartitionChange(VThunderBaseTask):
     """Task to switch to specified partition"""
 
-    def execute(self, vthunder):
-        axapi_client = a10_utils.get_axapi_client(vthunder)
+    def _get_hmt_partition_name(self, loadbalancer):
+        partition_name = loadbalancer.project_id[:14]
+        if CONF.a10_global.use_parent_partition:
+            parent_project_id = a10_utils.get_parent_project(loadbalancer.project_id)
+            if parent_project_id:
+                if parent_project_id != 'default':
+                    partition_name = parent_project_id[:14]
+            else:
+                LOG.error(
+                    "The parent project for project %s does not exist. ",
+                    loadbalancer.project_id)
+                raise exceptions.ParentProjectNotFound(loadbalancer.project_id)
+        else:
+            LOG.warning(
+                "Hierarchical multitenancy is disabled, use_parent_partition "
+                "configuration will not be applied for loadbalancer: %s",
+                loadbalancer.id)
+        return partition_name
+
+    def execute(self, loadbalancer, vthunder_config):
+        axapi_client = a10_utils.get_axapi_client(vthunder_config)
+
+        partition_name = vthunder_config.partition_name
+        hierarchical_mt = vthunder_config.hierarchical_multitenancy
+        if hierarchical_mt == 'enable':
+            partition_name = self._get_hmt_partition_name(loadbalancer)
+
         try:
-            partition = axapi_client.system.partition.get(vthunder.partition_name)
+            partition = axapi_client.system.partition.get(partition_name)
+            partition_name = partition['partition-name']
         except acos_errors.NotFound:
             partition = None
 
+        # Check if partition is using old n-lbaas length
+        if partition is None and hierarchical_mt == 'enable':
+            try:
+                partition = axapi_client.system.partition.get(partition_name[:13])
+                partition_name = partition['partition-name']
+            except acos_errors.NotFound:
+                partition = None
+
         if partition is None:
             try:
-                axapi_client.system.partition.create(vthunder.partition_name)
+                axapi_client.system.partition.create(partition_name)
                 axapi_client.system.action.write_memory(partition="shared")
-                LOG.info("Partition %s created", vthunder.partition_name)
+                LOG.info("Partition %s created", partition_name)
             except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
                 LOG.exception("Failed to create parition on vThunder: %s", str(e))
                 raise e
         elif partition.get("status") == "Not-Active":
-            raise exceptions.PartitionNotActiveError(partition, vthunder.ip_address)
+            raise exceptions.PartitionNotActiveError(partition, vthunder_config.ip_address)
+
+        vthunder_config.partition_name = partition_name
+        return vthunder_config
 
 
 class SetupDeviceNetworkMap(VThunderBaseTask):
@@ -1070,10 +1147,14 @@ class VCSSyncWait(VThunderBaseTask):
                             msg="vBlade not found in vcs-summary")
                     raise acos_errors.AxapiJsonFormatError(
                         msg="vMaster not found in vcs-summary")
-            except req_exceptions.ReadTimeout as e:
-                # Don't retry for ReadTimout, since acos-client already already have
-                # tries and timeout for axapi request. And it will take very long to
-                # response this error.
+                if vmaster_ready is True and vblade_ready is True:
+                    break
+            except a10_task_utils.thunder_busy_exceptions() as e:
+                # acos-client already wait default_axapi_timeout for these exceptions.
+                axapi_timeout = CONF.vthunder.default_axapi_timeout
+                attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
+                if axapi_timeout > attempt_wait:
+                    attempts = attempts - (axapi_timeout / attempt_wait - 1)
                 if attempts < 0:
                     LOG.exception("Failed to connect VCS device: %s", str(e))
                     raise e
@@ -1106,10 +1187,12 @@ class GetMasterVThunder(VThunderBaseTask):
                         raise acos_errors.AxapiJsonFormatError(
                             msg="vMaster not found in vcs-summary")
                     return vthunder
-                except req_exceptions.ReadTimeout as e:
-                    # Don't retry for ReadTimout, since acos-client already already have
-                    # tries and timeout for axapi request. And it will take very long to
-                    # response this error.
+                except a10_task_utils.thunder_busy_exceptions() as e:
+                    # acos-client already wait default_axapi_timeout for these exceptions.
+                    axapi_timeout = CONF.vthunder.default_axapi_timeout
+                    attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
+                    if axapi_timeout > attempt_wait:
+                        attempts = attempts - (axapi_timeout / attempt_wait - 1)
                     if attempts < 0:
                         LOG.exception("Failed to get Master vThunder: %s", str(e))
                         raise e
@@ -1131,7 +1214,8 @@ class VthunderInstanceBusy(VThunderBaseTask):
 
 class GetVthunderConfByFlavor(VThunderBaseTask):
 
-    def execute(self, loadbalancer, vthunder_config, device_config_dict, flavor_data=None):
+    def execute(self, loadbalancer, vthunder_config, device_config_dict, flavor_data=None,
+                flow_type=None):
         if flavor_data is None and vthunder_config is None:
             raise exceptions.ProjectDeviceNotFound()
 
@@ -1141,6 +1225,9 @@ class GetVthunderConfByFlavor(VThunderBaseTask):
                 dev_key = a10constants.DEVICE_KEY_PREFIX + device_flavor
                 if dev_key in device_config_dict:
                     vthunder_config = device_config_dict[dev_key]
+                    if flow_type is None or flow_type == a10constants.CREATE_FLOW:
+                        if vthunder_config.project_id is not None:
+                            raise exceptions.DeviceIsProjectDevice()
                     vthunder_config.project_id = loadbalancer.project_id
                     if vthunder_config.hierarchical_multitenancy == "enable":
                         vthunder_config.partition_name = loadbalancer.project_id[0:14]
