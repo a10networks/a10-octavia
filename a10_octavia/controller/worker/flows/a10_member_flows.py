@@ -333,8 +333,7 @@ class MemberFlows(object):
             provides=constants.FLAVOR))
         delete_member_flow.add(vthunder_tasks.GetVthunderConfByFlavor(
             inject={a10constants.VTHUNDER_CONFIG: vthunder_conf,
-                    a10constants.DEVICE_CONFIG_DICT: device_dict,
-                    a10constants.FLOW_TYPE: a10constants.DELETE_FLOW},
+                    a10constants.DEVICE_CONFIG_DICT: device_dict},
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG,
                       a10constants.DEVICE_CONFIG_DICT),
             rebind={constants.FLAVOR_DATA: constants.FLAVOR},
@@ -668,8 +667,7 @@ class MemberFlows(object):
             provides=constants.FLAVOR))
         update_member_flow.add(vthunder_tasks.GetVthunderConfByFlavor(
             inject={a10constants.VTHUNDER_CONFIG: vthunder_conf,
-                    a10constants.DEVICE_CONFIG_DICT: device_dict,
-                    a10constants.FLOW_TYPE: a10constants.UPDATE_FLOW},
+                    a10constants.DEVICE_CONFIG_DICT: device_dict},
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG,
                       a10constants.DEVICE_CONFIG_DICT),
             rebind={constants.FLAVOR_DATA: constants.FLAVOR},
@@ -723,8 +721,7 @@ class MemberFlows(object):
             provides=constants.FLAVOR))
         create_member_flow.add(vthunder_tasks.GetVthunderConfByFlavor(
             inject={a10constants.VTHUNDER_CONFIG: vthunder_conf,
-                    a10constants.DEVICE_CONFIG_DICT: device_dict,
-                    a10constants.FLOW_TYPE: a10constants.CREATE_FLOW},
+                    a10constants.DEVICE_CONFIG_DICT: device_dict},
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG,
                       a10constants.DEVICE_CONFIG_DICT),
             rebind={constants.FLAVOR_DATA: constants.FLAVOR},
