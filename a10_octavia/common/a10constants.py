@@ -106,7 +106,7 @@ DELETE_FLOW = 'delete'
 UPDATE_FLOW = 'update'
 
 # ACOS versions
-ACOS_5_2_1_P2 = "5.2.1-p2"
+ACOS_5_2_1_P2 = "5.2.1-P2"
 
 # ============================
 # Taskflow flow and task names
