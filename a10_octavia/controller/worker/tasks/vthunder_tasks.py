@@ -1125,30 +1125,41 @@ class VCSSyncWait(VThunderBaseTask):
 
         attempts = CONF.a10_controller_worker.amp_vcs_retries
         while attempts >= 0:
-            vmaster_ready = False
-            vblade_ready = False
             try:
                 attempts = attempts - 1
                 vcs_summary = {}
                 vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
-                vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
-                for i in range(len(vcs_member_list)):
-                    role = vcs_member_list[i]['state'].split('(')[0]
-                    if role == "vMaster":
-                        vmaster_ready = True
-                    if role == "vBlade":
-                        vblade_ready = True
-                    if vmaster_ready is True and vblade_ready is True:
+                vcs_summary = vcs_summary['vcs-summary']['oper']
+
+                if acos_client.utils.acos_version_cmp(vthunder.acos_version,
+                                                      a10constants.ACOS_5_2_1_P2) >= 0:
+                    vcs_ready = False
+                    for peer_vcs_state in vcs_summary['vcs-handshake-completed-list']:
+                        if peer_vcs_state['vcs-handshake-completed'] == 1:
+                            vcs_ready = True
+                            break
+                    if vcs_ready is True:
                         break
                 else:
-                    # TODO(ytsai) maybe reload the device and try again
-                    if vmaster_ready:
+                    vmaster_ready = False
+                    vblade_ready = False
+                    vcs_member_list = vcs_summary['member-list']
+                    for i in range(len(vcs_member_list)):
+                        role = vcs_member_list[i]['state'].split('(')[0]
+                        if role == "vMaster":
+                            vmaster_ready = True
+                        if role == "vBlade":
+                            vblade_ready = True
+                        if vmaster_ready is True and vblade_ready is True:
+                            break
+                    else:
+                        if vmaster_ready:
+                            raise acos_errors.AxapiJsonFormatError(
+                                msg="vBlade not found in vcs-summary")
                         raise acos_errors.AxapiJsonFormatError(
-                            msg="vBlade not found in vcs-summary")
-                    raise acos_errors.AxapiJsonFormatError(
-                        msg="vMaster not found in vcs-summary")
-                if vmaster_ready is True and vblade_ready is True:
-                    break
+                            msg="vMaster not found in vcs-summary")
+                    if vmaster_ready is True and vblade_ready is True:
+                        break
             except a10_task_utils.thunder_busy_exceptions() as e:
                 # acos-client already wait default_axapi_timeout for these exceptions.
                 axapi_timeout = CONF.vthunder.default_axapi_timeout
