@@ -271,9 +271,18 @@ A10_CONTROLLER_WORKER_OPTS = [
                default=900,
                help=_('Timeout for waiting when vThunder instance is busy. '
                       '(0 for no timeout')),
-    cfg.IntOpt('max_db_timeout',
-               default=60,
-               help=_('Database Timeout for creating a Database entry'))
+    cfg.IntOpt('retry_attempts',
+               default=15,
+               help=_('Retry attempts for Database Entry')),
+    cfg.IntOpt('retry_initial_delay',
+               default=1,
+               help=_('Retry initial delay for Database Entry')),
+    cfg.IntOpt('retry_bakcoff',
+               default=1,
+               help=_('Retry Backoff for Database Entry')),
+    cfg.IntOpt('retry_max',
+               default=5,
+               help=_('Maximum Retries for Database Entry'))
 ]
 
 A10_HOUSE_KEEPING_OPTS = [
