@@ -473,6 +473,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                               a10constants.COMPUTE_BUSY: busy,
                               constants.VIP: lb.vip,
                               constants.SERVER_GROUP_ID: lb.server_group_id,
+                              constants.LOADBALANCER_ID: lb.id,
                               a10constants.VTHUNDER_CONFIG: None,
                               a10constants.USE_DEVICE_FLAVOR: False,
                               a10constants.LB_COUNT_THUNDER: None,
@@ -597,7 +598,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                            a10constants.COMPUTE_BUSY: busy,
                            constants.POOL: pool,
                            a10constants.VTHUNDER_CONFIG: None,
-                           a10constants.USE_DEVICE_FLAVOR: False})
+                           a10constants.USE_DEVICE_FLAVOR: False,
+                           constants.LOADBALANCER_ID: load_balancer.id})
                 self._register_flow_notify_handler(create_member_tf, member.project_id, True,
                                                    busy, ctx_flags, load_balancer)
 
@@ -641,7 +643,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                            constants.POOL: pool, a10constants.VTHUNDER_CONFIG: None,
                            a10constants.USE_DEVICE_FLAVOR: False,
                            a10constants.LB_COUNT_THUNDER: None,
-                           a10constants.MEMBER_COUNT_THUNDER: None}
+                           a10constants.MEMBER_COUNT_THUNDER: None,
+                           constants.LOADBALANCER_ID: load_balancer.id}
                 )
                 self._register_flow_notify_handler(delete_member_tf, member.project_id, True,
                                                    busy, ctx_flags, load_balancer)
