@@ -42,13 +42,13 @@ from a10_octavia.db import repositories as a10repo
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-RETRY_ATTEMPTS = 15
-RETRY_INITIAL_DELAY = 1
-RETRY_BACKOFF = 1
-RETRY_MAX = 5
-
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
+
+RETRY_ATTEMPTS = CONF.a10_controller_worker.retry_attempts
+RETRY_INITIAL_DELAY = CONF.a10_controller_worker.retry_initial_delay
+RETRY_BACKOFF = CONF.a10_controller_worker.retry_bakcoff
+RETRY_MAX = CONF.a10_controller_worker.retry_max
 
 
 def flow_notification_handler(state, details, **kwargs):
@@ -124,6 +124,11 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         return create_vthunder_tf.storage.fetch('amphora')
 
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
+        wait=tenacity.wait_incrementing(
+            RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
+        stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def create_health_monitor(self, health_monitor_id):
         """Creates a health monitor.
 
@@ -131,7 +136,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        health_mon = utils.wait_for_db_entry(self._health_mon_repo, health_monitor_id)
+        health_mon = self._health_mon_repo.get(db_apis.get_session(),
+                                               id=health_monitor_id)
         if not health_mon:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'health_monitor', health_monitor_id)
@@ -232,9 +238,15 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                log=LOG):
             update_hm_tf.run()
 
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
+        wait=tenacity.wait_incrementing(
+            RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
+        stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def create_listener(self, listener_id):
         """Function to create listener for A10 provider"""
-        listener = utils.wait_for_db_entry(self._listener_repo, listener_id)
+        listener = self._listener_repo.get(db_apis.get_session(),
+                                           id=listener_id)
         if not listener:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'listener', listener_id)
@@ -340,7 +352,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def create_load_balancer(self, load_balancer_id, flavor=None, ctx_map=None, ctx_lock=None):
         """Function to create load balancer for A10 provider"""
-        lb = utils.wait_for_db_entry(self._lb_repo, load_balancer_id)
+        lb = self._lb_repo.get(db_apis.get_session(), id=load_balancer_id)
         if not lb:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'load_balancer', load_balancer_id)
@@ -468,7 +480,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :raises NoSuitablePool: Unable to find the node pool
         """
 
-        member = utils.wait_for_db_entry(self._member_repo, member_id)
+        member = self._member_repo.get(db_apis.get_session(),
+                                       id=member_id)
         if not member:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'member', member_id)
@@ -628,7 +641,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        pool = utils.wait_for_db_entry(self._pool_repo, pool_id)
+        pool = self._pool_repo.get(db_apis.get_session(),
+                                   id=pool_id)
         if not pool:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'pool', pool_id)
@@ -761,7 +775,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        l7policy = utils.wait_for_db_entry(self._l7policy_repo, l7policy_id)
+        l7policy = self._l7policy_repo.get(db_apis.get_session(),
+                                           id=l7policy_id)
         if not l7policy:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'l7policy', l7policy_id)
@@ -863,7 +878,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         :returns: None
         :raises NoResultFound: Unable to find the object
         """
-        l7rule = utils.wait_for_db_entry(self._l7rule_repo, l7rule_id)
+        l7rule = self._l7rule_repo.get(db_apis.get_session(),
+                                       id=l7rule_id)
         if not l7rule:
             LOG.warning('Failed to fetch %s %s from DB. Retrying for up to '
                         '60 seconds.', 'l7rule', l7rule_id)
