@@ -341,3 +341,10 @@ def get_loadbalancer_flavor(loadbalancer):
                                                      id=flavor.flavor_profile_id)
             flavor_data = json.loads(flavor_profile.flavor_data)
             return flavor_data
+
+
+def get_device_vrid_owner(device_name, partition, hmt):
+    owner = device_name
+    if hmt == 'enable':
+        owner = device_name + '-' + partition
+    return owner

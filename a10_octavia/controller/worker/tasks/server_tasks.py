@@ -29,6 +29,16 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
+def _get_server_name(axapi_client, member):
+    server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
+    try:
+        server_name = axapi_client.slb.server.get(server_name)
+    except (acos_errors.NotFound):
+        # Backwards compatability with a10-neutron-lbaas
+        server_name = axapi_client.slb.server.get('_{}_{}'.format(server_name, 'neutron'))
+    return server_name['server']['name']
+
+
 class MemberCreate(task.Task):
     """Task to create a member and associate to pool"""
 
@@ -108,11 +118,13 @@ class MemberDelete(task.Task):
 
     @axapi_client_decorator
     def execute(self, member, vthunder, pool, member_count_ip, member_count_ip_port_protocol):
-        server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         try:
+            server_name = _get_server_name(self.axapi_client, member)
             self.axapi_client.slb.service_group.member.delete(
                 pool.id, server_name, member.protocol_port)
             LOG.debug("Successfully dissociated member %s from pool %s", member.id, pool.id)
+        except acos_errors.NotFound:
+            LOG.debug("Unable to find member %s in pool %s", member.id, pool.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to dissociate member %s from pool %s",
                           member.id, pool.id)
@@ -139,7 +151,6 @@ class MemberUpdate(task.Task):
 
     @axapi_client_decorator
     def execute(self, member, vthunder, pool, flavor=None):
-        server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         server_args = utils.meta(member, 'server', {})
         server_args = utils.dash_to_underscore(server_args)
         server_args['conn_limit'] = CONF.server.conn_limit
@@ -166,12 +177,15 @@ class MemberUpdate(task.Task):
             status = True
 
         try:
+            server_name = _get_server_name(self.axapi_client, member)
             port_list = self.axapi_client.slb.server.get(server_name)['server'].get('port-list')
             self.axapi_client.slb.server.replace(server_name, member.ip_address, status=status,
                                                  server_templates=server_temp,
                                                  port_list=port_list,
                                                  **server_args)
             LOG.debug("Successfully updated member: %s", member.id)
+        except acos_errors.NotFound:
+            LOG.debug("Unable to find member %s in pool %s", member.id, pool.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update member: %s", member.id)
             raise e
@@ -183,7 +197,7 @@ class MemberDeletePool(task.Task):
     @axapi_client_decorator
     def execute(self, member, vthunder, pool, pool_count_ip, member_count_ip_port_protocol):
         try:
-            server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
+            server_name = _get_server_name(self.axapi_client, member)
             if pool_count_ip <= 1:
                 self.axapi_client.slb.server.delete(server_name)
                 LOG.debug("Successfully deleted member %s from pool %s", member.id, pool.id)
@@ -194,6 +208,8 @@ class MemberDeletePool(task.Task):
                                                          protocol)
                 LOG.debug("Successfully deleted port for member %s from pool %s",
                           member.id, pool.id)
+        except acos_errors.NotFound:
+            LOG.debug("Unable to find member %s in pool %s", member.id, pool.id)
         except acos_errors.ACOSException:
             pass
         except exceptions.ConnectionError as e:

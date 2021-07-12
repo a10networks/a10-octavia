@@ -190,13 +190,6 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.RELOAD_AMPHORA,
             requires=constants.AMPHORA_ID,
             provides=constants.AMPHORA))
-        create_amp_for_lb_subflow.add(a10_network_tasks.GetLBResourceSubnet(
-            name=sf_name + '-' + a10constants.GET_LB_RESOURCE,
-            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
-            provides=constants.SUBNET))
-        create_amp_for_lb_subflow.add(vthunder_tasks.AllowL2DSR(
-            name=sf_name + '-' + a10constants.ALLOW_L2DSR,
-            requires=(constants.SUBNET, constants.AMPHORA)))
         if role == constants.ROLE_MASTER:
             create_amp_for_lb_subflow.add(database_tasks.MarkAmphoraMasterInDB(
                 name=sf_name + '-' + constants.MARK_AMP_MASTER_INDB,
@@ -293,9 +286,6 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.RELOAD_AMPHORA,
             requires=constants.AMPHORA_ID,
             provides=constants.AMPHORA))
-        vthunder_for_amphora_subflow.add(vthunder_tasks.AllowL2DSR(
-            name=sf_name + '-' + a10constants.ALLOW_L2DSR,
-            requires=(constants.SUBNET, constants.AMPHORA)))
         if role == constants.ROLE_MASTER:
             vthunder_for_amphora_subflow.add(database_tasks.MarkAmphoraMasterInDB(
                 name=sf_name + '-' + constants.MARK_AMP_MASTER_INDB,
@@ -393,16 +383,12 @@ class VThunderFlows(object):
         sf_name = prefix + '-' + constants.GET_AMPHORA_FOR_LB_SUBFLOW
 
         amp_for_lb_flow = linear_flow.Flow(sf_name)
-
         amp_for_lb_flow.add(a10_database_tasks.CreateRackVthunderEntry(
             name=sf_name + '-' + 'create_rack_vThunder_entry_in_database',
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG)))
         amp_for_lb_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        amp_for_lb_flow.add(vthunder_tasks.HandleACOSPartitionChange(
-            name=sf_name + '-' + a10constants.CHANGE_PARTITION,
-            requires=a10constants.VTHUNDER))
         return amp_for_lb_flow
 
     def _is_vrrp_configured(self, history):

@@ -31,7 +31,6 @@ from octavia.tests.common import constants as t_constants
 
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
-from a10_octavia.common import exceptions
 from a10_octavia.common import utils
 from a10_octavia.controller.worker.tasks import a10_database_tasks as task
 from a10_octavia.tests.common import a10constants
@@ -51,7 +50,7 @@ LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
 FIXED_IP = n_data_models.FixedIP(ip_address='10.10.10.10')
 PORT = n_data_models.Port(id=uuidutils.generate_uuid(), fixed_ips=[FIXED_IP])
 VRID = data_models.VRID(id=1, vrid=0,
-                        project_id=a10constants.MOCK_PROJECT_ID,
+                        owner=a10constants.MOCK_PROJECT_ID,
                         vrid_port_id=uuidutils.generate_uuid(),
                         vrid_floating_ip='10.0.12.32')
 LISTENER = o_data_models.Listener(id=a10constants.MOCK_LISTENER_ID, load_balancer=LB)
@@ -114,95 +113,6 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         vthunder = mock_get_vthunder.execute(LB)
         self.assertEqual(vthunder, None)
 
-    @mock.patch('a10_octavia.common.utils.get_parent_project',
-                return_value=a10constants.MOCK_PARENT_PROJECT_ID)
-    def test_create_rack_vthunder_entry_parent_partition_exists(
-            self, mock_parent_project_id):
-        self.conf.config(
-            group=a10constants.A10_GLOBAL_CONF_SECTION,
-            use_parent_partition=True)
-        mock_lb = copy.deepcopy(LB)
-        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
-        mock_vthunder_config = copy.deepcopy(HW_THUNDER)
-        mock_vthunder_config.hierarchical_multitenancy = "enable"
-        mock_create_vthunder = task.CreateRackVthunderEntry()
-        mock_create_vthunder.vthunder_repo = mock.MagicMock()
-        mock_vthunder = copy.deepcopy(VTHUNDER)
-        mock_vthunder.partition_name = a10constants.MOCK_PARENT_PROJECT_ID[:14]
-        mock_create_vthunder.vthunder_repo.create.return_value = mock_vthunder
-        vthunder = mock_create_vthunder.execute(mock_lb, mock_vthunder_config)
-        self.assertEqual(vthunder.partition_name,
-                         a10constants.MOCK_PARENT_PROJECT_ID[:14])
-
-    @mock.patch('a10_octavia.common.utils.get_parent_project',
-                return_value=None)
-    def test_create_rack_vthunder_entry_parent_partition_not_exists(
-            self, mock_parent_project_id):
-        self.conf.config(
-            group=a10constants.A10_GLOBAL_CONF_SECTION,
-            use_parent_partition=True)
-        mock_lb = copy.deepcopy(LB)
-        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
-        mock_vthunder_config = copy.deepcopy(HW_THUNDER)
-        mock_vthunder_config.hierarchical_multitenancy = "enable"
-        mock_create_vthunder = task.CheckExistingProjectToThunderMappedEntries()
-        mock_create_vthunder.vthunder_repo = mock.MagicMock()
-        mock_vthunder = copy.deepcopy(VTHUNDER)
-        mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
-        self.assertRaises(exceptions.ParentProjectNotFound,
-                          mock_create_vthunder.execute, mock_lb,
-                          mock_vthunder_config)
-
-    def test_create_rack_vthunder_entry_parent_partition_no_hmt(self):
-        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION,
-                         use_parent_partition=True)
-        mock_lb = copy.deepcopy(LB)
-        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
-        mock_vthunder_config = copy.deepcopy(HW_THUNDER)
-        mock_vthunder_config.hierarchical_multitenancy = "disable"
-        mock_create_vthunder = task.CreateRackVthunderEntry()
-        mock_create_vthunder.vthunder_repo = mock.MagicMock()
-        mock_vthunder = copy.deepcopy(VTHUNDER)
-        mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
-
-        mock_create_vthunder.vthunder_repo.create.return_value = mock_vthunder
-        vthunder = mock_create_vthunder.execute(mock_lb, mock_vthunder_config)
-        self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PART)
-
-    def test_create_rack_vthunder_entry_parent_partition_hmt_no_use_parent_partition(
-            self):
-        self.conf.config(
-            group=a10constants.A10_GLOBAL_CONF_SECTION,
-            use_parent_partition=False)
-        mock_lb = copy.deepcopy(LB)
-        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
-        mock_vthunder_config = copy.deepcopy(HW_THUNDER)
-        mock_vthunder_config.hierarchical_multitenancy = "enable"
-        mock_create_vthunder = task.CreateRackVthunderEntry()
-        mock_create_vthunder.vthunder_repo = mock.MagicMock()
-        mock_vthunder = copy.deepcopy(VTHUNDER)
-        mock_vthunder.partition_name = a10constants.MOCK_CHILD_PART
-        mock_create_vthunder.vthunder_repo.create.return_value = mock_vthunder
-        vthunder = mock_create_vthunder.execute(mock_lb, mock_vthunder_config)
-        self.assertEqual(vthunder.partition_name, a10constants.MOCK_CHILD_PART)
-
-    def test_create_rack_vthunder_entry_child_partition_exists(self):
-        self.conf.config(
-            group=a10constants.A10_GLOBAL_CONF_SECTION,
-            use_parent_partition=False)
-        mock_lb = copy.deepcopy(LB)
-        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
-        mock_vthunder_config = copy.deepcopy(HW_THUNDER)
-        mock_vthunder_config.hierarchical_multitenancy = "enable"
-        mock_create_vthunder = task.CreateRackVthunderEntry()
-        mock_create_vthunder.vthunder_repo = mock.MagicMock()
-        mock_vthunder = copy.deepcopy(VTHUNDER)
-        mock_vthunder.partition_name = a10constants.MOCK_CHILD_PROJECT_ID[:14]
-        mock_create_vthunder.vthunder_repo.create.return_value = mock_vthunder
-        vthunder = mock_create_vthunder.execute(mock_lb, mock_vthunder_config)
-        self.assertEqual(vthunder.partition_name,
-                         a10constants.MOCK_CHILD_PROJECT_ID[:14])
-
     def test_get_vrid_for_project_member_hmt_use_partition(self):
         thunder = copy.deepcopy(HW_THUNDER)
         thunder.hierarchical_multitenancy = 'enable'
@@ -222,7 +132,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vthunder_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.get_vrid_from_project_ids.return_value = VRID
-        vrid = mock_vrid_entry.execute([a10constants.MOCK_PROJECT_ID])
+        vrid = mock_vrid_entry.execute([a10constants.MOCK_PROJECT_ID], thunder, False)
         self.assertEqual(VRID, vrid)
 
     def test_get_vrid_for_project(self):
@@ -244,7 +154,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vthunder_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.get_vrid_from_project_ids.return_value = VRID
-        vrid = mock_vrid_entry.execute(MEMBER_1)
+        vrid = mock_vrid_entry.execute(MEMBER_1, thunder, False)
         mock_vrid_entry.vthunder_repo.get_partition_for_project.assert_not_called()
         self.assertEqual(VRID, vrid)
 
@@ -260,17 +170,18 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
 
         mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
-        mock_vrid_entry.execute(MEMBER_1, [])
+        mock_vrid_entry.execute(MEMBER_1, [], thunder, False)
         mock_vrid_entry.vrid_repo.delete.assert_called_once_with(
             mock.ANY,
-            project_id=a10constants.MOCK_PROJECT_ID
+            owner=a10constants.MOCK_PROJECT_ID
         )
 
     def test_update_vrid_for_project_member_with_port_and_with_vrid(self):
+        thunder = copy.deepcopy(HW_THUNDER)
         mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.exists.return_value = True
-        mock_vrid_entry.execute(MEMBER_1, [VRID])
+        mock_vrid_entry.execute(MEMBER_1, [VRID], thunder, False)
         mock_vrid_entry.vrid_repo.update.assert_called_once_with(
             mock.ANY,
             VRID.id,
@@ -281,13 +192,14 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo.create.assert_not_called()
 
     def test_update_vrid_for_project_member_with_port_and_no_vrid(self):
+        thunder = copy.deepcopy(HW_THUNDER)
         mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.exists.return_value = False
-        mock_vrid_entry.execute(MEMBER_1, [VRID])
+        mock_vrid_entry.execute(MEMBER_1, [VRID], thunder, False)
         mock_vrid_entry.vrid_repo.create.assert_called_once_with(
             mock.ANY,
-            project_id=MEMBER_1.project_id,
+            owner=MEMBER_1.project_id,
             id=VRID.id,
             vrid=VRID.vrid,
             vrid_floating_ip=VRID.vrid_floating_ip,
@@ -342,6 +254,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.assertEqual(2, member_count)
 
     def test_pool_count_accn_ip(self):
+        use_dev_flavor = False
         member_1 = o_data_models.Member(id=uuidutils.generate_uuid(),
                                         project_id=t_constants.MOCK_PROJECT_ID,
                                         ip_address=t_constants.MOCK_IP_ADDRESS,
@@ -349,27 +262,29 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_count_pool = task.PoolCountforIP()
         mock_count_pool.member_repo.get_pool_count_by_ip = mock.Mock()
         mock_count_pool.member_repo.get_pool_count_by_ip.return_value = 2
-        pool_count = mock_count_pool.execute(member_1)
+        pool_count = mock_count_pool.execute(member_1, use_dev_flavor, mock.ANY)
         self.assertEqual(2, pool_count)
 
     def test_get_subnet_for_deletion_with_pool_no_lb(self):
+        use_dev_flavor = False
         mock_subnets = task.GetSubnetForDeletionInPool()
         mock_subnets.member_repo.get_pool_count_subnet = mock.Mock()
         mock_subnets.member_repo.get_pool_count_subnet.return_value = 1
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet = mock.Mock()
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet.return_value = 0
         subnet_list = mock_subnets.execute(
-            [MEMBER_1, MEMBER_2], [a10constants.MOCK_PROJECT_ID])
+            [MEMBER_1, MEMBER_2], [a10constants.MOCK_PROJECT_ID], use_dev_flavor, mock.ANY)
         self.assertEqual(['mock-subnet-1', 'mock-subnet-2'], subnet_list)
 
     def test_get_subnet_for_deletion_with_multiple_pool_lb(self):
+        use_dev_flavor = False
         mock_subnets = task.GetSubnetForDeletionInPool()
         mock_subnets.member_repo.get_pool_count_subnet = mock.Mock()
         mock_subnets.member_repo.get_pool_count_subnet.return_value = 2
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet = mock.Mock()
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet.return_value = 2
         subnet_list = mock_subnets.execute(
-            [MEMBER_1, MEMBER_2], [a10constants.MOCK_PROJECT_ID])
+            [MEMBER_1, MEMBER_2], [a10constants.MOCK_PROJECT_ID], use_dev_flavor, mock.ANY)
         self.assertEqual([], subnet_list)
 
     def test_get_child_projects_for_partition(self):
