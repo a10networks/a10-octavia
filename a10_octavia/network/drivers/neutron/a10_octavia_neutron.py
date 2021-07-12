@@ -190,6 +190,9 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
         vip_port_id = loadbalancer.vip.port_id
         fixed_subnets = CONF.a10_controller_worker.amp_boot_network_list[:]
         subnet = self.get_subnet(loadbalancer.vip.subnet_id)
+        if subnet.network_id in fixed_subnets and lb_count_subnet != 0:
+            lb_count_subnet = lb_count_subnet + 1
+
         if self.sec_grp_enabled:
             sec_grp = self._get_lb_security_group(loadbalancer.id)
             if sec_grp:
@@ -201,19 +204,32 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
                 ports.extend(self._get_instance_ports_by_subnet(
                     amphora.compute_id, loadbalancer.vip.subnet_id))
 
-        if subnet.network_id not in fixed_subnets:
-            for port in ports:
-                port = port.get('port', port)
-                if lb_count_subnet > 1:  # vNIC port is in use by other lbs. Only delete VIP port.
-                    if sec_grp:
-                        self._remove_security_group(port, sec_grp['id'])
-                    if port['id'] == vip_port_id:
-                        self._cleanup_port(vip_port_id, port)
-                elif lb_count_subnet <= 1:  # This is the only lb using vNIC ports
+        for port in ports:
+            port = port.get('port', port)
+            """If lb_count_subnet is greater then 1 then
+            vNIC port is in use by other lbs. Only delete VIP port.
+            In-case of deleting lb(ERROR state),
+            vthunder returned value from database is "None" then
+            lb_count_subnet is equal to 0, in this case delete only vip port."""
+            if lb_count_subnet != 1:
+                if sec_grp:
+                    self._remove_security_group(port, sec_grp['id'])
+                if port['id'] == vip_port_id:
                     self._cleanup_port(vip_port_id, port)
+            else:  # This is the only lb using vNIC ports
+                self._cleanup_port(vip_port_id, port)
 
-        if subnet.network_id not in fixed_subnets and sec_grp:
+        if sec_grp:
             self._delete_vip_security_group(sec_grp['id'])
+
+        for amphora in filter(
+                lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
+                loadbalancer.amphorae):
+            interface = self._get_plugged_interface(
+                amphora.compute_id, subnet.network_id, amphora.lb_network_ip)
+            if interface is not None:
+                self._remove_allowed_address_pair_from_port(
+                    interface.port_id, loadbalancer.vip.ip_address)
 
     def get_plugged_parent_port(self, vip):
         parent_port = None
@@ -365,7 +381,7 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
                          'admin_state_up': False,
                          'device_id': 'vrid-{0}'.format(vrid.id),
                          'device_owner': aap.OCTAVIA_OWNER,
-                         project_id_key: vrid.project_id}}
+                         project_id_key: vrid.owner}}
         if fixed_ip_json:
             port['port']['fixed_ips'] = [fixed_ip_json]
 
@@ -396,16 +412,32 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
     def allow_use_any_source_ip_on_egress(self, network_id, amphora):
         interface = self._get_plugged_interface(
             amphora.compute_id, network_id, amphora.lb_network_ip)
-        port = self.neutron_client.show_port(interface.port_id)
-        aap_ips = port['port']['allowed_address_pairs']
-        for aap_ip in aap_ips:
-            if aap_ip['ip_address'] == '0.0.0.0/0':
-                break
+        if interface:
+            port = self.neutron_client.show_port(interface.port_id)
+            aap_ips = port['port']['allowed_address_pairs']
+            for aap_ip in aap_ips:
+                if aap_ip['ip_address'] == '0.0.0.0/0':
+                    break
+            else:
+                self._add_allowed_address_pair_to_port(interface.port_id, '0.0.0.0/0')
         else:
-            self._add_allowed_address_pair_to_port(interface.port_id, '0.0.0.0/0')
+            raise exceptions.InterfaceNotFound(amphora.compute_id, network_id)
+
+    def remove_any_source_ip_on_egress(self, network_id, amphora):
+        interface = self._get_plugged_interface(
+            amphora.compute_id, network_id, amphora.lb_network_ip)
+        if interface is not None:
+            self._remove_allowed_address_pair_from_port(interface.port_id, '0.0.0.0/0')
 
     def _remove_allowed_address_pair_from_port(self, port_id, ip_address):
-        port = self.neutron_client.show_port(port_id)
+        try:
+            port = self.neutron_client.show_port(port_id)
+        except neutron_client_exceptions.PortNotFoundClient:
+            LOG.warning("Can't deallocate AAP from instance port {0} because it "
+                        "cannot be found in neutron. "
+                        "Continuing cleanup.".format(port_id))
+            return
+
         aap_ips = port['port']['allowed_address_pairs']
         if isinstance(ip_address, list):
             updated_aap_ips = aap_ips
@@ -414,12 +446,13 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
                                    if aap_ip['ip_address'] != ip]
         else:
             updated_aap_ips = [aap_ip for aap_ip in aap_ips if aap_ip['ip_address'] != ip_address]
-        aap = {
-            'port': {
-                'allowed_address_pairs': updated_aap_ips,
+        if len(aap_ips) != len(updated_aap_ips):
+            aap = {
+                'port': {
+                    'allowed_address_pairs': updated_aap_ips,
+                }
             }
-        }
-        self.neutron_client.update_port(port_id, aap)
+            self.neutron_client.update_port(port_id, aap)
 
     def deallocate_vrid_fip(self, vrid, subnet, amphorae):
         self.delete_port(vrid.vrid_port_id)

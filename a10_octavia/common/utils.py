@@ -355,3 +355,10 @@ def wait_for_db_entry(db_repo, component_id):
         else:
             time.sleep(1)
     return db_obj
+
+
+def get_device_vrid_owner(device_name, partition, hmt):
+    owner = device_name
+    if hmt == 'enable':
+        owner = device_name + '-' + partition
+    return owner
