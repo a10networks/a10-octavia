@@ -21,7 +21,6 @@ import json
 import netaddr
 import socket
 import struct
-import time
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -342,19 +341,6 @@ def get_loadbalancer_flavor(loadbalancer):
                                                      id=flavor.flavor_profile_id)
             flavor_data = json.loads(flavor_profile.flavor_data)
             return flavor_data
-
-
-def wait_for_db_entry(db_repo, component_id):
-    attempts = CONF.a10_controller_worker.max_db_timeout
-    LOG.info("Attempting to fetch entry from database")
-    while attempts >= 0:
-        attempts = attempts - 1
-        db_obj = db_repo.get(db_apis.get_session(), id=component_id)
-        if db_obj is not None:
-            break
-        else:
-            time.sleep(1)
-    return db_obj
 
 
 def get_device_vrid_owner(device_name, partition, hmt):
