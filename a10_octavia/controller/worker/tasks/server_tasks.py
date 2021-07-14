@@ -125,6 +125,7 @@ class MemberDelete(task.Task):
             LOG.debug("Successfully dissociated member %s from pool %s", member.id, pool.id)
         except acos_errors.NotFound:
             LOG.debug("Unable to find member %s in pool %s", member.id, pool.id)
+            return
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to dissociate member %s from pool %s",
                           member.id, pool.id)
