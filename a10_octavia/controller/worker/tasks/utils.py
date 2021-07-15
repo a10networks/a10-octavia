@@ -20,8 +20,6 @@ from oslo_config import cfg
 
 from a10_octavia.common.data_models import Certificate
 
-from acos_client.v30 import responses as acos_resp
-from requests import exceptions as req_exceptions
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -129,7 +127,3 @@ def attribute_search(lb_resource, attr_name):
     elif hasattr(lb_resource, 'load_balancer'):
         return attribute_search(lb_resource.load_balancer, attr_name)
     return None
-
-
-def thunder_busy_exceptions():
-    return (acos_resp.axapi_retry_exceptions(), req_exceptions.ReadTimeout)

@@ -15,6 +15,7 @@
 
 import acos_client
 from acos_client import errors as acos_errors
+
 import datetime
 try:
     import http.client as http_client
@@ -40,7 +41,6 @@ from a10_octavia.controller.worker.tasks.decorators import activate_partition
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks.decorators import device_context_switch_decorator
-from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 from a10_octavia.db import repositories as a10_repo
 
 
@@ -78,7 +78,8 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
                         attempts = attempts - 1
                         axapi_client.system.information()
                         break
-                    except a10_task_utils.thunder_busy_exceptions():
+                    except (acos_errors.ACOSSystemIsBusy, acos_errors.ACOSSystemNotReady,
+                            req_exceptions.ConnectionError, req_exceptions.ReadTimeout):
                         # acos-client already wait default_axapi_timeout for these exceptions.
                         axapi_timeout = CONF.vthunder.default_axapi_timeout
                         attempt_wait = CONF.a10_controller_worker.amp_active_wait_sec
@@ -356,7 +357,8 @@ class ConfigureaVCSBackup(VThunderBaseTask):
                     attempts = 0
                     LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
                     break
-                except a10_task_utils.thunder_busy_exceptions() as e:
+                except (acos_errors.ACOSSystemIsBusy, acos_errors.ACOSSystemNotReady,
+                        req_exceptions.ConnectionError, req_exceptions.ReadTimeout) as e:
                     # acos-client already wait default_axapi_timeout for these exceptions.
                     axapi_timeout = CONF.vthunder.default_axapi_timeout
                     attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
@@ -1149,7 +1151,8 @@ class VCSSyncWait(VThunderBaseTask):
                         msg="vMaster not found in vcs-summary")
                 if vmaster_ready is True and vblade_ready is True:
                     break
-            except a10_task_utils.thunder_busy_exceptions() as e:
+            except (acos_errors.ACOSSystemIsBusy, acos_errors.ACOSSystemNotReady,
+                    req_exceptions.ConnectionError, req_exceptions.ReadTimeout) as e:
                 # acos-client already wait default_axapi_timeout for these exceptions.
                 axapi_timeout = CONF.vthunder.default_axapi_timeout
                 attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
@@ -1187,7 +1190,8 @@ class GetMasterVThunder(VThunderBaseTask):
                         raise acos_errors.AxapiJsonFormatError(
                             msg="vMaster not found in vcs-summary")
                     return vthunder
-                except a10_task_utils.thunder_busy_exceptions() as e:
+                except (acos_errors.ACOSSystemIsBusy, acos_errors.ACOSSystemNotReady,
+                        req_exceptions.ConnectionError, req_exceptions.ReadTimeout) as e:
                     # acos-client already wait default_axapi_timeout for these exceptions.
                     axapi_timeout = CONF.vthunder.default_axapi_timeout
                     attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
