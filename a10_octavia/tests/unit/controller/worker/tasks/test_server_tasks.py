@@ -195,12 +195,27 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         self.client_mock.slb.service_group.member.create.assert_called_with(
             POOL.id, SERVER_NAME, MEMBER.protocol_port)
 
-    def test_create_member_task_multi_port(self):
+    def test_create_member_task_multi_port_revert_no_delete(self):
         mock_member = task.MemberCreate()
         mock_member.axapi_client = self.client_mock
         member_port_count_ip = 4
         mock_member.revert(MEMBER, VTHUNDER, POOL, member_port_count_ip)
         self.client_mock.slb.server.delete.assert_not_called()
+
+    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    def test_create_member_task_multi_port(self, mock_server_name):
+        mock_server_name.return_value = SERVER_NAME
+        mock_create_member = task.MemberCreate()
+        mock_create_member.axapi_client = self.client_mock
+        member_port_count_ip = 4
+        mock_create_member.execute(MEMBER, VTHUNDER, POOL,
+                                   member_port_count_ip)
+        self.client_mock.slb.server.create.assert_not_called()
+        self.client_mock.slb.server.update.assert_called_with(
+            SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
+            server_templates=mock.ANY, **KEY_ARGS)
+        self.client_mock.slb.service_group.member.create.assert_called_with(
+            POOL.id, SERVER_NAME, MEMBER.protocol_port)
 
     @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
     def test_delete_member_task_single_no_port(self, mock_server_name):
