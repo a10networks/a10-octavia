@@ -73,7 +73,9 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         member_task.CONF = self.conf
         return member_task
 
-    def test_MemberCreate_execute_create_with_server_template(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    def test_MemberCreate_execute_create_with_server_template(self, mock_server_name):
+        mock_server_name.side_effect = acos_errors.NotFound()
         member_port_count_ip = 1
         member_task = self._create_member_task_with_server_template('my_server_template')
         member_task.execute(MEMBER, VTHUNDER, POOL, member_port_count_ip)
@@ -81,7 +83,9 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         self.assertIn('template-server', kwargs['server_templates'])
         self.assertEqual(kwargs['server_templates']['template-server'], 'my_server_template')
 
-    def test_MemberCreate_execute_create_with_shared_template_log_warning(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    def test_MemberCreate_execute_create_with_shared_template_log_warning(self, mock_server_name):
+        mock_server_name.side_effect = acos_errors.NotFound()
         member_port_count_ip = 1
         member_task = self._create_member_task_with_server_template(
             'my_server_template', use_shared=True)
@@ -94,7 +98,9 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
             member_task.execute(MEMBER, VTHUNDER, POOL, member_port_count_ip)
             self.assertEqual(expected_log, cm.output)
 
-    def test_MemberCreate_execute_create_with_flavor(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    def test_MemberCreate_execute_create_with_flavor(self, mock_server_name):
+        mock_server_name.side_effect = acos_errors.NotFound()
         mock_create_member = task.MemberCreate()
         member_port_count_ip = 1
         flavor = {"server": {"conn_limit": 65535, "conn_resume": 5000}}
@@ -107,7 +113,9 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
             server_templates=mock.ANY, **expect_key_args)
 
-    def test_MemberCreate_execute_create_with_regex_overwrite_flavor(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    def test_MemberCreate_execute_create_with_regex_overwrite_flavor(self, mock_server_name):
+        mock_server_name.side_effect = acos_errors.NotFound()
         mock_create_member = task.MemberCreate()
         member_port_count_ip = 1
         flavor = {"server": {"conn_limit": 65535}}
@@ -126,7 +134,9 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
             SERVER_NAME, member_obj.ip_address, status=mock.ANY,
             server_templates=mock.ANY, **expect_key_args)
 
-    def test_MemberCreate_execute_create_with_regex_flavor(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    def test_MemberCreate_execute_create_with_regex_flavor(self, mock_server_name):
+        mock_server_name.side_effect = acos_errors.NotFound()
         mock_create_member = task.MemberCreate()
         member_port_count_ip = 1
         flavor = {}
@@ -145,7 +155,9 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
             SERVER_NAME, member_obj.ip_address, status=mock.ANY,
             server_templates=mock.ANY, **expect_key_args)
 
-    def test_MemberCreate_execute_create_flavor_override_config(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    def test_MemberCreate_execute_create_flavor_override_config(self, mock_server_name):
+        mock_server_name.side_effect = acos_errors.NotFound()
         self.conf.config(group=a10constants.SERVER_CONF_SECTION, conn_resume=300)
         mock_create_member = task.MemberCreate()
         member_port_count_ip = 1
@@ -168,7 +180,9 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         self.client_mock.slb.server.delete.assert_called_with(
             SERVER_NAME)
 
-    def test_create_member_task(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    def test_create_member_task(self, mock_server_name):
+        mock_server_name.side_effect = acos_errors.NotFound()
         mock_create_member = task.MemberCreate()
         member_port_count_ip = 1
         mock_create_member.CONF = self.conf
