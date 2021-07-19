@@ -349,7 +349,8 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
         if partition_project_list:
             try:
                 vrid_list = self.vrid_repo.get_vrid_from_owner(
-                    db_apis.get_session(), owner=owner)
+                    db_apis.get_session(), owner=owner,
+                    project_ids=partition_project_list)
                 return vrid_list
             except Exception as e:
                 LOG.exception(
