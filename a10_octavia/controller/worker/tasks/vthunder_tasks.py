@@ -114,17 +114,17 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
         if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
             try:
                 self.axapi_client.system.action.write_memory()
-                self.axapi_client.system.action.reload_reboot_for_interface_attachment(
-                    vthunder.acos_version)
-                LOG.debug("Waiting for 30 seconds to trigger vThunder reload.")
-                time.sleep(30)
-                LOG.debug("Successfully reloaded/rebooted vThunder: %s", vthunder.id)
                 if CONF.a10_house_keeping.use_periodic_write_memory == 'enable':
                     self.vthunder_repo.update_last_write_mem(
                         db_apis.get_session(),
                         vthunder.ip_address,
                         vthunder.partition_name,
                         last_write_mem=datetime.datetime.utcnow())
+                self.axapi_client.system.action.reload_reboot_for_interface_attachment(
+                    vthunder.acos_version)
+                LOG.debug("Waiting for 30 seconds to trigger vThunder reload.")
+                time.sleep(30)
+                LOG.debug("Successfully reloaded/rebooted vThunder: %s", vthunder.id)
             except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
                 LOG.exception("Failed to save configuration and reboot on vThunder "
                               "for amphora id: %s", vthunder.amphora_id)
@@ -197,17 +197,17 @@ class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
             amphora_id = loadbalancer.amphorae[0].id
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 self.axapi_client.system.action.write_memory()
-                self.axapi_client.system.action.reload_reboot_for_interface_attachment(
-                    vthunder.acos_version)
-                LOG.debug("Waiting for 30 seconds to trigger vThunder reload/reboot.")
-                time.sleep(30)
-                LOG.debug("Successfully rebooted/reloaded vThunder: %s", vthunder.id)
                 if CONF.a10_house_keeping.use_periodic_write_memory == 'enable':
                     self.vthunder_repo.update_last_write_mem(
                         db_apis.get_session(),
                         vthunder.ip_address,
                         vthunder.partition_name,
                         last_write_mem=datetime.datetime.utcnow())
+                self.axapi_client.system.action.reload_reboot_for_interface_attachment(
+                    vthunder.acos_version)
+                LOG.debug("Waiting for 30 seconds to trigger vThunder reload/reboot.")
+                time.sleep(30)
+                LOG.debug("Successfully rebooted/reloaded vThunder: %s", vthunder.id)
             else:
                 LOG.debug("vThunder reboot/relaod is not required for member addition.")
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
@@ -1065,17 +1065,17 @@ class AmphoraePostNetworkUnplug(VThunderBaseTask):
                 amphora_id = loadbalancer.amphorae[0].id
                 if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                     self.axapi_client.system.action.write_memory()
-                    self.axapi_client.system.action.reload_reboot_for_interface_detachment(
-                        vthunder.acos_version)
-                    LOG.debug("Waiting for 30 seconds to trigger vThunder reload/reboot.")
-                    time.sleep(30)
-                    LOG.debug("Successfully rebooted/reloaded vThunder: %s", vthunder.id)
                     if CONF.a10_house_keeping.use_periodic_write_memory == 'enable':
                         self.vthunder_repo.update_last_write_mem(
                             db_apis.get_session(),
                             vthunder.ip_address,
                             vthunder.partition_name,
                             last_write_mem=datetime.datetime.utcnow())
+                    self.axapi_client.system.action.reload_reboot_for_interface_detachment(
+                        vthunder.acos_version)
+                    LOG.debug("Waiting for 30 seconds to trigger vThunder reload/reboot.")
+                    time.sleep(30)
+                    LOG.debug("Successfully rebooted/reloaded vThunder: %s", vthunder.id)
                 else:
                     LOG.debug("vThunder reboot/relaod is not required for member addition.")
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
