@@ -946,7 +946,17 @@ class LoadBalancerFlows(object):
         """
         pools_listeners_delete_flow = linear_flow.Flow('pool_listener_delete_flow')
         store = {}
-        # loop fo loadbalancer's pool deletion
+        # loop for loadbalancer's l7policy deletion
+        for listener in lb.listeners:
+            l7policy_delete_flow = linear_flow.Flow('l7policy_delete_flow')
+            for l7policy in listener.l7policies:
+                l7policy_name = 'l7policy_' + l7policy.id
+                store[l7policy_name] = l7policy
+                l7policy_delete_flow.add(
+                    self._l7policy_flows.get_cascade_delete_l7policy_internal_flow(l7policy_name))
+        pools_listeners_delete_flow.add(l7policy_delete_flow)
+
+        # loop for loadbalancer's pool deletion
         for pool in lb.pools:
             pool_name = 'pool' + pool.id
             members = pool.members
@@ -971,13 +981,6 @@ class LoadBalancerFlows(object):
         listeners_delete_flow = unordered_flow.Flow('listener_delete_flow')
         compute_flag = lb.amphorae
         for listener in lb.listeners:
-            l7policy_delete_flow = linear_flow.Flow('l7policy_delete_flow')
-            for l7policy in listener.l7policies:
-                l7policy_name = 'l7policy_' + l7policy.id
-                store[l7policy_name] = l7policy
-                l7policy_delete_flow.add(
-                    self._l7policy_flows.get_cascade_delete_l7policy_internal_flow(l7policy_name))
-            listeners_delete_flow.add(l7policy_delete_flow)
             listener_name = 'listener_' + listener.id
             store[listener_name] = listener
             listeners_delete_flow.add(
