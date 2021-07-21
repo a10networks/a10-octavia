@@ -778,13 +778,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         vrid_floating_ips = []
         update_vrid_flag = False
         existing_fips = []
-        if use_device_flavor:
-            owner = a10_utils.get_device_vrid_owner(
-                vthunder_config.device_name, vthunder_config.partition_name,
-                vthunder_config.hierarchical_multitenancy)
-            self._add_vrid_to_list(updated_vrid_list, subnet, owner)
-        else:
-            self._add_vrid_to_list(updated_vrid_list, subnet, lb_resource.project_id)
+        owner = vthunder.ip_address + "_" + vthunder.partition_name
+        self._add_vrid_to_list(updated_vrid_list, subnet, owner)
         for vrid in updated_vrid_list:
             try:
                 vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
@@ -1057,6 +1052,8 @@ class GetMembersOnThunder(BaseNetworkTask):
             try:
                 member_list = []
                 members = []
+                if vthunder.partition_name != 'shared':
+                    self.axapi_client.system.partition.active(vthunder.partition_name)
                 member_list = self.axapi_client.slb.server.get_all()
                 if member_list:
                     for member in range(len(member_list['server-list'])):

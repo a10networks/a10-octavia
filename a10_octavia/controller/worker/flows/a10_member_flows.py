@@ -490,8 +490,7 @@ class MemberFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER,
-                    a10constants.USE_DEVICE_FLAVOR],
+                    a10constants.VTHUNDER],
                 provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(
             a10_network_tasks.DeleteVRIDPort(
@@ -535,8 +534,7 @@ class MemberFlows(object):
                 name='get_vrid_for_loadbalancer_resource' + pool,
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER,
-                    a10constants.USE_DEVICE_FLAVOR],
+                    a10constants.VTHUNDER],
                 provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(
             a10_network_tasks.DeleteMultipleVRIDPort(
@@ -569,8 +567,7 @@ class MemberFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER,
-                    a10constants.USE_DEVICE_FLAVOR],
+                    a10constants.VTHUNDER],
                 provides=a10constants.VRID_LIST))
         handle_vrid_for_member_subflow.add(
             a10_network_tasks.HandleVRIDFloatingIP(
@@ -587,8 +584,7 @@ class MemberFlows(object):
             a10_database_tasks.UpdateVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.VRID_LIST,
-                    a10constants.VTHUNDER_CONFIG,
-                    a10constants.USE_DEVICE_FLAVOR],
+                    a10constants.VTHUNDER],
                 rebind={
                     a10constants.LB_RESOURCE: constants.MEMBER}))
 

@@ -343,34 +343,21 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
 
 class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
-    def execute(self, partition_project_list, vthunder, use_device_flavor):
+    def execute(self, partition_project_list, vthunder):
         vrid_list = []
-        if partition_project_list and not use_device_flavor:
+        owner = vthunder.ip_address + "_" + vthunder.partition_name
+        if partition_project_list:
             try:
-                vrid_list = self.vrid_repo.get_vrid_from_project_ids(
-                    db_apis.get_session(), project_ids=partition_project_list)
+                vrid_list = self.vrid_repo.get_vrid_from_owner(
+                    db_apis.get_session(), owner=owner,
+                    project_ids=partition_project_list)
                 return vrid_list
             except Exception as e:
                 LOG.exception(
-                    "Failed to get VRID list for given project list  %s due to %s",
-                    partition_project_list,
+                    "Failed to get VRID list for given owner  %s due to %s",
+                    owner,
                     str(e))
                 raise e
-        elif use_device_flavor:
-            if vthunder is not None:
-                try:
-                    owner = utils.get_device_vrid_owner(
-                        vthunder.device_name, vthunder.partition_name,
-                        vthunder.hierarchical_multitenancy)
-                    vrid_list = self.vrid_repo.get_vrid_from_owner(
-                        db_apis.get_session(), owner=owner)
-                    return vrid_list
-                except Exception as e:
-                    LOG.exception(
-                        "Failed to get VRID list for given device  %s due to %s",
-                        vthunder.device_name,
-                        str(e))
-                    raise e
         return vrid_list
 
 
@@ -380,26 +367,19 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
         self.vrid_created = []
         super(UpdateVRIDForLoadbalancerResource, self).__init__(*arg, **kwargs)
 
-    def execute(self, lb_resource, vrid_list, vthunder_config, use_device_flavor):
+    def execute(self, lb_resource, vrid_list, vthunder):
+        owner = vthunder.ip_address + "_" + vthunder.partition_name
         if not vrid_list:
             # delete all vrids from DB for the lB resource's project.
             try:
-                if not use_device_flavor:
-                    self.vrid_repo.delete(db_apis.get_session(),
-                                          owner=lb_resource.project_id)
-                    LOG.debug("Successfully deleted DB vrid from project %s",
-                              lb_resource.project_id)
-                elif use_device_flavor:
-                    owner = utils.get_device_vrid_owner(
-                        vthunder_config.device_name, vthunder_config.partition_name,
-                        vthunder_config.hierarchical_multitenancy)
-                    self.vrid_repo.delete(db_apis.get_session(), owner=owner)
-                    LOG.debug("Successfully deleted DB vrid from device %s", owner)
+                self.vrid_repo.delete(db_apis.get_session(),
+                                      owner=owner)
+                LOG.debug("Successfully deleted DB vrid from owner %s", owner)
 
             except Exception as e:
                 LOG.error(
-                    "Failed to delete VRID data for project %s due to %s",
-                    lb_resource.project_id,
+                    "Failed to delete VRID data for owner %s due to %s",
+                    owner,
                     str(e))
                 raise e
             return
@@ -425,44 +405,22 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
                     raise e
 
             else:
-                if use_device_flavor:
-                    try:
-                        owner = utils.get_device_vrid_owner(
-                            vthunder_config.device_name,
-                            vthunder_config.partition_name,
-                            vthunder_config.hierarchical_multitenancy)
-                        new_vrid = self.vrid_repo.create(
-                            db_apis.get_session(),
-                            id=vrid.id,
-                            owner=owner,
-                            vrid_floating_ip=vrid.vrid_floating_ip,
-                            vrid_port_id=vrid.vrid_port_id,
-                            vrid=vrid.vrid,
-                            subnet_id=vrid.subnet_id)
-                        self.vrid_created.append(new_vrid)
-                    except Exception as e:
-                        LOG.error(
-                            "Failed to create VRID data for VRID FIP %s due to %s",
-                            vrid.vrid_floating_ip,
-                            str(e))
-                        raise e
-                else:
-                    try:
-                        new_vrid = self.vrid_repo.create(
-                            db_apis.get_session(),
-                            id=vrid.id,
-                            owner=vrid.owner,
-                            vrid_floating_ip=vrid.vrid_floating_ip,
-                            vrid_port_id=vrid.vrid_port_id,
-                            vrid=vrid.vrid,
-                            subnet_id=vrid.subnet_id)
-                        self.vrid_created.append(new_vrid)
-                    except Exception as e:
-                        LOG.error(
-                            "Failed to create VRID data for VRID FIP %s due to %s",
-                            vrid.vrid_floating_ip,
-                            str(e))
-                        raise e
+                try:
+                    new_vrid = self.vrid_repo.create(
+                        db_apis.get_session(),
+                        id=vrid.id,
+                        owner=owner,
+                        vrid_floating_ip=vrid.vrid_floating_ip,
+                        vrid_port_id=vrid.vrid_port_id,
+                        vrid=vrid.vrid,
+                        subnet_id=vrid.subnet_id)
+                    self.vrid_created.append(new_vrid)
+                except Exception as e:
+                    LOG.error(
+                        "Failed to create VRID data for VRID FIP %s due to %s",
+                        vrid.vrid_floating_ip,
+                        str(e))
+                    raise e
 
     def revert(self, *args, **kwargs):
         for vrid in self.vrid_created:
