@@ -1052,6 +1052,8 @@ class GetMembersOnThunder(BaseNetworkTask):
             try:
                 member_list = []
                 members = []
+                if vthunder.partition_name != 'shared':
+                    self.axapi_client.system.partition.active(vthunder.partition_name)
                 member_list = self.axapi_client.slb.server.get_all()
                 if member_list:
                     for member in range(len(member_list['server-list'])):

@@ -940,6 +940,7 @@ class LoadBalancerFlows(object):
         pools_listeners_delete_flow = linear_flow.Flow('pool_listener_delete_flow')
         store = {}
         # loop for loadbalancer's l7policy deletion
+        l7policy_delete_flow = None
         for listener in lb.listeners:
             l7policy_delete_flow = linear_flow.Flow('l7policy_delete_flow')
             for l7policy in listener.l7policies:
@@ -947,7 +948,8 @@ class LoadBalancerFlows(object):
                 store[l7policy_name] = l7policy
                 l7policy_delete_flow.add(
                     self._l7policy_flows.get_cascade_delete_l7policy_internal_flow(l7policy_name))
-        pools_listeners_delete_flow.add(l7policy_delete_flow)
+        if l7policy_delete_flow:
+            pools_listeners_delete_flow.add(l7policy_delete_flow)
 
         # loop for loadbalancer's pool deletion
         for pool in lb.pools:
