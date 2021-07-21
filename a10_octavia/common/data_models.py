@@ -140,7 +140,7 @@ class Thunder(BaseDataModel):
                  created_at=datetime.utcnow(), updated_at=datetime.utcnow(),
                  partition_name="shared", hierarchical_multitenancy="disable",
                  last_write_mem=None, vrid_floating_ip=None,
-                 device_network_map=None, acos_version=None):
+                 device_network_map=None, acos_version=None, device_name_as_key=False):
         self.id = id
         self.vthunder_id = vthunder_id
         self.amphora_id = amphora_id
@@ -165,6 +165,7 @@ class Thunder(BaseDataModel):
         self.vrid_floating_ip = vrid_floating_ip
         self.device_network_map = device_network_map or []
         self.acos_version = acos_version
+        self.device_name_as_key = device_name_as_key
 
 
 class HardwareThunder(Thunder):
@@ -191,10 +192,10 @@ class Certificate(BaseDataModel):
 
 class VRID(BaseDataModel):
 
-    def __init__(self, id=None, project_id=None, vrid=None, vrid_port_id=None,
+    def __init__(self, id=None, owner=None, vrid=None, vrid_port_id=None,
                  vrid_floating_ip=None, subnet_id=None):
         self.id = id
-        self.project_id = project_id
+        self.owner = owner
         self.vrid = vrid
         self.vrid_port_id = vrid_port_id
         self.vrid_floating_ip = vrid_floating_ip

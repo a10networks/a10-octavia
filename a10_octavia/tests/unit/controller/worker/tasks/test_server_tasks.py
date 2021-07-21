@@ -26,6 +26,8 @@ from oslo_config import fixture as oslo_fixture
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
 
+from acos_client import errors as acos_errors
+
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
 import a10_octavia.controller.worker.tasks.server_tasks as task
@@ -186,7 +188,9 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         mock_member.revert(MEMBER, VTHUNDER, POOL, member_port_count_ip)
         self.client_mock.slb.server.delete.assert_not_called()
 
-    def test_delete_member_task_single_no_port(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    def test_delete_member_task_single_no_port(self, mock_server_name):
+        mock_server_name.return_value = SERVER_NAME
         mock_delete_member = task.MemberDelete()
         mock_delete_member.axapi_client = self.client_mock
         mock_delete_member.execute(MEMBER, VTHUNDER, POOL, 0, 0)
@@ -194,7 +198,9 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
             POOL.id, SERVER_NAME, MEMBER.protocol_port)
         self.client_mock.slb.server.delete.assert_called_with(SERVER_NAME)
 
-    def test_delete_member_task_multi_port(self):
+    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    def test_delete_member_task_multi_port(self, mock_server_name):
+        mock_server_name.return_value = SERVER_NAME
         member_port_count_ip = 2
         pool_protocol_tcp = 'tcp'
         mock_delete_member = task.MemberDelete()
@@ -207,3 +213,31 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
             POOL.id, SERVER_NAME, MEMBER.protocol_port)
         self.client_mock.slb.server.port.delete.assert_called_with(
             SERVER_NAME, MEMBER.protocol_port, pool_protocol_tcp)
+
+    def test_get_server_name(self):
+        server_name = {
+            'server': {
+                'name': SERVER_NAME
+            }
+        }
+        self.client_mock.slb.server.get.return_value = server_name
+        server_name = task._get_server_name(self.client_mock, MEMBER)
+        self.assertEqual(SERVER_NAME, server_name)
+
+    def test_get_server_name_backwards_compat(self):
+        server_name = {
+            'server': {
+                'name': '_{}_neutron'.format(SERVER_NAME)
+            }
+        }
+        self.client_mock.slb.server.get.return_value = server_name
+        server_name = task._get_server_name(self.client_mock, MEMBER)
+        self.assertEqual('_{}_neutron'.format(SERVER_NAME), server_name)
+
+    def test_get_server_name_raise_notfound(self):
+        self.client_mock.slb.server.get.side_effect = acos_errors.NotFound
+
+        expected_error = acos_errors.NotFound
+        module_func = task._get_server_name
+        func_args = [self.client_mock, MEMBER]
+        self.assertRaises(expected_error, module_func, *func_args)

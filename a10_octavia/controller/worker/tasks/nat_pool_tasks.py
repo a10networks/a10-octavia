@@ -26,6 +26,9 @@ LOG = logging.getLogger(__name__)
 
 class NatPoolCreate(task.Task):
     """Task to create nat pool"""
+    def __init__(self, **kwargs):
+        super(NatPoolCreate, self).__init__(**kwargs)
+        self._added_pool_list = []
 
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder, flavor_data=None):
@@ -41,6 +44,7 @@ class NatPoolCreate(task.Task):
                                 device_pool['pool']['end-address'] == nat_pool['end_address'])):
                         try:
                             self.axapi_client.nat.pool.create(**nat_pool)
+                            self._added_pool_list.append(nat_pool['pool_name'])
                         except(acos_errors.Exists) as e:
                             LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                           "thunder device %s",
@@ -62,6 +66,7 @@ class NatPoolCreate(task.Task):
                     return
                 try:
                     self.axapi_client.nat.pool.create(**natpool_flavor)
+                    self._added_pool_list.append(natpool_flavor['pool_name'])
                 except(acos_errors.Exists) as e:
                     LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                   "thunder device %s",
@@ -81,15 +86,18 @@ class NatPoolCreate(task.Task):
             natpool_flavor_list = flavor_data.get('nat_pool_list')
             natpool_flavor = flavor_data.get('nat_pool')
             try:
-                if natpool_flavor_list:
-                    for nat_pool in natpool_flavor_list:
-                        pool_name = nat_pool.get('pool_name')
-                        LOG.warning("Reverting creation of nat-pool: %s", pool_name)
-                        self.axapi_client.nat.pool.delete(pool_name)
-                if natpool_flavor:
-                    pool_name = natpool_flavor.get('pool_name')
-                    LOG.warning("Reverting creation of nat-pool: %s", pool_name)
-                    self.axapi_client.nat.pool.delete(pool_name)
+                if len(self._added_pool_list) > 0:
+                    if natpool_flavor_list:
+                        for nat_pool in natpool_flavor_list:
+                            pool_name = nat_pool.get('pool_name')
+                            if pool_name in self._added_pool_list:
+                                LOG.warning("Reverting creation of nat-pool: %s", pool_name)
+                                self.axapi_client.nat.pool.delete(pool_name)
+                    if natpool_flavor:
+                        pool_name = natpool_flavor.get('pool_name')
+                        if pool_name in self._added_pool_list:
+                            LOG.warning("Reverting creation of nat-pool: %s", pool_name)
+                            self.axapi_client.nat.pool.delete(pool_name)
             except ConnectionError:
                 LOG.exception(
                     "Failed to connect A10 Thunder device: %s", vthunder.ip_address)

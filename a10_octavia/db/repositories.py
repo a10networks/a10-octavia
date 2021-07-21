@@ -238,6 +238,20 @@ class VThunderRepository(BaseRepository):
 
         return model.to_data_model()
 
+    def get_vthunder_with_different_topology(self, session, project_id, topology):
+        model = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            and_(self.model_class.status == "ACTIVE",
+                 or_(self.model_class.role == "STANDALONE",
+                     self.model_class.role == "MASTER"))).filter(
+                self.model_class.compute_id != None).filter(
+                self.model_class.topology != topology).first()
+
+        if not model:
+            return None
+
+        return model.to_data_model()
+
     def get_vthunders_by_project_id(self, session, project_id):
         model_list = session.query(self.model_class).filter(
             self.model_class.project_id == project_id).filter(
@@ -347,6 +361,16 @@ class VThunderRepository(BaseRepository):
         id_list = [model.id for model in model_list]
         return id_list
 
+    def get_rack_vthunders_by_ip_address(self, session, ip_address):
+        model_list = session.query(self.model_class).filter(
+            self.model_class.ip_address == ip_address).filter(
+            and_(self.model_class.role == "MASTER",
+                 or_(self.model_class.status == "ACTIVE",
+                     self.model_class.status == "PENDING_DELETE")))
+
+        id_list = [model.id for model in model_list]
+        return id_list
+
 
 class LoadBalancerRepository(repo.LoadBalancerRepository):
     thunder_model_class = models.VThunder
@@ -366,7 +390,8 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
             and_(self.model_class.project_id.in_(project_ids),
                  base_models.Vip.subnet_id == subnet_id,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
-                     self.model_class.provisioning_status == consts.ACTIVE))).count()
+                     self.model_class.provisioning_status == consts.ACTIVE,
+                     self.model_class.provisioning_status == consts.PENDING_UPDATE))).count()
 
     def get_lb_count_by_flavor(self, session, project_ids, flavor_id):
         return session.query(self.model_class).filter(
@@ -410,6 +435,26 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
             lb_list.append(data.to_data_model())
         return lb_list
 
+    def get_lb_excluding_deleted(self, session, lb_id):
+        query = session.query(self.model_class).filter(
+            and_(self.model_class.id == lb_id,
+                 self.model_class.provisioning_status != "DELETED"))
+        model = query.first()
+        if model is None:
+            return None
+        return model.to_data_model()
+
+    def get_lbs_on_thunder_by_subnet(self, session, loadbalancer_id, subnet_id):
+        model = session.query(self.model_class).join(base_models.Vip).filter(
+            and_(self.model_class.id == loadbalancer_id,
+                 base_models.Vip.subnet_id == subnet_id,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE,
+                     self.model_class.provisioning_status == consts.PENDING_UPDATE))).first()
+        if not model:
+            return None
+        return model.to_data_model()
+
 
 class VRIDRepository(BaseRepository):
     model_class = models.VRID
@@ -418,9 +463,18 @@ class VRIDRepository(BaseRepository):
     # "to_data_model"
     def get_vrid_from_project_ids(self, session, project_ids):
         vrid_obj_list = []
+        model = session.query(self.model_class).filter(
+            self.model_class.owner.in_(project_ids))
+        for data in model:
+            vrid_obj_list.append(data.to_data_model())
+
+        return vrid_obj_list
+
+    def get_vrid_from_owner(self, session, owner):
+        vrid_obj_list = []
 
         model = session.query(self.model_class).filter(
-            self.model_class.project_id.in_(project_ids))
+            self.model_class.owner == owner)
         for data in model:
             vrid_obj_list.append(data.to_data_model())
 
@@ -467,12 +521,37 @@ class MemberRepository(repo.MemberRepository):
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
 
+    def get_pool_count_by_ip_on_thunder(self, session, ip_address, pool_ids):
+        return session.query(self.model_class.pool_id.distinct()).filter(
+            self.model_class.pool_id.in_(pool_ids)).filter(
+            and_(self.model_class.ip_address == ip_address,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
+
     def get_pool_count_subnet(self, session, project_ids, subnet_id):
         return session.query(self.model_class.pool_id.distinct()).filter(
             self.model_class.project_id.in_(project_ids)).filter(
             and_(self.model_class.subnet_id == subnet_id,
                  or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                      self.model_class.provisioning_status == consts.ACTIVE))).count()
+
+    def get_pool_count_subnet_on_thunder(self, session, pool_ids, subnet_id):
+        return session.query(self.model_class.pool_id.distinct()).filter(
+            self.model_class.pool_id.in_(pool_ids)).filter(
+            and_(self.model_class.subnet_id == subnet_id,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).count()
+
+    def get_members_on_thunder_by_subnet(self, session, ip_address, subnet_id):
+        model = session.query(self.model_class).filter(
+            and_(self.model_class.ip_address == ip_address,
+                 self.model_class.subnet_id == subnet_id,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE))).first()
+
+        if not model:
+            return None
+        return model.to_data_model()
 
 
 class NatPoolRepository(BaseRepository):

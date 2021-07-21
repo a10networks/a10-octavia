@@ -163,10 +163,29 @@ INTERFACES = {
     }
 }
 
+FLAVOR_DEV1 = a10_data_models.HardwareThunder(device_name="rack_thunder_1",
+                                              undercloud=True, username="abc", password="abc",
+                                              ip_address="10.10.10.10", partition_name="shared",
+                                              device_name_as_key=True)
+FLAVOR_DEV2 = a10_data_models.HardwareThunder(project_id="project-2", device_name="rack_thunder_2",
+                                              undercloud=True, username="abc", password="abc",
+                                              ip_address="10.10.10.10", partition_name="shared")
+FLAVOR_DEV3 = a10_data_models.HardwareThunder(project_id="project-1", device_name="rack_thunder_1",
+                                              undercloud=True, username="abc", password="abc",
+                                              ip_address="10.10.10.10", partition_name="shared")
+DEV_CONF_DICT = {'[dev]rack_thunder_1': FLAVOR_DEV1,
+                 'project-1': FLAVOR_DEV3,
+                 '[dev]rack_thunder_2': FLAVOR_DEV2,
+                 'project-2': FLAVOR_DEV2}
+DEV_FLAVOR = {'device_name': 'rack_thunder_1'}
+
 VIP = o_data_models.Vip(ip_address="1.1.1.1")
 AMPHORAE = [o_data_models.Amphora(id=a10constants.MOCK_AMPHORA_ID)]
 LB = o_data_models.LoadBalancer(
-    id=a10constants.MOCK_LOAD_BALANCER_ID, vip=VIP, amphorae=AMPHORAE)
+    id=a10constants.MOCK_LOAD_BALANCER_ID, vip=VIP,
+    amphorae=AMPHORAE, project_id=PROJECT_ID)
+DEPLOYMENT_FLAVOR = {'deployment': {"dsr_type": "l2dsr_transparent"}}
+SUBNET = n_data_models.Subnet()
 
 
 class TestVThunderTasks(base.BaseTaskTestCase):
@@ -174,6 +193,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
     def setUp(self):
         super(TestVThunderTasks, self).setUp()
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
+        self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
+                                group=a10constants.A10_GLOBAL_CONF_SECTION)
         imp.reload(task)
         self.client_mock = mock.Mock()
         self.db_session = mock.patch(
@@ -617,9 +638,9 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_client = mock.Mock()
         mock_client.system.partition.get.side_effect = acos_errors.NotFound()
         mock_utils.get_axapi_client.return_value = mock_client
-        mock_thunder = copy.deepcopy(VTHUNDER)
-        mock_thunder.partition_name = "PartitionA"
-        task.HandleACOSPartitionChange().execute(mock_thunder)
+        mock_thunder_config = copy.deepcopy(VTHUNDER)
+        mock_thunder_config.partition_name = "PartitionA"
+        task.HandleACOSPartitionChange().execute(LB, mock_thunder_config)
         mock_client.system.partition.create.assert_called_with("PartitionA")
 
     @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.a10_utils')
@@ -628,26 +649,32 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_client.system.partition.get.side_effect = acos_errors.NotFound()
         mock_client.system.action.write_memory.side_effect = acos_errors.ACOSException()
         mock_utils.get_axapi_client.return_value = mock_client
-        mock_thunder = copy.deepcopy(VTHUNDER)
-        mock_thunder.partition_name = "PartitionA"
+        mock_thunder_config = copy.deepcopy(VTHUNDER)
+        mock_thunder_config.partition_name = "PartitionA"
         expected_error = acos_errors.ACOSException
         task_function = task.HandleACOSPartitionChange().execute
-        self.assertRaises(expected_error, task_function, mock_thunder)
+        self.assertRaises(expected_error, task_function, LB, mock_thunder_config)
 
     @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.a10_utils')
     def test_HandleACOSPartitionChange_execute_partition_found_active(self, mock_utils):
-        partition = {'status': 'Active'}
+        partition = {
+            'partition-name': 'PartitionA',
+            'status': 'Active'
+        }
         mock_client = mock.Mock()
         mock_client.system.partition.get.return_value = partition
         mock_utils.get_axapi_client.return_value = mock_client
-        mock_thunder = copy.deepcopy(VTHUNDER)
-        mock_thunder.partition_name = "PartitionA"
-        task.HandleACOSPartitionChange().execute(mock_thunder)
+        mock_thunder_config = copy.deepcopy(VTHUNDER)
+        mock_thunder_config.partition_name = "PartitionA"
+        task.HandleACOSPartitionChange().execute(LB, mock_thunder_config)
         mock_client.system.partition.create.assert_not_called()
 
     @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.a10_utils')
     def test_HandleACOSPartitionChange_execute_partition_found_not_active(self, mock_utils):
-        partition = {'status': 'Not-Active'}
+        partition = {
+            'partition-name': 'PartitionA',
+            'status': 'Not-Active'
+        }
         mock_client = mock.Mock()
         mock_client.system.partition.get.return_value = partition
         mock_utils.get_axapi_client.return_value = mock_client
@@ -655,7 +682,152 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_thunder.partition_name = "PartitionA"
         expected_error = exceptions.PartitionNotActiveError
         task_function = task.HandleACOSPartitionChange().execute
-        self.assertRaises(expected_error, task_function, mock_thunder)
+        self.assertRaises(expected_error, task_function, LB, mock_thunder)
+
+    @mock.patch('a10_octavia.common.utils.get_parent_project',
+                return_value=None)
+    def test_HandleACOSPartitionChange_parent_partition_not_exists(
+            self, mock_parent_project_id):
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=True)
+        mock_lb = copy.deepcopy(LB)
+        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
+        mock_thunder_config = copy.deepcopy(VTHUNDER)
+        mock_thunder_config.hierarchical_multitenancy = "enable"
+        expected_error = exceptions.ParentProjectNotFound
+        task_function = task.HandleACOSPartitionChange().execute
+        self.assertRaises(expected_error, task_function, mock_lb, mock_thunder_config)
+
+    @mock.patch('a10_octavia.common.utils.get_parent_project',
+                return_value=a10constants.MOCK_PARENT_PROJECT_ID)
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.a10_utils')
+    def test_HandleACOSPartitionChange_parent_partition_exists(
+            self, mock_utils, mock_parent_project_id):
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=True)
+
+        partition = {
+            'partition-name': a10constants.MOCK_PARENT_PROJECT_ID[:14],
+            'status': 'Active'
+        }
+        mock_client = mock.Mock()
+        mock_client.system.partition.get.return_value = partition
+        mock_utils.get_axapi_client.return_value = mock_client
+
+        mock_lb = copy.deepcopy(LB)
+        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
+        mock_thunder_config = copy.deepcopy(VTHUNDER)
+        mock_thunder_config.hierarchical_multitenancy = "enable"
+        vthunder_config = task.HandleACOSPartitionChange().execute(
+            LB, mock_thunder_config)
+        self.assertEqual(vthunder_config.partition_name,
+                         a10constants.MOCK_PARENT_PROJECT_ID[:14])
+
+    @mock.patch('a10_octavia.common.utils.get_parent_project',
+                return_value=a10constants.MOCK_PARENT_PROJECT_ID)
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.a10_utils')
+    def test_HandleACOSPartitionChange_parent_partition_no_hmt(
+            self, mock_utils, mock_parent_project_id):
+        self.conf.config(group=a10constants.A10_GLOBAL_CONF_SECTION,
+                         use_parent_partition=True)
+        partition = {
+            'partition-name': a10constants.MOCK_CHILD_PROJECT_ID[:14],
+            'status': 'Active'
+        }
+        mock_client = mock.Mock()
+        mock_client.system.partition.get.return_value = partition
+        mock_utils.get_axapi_client.return_value = mock_client
+
+        mock_lb = copy.deepcopy(LB)
+        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
+        mock_thunder_config = copy.deepcopy(VTHUNDER)
+        mock_thunder_config.hierarchical_multitenancy = "disable"
+        vthunder_config = task.HandleACOSPartitionChange().execute(
+            LB, mock_thunder_config)
+
+        self.assertEqual(vthunder_config.partition_name, a10constants.MOCK_CHILD_PROJECT_ID[:14])
+
+    @mock.patch('a10_octavia.common.utils.get_parent_project',
+                return_value=a10constants.MOCK_PARENT_PROJECT_ID)
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.a10_utils')
+    def test_HandleACOSPartitionChange_parent_partition_hmt_no_use_parent_partition(
+            self, mock_utils, mock_parent_project_id):
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=False)
+
+        partition = {
+            'partition-name': a10constants.MOCK_CHILD_PROJECT_ID[:14],
+            'status': 'Active'
+        }
+        mock_client = mock.Mock()
+        mock_client.system.partition.get.return_value = partition
+        mock_utils.get_axapi_client.return_value = mock_client
+
+        mock_lb = copy.deepcopy(LB)
+        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
+        mock_thunder_config = copy.deepcopy(VTHUNDER)
+        mock_thunder_config.hierarchical_multitenancy = "enable"
+
+        vthunder_config = task.HandleACOSPartitionChange().execute(
+            LB, mock_thunder_config)
+        self.assertEqual(vthunder_config.partition_name, a10constants.MOCK_CHILD_PROJECT_ID[:14])
+
+    @mock.patch('a10_octavia.common.utils.get_parent_project',
+                return_value=a10constants.MOCK_PARENT_PROJECT_ID)
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.a10_utils')
+    def test_HandleACOSPartitionChange_child_partition_exists(
+            self, mock_utils, mock_parent_project_id):
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=False)
+
+        partition = {
+            'partition-name': a10constants.MOCK_CHILD_PROJECT_ID[:14],
+            'status': 'Active'
+        }
+        mock_client = mock.Mock()
+        mock_client.system.partition.get.return_value = partition
+        mock_utils.get_axapi_client.return_value = mock_client
+
+        mock_lb = copy.deepcopy(LB)
+        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
+        mock_thunder_config = copy.deepcopy(VTHUNDER)
+        mock_thunder_config.hierarchical_multitenancy = "enable"
+
+        vthunder_config = task.HandleACOSPartitionChange().execute(
+            LB, mock_thunder_config)
+        self.assertEqual(vthunder_config.partition_name,
+                         a10constants.MOCK_CHILD_PROJECT_ID[:14])
+
+    @mock.patch('a10_octavia.common.utils.get_parent_project',
+                return_value=a10constants.MOCK_PARENT_PROJECT_ID)
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.a10_utils')
+    def test_HandleACOSPartitionChange_nlbaas_backwards_compat(
+            self, mock_utils, mock_parent_project_id):
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=False)
+
+        partition = {
+            'partition-name': a10constants.MOCK_CHILD_PROJECT_ID[:13],
+            'status': 'Active'
+        }
+        mock_client = mock.Mock()
+        mock_client.system.partition.get.return_value = partition
+        mock_utils.get_axapi_client.return_value = mock_client
+
+        mock_lb = copy.deepcopy(LB)
+        mock_lb.project_id = a10constants.MOCK_CHILD_PROJECT_ID
+        mock_thunder_config = copy.deepcopy(VTHUNDER)
+        mock_thunder_config.hierarchical_multitenancy = "enable"
+
+        vthunder_config = task.HandleACOSPartitionChange().execute(
+            LB, mock_thunder_config)
+        self.assertEqual(vthunder_config.partition_name,
+                         a10constants.MOCK_CHILD_PROJECT_ID[:13])
 
     @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.time')
     def test_AmphoraPostVipPlug_execute_for_reload_reboot(self, mock_time):
@@ -805,3 +977,46 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.execute(added_ports, mock_LB, mock_thunder)
         self.client_mock.system.action.write_memory.assert_not_called()
         self.client_mock.system.action.reload_reboot_for_interface_detachment.assert_not_called()
+
+    def test_GetVthunderConfByFlavor_with_flavor(self):
+        conf = {}
+        use_dev_flavor = False
+        mock_LB = copy.deepcopy(LB)
+        mock_task = task.GetVthunderConfByFlavor()
+        mock_task.axapi_client = self.client_mock
+        conf, use_dev_flavor = mock_task.execute(mock_LB, FLAVOR_DEV2, DEV_CONF_DICT, DEV_FLAVOR)
+        self.assertEqual(use_dev_flavor, True)
+        self.assertEqual(conf, FLAVOR_DEV1)
+
+    def test_GetVthunderConfByFlavor_without_flavor(self):
+        conf = {}
+        use_dev_flavor = False
+        mock_LB = copy.deepcopy(LB)
+        mock_task = task.GetVthunderConfByFlavor()
+        mock_task.axapi_client = self.client_mock
+        conf, use_dev_flavor = mock_task.execute(mock_LB, FLAVOR_DEV2, DEV_CONF_DICT, None)
+        self.assertEqual(use_dev_flavor, False)
+        self.assertEqual(conf, FLAVOR_DEV2)
+
+    def test_allowl2dsr_with_deployment_flavor(self):
+        mock_task = task.AllowL2DSR()
+        mock_task._network_driver = self.client_mock
+        lb_count = 1
+        mock_task.execute(SUBNET, AMPHORAE, lb_count, flavor_data=DEPLOYMENT_FLAVOR)
+        self.client_mock.allow_use_any_source_ip_on_egress.assert_called_with(
+            SUBNET.network_id, AMPHORAE[0])
+
+    def test_allowl2dsr_without_deployment_flavor(self):
+        mock_task = task.AllowL2DSR()
+        mock_task._network_driver = self.client_mock
+        lb_count = 1
+        mock_task.execute(SUBNET, AMPHORAE, lb_count, flavor_data=DEV_FLAVOR)
+        self.client_mock.allow_use_any_source_ip_on_egress.assert_not_called()
+
+    def test_deletel2dsr_with_deployment_flavor(self):
+        mock_task = task.DeleteL2DSR()
+        mock_task._network_driver = self.client_mock
+        lb_count = 1
+        mock_task.execute(SUBNET, AMPHORAE, lb_count, lb_count, flavor_data=DEPLOYMENT_FLAVOR)
+        self.client_mock.remove_any_source_ip_on_egress.assert_called_with(
+            SUBNET.network_id, AMPHORAE[0])
