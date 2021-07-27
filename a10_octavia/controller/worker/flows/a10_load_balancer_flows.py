@@ -736,8 +736,7 @@ class LoadBalancerFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER,
-                    a10constants.USE_DEVICE_FLAVOR],
+                    a10constants.VTHUNDER],
                 provides=a10constants.VRID_LIST))
         handle_vrid_for_lb_subflow.add(vthunder_tasks.ConfigureVRID(
             requires=a10constants.VTHUNDER))
@@ -756,8 +755,7 @@ class LoadBalancerFlows(object):
             a10_database_tasks.UpdateVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.VRID_LIST,
-                    a10constants.VTHUNDER_CONFIG,
-                    a10constants.USE_DEVICE_FLAVOR],
+                    a10constants.VTHUNDER],
                 rebind={
                     a10constants.LB_RESOURCE: constants.LOADBALANCER}))
         return handle_vrid_for_lb_subflow
@@ -784,8 +782,7 @@ class LoadBalancerFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER,
-                    a10constants.USE_DEVICE_FLAVOR],
+                    a10constants.VTHUNDER],
                 provides=a10constants.VRID_LIST))
         delete_lb_vrid_subflow.add(
             a10_network_tasks.DeleteVRIDPort(
@@ -820,8 +817,7 @@ class LoadBalancerFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER,
-                    a10constants.USE_DEVICE_FLAVOR],
+                    a10constants.VTHUNDER],
                 provides=a10constants.VRID_LIST))
         delete_lb_vrid_subflow.add(
             a10_network_tasks.DeleteVRIDPort(
@@ -858,6 +854,7 @@ class LoadBalancerFlows(object):
         pools_listeners_delete_flow = linear_flow.Flow('pool_listener_delete_flow')
         store = {}
         # loop for loadbalancer's l7policy deletion
+        l7policy_delete_flow = None
         for listener in lb.listeners:
             l7policy_delete_flow = linear_flow.Flow('l7policy_delete_flow')
             for l7policy in listener.l7policies:
@@ -865,7 +862,8 @@ class LoadBalancerFlows(object):
                 store[l7policy_name] = l7policy
                 l7policy_delete_flow.add(
                     self._l7policy_flows.get_cascade_delete_l7policy_internal_flow(l7policy_name))
-        pools_listeners_delete_flow.add(l7policy_delete_flow)
+        if l7policy_delete_flow:
+            pools_listeners_delete_flow.add(l7policy_delete_flow)
 
         # loop for loadbalancer's pool deletion
         for pool in lb.pools:
