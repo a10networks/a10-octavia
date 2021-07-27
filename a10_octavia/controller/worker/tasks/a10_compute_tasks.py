@@ -39,12 +39,16 @@ class ComputeCreate(BaseComputeTask):
                 server_group_id=None, ports=None, network_list=None):
 
         ports = ports or []
-        network_ids = CONF.a10_controller_worker.amp_boot_network_list[:]
+        network_ids = CONF.a10_controller_worker.amp_mgmt_network
+        network_ids = network_ids if network_ids[0] else []
+        if (CONF.glm_license.amp_license_network and
+                network_ids[0] != CONF.glm_license.amp_license_network):
+            network_ids.append(CONF.glm_license.amp_license_network)
+        network_ids.extend(CONF.a10_controller_worker.amp_boot_network_list[:])
         if network_list:
             for net in network_list:
                 if net not in network_ids:
                     network_ids.append(net)
-
         # Injecting VIP network ID
         if loadbalancer:
             if loadbalancer.vip.network_id not in network_ids:

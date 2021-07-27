@@ -137,7 +137,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                    constants.LB_CREATE_SPARES_POOL_PRIORITY}
         )
         with tf_logging.DynamicLoggingListener(create_vthunder_tf, log=LOG):
-
             create_vthunder_tf.run()
 
         return create_vthunder_tf.storage.fetch('amphora')
