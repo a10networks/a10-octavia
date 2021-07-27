@@ -52,6 +52,33 @@ A10_GLOBAL_OPTS = [
                help=_('Default flavor ID to apply globally to all users')),
 ]
 
+A10_GLM_LICENSE = [
+    cfg.StrOpt('flexpool_token',
+               default=None,
+               help=_('Alphanumeric string allowing for device licensing.')),
+    cfg.StrOpt('primary_dns',
+               default=None,
+               help=_('Primary nameserver used to contact the GLM or ELM')),
+    cfg.StrOpt('secondary_dns',
+               default=None,
+               help=_('Secondary nameserver used to contact the GLM or ELM')),
+    cfg.StrOpt('allocate_bandwidth',
+               default=None,
+               help=_('Bandwidth allocated per amphora')),
+    cfg.StrOpt('proxy_host',
+               default=None,
+               help=_('Hostname or IP of the forward proxy')),
+    cfg.StrOpt('proxy_username',
+               default=None,
+               help=_('Bandwidth allocated per amphora')),
+    cfg.StrOpt('proxy_password',
+               default=None,
+               help=_('Bandwidth allocated per amphora')),
+    cfg.StrOpt('proxy_port',
+               default=None,
+               help=_('Bandwidth allocated per amphora')),
+]
+
 A10_VTHUNDER_OPTS = [
     cfg.StrOpt('default_vthunder_username',
                default='admin',
