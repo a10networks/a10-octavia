@@ -222,24 +222,21 @@ class EnableInterface(VThunderBaseTask):
 
         try:
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
+                interfaces = self.axapi_client.interface.get_list()
                 if (not lb_exists_flag and topology == "ACTIVE_STANDBY") or topology == "SINGLE":
-                    interfaces = self.axapi_client.interface.get_list()
                     for i in range(len(interfaces['interface']['ethernet-list'])):
                         if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
                             ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                             self.axapi_client.system.action.setInterface(ifnum)
                     LOG.debug("Configured the ethernet interface for vThunder: %s", vthunder.id)
                 else:
-                    if ifnum_master:
-                        for i in range(len(ifnum_master)):
-                            self.axapi_client.system.action.setInterface(ifnum_master[i])
-                            LOG.debug("Configured the ethernet interface for "
-                                      "master vThunder: %s", vthunder.id)
-                    elif ifnum_backup:
-                        for i in range(len(ifnum_backup)):
-                            self.axapi_client.system.action.setInterface(ifnum_backup[i])
-                            LOG.debug("Configured the ethernet interface for "
-                                      "backup vThunder: %s", vthunder.id)
+                    for i in range(len(interfaces['interface']['ethernet-list'])):
+                        if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
+                            ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
+                            self.axapi_client.device_context.switch_context(1)
+                            self.axapi_client.system.action.setInterface(ifnum)
+                            self.axapi_client.device_context.switch_context(2)
+                            self.axapi_client.system.action.setInterface(ifnum)
         except(acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure ethernet interface vThunder: %s", str(e))
             raise e
@@ -1125,30 +1122,41 @@ class VCSSyncWait(VThunderBaseTask):
 
         attempts = CONF.a10_controller_worker.amp_vcs_retries
         while attempts >= 0:
-            vmaster_ready = False
-            vblade_ready = False
             try:
                 attempts = attempts - 1
                 vcs_summary = {}
                 vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
-                vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
-                for i in range(len(vcs_member_list)):
-                    role = vcs_member_list[i]['state'].split('(')[0]
-                    if role == "vMaster":
-                        vmaster_ready = True
-                    if role == "vBlade":
-                        vblade_ready = True
-                    if vmaster_ready is True and vblade_ready is True:
+                vcs_summary = vcs_summary['vcs-summary']['oper']
+
+                if acos_client.utils.acos_version_cmp(vthunder.acos_version,
+                                                      a10constants.ACOS_5_2_1_P2) >= 0:
+                    vcs_ready = False
+                    for peer_vcs_state in vcs_summary['vcs-handshake-completed-list']:
+                        if peer_vcs_state['vcs-handshake-completed'] == 1:
+                            vcs_ready = True
+                            break
+                    if vcs_ready is True:
                         break
                 else:
-                    # TODO(ytsai) maybe reload the device and try again
-                    if vmaster_ready:
+                    vmaster_ready = False
+                    vblade_ready = False
+                    vcs_member_list = vcs_summary['member-list']
+                    for i in range(len(vcs_member_list)):
+                        role = vcs_member_list[i]['state'].split('(')[0]
+                        if role == "vMaster":
+                            vmaster_ready = True
+                        if role == "vBlade":
+                            vblade_ready = True
+                        if vmaster_ready is True and vblade_ready is True:
+                            break
+                    else:
+                        if vmaster_ready:
+                            raise acos_errors.AxapiJsonFormatError(
+                                msg="vBlade not found in vcs-summary")
                         raise acos_errors.AxapiJsonFormatError(
-                            msg="vBlade not found in vcs-summary")
-                    raise acos_errors.AxapiJsonFormatError(
-                        msg="vMaster not found in vcs-summary")
-                if vmaster_ready is True and vblade_ready is True:
-                    break
+                            msg="vMaster not found in vcs-summary")
+                    if vmaster_ready is True and vblade_ready is True:
+                        break
             except a10_task_utils.thunder_busy_exceptions() as e:
                 # acos-client already wait default_axapi_timeout for these exceptions.
                 axapi_timeout = CONF.vthunder.default_axapi_timeout
