@@ -68,13 +68,13 @@ A10_GLM_LICENSE = [
                help=_('Hostname or IP of the forward proxy')),
     cfg.StrOpt('proxy_username',
                default=None,
-               help=_('Bandwidth allocated per amphora')),
+               help=_('Username used to authenticate to forward proxy')),
     cfg.StrOpt('proxy_password',
                default=None,
-               help=_('Bandwidth allocated per amphora')),
+               help=_('Password used to authenticate to forward proxy')),
     cfg.StrOpt('proxy_port',
                default=None,
-               help=_('Bandwidth allocated per amphora')),
+               help=_('Port to connect to on the forward proxy')),
 ]
 
 A10_VTHUNDER_OPTS = [

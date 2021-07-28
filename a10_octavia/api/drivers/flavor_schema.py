@@ -194,6 +194,20 @@ SUPPORTED_FLAVOR_SCHEMA = {
                                    " for the loadbalancer"
                 }
             }
+        },
+        "dns": {
+            "type": "object",
+            "description": "DNS name server information",
+            "properties": {
+                "primary_dns": {
+                    "type": "string",
+                    "description": "Primary nameserver used to contact the GLM or ELM"
+                },
+                "secondary_dns": {
+                    "type": "string",
+                    "description": "Secondary nameserver used to contact the GLM or ELM"
+                }
+            }
         }
     }
 }
