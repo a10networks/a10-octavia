@@ -12,10 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from os import set_blocking
 import acos_client
 from acos_client import errors as acos_errors
 
+from requests import exceptions as req_exceptions
 from taskflow import task
 
 from oslo_config import cfg
@@ -42,8 +42,7 @@ class DNSConfiguration(task.Task):
             self._network_driver = a10_utils.get_network_driver()
         return self._network_driver
 
-    @axapi_client_decorator
-    def execute(self, vthunder, amphora_id, flavor_data=None):
+    def _get_dns_nameservers(self, flavor_data=None):
         license_net_id = CONF.glm_license.amp_license_network
         license_net = self.network_driver.get_network(license_net_id)
         license_subnet_id = license_net[0]
@@ -69,4 +68,28 @@ class DNSConfiguration(task.Task):
             secondary_dns = CONF.glm_license.secondary_dns
 
         if flavor_data:
-            pass
+            dns_flavor = flavor_data.get('dns')
+            if dns_flavor and dns_flavor.get('primary_dns'):
+                primary_dns = dns_flavor.get('primary_dns')
+            if dns_flavor and dns_flavor.get('secondary_dns'):
+                secondary_dns = dns_flavor.get('secondary_dns')
+
+        return primary_dns, secondary_dns
+
+    @axapi_client_decorator
+    def execute(self, vthunder, flavor_data=None):
+        primary_dns, secondary_dns = self._get_dns_nameservers(flavor_data)
+        try:
+            self.axapi_client.set(primary_dns, secondary_dns)
+        except acos_errors.ACOSException as e:
+            LOG.error("Could not set DNS configuration for amphora %s",
+                      vthunder.amphora_id)
+            raise e
+    
+    @axapi_client_decorator_for_revert
+    def revert(self, vthunder, flavor_data, *args, **kwargs):
+        primary_dns, secondary_dns = self._get_dns_nameservers(flavor_data)
+        try:
+            self.axapi_client.delete(primary_dns, secondary_dns)
+        except req_exceptions.ConnectionError:
+            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
