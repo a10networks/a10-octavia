@@ -198,11 +198,14 @@ class VThunderRepository(BaseRepository):
             self.model_class.created_at < initial_setup_wait_time).filter(
             self.model_class.last_udp_update < failover_wait_time).filter(
             self.model_class.status == 'ACTIVE').filter(
-            or_(self.model_class.role == "MASTER",
-                self.model_class.role == "BACKUP")).first()
+            self.model_class.health_state == 'UP').first()
         if model is None:
             return None
         return model.to_data_model()
+
+
+    def set_vthunder_health_state(self, session, id, new_state):
+        self.update(session, id, health_state=new_state)
 
     def get_vthunder_from_lb(self, session, lb_id):
         model = session.query(self.model_class).filter(

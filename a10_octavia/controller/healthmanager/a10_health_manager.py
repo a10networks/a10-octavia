@@ -15,8 +15,10 @@
 
 from concurrent import futures
 import datetime
+import time
 
 from oslo_config import cfg
+from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_utils import excutils
 
@@ -40,23 +42,38 @@ class A10HealthManager(health_manager.HealthManager):
         self.dead = exit_event
 
     def health_check(self):
+        LOG.debug('health_check() starting...')
         futs = []
         while not self.dead.is_set():
+            vthunder = None
             lock_session = None
             try:
-                lock_session = db_apis.get_session()
+                lock_session = db_apis.get_session(autocommit=False)
                 failover_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
                     seconds=CONF.a10_health_manager.heartbeat_timeout)
                 initial_setup_wait_time = datetime.datetime.utcnow() - datetime.timedelta(
                     seconds=CONF.a10_health_manager.failover_timeout)
-                # TODO(ytsai-a10) get_stale_vthunders() will always get the same (first) vthunder
                 vthunder = self.vthunder_repo.get_stale_vthunders(
                     lock_session, initial_setup_wait_time, failover_wait_time)
+                if vthunder:
+                    self.vthunder_repo.set_vthunder_health_state(
+                        lock_session, vthunder.id, 'DOWN')
+                lock_session.commit()
 
-            except Exception:
-                # TODO(ytsai-a10) lock_session is not locked session, don't call rollback() here.
-                #       Just log a warning here is enough.
+            except db_exc.DBDeadlock:
+                LOG.debug('Database reports deadlock. Skipping.')
+                lock_session.rollback()
+            except db_exc.RetryRequest:
+                LOG.debug('Database is requesting a retry. Skipping.')
+                lock_session.rollback()
+            except db_exc.DBConnectionError:
+                db_apis.wait_for_connection(self.dead)
+                lock_session.rollback()
+                if not self.dead.is_set():
+                    time.sleep(CONF.health_manager.heartbeat_timeout)
+            except Exception as e:
                 with excutils.save_and_reraise_exception():
+                    LOG.debug("Database error while health_check: %s", str(e))
                     if lock_session:
                         lock_session.rollback()
 

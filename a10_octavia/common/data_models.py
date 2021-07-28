@@ -140,7 +140,8 @@ class Thunder(BaseDataModel):
                  created_at=datetime.utcnow(), updated_at=datetime.utcnow(),
                  partition_name="shared", hierarchical_multitenancy="disable",
                  last_write_mem=None, vrid_floating_ip=None,
-                 device_network_map=None, acos_version=None, device_name_as_key=False):
+                 device_network_map=None, acos_version=None, device_name_as_key=False,
+                 health_state=None):
         self.id = id
         self.vthunder_id = vthunder_id
         self.amphora_id = amphora_id
@@ -166,6 +167,7 @@ class Thunder(BaseDataModel):
         self.device_network_map = device_network_map or []
         self.acos_version = acos_version
         self.device_name_as_key = device_name_as_key
+        self.health_state = health_state
 
 
 class HardwareThunder(Thunder):
