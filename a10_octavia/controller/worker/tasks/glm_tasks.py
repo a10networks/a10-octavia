@@ -69,16 +69,17 @@ class DNSConfiguration(task.Task):
 
         if flavor_data:
             dns_flavor = flavor_data.get('dns')
-            if dns_flavor and dns_flavor.get('primary_dns'):
-                primary_dns = dns_flavor.get('primary_dns')
-            if dns_flavor and dns_flavor.get('secondary_dns'):
-                secondary_dns = dns_flavor.get('secondary_dns')
+            if dns_flavor and dns_flavor.get('primary-dns'):
+                primary_dns = dns_flavor.get('primary-dns')
+            if dns_flavor and dns_flavor.get('secondary-dns'):
+                secondary_dns = dns_flavor.get('secondary-dns')
 
         return primary_dns, secondary_dns
 
     @axapi_client_decorator
-    def execute(self, vthunder, flavor_data=None):
-        primary_dns, secondary_dns = self._get_dns_nameservers(flavor_data)
+    def execute(self, vthunder, flavor=None):
+        import rpdb; rpdb.set_trace()
+        primary_dns, secondary_dns = self._get_dns_nameservers(flavor)
         try:
             self.axapi_client.set(primary_dns, secondary_dns)
         except acos_errors.ACOSException as e:

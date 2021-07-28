@@ -26,6 +26,7 @@ from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_compute_tasks as compute_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
+from a10_octavia.controller.worker.tasks import glm_tasks
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 CONF = cfg.CONF
@@ -47,7 +48,6 @@ class VThunderFlows(object):
         create_vthunder_flow.add(database_tasks.CreateAmphoraInDB(
             name=sf_name + '-' + constants.CREATE_AMPHORA_INDB,
             provides=constants.AMPHORA_ID))
-
         create_vthunder_flow.add(compute_tasks.ComputeCreate(
             name=sf_name + '-' + constants.COMPUTE_CREATE,
             requires=(constants.AMPHORA_ID,
@@ -57,7 +57,6 @@ class VThunderFlows(object):
         create_vthunder_flow.add(database_tasks.UpdateAmphoraComputeId(
             name=sf_name + '-' + constants.UPDATE_AMPHORA_COMPUTEID,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_ID)))
-
         create_vthunder_flow.add(database_tasks.MarkAmphoraBootingInDB(
             name=sf_name + '-' + constants.MARK_AMPHORA_BOOTING_INDB,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_ID)))
@@ -84,6 +83,8 @@ class VThunderFlows(object):
             database_tasks.MarkAmphoraReadyInDB(
                 name=sf_name + '-' + a10constants.MARK_AMPHORA_READY_INDB,
                 requires=(constants.AMPHORA)))
+        create_vthunder_flow.add(self.get_glm_license_subflow(
+            prefix=a10constants.SPARE_VTHUNDER_CREATE))
         create_vthunder_flow.add(
             vthunder_tasks.CreateHealthMonitorOnVThunder(
                 name=sf_name + '-' + a10constants.CREATE_HEALTH_MONITOR_ON_SPARE,
@@ -208,6 +209,7 @@ class VThunderFlows(object):
             create_amp_for_lb_subflow.add(database_tasks.MarkAmphoraMasterInDB(
                 name=sf_name + '-' + constants.MARK_AMP_MASTER_INDB,
                 requires=constants.AMPHORA))
+            create_amp_for_lb_subflow.add(self.get_glm_license_subflow(prefix))
         elif role == constants.ROLE_BACKUP:
             create_amp_for_lb_subflow.add(database_tasks.MarkAmphoraBackupInDB(
                 name=sf_name + '-' + constants.MARK_AMP_BACKUP_INDB,
@@ -362,6 +364,15 @@ class VThunderFlows(object):
             name=sf_name + '-' + a10constants.DELETE_STALE_SPARE_VTHUNDER,
             requires=(a10constants.SPARE_VTHUNDER)))
         return vthunder_for_amphora_subflow
+
+    def get_glm_license_subflow(self, prefix):
+        sf_name = prefix + '-' + a10constants.ACTIVATE_GLM_LICENSE_SUBFLOW
+        glm_license_subflow = linear_flow.Flow(sf_name)
+        glm_license_subflow.add(glm_tasks.DNSConfiguration(
+            name=a10constants.CONFIGURE_DNS_NAMESERVERS,
+            requires={a10constants.VTHUNDER, constants.FLAVOR}
+        ))
+        return glm_license_subflow
 
     def get_vrrp_subflow(self, prefix):
         sf_name = prefix + '-' + constants.GET_VRRP_SUBFLOW
@@ -539,6 +550,7 @@ class VThunderFlows(object):
             rebind={a10constants.VTHUNDER: vthunder.vthunder_id}))
 
         store.update(vthunder_store)
+<<<<<<< HEAD
         return reload_check_flow
 
     def get_failover_spare_vthunder_flow(self):
@@ -724,3 +736,6 @@ class VThunderFlows(object):
         failover_flow = linear_flow.Flow(sf_name)
 
         return failover_flow
+=======
+        return reload_check_flow
+>>>>>>> Added handling for when amp_license and amp_mgmt networks are not defined in the config

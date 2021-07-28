@@ -134,7 +134,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         create_vthunder_tf = self.taskflow_load(
             self._vthunder_flows.get_create_vthunder_flow(),
             store={constants.BUILD_TYPE_PRIORITY:
-                   constants.LB_CREATE_SPARES_POOL_PRIORITY}
+                   constants.LB_CREATE_SPARES_POOL_PRIORITY,
+                   constants.FLAVOR: None}
         )
         with tf_logging.DynamicLoggingListener(create_vthunder_tf, log=LOG):
             create_vthunder_tf.run()

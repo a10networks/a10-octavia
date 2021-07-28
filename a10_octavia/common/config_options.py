@@ -53,6 +53,11 @@ A10_GLOBAL_OPTS = [
 ]
 
 A10_GLM_LICENSE = [
+    cfg.IntOpt('amp_license_network',
+               default='',
+               help=_('Network used to connect the vThunder-Amphorae '
+                      'to the GLM or ELM. If not specified, the '
+                      'amp_mgmt_network_list is used instead.')), 
     cfg.StrOpt('flexpool_token',
                default=None,
                help=_('Alphanumeric string allowing for device licensing.')),
@@ -82,18 +87,18 @@ A10_GLM_LICENSE = [
 A10_VTHUNDER_OPTS = [
     cfg.StrOpt('default_vthunder_username',
                default='admin',
-               help=_('VThunder username')),
+               help=_('vThunder-Amphora username')),
     cfg.StrOpt('default_vthunder_password',
                default='a10',
-               help=_('VThunder password')),
+               help=_('vThunder-Amphora password')),
     cfg.IntOpt('default_axapi_version',
                default=30,
-               help=_('VThunder axapi version')),
+               help=_('vThunder-Amphora AXAPI version')),
     cfg.IntOpt('default_axapi_timeout',
                default=300,
-               help=_('VThunder axapi timeout')),
+               help=_('vThunder-Amphora AXAPI timeout')),
     cfg.BoolOpt('l2dsr_support', default=False,
-                help=_('For vThunder VIP port, ingres/egress allows any address with VIP '
+                help=_('For vThunder-Amphora VIP port, ingres/egress allows any address with VIP '
                        'interface MAC address to pass.')),
     cfg.BoolOpt('slb_no_snat_support', default=False,
                 help=_('Allow Loadbalancer use any source address to access backend server.')),
@@ -196,15 +201,15 @@ A10_HEALTH_MANAGER_OPTS = [
     cfg.IntOpt('failover_timeout',
                default=600,
                help=_('Interval(in seconds) to wait before considering '
-                      'a vThunder is eligible for failover.')),
+                      'a vThunder-Amphora is eligible for failover.')),
     cfg.IntOpt('health_check_timeout', min=1, max=180,
                default=3,
                help=_('Specify the Healthcheck timeout(in seconds) in '
-                      ' vThunder. ')),
+                      ' vThunder-Amphora. ')),
     cfg.IntOpt('health_check_max_retries', min=1, max=10,
                default=3,
                help=_('Specify the Healthcheck Retries in '
-                      'a vThunder. ')),
+                      'a vThunder-Amphora. ')),
     cfg.PortOpt('bind_port', default=5550,
                 help=_('Port number the controller will listen on'
                        'for heart beats')),
@@ -273,7 +278,12 @@ A10_CONTROLLER_WORKER_OPTS = [
                       'owner ID.  This is a recommended security setting.')),
     cfg.StrOpt('amp_ssh_key_name',
                default='',
-               help=_('SSH key name used to boot the VThunder')),
+               help=_('SSH key name used to boot the vThunder-Amphorae.')),
+    cfg.IntOpt('amp_mgmt_network',
+               default='',
+               help=_('Network used to manage the vThunder-Amphorae. '
+                      'If not specified, the first network in the '
+                      'amp_boot_network_list is used instead.')),
     cfg.ListOpt('amp_boot_network_list',
                 default='',
                 help=_('List of networks to attach to the VThunder. '
@@ -281,10 +291,10 @@ A10_CONTROLLER_WORKER_OPTS = [
                        'be attached to each vthunder.')),
     cfg.ListOpt('amp_secgroup_list',
                 default='',
-                help=_('List of security groups to attach to the VThunder.')),
+                help=_('List of security groups to attach to the vThunder-Amphorae.')),
     cfg.IntOpt('build_rate_limit',
                default=-1,
-               help=_('Number of vThunders that could be built per controller '
+               help=_('Number of vThunder-Amphorae that could be built per controller '
                       'worker, simultaneously.')),
     cfg.StrOpt('network_driver',
                default='network_noop_driver',
@@ -297,14 +307,14 @@ A10_CONTROLLER_WORKER_OPTS = [
                       'ACTIVE_STANDBY - Two vthunder per load balancer.')),
     cfg.IntOpt('amp_vcs_wait_sec',
                default=10,
-               help=_('Seconds to wait between checks on whether an VThunder '
+               help=_('Seconds to wait between checks on whether an vThunder-Amphorae '
                       'vcs negotiation is ready')),
     cfg.IntOpt('amp_vcs_retries',
                default=60,
-               help=_('Retry attempts to wait for VThunder vcs negotiation')),
+               help=_('Retry attempts to wait for ACOS VCS negotiation')),
     cfg.IntOpt('amp_busy_wait_sec',
                default=900,
-               help=_('Timeout for waiting when vThunder instance is busy. '
+               help=_('Timeout for waiting when vThunder-Amphora is busy. '
                       '(0 for no timeout')),
     cfg.IntOpt('retry_attempts',
                default=15,
@@ -327,13 +337,13 @@ A10_HOUSE_KEEPING_OPTS = [
                       ' spare amphora in the pool')),
     cfg.IntOpt('spare_amphora_pool_size',
                default=0,
-               help=_('Number of spare vthunders')),
+               help=_('Number of spare vThunder-Amphorae')),
     cfg.IntOpt('cleanup_interval',
                default=30,
                help=_('DB cleanup interval in seconds')),
     cfg.IntOpt('amphora_expiry_age',
                default=604800,
-               help=_('VThunder expiry age in seconds')),
+               help=_('vThunder-Amphora expiry age in seconds')),
     cfg.IntOpt('load_balancer_expiry_age',
                default=604800,
                help=_('Load balancer expiry age in seconds')),
@@ -345,7 +355,7 @@ A10_HOUSE_KEEPING_OPTS = [
                help=_('Seconds until certificate expiration')),
     cfg.IntOpt('cert_rotate_threads',
                default=10,
-               help=_('Number of threads performing vthunder certificate'
+               help=_('Number of threads performing vThunder-Amphora certificate'
                       ' rotation')),
     cfg.IntOpt('write_mem_interval',
                default=3600,
