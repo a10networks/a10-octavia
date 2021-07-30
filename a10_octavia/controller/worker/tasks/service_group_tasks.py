@@ -136,8 +136,8 @@ class PoolUpdate(PoolParent, task.Task):
     """Task to update pool"""
 
     @axapi_client_decorator
-    def execute(self, pool, vthunder, update_dict, flavor=None):
-        pool.update(update_dict)
+    def execute(self, pool, vthunder, update_dict={}, flavor=None):
+        pool.__dict__.update(update_dict)
         try:
             service_group = self.axapi_client.slb.service_group.get(
                 pool.id)['service-group']
