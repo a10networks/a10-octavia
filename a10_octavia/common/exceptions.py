@@ -246,3 +246,9 @@ class InterfaceNotFound(acos_errors.ACOSException):
         msg = ('vThunder instance {0} has no interface in network {1}.').format(comput_id,
                                                                                 network_id)
         super(InterfaceNotFound, self).__init__(msg=msg)
+
+
+class NoComputeForLoadbalancer(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('No valid compute for the loadbalancer.')
+        super(NoComputeForLoadbalancer, self).__init__(msg=msg)

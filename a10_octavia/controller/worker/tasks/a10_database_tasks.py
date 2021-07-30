@@ -331,7 +331,7 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
             loadbalancer_id=None,
             project_id=None,
             compute_id=amphora.compute_id,
-            topology="SINGLE",
+            topology=a10constants.TOPOLOGY_SPARE,
             role="MASTER",
             status="READY",
             created_at=datetime.utcnow(),
@@ -979,6 +979,7 @@ class ValidateComputeForProject(BaseDatabaseTask):
     """Validate compute_id got for the project"""
 
     def execute(self, loadbalancer, role):
+        vthunder = None
         vthunder_ids = self.vthunder_repo.get_vthunders_by_project_id_and_role(
             db_apis.get_session(), loadbalancer.project_id, role)
         for vthunder_id in vthunder_ids:
@@ -993,7 +994,53 @@ class ValidateComputeForProject(BaseDatabaseTask):
                     LOG.debug("Successfully validated comput_id %s for the project %s",
                               vthunder.compute_id, vthunder.project_id)
                     break
+
+        if vthunder is None:
+            return None
         return vthunder.compute_id
+
+
+class GetSpareComputeForProject(BaseDatabaseTask):
+    """Get spare compute for the project"""
+
+    def __init__(self, *arg, **kwargs):
+        self.spare = None
+        super(GetSpareComputeForProject, self).__init__(*arg, **kwargs)
+
+    def execute(self, compute_id):
+        if compute_id is None:
+            vthunder = self.vthunder_repo.get_spare_vthunder(
+                db_apis.get_session())
+            if vthunder:
+                self.spare = vthunder
+                self.vthunder_repo.set_spare_vthunder_status(
+                    db_apis.get_session(), self.spare.id, "BUSY")
+                compute_id = vthunder.compute_id
+            else:
+                raise exceptions.NoComputeForLoadbalancer()
+        return compute_id, self.spare
+
+    def revert(self, compute_id):
+        if self.spare is not None:
+            self.vthunder_repo.set_spare_vthunder_status(
+                db_apis.get_session(), self.spare.id, "READY")
+
+
+class DeleteUsedSpareVThunder(BaseDatabaseTask):
+    """Delete spare compute vthunder and amphora"""
+
+    def execute(self, spare_vthunder):
+        if spare_vthunder:
+            try:
+                self.amphora_repo.delete(db_apis.get_session(), id=spare_vthunder.amphora_id)
+            except Exception as e:
+                LOG.exception("Failed to delete used spare amphora %s due to %s",
+                              spare_vthunder.amphora_id, str(e))
+            try:
+                self.vthunder_repo.delete(db_apis.get_session(), id=spare_vthunder.id)
+            except Exception as e:
+                LOG.exception("Failed to delete used spare vthunder %s due to %s",
+                              spare_vthunder.id, str(e))
 
 
 class CountLoadbalancersOnThunderBySubnet(BaseDatabaseTask):

@@ -75,6 +75,14 @@ class VThunderFlows(object):
             vthunder_tasks.VThunderComputeConnectivityWait(
                 name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
                 requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        create_vthunder_flow.add(
+            database_tasks.MarkAmphoraReadyInDB(
+                name=sf_name + '-' + a10constants.MARK_AMPHORA_READY_INDB,
+                requires=(constants.AMPHORA)))
+        create_vthunder_flow.add(
+            vthunder_tasks.CreateHealthMonitorOnVThunder(
+                name=sf_name + '-' + a10constants.CREATE_HEALTH_MONITOR_ON_SPARE,
+                requires=(a10constants.VTHUNDER)))
         return create_vthunder_flow
 
     def get_vthunder_for_lb_subflow(
@@ -229,6 +237,10 @@ class VThunderFlows(object):
             requires=constants.LOADBALANCER,
             inject={"role": role},
             provides=constants.COMPUTE_ID))
+        vthunder_for_amphora_subflow.add(a10_database_tasks.GetSpareComputeForProject(
+            name=sf_name + '-' + a10constants.GET_SPARE_COMPUTE_FOR_PROJECT,
+            requires=constants.COMPUTE_ID,
+            provides=(constants.COMPUTE_ID, a10constants.SPARE_VTHUNDER)))
         vthunder_for_amphora_subflow.add(database_tasks.UpdateAmphoraComputeId(
             name=sf_name + '-' + constants.UPDATE_AMPHORA_COMPUTEID,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_ID)))
@@ -245,6 +257,10 @@ class VThunderFlows(object):
             name=sf_name + '-' + a10constants.CREATE_VTHUNDER_ENTRY,
             requires=(constants.AMPHORA, constants.LOADBALANCER),
             inject={"role": role, "status": constants.PENDING_CREATE}))
+        # the spare vThunder is used, cleanup the database
+        vthunder_for_amphora_subflow.add(a10_database_tasks.DeleteUsedSpareVThunder(
+            name=sf_name + '-' + a10constants.DELETE_USED_SPARE_VTHUNDER,
+            requires=(a10constants.SPARE_VTHUNDER)))
         # Get VThunder details from database
         vthunder_for_amphora_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,

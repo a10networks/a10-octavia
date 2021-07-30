@@ -61,6 +61,7 @@ class ComputeCreate(BaseComputeTask):
 
             LOG.debug("Server created with id: %s for amphora id: %s",
                       compute_id, amphora_id)
+
             return compute_id
 
         except Exception as e:

@@ -304,6 +304,9 @@ class VThunderRepository(BaseRepository):
 
         return model.to_data_model()
 
+    def set_spare_vthunder_status(self, session, id, new_status):
+        self.update(session, id, status=new_status)
+
     def get_spare_vthunder_count(self, session):
         with session.begin(subtransactions=True):
             count = session.query(self.model_class).filter_by(

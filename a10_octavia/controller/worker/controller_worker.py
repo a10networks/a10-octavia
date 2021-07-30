@@ -1181,6 +1181,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 return
 
             LOG.info("Starting Failover process on %s", vthunder.ip_address)
+
+            """
+            store = {a10constants.VTHUNDER: vthunder}
+            if vthunder.topology == a10constants.TOPOLOGY_SPARE:
+            elif vthunder.topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            """
+
             """
             # feature : db role switching for HA flow
             self._switch_roles_for_ha_flow(vthunder)
