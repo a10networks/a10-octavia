@@ -94,7 +94,7 @@ class ListenersParent(object):
             if (update_dict and 'default_tls_container_ref' in update_dict
                     and update_dict["default_tls_container_ref"] is None):
                 template_args["template_client_ssl"] = None
-            else:
+            elif listener.protocol == 'https':
                 template_args["template_client_ssl"] = listener.id
 
             template_http = CONF.listener.template_http
