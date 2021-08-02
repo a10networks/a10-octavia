@@ -560,7 +560,7 @@ class LoadBalancerFlows(object):
             provides=constants.FLAVOR_DATA))
         update_LB_flow.add(virtual_server_tasks.UpdateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
-                      constants.FLAVOR_DATA)))
+                      constants.FLAVOR_DATA, constants.UPDATE_DICT)))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         update_LB_flow.add(database_tasks.MarkLBActiveInDB(
@@ -613,7 +613,7 @@ class LoadBalancerFlows(object):
 
         update_LB_flow.add(virtual_server_tasks.UpdateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
-                      constants.FLAVOR_DATA)))
+                      constants.FLAVOR_DATA, constants.UPDATE_DICT)))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         if CONF.a10_global.network_type == 'vlan':
