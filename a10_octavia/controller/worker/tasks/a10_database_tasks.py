@@ -66,6 +66,15 @@ class GetVThunderTask(BaseDatabaseTask):
         return vthunder
 
 
+class GetVThunderAmphora(BaseDatabaseTask):
+    """Get vThunder Amphora for taskflow"""
+
+    def execute(self, vthunder):
+        amphora = self.amphora_repo.get(db_apis.get_session(),
+                                        id=vthunder.amphora_id)
+        return amphora
+
+
 class CreateVThunderEntry(BaseDatabaseTask):
     """ Create VThunder device entry in DB"""
 
@@ -199,14 +208,13 @@ class GetBackupVThunderByLoadBalancer(BaseDatabaseTask):
 class MapLoadbalancerToAmphora(BaseDatabaseTask):
     """Maps and assigns a load balancer to an amphora in the database."""
 
-    def execute(self, loadbalancer, server_group_id=None):
+    def execute(self, loadbalancer, server_group_id=None, role=constants.ROLE_STANDALONE):
         """Allocates an Amphora for the load balancer in the database.
 
         :param loadbalancer_id: The load balancer id to map to an amphora
         :returns: Amphora ID if one was allocated, None if it was
                   unable to allocate an Amphora
         """
-
         if server_group_id is not None:
             LOG.debug("Load balancer is using anti-affinity. Skipping spares "
                       "pool allocation.")
@@ -218,6 +226,13 @@ class MapLoadbalancerToAmphora(BaseDatabaseTask):
 
         if vthunder is None:
             # Check for spare vthunder
+            if role == constants.ROLE_BACKUP:
+                # For VCS, master will take one spare vthunder.
+                spare_vthunder_count = self.vthunder_repo.get_spare_vthunder_count(
+                    db_apis.get_session())
+                if spare_vthunder_count < 2:
+                    return None
+
             vthunder = self.vthunder_repo.get_spare_vthunder(
                 db_apis.get_session())
             if vthunder is None:
@@ -1026,7 +1041,7 @@ class GetSpareComputeForProject(BaseDatabaseTask):
                 db_apis.get_session(), self.spare.id, "READY")
 
 
-class DeleteUsedSpareVThunder(BaseDatabaseTask):
+class DeleteStaleSpareVThunder(BaseDatabaseTask):
     """Delete spare compute vthunder and amphora"""
 
     def execute(self, spare_vthunder):

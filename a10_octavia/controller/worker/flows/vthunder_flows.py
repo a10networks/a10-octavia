@@ -19,6 +19,7 @@ from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
+from octavia.controller.worker.tasks import compute_tasks as compute
 from octavia.controller.worker.tasks import database_tasks
 
 from a10_octavia.common import a10constants
@@ -103,6 +104,7 @@ class VThunderFlows(object):
         allocate_and_associate_amp = a10_database_tasks.MapLoadbalancerToAmphora(
             name=sf_name + '-' + constants.MAP_LOADBALANCER_TO_AMPHORA,
             requires=constants.LOADBALANCER,
+            inject={a10constants.ROLE: role},
             provides=constants.AMPHORA_ID)
 
         create_amp = self._get_create_amp_for_lb_subflow(prefix, role)
@@ -258,8 +260,8 @@ class VThunderFlows(object):
             requires=(constants.AMPHORA, constants.LOADBALANCER),
             inject={"role": role, "status": constants.PENDING_CREATE}))
         # the spare vThunder is used, cleanup the database
-        vthunder_for_amphora_subflow.add(a10_database_tasks.DeleteUsedSpareVThunder(
-            name=sf_name + '-' + a10constants.DELETE_USED_SPARE_VTHUNDER,
+        vthunder_for_amphora_subflow.add(a10_database_tasks.DeleteStaleSpareVThunder(
+            name=sf_name + '-' + a10constants.DELETE_STALE_SPARE_VTHUNDER,
             requires=(a10constants.SPARE_VTHUNDER)))
         # Get VThunder details from database
         vthunder_for_amphora_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
@@ -498,3 +500,35 @@ class VThunderFlows(object):
 
         store.update(vthunder_store)
         return reload_check_flow
+
+    def get_failover_spare_vthunder_flow(self):
+        """Perform failover for spare vthunder"""
+        sf_name = 'a10-house-keeper-failover-spare-vthunder'
+        failover_flow = linear_flow.Flow(sf_name)
+
+        failover_flow.add(a10_database_tasks.GetVThunderAmphora(
+            name=sf_name + '-' + a10constants.GET_VTHUNDER_AMPHORA,
+            requires=a10constants.VTHUNDER,
+            provides=constants.AMPHORA))
+        failover_flow.add(compute.ComputeDelete(
+            name=sf_name + '-' + a10constants.COMPUTE_DELETE,
+            requires=constants.AMPHORA))
+        failover_flow.add(a10_database_tasks.DeleteStaleSpareVThunder(
+            name=sf_name + '-' + a10constants.DELETE_STALE_SPARE_VTHUNDER,
+            rebind={a10constants.SPARE_VTHUNDER: a10constants.VTHUNDER}))
+
+        return failover_flow
+
+    def get_failover_vcs_vthnder_flow(self):
+        """Perform failover for VCS vthunder device"""
+        sf_name = 'a10-house-keeper-failover-vcs-vthunder'
+        failover_flow = linear_flow.Flow(sf_name)
+
+        return failover_flow
+
+    def get_failover_restore_vthunder_flow(self):
+        """Perform vthunder restore"""
+        sf_name = 'a10-house-keeper-failover-restore-vthunder'
+        failover_flow = linear_flow.Flow(sf_name)
+
+        return failover_flow

@@ -1123,6 +1123,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         finally:
             self._set_vthunder_available(l7rule.project_id, False, ctx_flags, load_balancer)
 
+    """
     def _switch_roles_for_ha_flow(self, vthunder):
         lock_session = db_apis.get_session(autocommit=False)
         if vthunder.role == constants.ROLE_MASTER:
@@ -1165,7 +1166,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                      "ip_address": vthunder.ip_address}]}
             lock_session.commit()
             LOG.info(str(status))
-        # TODO(ytsai-a10) check if we need to call lock_session.close() to release db lock
+    """
 
     def failover_amphora(self, vthunder_id):
         """Perform failover operations for an vThunder.
@@ -1182,20 +1183,35 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
             LOG.info("Starting Failover process on %s", vthunder.ip_address)
 
-            """
             store = {a10constants.VTHUNDER: vthunder}
             if vthunder.topology == a10constants.TOPOLOGY_SPARE:
+                try:
+                    failover_tf = self._taskflow_load(
+                        self._vthunder_flows.get_failover_spare_vthunder_flow(),
+                        store=store)
+                    with tf_logging.DynamicLoggingListener(failover_tf, log=LOG):
+                        failover_tf.run()
+                except Exception as e:
+                    LOG.exception("Failover for spare vthunder failed: %s", str(e))
+                    raise e
             elif vthunder.topology == constants.TOPOLOGY_ACTIVE_STANDBY:
-            """
+                health_vthunder_count = self._vthunder_repo.get_health_vthunder_count_for_lb(
+                    db_apis.get_session(), vthunder.loadbalancer_id)
+                try:
+                    if health_vthunder_count > 0:
+                        failover_tf = self._taskflow_load(
+                            self._vthunder_flows.get_failover_vcs_vthnder_flow(),
+                            store=store)
+                    else:
+                        LOG.warning("Failover for HA Pair Fully Failure is not support yet.")
+                        failover_tf = self._taskflow_load(
+                            self._vthunder_flows.get_failover_restore_vthunder_flow(),
+                            store=store)
 
-            """
-            # feature : db role switching for HA flow
-            self._switch_roles_for_ha_flow(vthunder)
-
-            # TODO(hthompson6) delete failed one
-            # TODO(hthompson6) boot up new amps
-            # TODO(hthompson6) vrrp sync
-            """
+                    with tf_logging.DynamicLoggingListener(failover_tf, log=LOG):
+                        failover_tf.run()
+                except Exception as e:
+                    LOG.exception("Failover for HA Pair failed: %s", str(e))
 
         except Exception as e:
             with excutils.save_and_reraise_exception():

@@ -163,7 +163,7 @@ VCS_SYNC_WAIT = "wait-for-vcs_ready"
 GET_COMPUTE_FOR_PROJECT = 'get-compute-for-project'
 VALIDATE_COMPUTE_FOR_PROJECT = 'validate-compute-for-project'
 GET_SPARE_COMPUTE_FOR_PROJECT = 'get-spare-compute-for-project'
-DELETE_USED_SPARE_VTHUNDER = 'delete-used-spare-vthunder'
+DELETE_STALE_SPARE_VTHUNDER = 'delete-stale-spare-vthunder'
 CREATE_VTHUNDER_ENTRY = 'create-vthunder-entry'
 UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY = 'update-acos-version-in-vthunder-entry'
 UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER = 'update-acos-version-for-backup-vthunder'
@@ -194,6 +194,9 @@ GET_LB_RESOURCE = 'get-lb-resource'
 GET_LB_RESOURCE_SUBNET = 'get-lb-resource-subnet'
 GET_PROJECT_COUNT = 'get-child-parent-project-count'
 GET_LB_COUNT_SUBNET = 'get-lb-count-by-subnet'
+GET_VTHUNDER_AMPHORA = 'get-vthunder-amphora'
+COMPUTE_DELETE = 'compute-delete'
+
 
 # ======================
 # Non-Taskflow Constants
