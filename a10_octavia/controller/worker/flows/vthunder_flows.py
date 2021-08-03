@@ -519,11 +519,31 @@ class VThunderFlows(object):
 
         return failover_flow
 
-    def get_failover_vcs_vthnder_flow(self):
+    def get_failover_vcs_vthnder_flow(self, vthunder):
         """Perform failover for VCS vthunder device"""
         sf_name = 'a10-house-keeper-failover-vcs-vthunder'
         failover_flow = linear_flow.Flow(sf_name)
 
+        failover_flow.add(a10_database_tasks.GetComputeVThundersAndLoadBalancers(
+            name=sf_name + '-' + a10constants.GET_LBS_BY_THUNDER,
+            requires=a10constants.VTHUNDER,
+            provides=(a10constants.VTHUNDER_LIST, a10constants.LOADBALANCERS_LIST)))
+        failover_flow.add(a10_database_tasks.SetVThunderToStandby(
+            name=sf_name + '-' + a10constants.SET_VTHUNDER_TO_STANDBY,
+            requires=a10constants.VTHUNDER_LIST))
+        failover_flow.add(a10_database_tasks.MarkLoadBalancersPendingUpdateInDB(
+            name=sf_name + '-' + a10constants.MARK_LB_PENIND_UPDATE_IN_DB,
+            requires=a10constants.LOADBALANCERS_LIST))
+        # find lb/memeber subnets and attach to dvthunder
+        # find VCS device-id
+        # configure VCS and VCS negotiation wait
+        # update vthunder entries
+        # update amphora entries
+        # delete spare vthunder
+
+        failover_flow.add(a10_database_tasks.MarkLoadBalancersActiveInDB(
+            name=sf_name + '-' + a10constants.MARK_LB_ACTIVE_IN_DB,
+            requires=a10constants.LOADBALANCERS_LIST))
         return failover_flow
 
     def get_failover_restore_vthunder_flow(self):

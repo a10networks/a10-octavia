@@ -882,6 +882,7 @@ class MarkLoadBalancersActiveInDB(BaseDatabaseTask):
 
     def execute(self, loadbalancers_list):
         try:
+            import rpdb; rpdb.set_trace()
             for lb in loadbalancers_list:
                 if lb.provisioning_status == constants.ERROR:
                     continue
@@ -1041,6 +1042,26 @@ class GetSpareComputeForProject(BaseDatabaseTask):
                 db_apis.get_session(), self.spare.id, "READY")
 
 
+class GetComputeVThundersAndLoadBalancers(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        try:
+            loadbalancers_list = []
+            vthunder_list = self.vthunder_repo.get_compute_vthunders(
+                db_apis.get_session(),
+                vthunder.compute_id)
+            for thunder in vthunder_list:
+                lb = self.loadbalancer_repo.get(
+                    db_apis.get_session(),
+                    id=thunder.loadbalancer_id)
+                if lb:
+                    loadbalancers_list.append(lb)
+            return vthunder_list, loadbalancers_list
+        except Exception as e:
+            LOG.exception('Failed to get all thunder and loadbalancers of the compute '
+                          'due to: {}'.format(str(e)))
+
+
 class DeleteStaleSpareVThunder(BaseDatabaseTask):
     """Delete spare compute vthunder and amphora"""
 
@@ -1106,3 +1127,24 @@ class CountMembersOnThunderBySubnet(BaseDatabaseTask):
                               subnet.id, str(e))
                 raise e
         return 0
+
+
+class SetVThunderToStandby(BaseDatabaseTask):
+
+    def execute(self, vthunder_list):
+        for vthunder in vthunder_list:
+            if (vthunder.topology != constants.TOPOLOGY_ACTIVE_STANDBY or
+                    vthunder.role != constants.ROLE_MASTER):
+                return
+            blade = self.vthunder_repo.get_backup_vthunder_from_lb(
+                db_apis.get_session(),
+                lb_id=vthunder.loadbalancer_id)
+
+            if blade:
+                try:
+                    self.vthunder_repo.update(db_apis.get_session(), blade.id,
+                                              role=constants.ROLE_MASTER)
+                    self.vthunder_repo.update(db_apis.get_session(), vthunder.id,
+                                              role=constants.ROLE_BACKUP)
+                except Exception as e:
+                    LOG.exception("Failed to switch VCS devices roles du to %s", str(e))

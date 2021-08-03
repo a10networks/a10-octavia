@@ -101,6 +101,7 @@ SUPPORTED_NETWORK_TYPE = [FLAT, VLAN]
 SSL_TEMPLATE = "ssl_template"
 
 COMPUTE_BUSY = "compute_busy"
+VTHUNDER_LIST = "vthunder_list"
 
 # ============================
 # Taskflow flow and task names
@@ -196,7 +197,10 @@ GET_PROJECT_COUNT = 'get-child-parent-project-count'
 GET_LB_COUNT_SUBNET = 'get-lb-count-by-subnet'
 GET_VTHUNDER_AMPHORA = 'get-vthunder-amphora'
 COMPUTE_DELETE = 'compute-delete'
-
+SET_VTHUNDER_TO_STANDBY = 'set-vthunder-to-stadnby'
+GET_LBS_BY_THUNDER = 'get-loadbalancers-by-thunder'
+MARK_LB_PENIND_UPDATE_IN_DB = 'mark-vthunder-pending-update-in-db'
+MARK_LB_ACTIVE_IN_DB = 'mark-vthunder-active-in-db'
 
 # ======================
 # Non-Taskflow Constants
