@@ -1067,42 +1067,6 @@ class AmphoraePostNetworkUnplug(VThunderBaseTask):
             raise e
 
 
-class GetVThunderInterface(VThunderBaseTask):
-    """Task to get interface on master and backup vThunders"""
-
-    @axapi_client_decorator
-    def execute(self, vthunder):
-        try:
-            vcs_summary = {}
-            ifnum = []
-            ifnum_master = []
-            ifnum_backup = []
-
-            vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
-            vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
-            interfaces = self.axapi_client.interface.get_list()
-
-            for i in range(len(interfaces['interface']['ethernet-list'])):
-                if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
-                    ifnum = ifnum + [interfaces['interface']['ethernet-list'][i]['ifnum']]
-
-            for i in range(len(vcs_member_list)):
-                if vthunder.ip_address in vcs_member_list[i]['ip-list'][0]['ip']:
-                    role = vcs_member_list[i]['state'].split('(')[0]
-                    if role == "vMaster":
-                        ifnum_master = ifnum
-                        LOG.debug(
-                            "Fetched the ethernet interface for Master vThunder: %s", vthunder.id)
-                    if role == "vBlade":
-                        ifnum_backup = ifnum
-                        LOG.debug(
-                            "Fetched the ethernet interface for Backup vThunder: %s", vthunder.id)
-            return ifnum_master, ifnum_backup
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
-            LOG.exception("Failed to fetch ethernet interface Backup vThunder: %s", str(e))
-            raise e
-
-
 class VCSReload(VThunderBaseTask):
     """Task to perform VCS reload"""
 

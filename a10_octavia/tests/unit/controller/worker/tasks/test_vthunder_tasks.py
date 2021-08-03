@@ -921,28 +921,6 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.write_memory.assert_not_called()
         self.client_mock.system.action.reload_reboot_for_interface_detachment.assert_not_called()
 
-    def test_GetVThunderInterface_execute_for_vMaster(self):
-        thunder = copy.deepcopy(VTHUNDER)
-        mock_task = task.GetVThunderInterface()
-        mock_task.axapi_client = self.client_mock
-        self.client_mock.system.action.get_vcs_summary_oper.return_value = VCS_MASTER_VBLADE
-        self.client_mock.interface.get_list.return_value = INTERFACES
-        thunder.ip_address = "10.0.0.1"
-        mock_task.execute(thunder)
-        self.client_mock.system.action.setInterface.assert_not_called()
-        self.assertEqual(mock_task.execute(thunder), ([1], []))
-
-    def test_GetVThunderInterface_execute_for_vBlade(self):
-        thunder = copy.deepcopy(VTHUNDER)
-        mock_task = task.GetVThunderInterface()
-        mock_task.axapi_client = self.client_mock
-        self.client_mock.system.action.get_vcs_summary_oper.return_value = VCS_MASTER_VBLADE
-        self.client_mock.interface.get_list.return_value = INTERFACES
-        thunder.ip_address = "10.0.0.2"
-        mock_task.execute(thunder)
-        self.client_mock.system.action.setInterface.assert_not_called()
-        self.assertEqual(mock_task.execute(thunder), ([], [1]))
-
     def test_EnableInterface_execute_for_single_topology(self):
         thunder = copy.deepcopy(VTHUNDER)
         added_ports = {'amphora_id': ''}
