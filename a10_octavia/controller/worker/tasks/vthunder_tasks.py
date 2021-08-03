@@ -233,9 +233,9 @@ class EnableInterface(VThunderBaseTask):
                     for i in range(len(interfaces['interface']['ethernet-list'])):
                         if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
                             ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
-                            self.axapi_client.device_context.switch_context(1)
+                            self.axapi_client.device_context.switch(1, None)
                             self.axapi_client.system.action.setInterface(ifnum)
-                            self.axapi_client.device_context.switch_context(2)
+                            self.axapi_client.device_context.switch(2, None)
                             self.axapi_client.system.action.setInterface(ifnum)
         except(acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure ethernet interface vThunder: %s", str(e))
@@ -249,6 +249,7 @@ class EnableInterfaceForMembers(VThunderBaseTask):
     def execute(self, added_ports, loadbalancer, vthunder):
         """Enable specific interface of amphora"""
         try:
+            topology = CONF.a10_controller_worker.loadbalancer_topology
             amphora_id = loadbalancer.amphorae[0].id
             compute_id = loadbalancer.amphorae[0].compute_id
             network_driver = utils.get_network_driver()
@@ -259,7 +260,13 @@ class EnableInterfaceForMembers(VThunderBaseTask):
                 while attempts > 0 and configured_interface is False:
                     try:
                         target_interface = len(nics)
-                        self.axapi_client.system.action.setInterface(target_interface - 1)
+                        if topology == "SINGLE":
+                            self.axapi_client.system.action.setInterface(target_interface - 1)
+                        else:
+                            self.axapi_client.device_context.switch(1, None)
+                            self.axapi_client.system.action.setInterface(target_interface - 1)
+                            self.axapi_client.device_context.switch(2, None)
+                            self.axapi_client.system.action.setInterface(target_interface - 1)
                         configured_interface = True
                         LOG.debug("Configured the new interface required for member.")
                     except (req_exceptions.ConnectionError, acos_errors.ACOSException,
