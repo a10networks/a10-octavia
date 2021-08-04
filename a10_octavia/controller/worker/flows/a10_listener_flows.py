@@ -281,3 +281,34 @@ class ListenerFlows(object):
         update_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateUpdate(
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         return update_ssl_cert_flow
+
+    def get_listener_stats_flow(self, vthunder, store):
+        """Perform Listener Statistics update """
+
+        sf_name = 'a10-health-monitor' + '-' + a10constants.UPDATE_LISTENER_STATS_FLOW
+
+        listener_stats_flow = linear_flow.Flow(sf_name)
+        vthunder_store = {}
+        vthunder_store[vthunder] = vthunder
+        listener_stats_flow.add(a10_database_tasks.GetListenerListInLoadbalancer(
+            name='{flow}-{id}'.format(
+                id=vthunder.vthunder_id,
+                flow='GetListenerListInLoadbalancer'),
+            requires=a10constants.VTHUNDER,
+            rebind={a10constants.VTHUNDER: vthunder},
+            provides=constants.LISTENERS))
+        listener_stats_flow.add(virtual_port_tasks.GetListenersStats(
+            name='{flow}-{id}'.format(
+                id=vthunder.vthunder_id,
+                flow='GetListenersStats'),
+            requires=(a10constants.VTHUNDER, constants.LISTENERS),
+            rebind={a10constants.VTHUNDER: vthunder},
+            provides=a10constants.LISTENER_STATS))
+        listener_stats_flow.add(a10_database_tasks.UpdateListenersStats(
+            name='{flow}-{id}'.format(
+                id=vthunder.vthunder_id,
+                flow='UpdateListenersStats'),
+            requires=a10constants.LISTENER_STATS))
+
+        store.update(vthunder_store)
+        return listener_stats_flow

@@ -1255,6 +1255,24 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 # continue on other thunders (assume exception is logged)
                 pass
 
+    def perform_vthunder_stats_update(self, ip):
+        """Perform for listener statistics update"""
+
+        store = {}
+        try:
+            thunders = self._vthunder_repo.get_vthunders_by_ip_address(db_apis.get_session(),
+                                                                       ip_address=ip,
+                                                                       vThunders=True)
+            for vthunder in thunders:
+                vthunder_stats_tf = self.taskflow_load(
+                    self._listener_flows.get_listener_stats_flow(vthunder, store),
+                    store=store)
+                with tf_logging.DynamicLoggingListener(vthunder_stats_tf, log=LOG):
+                    vthunder_stats_tf.run()
+        except Exception:
+            # continue on other thunders (assume exception is logged)
+            pass
+
     def a10_worker_ctx_init(self, ctx_map, ctx_lock):
         self.ctx_map = ctx_map
         self.ctx_lock = ctx_lock
