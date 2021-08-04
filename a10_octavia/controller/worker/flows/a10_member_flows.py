@@ -333,8 +333,7 @@ class MemberFlows(object):
             provides=constants.FLAVOR))
         delete_member_flow.add(vthunder_tasks.GetVthunderConfByFlavor(
             inject={a10constants.VTHUNDER_CONFIG: vthunder_conf,
-                    a10constants.DEVICE_CONFIG_DICT: device_dict,
-                    a10constants.FLOW_TYPE: a10constants.DELETE_FLOW},
+                    a10constants.DEVICE_CONFIG_DICT: device_dict},
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG,
                       a10constants.DEVICE_CONFIG_DICT),
             rebind={constants.FLAVOR_DATA: constants.FLAVOR},
@@ -491,8 +490,7 @@ class MemberFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER,
-                    a10constants.USE_DEVICE_FLAVOR],
+                    a10constants.VTHUNDER],
                 provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(
             a10_network_tasks.DeleteVRIDPort(
@@ -536,8 +534,7 @@ class MemberFlows(object):
                 name='get_vrid_for_loadbalancer_resource' + pool,
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER,
-                    a10constants.USE_DEVICE_FLAVOR],
+                    a10constants.VTHUNDER],
                 provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(
             a10_network_tasks.DeleteMultipleVRIDPort(
@@ -570,8 +567,7 @@ class MemberFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER,
-                    a10constants.USE_DEVICE_FLAVOR],
+                    a10constants.VTHUNDER],
                 provides=a10constants.VRID_LIST))
         handle_vrid_for_member_subflow.add(
             a10_network_tasks.HandleVRIDFloatingIP(
@@ -588,8 +584,7 @@ class MemberFlows(object):
             a10_database_tasks.UpdateVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.VRID_LIST,
-                    a10constants.VTHUNDER_CONFIG,
-                    a10constants.USE_DEVICE_FLAVOR],
+                    a10constants.VTHUNDER],
                 rebind={
                     a10constants.LB_RESOURCE: constants.MEMBER}))
 
@@ -668,8 +663,7 @@ class MemberFlows(object):
             provides=constants.FLAVOR))
         update_member_flow.add(vthunder_tasks.GetVthunderConfByFlavor(
             inject={a10constants.VTHUNDER_CONFIG: vthunder_conf,
-                    a10constants.DEVICE_CONFIG_DICT: device_dict,
-                    a10constants.FLOW_TYPE: a10constants.UPDATE_FLOW},
+                    a10constants.DEVICE_CONFIG_DICT: device_dict},
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG,
                       a10constants.DEVICE_CONFIG_DICT),
             rebind={constants.FLAVOR_DATA: constants.FLAVOR},
@@ -723,8 +717,7 @@ class MemberFlows(object):
             provides=constants.FLAVOR))
         create_member_flow.add(vthunder_tasks.GetVthunderConfByFlavor(
             inject={a10constants.VTHUNDER_CONFIG: vthunder_conf,
-                    a10constants.DEVICE_CONFIG_DICT: device_dict,
-                    a10constants.FLOW_TYPE: a10constants.CREATE_FLOW},
+                    a10constants.DEVICE_CONFIG_DICT: device_dict},
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG,
                       a10constants.DEVICE_CONFIG_DICT),
             rebind={constants.FLAVOR_DATA: constants.FLAVOR},

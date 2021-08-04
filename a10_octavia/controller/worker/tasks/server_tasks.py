@@ -20,6 +20,7 @@ from taskflow import task
 import acos_client.errors as acos_errors
 
 from a10_octavia.common import openstack_mappings
+from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks import utils
@@ -35,7 +36,18 @@ def _get_server_name(axapi_client, member):
         server_name = axapi_client.slb.server.get(server_name)
     except (acos_errors.NotFound):
         # Backwards compatability with a10-neutron-lbaas
-        server_name = axapi_client.slb.server.get('_{}_{}'.format(server_name, 'neutron'))
+        if CONF.a10_global.use_parent_partition:
+            try:
+                parent_project_id = a10_utils.get_parent_project(member.project_id)
+                server_name = '_{}_{}_neutron'.format(parent_project_id[:5],
+                                                      member.ip_address.replace('.', '_'))
+                server_name = axapi_client.slb.server.get(server_name)
+            except (acos_errors.NotFound):
+                server_name = '_{}_{}_neutron'.format(member.project_id[:5],
+                                                      member.ip_address.replace('.', '_'))
+                server_name = axapi_client.slb.server.get(server_name)
+        else:
+            server_name = axapi_client.slb.server.get('_{}_{}'.format(server_name, 'neutron'))
     return server_name['server']['name']
 
 
@@ -44,7 +56,6 @@ class MemberCreate(task.Task):
 
     @axapi_client_decorator
     def execute(self, member, vthunder, pool, member_count_ip, flavor=None):
-        server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
         server_args = utils.meta(member, 'server', {})
         server_args = utils.dash_to_underscore(server_args)
         server_args['conn_limit'] = CONF.server.conn_limit
@@ -75,14 +86,18 @@ class MemberCreate(task.Task):
 
         try:
             try:
+                server_name = _get_server_name(self.axapi_client, member)
+                self.axapi_client.slb.server.update(server_name, member.ip_address, status=status,
+                                                    server_templates=server_temp,
+                                                    **server_args)
+                LOG.debug("Successfully created member: %s", member.id)
+            except acos_errors.NotFound:
+                server_name = '{}_{}'.format(member.project_id[:5],
+                                             member.ip_address.replace('.', '_'))
                 self.axapi_client.slb.server.create(server_name, member.ip_address, status=status,
                                                     server_templates=server_temp,
                                                     **server_args)
                 LOG.debug("Successfully created member: %s", member.id)
-            except (acos_errors.Exists, acos_errors.AddressSpecifiedIsInUse):
-                self.axapi_client.slb.server.update(server_name, member.ip_address, status=status,
-                                                    server_templates=server_temp,
-                                                    **server_args)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to create member: %s", member.id)
             raise e
