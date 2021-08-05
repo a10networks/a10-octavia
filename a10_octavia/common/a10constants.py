@@ -53,6 +53,8 @@ WRITE_MEM_PRIVATE = 'write_mem_private'
 
 FAILED = 'FAILED'
 USED_SPARE = 'USED_SPARE'
+SPARE_VTHUNDER = 'spare_vthunder'
+FAILOVER_VTHUNDER = 'failover_vthunder'
 OCTAVIA_HEALTH_MANAGER_CONTROLLER = 'octavia_health_manager_controller'
 OCTAVIA_HEALTH_MONITOR = 'octavia_health_monitor'
 VTHUNDER_CONFIG = 'vthunder_config'
@@ -100,6 +102,8 @@ SUPPORTED_NETWORK_TYPE = [FLAT, VLAN]
 SSL_TEMPLATE = "ssl_template"
 
 COMPUTE_BUSY = "compute_busy"
+VTHUNDER_LIST = "vthunder_list"
+NETWORK_LIST = "network_list"
 
 # ACOS versions
 ACOS_5_2_1_P2 = "5.2.1-P2"
@@ -124,6 +128,8 @@ MARK_VTHUNDER_MASTER_DELETED_IN_DB = 'mark-vthunder-master-deleted-in-db'
 MARK_VTHUNDER_BACKUP_DELETED_IN_DB = 'mark-vthunder-backup-deleted-in-db'
 GET_BACKUP_VTHUNDER_BY_LB = 'get-backup-vthunder-by-lb'
 CREATE_HEALTH_MONITOR_ON_VTHUNDER_MASTER = 'create-health-monitor-on-vthunder-master'
+CREATE_HEALTH_MONITOR_ON_SPARE = 'create-health-monitor-on-spare'
+MARK_AMPHORA_READY_INDB = 'mark-amphora-ready-indb'
 HANDLE_SESS_PERS = 'handle-session-persistence-delta-subflow'
 GET_LOADBALANCER_FROM_DB = 'Get-Loadbalancer-from-db'
 GET_BACKUP_LOADBALANCER_FROM_DB = 'get-backup-loadbalancer-from-db'
@@ -162,6 +168,8 @@ WAIT_FOR_BACKUP_VCS_RELOAD = 'wait-for-backup-vcs-reload'
 VCS_SYNC_WAIT = "wait-for-vcs_ready"
 GET_COMPUTE_FOR_PROJECT = 'get-compute-for-project'
 VALIDATE_COMPUTE_FOR_PROJECT = 'validate-compute-for-project'
+GET_SPARE_COMPUTE_FOR_PROJECT = 'get-spare-compute-for-project'
+DELETE_STALE_SPARE_VTHUNDER = 'delete-stale-spare-vthunder'
 CREATE_VTHUNDER_ENTRY = 'create-vthunder-entry'
 UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY = 'update-acos-version-in-vthunder-entry'
 UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER = 'update-acos-version-for-backup-vthunder'
@@ -192,9 +200,18 @@ GET_LB_RESOURCE = 'get-lb-resource'
 GET_LB_RESOURCE_SUBNET = 'get-lb-resource-subnet'
 GET_PROJECT_COUNT = 'get-child-parent-project-count'
 GET_LB_COUNT_SUBNET = 'get-lb-count-by-subnet'
+GET_VTHUNDER_AMPHORA = 'get-vthunder-amphora'
+COMPUTE_DELETE = 'compute-delete'
+SET_VTHUNDER_TO_STANDBY = 'set-vthunder-to-stadnby'
+GET_LBS_BY_THUNDER = 'get-loadbalancers-by-thunder'
+MARK_LB_PENIND_UPDATE_IN_DB = 'mark-vthunder-pending-update-in-db'
+MARK_LB_ACTIVE_IN_DB = 'mark-vthunder-active-in-db'
+GET_VTHUNDER_NETWORK_LIST = 'get-vthunder-network-list'
+GET_AMPHORA_FOR_FAILOVER = 'get-amphora-for-failover'
 
 # ======================
 # Non-Taskflow Constants
 # ======================
 
 OCTAVIA_OWNER = 'Octavia'
+TOPOLOGY_SPARE = 'SPARE'

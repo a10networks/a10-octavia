@@ -1085,3 +1085,15 @@ class GetPoolsOnThunder(BaseNetworkTask):
                 raise e
         else:
             return
+
+
+class GetVThunderNetworkList(BaseNetworkTask):
+
+    def execute(self, vthunder):
+        try:
+            nics = self.network_driver.get_plugged_networks(vthunder.compute_id)
+            network_ids = [nic.network_id for nic in nics]
+            return network_ids
+        except Exception as e:
+            LOG.exception("Failed to get network list for vthunder duo to %s", str(e))
+            raise e

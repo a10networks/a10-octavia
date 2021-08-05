@@ -282,7 +282,8 @@ A10_CONTROLLER_WORKER_OPTS = [
 A10_HOUSE_KEEPING_OPTS = [
     cfg.IntOpt('spare_check_interval',
                default=30,
-               help=_('Spare check interval in seconds')),
+               help=_('The interval in seconds for Hourkeeper to check remaining'
+                      ' spare amphora in the pool')),
     cfg.IntOpt('spare_amphora_pool_size',
                default=0,
                help=_('Number of spare vthunders')),
