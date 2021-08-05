@@ -1052,7 +1052,6 @@ class GetListenerListInLoadbalancer(BaseDatabaseTask):
     """Task for fetching the listeners of a loadbalancer"""
 
     def execute(self, vthunder):
-
         try:
             lb = self.loadbalancer_repo.get(db_apis.get_session(), id=vthunder.loadbalancer_id)
             if lb.provisioning_status == constants.ACTIVE:
@@ -1068,10 +1067,9 @@ class UpdateListenersStats(BaseDatabaseTask):
     """Task for updating the listener stats"""
 
     def execute(self, listener_stats):
-
         try:
             if listener_stats:
-                stats_base.update_stats_via_driver(listener_stats, deltas=False)
+                stats_base.update_stats_via_driver(listener_stats)
                 LOG.info('Updated the listeners statistics')
 
             listeners, _ = self.listener_repo.get_all(db_apis.get_session())

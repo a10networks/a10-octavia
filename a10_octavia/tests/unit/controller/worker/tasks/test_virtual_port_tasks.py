@@ -492,3 +492,23 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
         self.assertEqual(kwargs['conn_limit'], 200)
+
+    def test_get_listeners_stats(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        listener = self._mock_listener('HTTP', 200)
+        STATS = {
+            "port": {
+                "stats": {
+                    "curr_conn": 0, "total_conn": 1, "total_fwd_bytes": 684, "total_rev_bytes": 705
+                }
+            }
+        }
+        listener_task = task.GetListenersStats()
+        listener_task.axapi_client = self.client_mock
+        listener_task.axapi_client.slb.virtual_server.vport.get_stats.return_value = STATS
+
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(vthunder, [listener])
+        self.client_mock.slb.virtual_server.vport.get_stats.assert_called_with(
+            mock.ANY, listener.id, listener.protocol, mock.ANY)

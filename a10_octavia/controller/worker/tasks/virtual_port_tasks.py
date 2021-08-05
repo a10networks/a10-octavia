@@ -255,26 +255,27 @@ class GetListenersStats(ListenersParent, task.Task):
     @axapi_client_statistics_decorator
     def execute(self, vthunder, listeners):
         listener_stats = []
-        for listener in listeners:
-            listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
-                                                                         listener.protocol)
-            try:
-                response = self.axapi_client.slb.virtual_server.vport.get_stats(
-                    listener.load_balancer_id, listener.id, listener.protocol,
-                    listener.protocol_port)
-                stats_model = data_models.ListenerStatistics(
-                    listener_id=listener.id,
-                    amphora_id=vthunder.amphora_id,
-                    bytes_in=response['port']['stats']['total_fwd_bytes'],
-                    bytes_out=response['port']['stats']['total_rev_bytes'],
-                    active_connections=response['port']['stats']['curr_conn'],
-                    total_connections=response['port']['stats']['total_conn'],
-                    request_errors=0,  # (ACOS don’t have related stats for this)
-                )
-                LOG.info("Listener %s / Amphora %s stats: %s",
-                         listener.id, vthunder.amphora_id, stats_model.get_stats())
-                listener_stats.append(stats_model)
-            except (acos_errors.ACOSException, ConnectionError) as e:
-                LOG.warning("Failed to retrieve statistics for  listener: %s "
-                            "due to %s", listener.id, str(e))
+        if listeners:
+            for listener in listeners:
+                listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
+                                                                             listener.protocol)
+                try:
+                    response = self.axapi_client.slb.virtual_server.vport.get_stats(
+                        listener.load_balancer_id, listener.id, listener.protocol,
+                        listener.protocol_port)
+                    stats_model = data_models.ListenerStatistics(
+                        listener_id=listener.id,
+                        amphora_id=vthunder.amphora_id,
+                        bytes_in=response['port']['stats']['total_fwd_bytes'],
+                        bytes_out=response['port']['stats']['total_rev_bytes'],
+                        active_connections=response['port']['stats']['curr_conn'],
+                        total_connections=response['port']['stats']['total_conn'],
+                        request_errors=0,  # (ACOS don’t have related stats for this)
+                    )
+                    LOG.info("Listener %s / Amphora %s stats: %s",
+                             listener.id, vthunder.amphora_id, stats_model.get_stats())
+                    listener_stats.append(stats_model)
+                except (acos_errors.ACOSException, ConnectionError) as e:
+                    LOG.warning("Failed to retrieve statistics for  listener: %s "
+                                "due to %s", listener.id, str(e))
         return listener_stats
