@@ -222,24 +222,21 @@ class EnableInterface(VThunderBaseTask):
 
         try:
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
+                interfaces = self.axapi_client.interface.get_list()
                 if (not lb_exists_flag and topology == "ACTIVE_STANDBY") or topology == "SINGLE":
-                    interfaces = self.axapi_client.interface.get_list()
                     for i in range(len(interfaces['interface']['ethernet-list'])):
                         if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
                             ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                             self.axapi_client.system.action.setInterface(ifnum)
                     LOG.debug("Configured the ethernet interface for vThunder: %s", vthunder.id)
                 else:
-                    if ifnum_master:
-                        for i in range(len(ifnum_master)):
-                            self.axapi_client.system.action.setInterface(ifnum_master[i])
-                            LOG.debug("Configured the ethernet interface for "
-                                      "master vThunder: %s", vthunder.id)
-                    elif ifnum_backup:
-                        for i in range(len(ifnum_backup)):
-                            self.axapi_client.system.action.setInterface(ifnum_backup[i])
-                            LOG.debug("Configured the ethernet interface for "
-                                      "backup vThunder: %s", vthunder.id)
+                    for i in range(len(interfaces['interface']['ethernet-list'])):
+                        if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
+                            ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
+                            self.axapi_client.device_context.switch(1, None)
+                            self.axapi_client.system.action.setInterface(ifnum)
+                            self.axapi_client.device_context.switch(2, None)
+                            self.axapi_client.system.action.setInterface(ifnum)
         except(acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure ethernet interface vThunder: %s", str(e))
             raise e
@@ -252,6 +249,7 @@ class EnableInterfaceForMembers(VThunderBaseTask):
     def execute(self, added_ports, loadbalancer, vthunder):
         """Enable specific interface of amphora"""
         try:
+            topology = CONF.a10_controller_worker.loadbalancer_topology
             amphora_id = loadbalancer.amphorae[0].id
             compute_id = loadbalancer.amphorae[0].compute_id
             network_driver = utils.get_network_driver()
@@ -262,7 +260,13 @@ class EnableInterfaceForMembers(VThunderBaseTask):
                 while attempts > 0 and configured_interface is False:
                     try:
                         target_interface = len(nics)
-                        self.axapi_client.system.action.setInterface(target_interface - 1)
+                        if topology == "SINGLE":
+                            self.axapi_client.system.action.setInterface(target_interface - 1)
+                        else:
+                            self.axapi_client.device_context.switch(1, None)
+                            self.axapi_client.system.action.setInterface(target_interface - 1)
+                            self.axapi_client.device_context.switch(2, None)
+                            self.axapi_client.system.action.setInterface(target_interface - 1)
                         configured_interface = True
                         LOG.debug("Configured the new interface required for member.")
                     except (req_exceptions.ConnectionError, acos_errors.ACOSException,
@@ -1060,42 +1064,6 @@ class AmphoraePostNetworkUnplug(VThunderBaseTask):
                     LOG.debug("vThunder reboot/relaod is not required for member addition.")
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to reboot/reload vthunder device: %s", str(e))
-            raise e
-
-
-class GetVThunderInterface(VThunderBaseTask):
-    """Task to get interface on master and backup vThunders"""
-
-    @axapi_client_decorator
-    def execute(self, vthunder):
-        try:
-            vcs_summary = {}
-            ifnum = []
-            ifnum_master = []
-            ifnum_backup = []
-
-            vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
-            vcs_member_list = vcs_summary['vcs-summary']['oper']['member-list']
-            interfaces = self.axapi_client.interface.get_list()
-
-            for i in range(len(interfaces['interface']['ethernet-list'])):
-                if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
-                    ifnum = ifnum + [interfaces['interface']['ethernet-list'][i]['ifnum']]
-
-            for i in range(len(vcs_member_list)):
-                if vthunder.ip_address in vcs_member_list[i]['ip-list'][0]['ip']:
-                    role = vcs_member_list[i]['state'].split('(')[0]
-                    if role == "vMaster":
-                        ifnum_master = ifnum
-                        LOG.debug(
-                            "Fetched the ethernet interface for Master vThunder: %s", vthunder.id)
-                    if role == "vBlade":
-                        ifnum_backup = ifnum
-                        LOG.debug(
-                            "Fetched the ethernet interface for Backup vThunder: %s", vthunder.id)
-            return ifnum_master, ifnum_backup
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
-            LOG.exception("Failed to fetch ethernet interface Backup vThunder: %s", str(e))
             raise e
 
 

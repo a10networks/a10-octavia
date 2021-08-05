@@ -17,7 +17,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from requests import exceptions
 from taskflow import task
-import time
 
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
