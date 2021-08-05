@@ -493,7 +493,7 @@ class VRIDRepository(BaseRepository):
         vrid_obj_list = []
 
         model = session.query(self.model_class).filter(
-            or_(self.model_class.owner == owner,
+            or_(self.model_class.owner.in_(owner),
                 self.model_class.owner.in_(project_ids)))
         for data in model:
             vrid_obj_list.append(data.to_data_model())
@@ -572,6 +572,19 @@ class MemberRepository(repo.MemberRepository):
         if not model:
             return None
         return model.to_data_model()
+
+    def get_members_by_project_id(self, session, project_id):
+        member_list = []
+        query = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            or_(self.model_class.provisioning_status == "ACTIVE",
+                self.model_class.provisioning_status == "PENDING_UPDATE",
+                self.model_class.provisioning_status == "PENDING_CREATE"))
+
+        model_list = query.all()
+        for data in model_list:
+            member_list.append(data.to_data_model())
+        return member_list
 
 
 class NatPoolRepository(BaseRepository):

@@ -105,6 +105,9 @@ COMPUTE_BUSY = "compute_busy"
 VTHUNDER_LIST = "vthunder_list"
 NETWORK_LIST = "network_list"
 
+# ACOS versions
+ACOS_5_2_1_P2 = "5.2.1-P2"
+
 # ============================
 # Taskflow flow and task names
 # ============================

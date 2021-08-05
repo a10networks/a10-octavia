@@ -352,10 +352,6 @@ class VThunderFlows(object):
             requires=(a10constants.VTHUNDER, a10constants.SET_ID),
             rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
         vrrp_subflow.add(self._get_vrrp_status_subflow(sf_name))
-        # Wait for aVCS sync
-        vrrp_subflow.add(vthunder_tasks.VCSSyncWait(
-            name=sf_name + '-' + a10constants.VCS_SYNC_WAIT + '-for-thunder',
-            requires=a10constants.VTHUNDER))
 
         return vrrp_subflow
 

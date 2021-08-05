@@ -20,6 +20,7 @@ from taskflow import task
 import acos_client.errors as acos_errors
 
 from a10_octavia.common import openstack_mappings
+from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks import utils
@@ -35,7 +36,18 @@ def _get_server_name(axapi_client, member):
         server_name = axapi_client.slb.server.get(server_name)
     except (acos_errors.NotFound):
         # Backwards compatability with a10-neutron-lbaas
-        server_name = axapi_client.slb.server.get('_{}_{}'.format(server_name, 'neutron'))
+        if CONF.a10_global.use_parent_partition:
+            try:
+                parent_project_id = a10_utils.get_parent_project(member.project_id)
+                server_name = '_{}_{}_neutron'.format(parent_project_id[:5],
+                                                      member.ip_address.replace('.', '_'))
+                server_name = axapi_client.slb.server.get(server_name)
+            except (acos_errors.NotFound):
+                server_name = '_{}_{}_neutron'.format(member.project_id[:5],
+                                                      member.ip_address.replace('.', '_'))
+                server_name = axapi_client.slb.server.get(server_name)
+        else:
+            server_name = axapi_client.slb.server.get('_{}_{}'.format(server_name, 'neutron'))
     return server_name['server']['name']
 
 
