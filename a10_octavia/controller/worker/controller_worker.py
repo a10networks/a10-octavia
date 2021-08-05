@@ -1138,7 +1138,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
             LOG.info("Starting Failover process on %s", vthunder.ip_address)
 
-            store = {a10constants.VTHUNDER: vthunder}
+            store = {a10constants.VTHUNDER: vthunder,
+                     a10constants.FAILOVER_VTHUNDER: vthunder}
             if vthunder.topology == a10constants.TOPOLOGY_SPARE:
                 try:
                     failover_tf = self._taskflow_load(
@@ -1155,7 +1156,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 try:
                     if health_vthunder_count > 0:
                         failover_tf = self._taskflow_load(
-                            self._vthunder_flows.get_failover_vcs_vthnder_flow(vthunder),
+                            self._vthunder_flows.get_failover_vcs_vthnder_flow(),
                             store=store)
                     else:
                         LOG.warning("Failover for HA Pair Fully Failure is not support yet.")

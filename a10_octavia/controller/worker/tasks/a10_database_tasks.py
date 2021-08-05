@@ -882,7 +882,6 @@ class MarkLoadBalancersActiveInDB(BaseDatabaseTask):
 
     def execute(self, loadbalancers_list):
         try:
-            import rpdb; rpdb.set_trace()
             for lb in loadbalancers_list:
                 if lb.provisioning_status == constants.ERROR:
                     continue
@@ -1017,22 +1016,29 @@ class ValidateComputeForProject(BaseDatabaseTask):
 
 
 class GetSpareComputeForProject(BaseDatabaseTask):
-    """Get spare compute for the project"""
+    """Get spare amphora for the project"""
 
     def __init__(self, *arg, **kwargs):
         self.spare = None
         super(GetSpareComputeForProject, self).__init__(*arg, **kwargs)
 
-    def execute(self, compute_id):
+    def execute(self, compute_id=None):
         if compute_id is None:
-            vthunder = self.vthunder_repo.get_spare_vthunder(
-                db_apis.get_session())
-            if vthunder:
-                self.spare = vthunder
-                self.vthunder_repo.set_spare_vthunder_status(
-                    db_apis.get_session(), self.spare.id, "BUSY")
-                compute_id = vthunder.compute_id
-            else:
+            vthunder = None
+            try:
+                vthunder = self.vthunder_repo.get_spare_vthunder(
+                    db_apis.get_session())
+
+                if vthunder:
+                    self.spare = vthunder
+                    self.vthunder_repo.set_spare_vthunder_status(
+                        db_apis.get_session(), self.spare.id, "BUSY")
+                    compute_id = vthunder.compute_id
+            except Exception as e:
+                LOG.exception("Failed to find spare amphora du to %s", str(e))
+                raise exceptions.NoComputeForLoadbalancer()
+
+            if self.spare is None:
                 raise exceptions.NoComputeForLoadbalancer()
         return compute_id, self.spare
 
@@ -1040,6 +1046,21 @@ class GetSpareComputeForProject(BaseDatabaseTask):
         if self.spare is not None:
             self.vthunder_repo.set_spare_vthunder_status(
                 db_apis.get_session(), self.spare.id, "READY")
+
+
+class TryGetSpareCompute(BaseDatabaseTask):
+    """Check if spare amphora exist"""
+
+    def execute(self):
+        vthunder = None
+        try:
+            vthunder = self.vthunder_repo.get_spare_vthunder(
+                db_apis.get_session())
+        except Exception:
+            LOG.debug('No spare amphora found for failover')
+            pass
+
+        return vthunder
 
 
 class GetComputeVThundersAndLoadBalancers(BaseDatabaseTask):
@@ -1067,6 +1088,7 @@ class DeleteStaleSpareVThunder(BaseDatabaseTask):
 
     def execute(self, spare_vthunder):
         if spare_vthunder:
+            LOG.info("Deleting spare vthunder %s", spare_vthunder.id)
             try:
                 self.amphora_repo.delete(db_apis.get_session(), id=spare_vthunder.amphora_id)
             except Exception as e:

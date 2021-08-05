@@ -85,6 +85,60 @@ class ComputeCreate(BaseComputeTask):
                           compute_id, str(e))
 
 
+class ComputeCreateWithNetworks(BaseComputeTask):
+    """Create the compute instance for a new amphora."""
+
+    def execute(self, amphora_id, network_list=None):
+
+        network_ids = CONF.a10_controller_worker.amp_boot_network_list[:]
+        for net in network_list:
+            if net not in network_ids:
+                network_ids.append(net)
+        LOG.debug("Compute create execute for amphora with id %s", amphora_id)
+
+        try:
+            if CONF.a10_controller_worker.build_rate_limit != -1:
+                self.rate_limit.add_to_build_request_queue(
+                    amphora_id, constants.LB_CREATE_NORMAL_PRIORITY)
+
+            compute_id = self.compute.build(
+                name="amphora-" + amphora_id,
+                amphora_flavor=CONF.a10_controller_worker.amp_flavor_id,
+                image_id=CONF.a10_controller_worker.amp_image_id,
+                image_tag=CONF.a10_controller_worker.amp_image_tag,
+                image_owner=CONF.a10_controller_worker.amp_image_owner_id,
+                key_name=CONF.a10_controller_worker.amp_ssh_key_name,
+                sec_groups=CONF.a10_controller_worker.amp_secgroup_list,
+                network_ids=network_ids,
+                port_ids=[],
+                server_group_id=None)
+
+            LOG.debug("Server created with id: %s for amphora id: %s",
+                      compute_id, amphora_id)
+
+            return compute_id
+
+        except Exception as e:
+            LOG.error("Compute create for amphora id: %s failed",
+                      amphora_id)
+            raise e
+
+    def revert(self, result, amphora_id, *args, **kwargs):
+        """This method will revert the creation of the amphora"""
+
+        if isinstance(result, failure.Failure):
+            return
+        compute_id = result
+        LOG.warning("Reverting compute create for amphora with id"
+                    "%(amp)s and compute id: %(comp)s",
+                    {'amp': amphora_id, 'comp': compute_id})
+        try:
+            self.compute.delete(compute_id)
+        except Exception as e:
+            LOG.exception("Failed to revert creation of compute %s due to %s: ",
+                          compute_id, str(e))
+
+
 class ComputeActiveWait(BaseComputeTask):
     """Wait for the compute driver to mark the amphora active."""
 

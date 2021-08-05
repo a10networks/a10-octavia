@@ -54,6 +54,7 @@ WRITE_MEM_PRIVATE = 'write_mem_private'
 FAILED = 'FAILED'
 USED_SPARE = 'USED_SPARE'
 SPARE_VTHUNDER = 'spare_vthunder'
+FAILOVER_VTHUNDER = 'failover_vthunder'
 OCTAVIA_HEALTH_MANAGER_CONTROLLER = 'octavia_health_manager_controller'
 OCTAVIA_HEALTH_MONITOR = 'octavia_health_monitor'
 VTHUNDER_CONFIG = 'vthunder_config'
@@ -102,6 +103,7 @@ SSL_TEMPLATE = "ssl_template"
 
 COMPUTE_BUSY = "compute_busy"
 VTHUNDER_LIST = "vthunder_list"
+NETWORK_LIST = "network_list"
 
 # ============================
 # Taskflow flow and task names
@@ -201,6 +203,8 @@ SET_VTHUNDER_TO_STANDBY = 'set-vthunder-to-stadnby'
 GET_LBS_BY_THUNDER = 'get-loadbalancers-by-thunder'
 MARK_LB_PENIND_UPDATE_IN_DB = 'mark-vthunder-pending-update-in-db'
 MARK_LB_ACTIVE_IN_DB = 'mark-vthunder-active-in-db'
+GET_VTHUNDER_NETWORK_LIST = 'get-vthunder-network-list'
+GET_AMPHORA_FOR_FAILOVER = 'get-amphora-for-failover'
 
 # ======================
 # Non-Taskflow Constants
