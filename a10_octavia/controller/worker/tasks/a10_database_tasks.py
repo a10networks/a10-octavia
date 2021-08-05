@@ -1151,6 +1151,20 @@ class CountMembersOnThunderBySubnet(BaseDatabaseTask):
         return 0
 
 
+class GetMemberListByProjectID(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        try:
+            if vthunder:
+                member_list = self.member_repo.get_members_by_project_id(
+                    db_apis.get_session(),
+                    vthunder.project_id)
+                return member_list
+        except Exception as e:
+            LOG.exception('Failed to get active Members related to vthunder '
+                          'due to: {}'.format(str(e)))
+
+
 class SetVThunderToStandby(BaseDatabaseTask):
 
     def execute(self, vthunder_list):
