@@ -32,7 +32,10 @@ class HandleSessionPersistenceDelta(task.Task):
     @axapi_client_decorator
     def execute(self, vthunder, pool):
         sess_pers = pool.session_persistence
-        if sess_pers and sess_pers.type in SP_OBJ_DICT:
+        if pool.session_persistence and hasattr(pool.session_persistence, 'to_dict'):
+            sess_pers = pool.session_persistence.to_dict()
+        if sess_pers and sess_pers['type'] in SP_OBJ_DICT:
+
             # Remove existing persistence template if any
             for sp_type in PERS_TYPE:
                 try:
@@ -46,11 +49,11 @@ class HandleSessionPersistenceDelta(task.Task):
                     LOG.exception("Failed to delete existing session persistence for pool: %s",
                                   pool.id)
                     raise e
-            sp_template = getattr(self.axapi_client.slb.template, SP_OBJ_DICT[sess_pers.type])
+            sp_template = getattr(self.axapi_client.slb.template, SP_OBJ_DICT[sess_pers['type']])
 
             try:
-                if sess_pers.cookie_name:
-                    sp_template.create(pool.id, cookie_name=sess_pers.cookie_name)
+                if sess_pers['cookie_name']:
+                    sp_template.create(pool.id, cookie_name=sess_pers['cookie_name'])
                 else:
                     sp_template.create(pool.id)
                 LOG.debug("Successfully created session persistence template for pool: %s", pool.id)

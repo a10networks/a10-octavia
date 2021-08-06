@@ -42,9 +42,11 @@ def get_sess_pers_templates(pool):
     c_pers, s_pers, sp = None, None, None
     if pool and pool.session_persistence:
         sp = pool.session_persistence
-        if sp.type == 'HTTP_COOKIE' or sp.type == 'APP_COOKIE':
+        if hasattr(pool.session_persistence, 'to_dict'):
+            sp = pool.session_persistence.to_dict()
+        if sp['type'] == 'HTTP_COOKIE' or sp['type'] == 'APP_COOKIE':
             c_pers = pool.id
-        elif sp.type == 'SOURCE_IP':
+        elif sp['type'] == 'SOURCE_IP':
             s_pers = pool.id
     return c_pers, s_pers
 
