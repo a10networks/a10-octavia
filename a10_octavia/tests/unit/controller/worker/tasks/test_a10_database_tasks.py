@@ -115,6 +115,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
 
     def test_get_vrid_for_project_member_hmt_use_partition(self):
         thunder = copy.deepcopy(HW_THUNDER)
+        lb = copy.deepcopy(LB)
         thunder.hierarchical_multitenancy = 'enable'
         thunder.vrid_floating_ip = VRID.vrid_floating_ip
         hardware_device_conf = self._generate_hardware_device_conf(thunder)
@@ -132,11 +133,12 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vthunder_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.get_vrid_from_owner.return_value = VRID
-        vrid = mock_vrid_entry.execute([a10constants.MOCK_PROJECT_ID], thunder)
+        vrid = mock_vrid_entry.execute([a10constants.MOCK_PROJECT_ID], thunder, lb)
         self.assertEqual(VRID, vrid)
 
     def test_get_vrid_for_project(self):
         thunder = copy.deepcopy(HW_THUNDER)
+        lb = copy.deepcopy(LB)
         thunder.hierarchical_multitenancy = 'disable'
         thunder.vrid_floating_ip = VRID.vrid_floating_ip
         hardware_device_conf = self._generate_hardware_device_conf(thunder)
@@ -154,7 +156,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vthunder_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.get_vrid_from_owner.return_value = VRID
-        vrid = mock_vrid_entry.execute(MEMBER_1, thunder)
+        vrid = mock_vrid_entry.execute(MEMBER_1, thunder, lb)
         mock_vrid_entry.vthunder_repo.get_partition_for_project.assert_not_called()
         self.assertEqual(VRID, vrid)
 

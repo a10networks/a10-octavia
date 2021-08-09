@@ -125,6 +125,9 @@ class PoolFlows(object):
         delete_pool_flow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
             requires=a10constants.VTHUNDER,
             provides=a10constants.LOADBALANCERS_LIST))
+        delete_pool_flow.add(a10_database_tasks.GetMemberListByProjectID(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.MEMBER_LIST))
         delete_pool_flow.add(a10_network_tasks.CalculateDelta(
             requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
             provides=constants.DELTAS))

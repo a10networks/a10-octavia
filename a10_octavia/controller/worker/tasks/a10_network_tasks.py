@@ -57,7 +57,7 @@ class CalculateAmphoraDelta(BaseNetworkTask):
 
     default_provides = constants.DELTA
 
-    def execute(self, loadbalancers_list, amphora):
+    def execute(self, loadbalancers_list, amphora, member_list):
         LOG.debug("Calculating network delta for amphora id: %s", amphora.id)
         # Figure out what networks we want
         # seed with lb network(s)
@@ -69,7 +69,7 @@ class CalculateAmphoraDelta(BaseNetworkTask):
                 member_networks = [
                     self.network_driver.get_subnet(member.subnet_id).network_id
                     for member in pool.members
-                    if member.subnet_id
+                    if member.subnet_id and member in member_list
                 ]
                 desired_network_ids.update(member_networks)
 
@@ -109,7 +109,7 @@ class CalculateDelta(BaseNetworkTask):
 
     default_provides = constants.DELTAS
 
-    def execute(self, loadbalancer, loadbalancers_list):
+    def execute(self, loadbalancer, loadbalancers_list, member_list):
         """Compute which NICs need to be plugged
 
         for the amphora to become operational.
@@ -126,7 +126,7 @@ class CalculateDelta(BaseNetworkTask):
             lambda amp: amp.status == constants.AMPHORA_ALLOCATED,
                 loadbalancer.amphorae):
 
-            delta = calculate_amp.execute(loadbalancers_list, amphora)
+            delta = calculate_amp.execute(loadbalancers_list, amphora, member_list)
             deltas[amphora.id] = delta
         return deltas
 
