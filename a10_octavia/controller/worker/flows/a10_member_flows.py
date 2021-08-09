@@ -57,30 +57,33 @@ class MemberFlows(object):
         create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER_ID,
             provides=constants.AMPHORA))
-        # requires=constants.LOADBALANCER,
+        create_member_flow.add(a10_database_tasks.GetMemberListByProjectID(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.MEMBER_LIST))
         create_member_flow.add(a10_network_tasks.CalculateDelta(
-            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
+            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST,
+                      a10constants.MEMBER_LIST),
             provides=constants.DELTAS))
         create_member_flow.add(a10_network_tasks.HandleNetworkDeltas(
             requires=constants.DELTAS, provides=constants.ADDED_PORTS))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            create_member_flow.add(vthunder_tasks.VCSSyncWait(
+                name="vcs_sync_wait_before_probe_device",
+                requires=a10constants.VTHUNDER))
+            create_member_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_VTHUNDER_MASTER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         # managing interface additions here
-        if topology == constants.TOPOLOGY_SINGLE:
-            create_member_flow.add(
-                vthunder_tasks.AmphoraePostMemberNetworkPlug(
-                    requires=(
-                        constants.LOADBALANCER,
-                        constants.ADDED_PORTS,
-                        a10constants.VTHUNDER)))
-            create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-                name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
-                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
-            create_member_flow.add(
-                vthunder_tasks.EnableInterfaceForMembers(
-                    requires=[
-                        constants.ADDED_PORTS,
-                        constants.LOADBALANCER,
-                        a10constants.VTHUNDER]))
-        # configure member flow for HA
+        create_member_flow.add(
+            vthunder_tasks.AmphoraePostMemberNetworkPlug(
+                requires=(
+                    constants.LOADBALANCER,
+                    constants.ADDED_PORTS,
+                    a10constants.VTHUNDER)))
+        create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
+            requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             create_member_flow.add(
                 a10_database_tasks.GetBackupVThunderByLoadBalancer(
@@ -92,71 +95,18 @@ class MemberFlows(object):
                 requires=constants.AMPHORA,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             create_member_flow.add(vthunder_tasks.VCSSyncWait(
-                name="vcs_sync_wait_before_probe_device",
-                requires=a10constants.VTHUNDER))
-            create_member_flow.add(
-                vthunder_tasks.AmphoraePostMemberNetworkPlug(
-                    requires=(
-                        constants.LOADBALANCER,
-                        constants.ADDED_PORTS,
-                        a10constants.VTHUNDER)))
-            create_member_flow.add(
-                vthunder_tasks.AmphoraePostMemberNetworkPlug(
-                    name="backup_amphora_network_plug", requires=[
-                        constants.ADDED_PORTS, constants.LOADBALANCER], rebind={
-                        a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-            create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-                name=a10constants.MASTER_CONNECTIVITY_WAIT,
-                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
-            create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-                name=a10constants.BACKUP_CONNECTIVITY_WAIT,
-                requires=constants.AMPHORA,
-                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-            create_member_flow.add(vthunder_tasks.VCSSyncWait(
                 name="backup-plug-wait-vcs-ready",
                 requires=a10constants.VTHUNDER))
             create_member_flow.add(vthunder_tasks.GetMasterVThunder(
                 name=a10constants.GET_MASTER_VTHUNDER,
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
-            create_member_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
-                name="get_backup_vThunder_after_get_master",
-                requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
-                provides=a10constants.BACKUP_VTHUNDER))
-            create_member_flow.add(
-                vthunder_tasks.EnableInterfaceForMembers(
-                    name=a10constants.ENABLE_MASTER_VTHUNDER_INTERFACE,
-                    requires=[
-                        constants.ADDED_PORTS,
-                        constants.LOADBALANCER,
-                        a10constants.VTHUNDER]))
-            create_member_flow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
-                name="amphorae-post-member-network-plug-for-master",
-                requires=(constants.LOADBALANCER, constants.ADDED_PORTS,
-                          a10constants.VTHUNDER)))
-            create_member_flow.add(
-                vthunder_tasks.VThunderComputeConnectivityWait(
-                    name=a10constants.CONNECTIVITY_WAIT_FOR_MASTER_VTHUNDER,
-                    requires=(a10constants.VTHUNDER, constants.AMPHORA)))
-            create_member_flow.add(
-                vthunder_tasks.VThunderComputeConnectivityWait(
-                    name=a10constants.CONNECTIVITY_WAIT_FOR_BACKUP_VTHUNDER,
-                    rebind={
-                        a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-                    requires=constants.AMPHORA))
-            create_member_flow.add(vthunder_tasks.VCSSyncWait(
-                name="member_enable_interface_vcs_sync_wait",
-                requires=a10constants.VTHUNDER))
-            create_member_flow.add(vthunder_tasks.GetMasterVThunder(
-                name=a10constants.GET_VTHUNDER_MASTER,
-                requires=a10constants.VTHUNDER,
-                provides=a10constants.VTHUNDER))
-            create_member_flow.add(
-                vthunder_tasks.EnableInterfaceForMembers(
-                    requires=[
-                        constants.ADDED_PORTS,
-                        constants.LOADBALANCER,
-                        a10constants.VTHUNDER]))
+        create_member_flow.add(
+            vthunder_tasks.EnableInterfaceForMembers(
+                requires=[
+                    constants.ADDED_PORTS,
+                    constants.LOADBALANCER,
+                    a10constants.VTHUNDER]))
         create_member_flow.add(self.handle_vrid_for_member_subflow())
         create_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP
@@ -224,11 +174,23 @@ class MemberFlows(object):
         delete_member_flow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
             requires=a10constants.VTHUNDER,
             provides=a10constants.LOADBALANCERS_LIST))
+        delete_member_flow.add(a10_database_tasks.GetMemberListByProjectID(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.MEMBER_LIST))
         delete_member_flow.add(a10_network_tasks.CalculateDelta(
-            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
+            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST,
+                      a10constants.MEMBER_LIST),
             provides=constants.DELTAS))
         delete_member_flow.add(a10_network_tasks.HandleNetworkDeltas(
             requires=constants.DELTAS, provides=constants.ADDED_PORTS))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            delete_member_flow.add(vthunder_tasks.VCSSyncWait(
+                name=a10constants.VCS_SYNC_WAIT,
+                requires=a10constants.VTHUNDER))
+            delete_member_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         delete_member_flow.add(
             vthunder_tasks.AmphoraePostNetworkUnplug(
                 requires=(
@@ -247,16 +209,6 @@ class MemberFlows(object):
             delete_member_flow.add(
                 vthunder_tasks.VThunderComputeConnectivityWait(
                     name=a10constants.BACKUP_CONNECTIVITY_WAIT + "-before-unplug",
-                    requires=constants.AMPHORA,
-                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-            delete_member_flow.add(
-                vthunder_tasks.AmphoraePostNetworkUnplug(
-                    name=a10constants.AMPHORA_POST_NETWORK_UNPLUG_FOR_BACKUP_VTHUNDER,
-                    requires=(constants.LOADBALANCER, constants.ADDED_PORTS),
-                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-            delete_member_flow.add(
-                vthunder_tasks.VThunderComputeConnectivityWait(
-                    name=a10constants.BACKUP_CONNECTIVITY_WAIT,
                     requires=constants.AMPHORA,
                     rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             delete_member_flow.add(vthunder_tasks.VCSSyncWait(
@@ -491,7 +443,8 @@ class MemberFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER],
+                    a10constants.VTHUNDER,
+                    constants.LOADBALANCER],
                 provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(
             a10_network_tasks.DeleteVRIDPort(
@@ -535,7 +488,8 @@ class MemberFlows(object):
                 name='get_vrid_for_loadbalancer_resource' + pool,
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER],
+                    a10constants.VTHUNDER,
+                    constants.LOADBALANCER],
                 provides=a10constants.VRID_LIST))
         delete_member_vrid_subflow.add(
             a10_network_tasks.DeleteMultipleVRIDPort(
@@ -568,7 +522,8 @@ class MemberFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER],
+                    a10constants.VTHUNDER,
+                    constants.LOADBALANCER],
                 provides=a10constants.VRID_LIST))
         handle_vrid_for_member_subflow.add(
             a10_network_tasks.HandleVRIDFloatingIP(
