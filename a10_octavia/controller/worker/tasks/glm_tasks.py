@@ -111,13 +111,13 @@ class DNSConfiguration(task.Task):
 class ActivateFlexpoolLicense(task.Task):
 
     @axapi_client_decorator
-    def execute(self, vthunder, amphora_id):
+    def execute(self, vthunder, amphora):
         if not vthunder:
             LOG.warning("No vthunder therefore licensing cannot occur.")
             return
         token = CONF.glm_license.flexpool_token
         bandwidth = CONF.glm_license.allocate_bandwidth
-        appliance_name = "amphora-"+amphora_id
+        appliance_name = "amphora-"+amphora.id
         use_mgmt_port = False
 
         license_net_id = CONF.glm_license.amp_license_network
