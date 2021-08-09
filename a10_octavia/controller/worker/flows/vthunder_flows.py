@@ -192,11 +192,14 @@ class VThunderFlows(object):
         create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
-            provides=a10constants.VTHUNDER))
+            provides=a10constants.VTHUNDER,
+            inject={a10constants.ROLE: role}))
         create_amp_for_lb_subflow.add(
             vthunder_tasks.VThunderComputeConnectivityWait(
                 name=sf_name + '-' + a10constants.WAIT_FOR_VTHUNDER_CONNECTIVITY,
                 requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        create_amp_for_lb_subflow.add(
+            self.get_glm_license_subflow(prefix + '-' + role, role))
         create_amp_for_lb_subflow.add(
             database_tasks.MarkAmphoraAllocatedInDB(
                 name=sf_name + '-' + constants.MARK_AMPHORA_ALLOCATED_INDB,
@@ -218,8 +221,6 @@ class VThunderFlows(object):
                 database_tasks.MarkAmphoraStandAloneInDB(
                     name=sf_name + '-' + constants.MARK_AMP_STANDALONE_INDB,
                     requires=constants.AMPHORA))
-        create_amp_for_lb_subflow.add(
-            self.get_glm_license_subflow(prefix + '-' + role, role))
 
         if role == constants.ROLE_BACKUP:
             create_amp_for_lb_subflow.add(
@@ -369,14 +370,40 @@ class VThunderFlows(object):
     def get_glm_license_subflow(self, prefix, role):
         sf_name = prefix + '-' + a10constants.ACTIVATE_GLM_LICENSE_SUBFLOW
         glm_license_subflow = linear_flow.Flow(sf_name)
-        glm_license_subflow.add(glm_tasks.DNSConfiguration(
-            name=role + '-' + a10constants.CONFIGURE_DNS_NAMESERVERS,
-            requires={a10constants.VTHUNDER, constants.FLAVOR}
-        ))
-        glm_license_subflow.add(glm_tasks.ActivateFlexpoolLicense(
-              name=role + '-' + a10constants.ACTIVATE_FLEXPOOL_LICENSE,
-            requires={a10constants.VTHUNDER, constants.AMPHORA_ID}
-        ))
+
+        if role == constants.ROLE_MASTER:
+            glm_license_subflow.add(glm_tasks.DNSConfiguration(
+                inject={constants.ROLE: role},
+                name=role + '-' + a10constants.CONFIGURE_DNS_NAMESERVERS,
+                requires=(constants.FLAVOR, a10constants.VTHUNDER)
+            ))
+            glm_license_subflow.add(glm_tasks.ActivateFlexpoolLicense(
+                inject={constants.ROLE: role},
+                name=role + '-' + a10constants.ACTIVATE_FLEXPOOL_LICENSE,
+                requires=(constants.AMPHORA, a10constants.VTHUNDER),
+            ))
+        elif role == constants.ROLE_BACKUP:
+            glm_license_subflow.add(
+                a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                    requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+                    provides=a10constants.BACKUP_VTHUNDER))
+            glm_license_subflow.add(
+                vthunder_tasks.VThunderComputeConnectivityWait(
+                    name=a10constants.BACKUP_CONNECTIVITY_WAIT,
+                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                    requires=constants.AMPHORA))
+            glm_license_subflow.add(glm_tasks.DNSConfiguration(
+                inject={constants.ROLE: role},
+                name=role + '-' + a10constants.CONFIGURE_DNS_NAMESERVERS,
+                requires=(constants.FLAVOR),
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+            ))
+            glm_license_subflow.add(glm_tasks.ActivateFlexpoolLicense(
+                inject={constants.ROLE: role},
+                name=role + '-' + a10constants.ACTIVATE_FLEXPOOL_LICENSE,
+                requires=(constants.AMPHORA),
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+            ))
         return glm_license_subflow
 
     def get_vrrp_subflow(self, prefix):

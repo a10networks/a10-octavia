@@ -107,6 +107,8 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
             self.amphora_repo.update(db_apis.get_session(), amphora.id,
                                      status=constants.ERROR)
             raise e
+        except Exception as e:
+            LOG.warning("vThunder could not be connected too")
 
 
 class AmphoraePostVIPPlug(VThunderBaseTask):
