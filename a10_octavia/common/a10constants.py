@@ -208,6 +208,8 @@ MARK_LB_PENIND_UPDATE_IN_DB = 'mark-vthunder-pending-update-in-db'
 MARK_LB_ACTIVE_IN_DB = 'mark-vthunder-active-in-db'
 GET_VTHUNDER_NETWORK_LIST = 'get-vthunder-network-list'
 GET_AMPHORA_FOR_FAILOVER = 'get-amphora-for-failover'
+PLUG_NETWORK_BY_IDS = 'plug-network-by-ids'
+POST_FAILOVER_PLUG_NETWORK = 'post-failover-plug-network'
 
 # ======================
 # Non-Taskflow Constants

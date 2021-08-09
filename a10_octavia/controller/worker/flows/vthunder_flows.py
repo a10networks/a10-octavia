@@ -77,6 +77,10 @@ class VThunderFlows(object):
                 name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
                 requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         create_vthunder_flow.add(
+            vthunder_tasks.UpdateAcosVersionInVthunderEntry(
+                name=sf_name + '-' + a10constants.UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY,
+                requires=(a10constants.VTHUNDER)))
+        create_vthunder_flow.add(
             database_tasks.MarkAmphoraReadyInDB(
                 name=sf_name + '-' + a10constants.MARK_AMPHORA_READY_INDB,
                 requires=(constants.AMPHORA)))
@@ -515,12 +519,31 @@ class VThunderFlows(object):
 
         return failover_flow
 
-    def _get_failover_spare_amphora_subflow(self, prefix):
+    def _get_failover_get_spare_amphora_subflow(self, prefix):
         """Flow to get spare amphora for failvoer"""
         sf_name = 'failover_get_spare_amphora'
-        failover_amp_flow = linear_flow.Flow(sf_name)
+        get_spare_flow = linear_flow.Flow(sf_name)
+        get_spare_flow.add(a10_database_tasks.GetSpareComputeForProject(
+            name=sf_name + '-' + a10constants.GET_SPARE_COMPUTE_FOR_PROJECT,
+            inject={constants.COMPUTE_ID: None},
+            provides=(constants.COMPUTE_ID, a10constants.SPARE_VTHUNDER)))
+        get_spare_flow.add(a10_network_tasks.PlugNetworksByID(
+            name=sf_name + '-' + a10constants.PLUG_NETWORK_BY_IDS,
+            requires=(a10constants.NETWORK_LIST),
+            rebind={a10constants.VTHUNDER: a10constants.SPARE_VTHUNDER}))
+        get_spare_flow.add(vthunder_tasks.FailoverPostNetowrkPlug(
+            name=sf_name + '-' + a10constants.POST_FAILOVER_PLUG_NETWORK,
+            rebind={a10constants.VTHUNDER: a10constants.SPARE_VTHUNDER}))
+        get_spare_flow.add(a10_database_tasks.GetVThunderAmphora(
+            name=sf_name + '-' + a10constants.GET_VTHUNDER_AMPHORA,
+            rebind={a10constants.VTHUNDER: a10constants.SPARE_VTHUNDER},
+            provides=constants.AMPHORA))
+        get_spare_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
+            rebind={a10constants.VTHUNDER: a10constants.SPARE_VTHUNDER},
+            requires=(constants.AMPHORA)))
 
-        return failover_amp_flow
+        return get_spare_flow
 
     def _get_failover_create_amphora_subflow(self, prefix):
         """Flow to create amphora for failover"""
@@ -567,7 +590,7 @@ class VThunderFlows(object):
         check_spare = a10_database_tasks.TryGetSpareCompute(
             name=sf_name + '-' + 'check-spare-exist',
             provides=a10constants.SPARE_VTHUNDER)
-        get_spare_amp = self._get_failover_spare_amphora_subflow(sf_name)
+        get_spare_amp = self._get_failover_get_spare_amphora_subflow(sf_name)
         create_amp = self._get_failover_create_amphora_subflow(sf_name)
         failover_get_amp_flow.add(check_spare, get_spare_amp, create_amp)
         failover_get_amp_flow.link(check_spare, get_spare_amp,

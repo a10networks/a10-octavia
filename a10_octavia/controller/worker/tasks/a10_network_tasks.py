@@ -208,6 +208,33 @@ class UnPlugNetworks(BaseNetworkTask):
                 LOG.exception("Unable to unplug network")
 
 
+class PlugNetworksByID(BaseNetworkTask):
+    """Task to plug the networks in the list."""
+
+    def __init__(self, *arg, **kwargs):
+        self.added_network = []
+        super(PlugNetworksByID, self).__init__(*arg, **kwargs)
+
+    def execute(self, vthunder, network_list):
+        nics = self.network_driver.get_plugged_networks(vthunder.compute_id)
+        exist_ids = [nic.network_id for nic in nics]
+
+        for net in network_list:
+            try:
+                if net not in exist_ids:
+                    self.network_driver.plug_network(vthunder.compute_id, net)
+                    self.added_network.append(net)
+            except Exception:
+                LOG.exception("Failed to plug network: %s", net)
+
+    def revert(self, vthunder, network_list):
+        for net in self.added_network:
+            try:
+                self.network_driver.unplug_network(vthunder.compute_id, net)
+            except base.NetworkNotFound:
+                pass
+
+
 class GetMemberPorts(BaseNetworkTask):
 
     def execute(self, loadbalancer, amphora):

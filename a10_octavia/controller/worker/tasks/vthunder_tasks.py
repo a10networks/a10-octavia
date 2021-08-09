@@ -124,6 +124,23 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
                 raise e
 
 
+class FailoverPostNetowrkPlug(VThunderBaseTask):
+    """Task to reload vThunder after plug networks"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder):
+        try:
+            self.axapi_client.system.action.write_memory()
+            self.axapi_client.system.action.reload_reboot_for_interface_attachment(
+                vthunder.acos_version)
+            LOG.debug("Waiting for 30 seconds to trigger vThunder reload.")
+            time.sleep(30)
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+            LOG.exception("Failed to reload vThunder for network interface plug-in"
+                          " for amphora: %s", vthunder.amphora_id)
+            raise e
+
+
 class AllowL2DSR(VThunderBaseTask):
     """Task to add wildcat address in allowed_address_pair for L2DSR"""
 
@@ -392,6 +409,12 @@ class CreateHealthMonitorOnVThunder(VThunderBaseTask):
         max_retries = CONF.a10_health_manager.health_check_max_retries
         port = CONF.a10_health_manager.bind_port
         ipv4 = CONF.a10_health_manager.bind_ip
+
+        # For spare vthunder if no data port, ACOS not allow create slb server
+        if vthunder.topology == a10constants.TOPOLOGY_SPARE:
+            if len(CONF.a10_controller_worker.amp_boot_network_list) < 2:
+                return
+
         if interval < timeout:
             LOG.warning(
                 "Interval should be greater than or equal to timeout. Reverting to default values. "
@@ -1027,9 +1050,12 @@ class WriteMemoryThunderStatusCheck(VThunderBaseTask):
 class UpdateAcosVersionInVthunderEntry(VThunderBaseTask):
 
     @axapi_client_decorator
-    def execute(self, vthunder, loadbalancer):
-        existing_vthunder = self.vthunder_repo.get_vthunder_by_project_id(db_apis.get_session(),
-                                                                          loadbalancer.project_id)
+    def execute(self, vthunder, loadbalancer=None):
+        existing_vthunder = None
+        if loadbalancer is not None:
+            existing_vthunder = self.vthunder_repo.get_vthunder_by_project_id(
+                db_apis.get_session(),
+                loadbalancer.project_id)
         if not existing_vthunder:
             try:
                 acos_version_summary = self.axapi_client.system.action.get_acos_version()
