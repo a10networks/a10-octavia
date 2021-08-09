@@ -51,7 +51,7 @@ A10_GLOBAL_OPTS = [
 ]
 
 A10_GLM_LICENSE = [
-    cfg.IntOpt('amp_license_network',
+    cfg.StrOpt('amp_license_network',
                default='',
                help=_('Network used to connect the vThunder-Amphorae '
                       'to the GLM or ELM. If not specified, the '
@@ -396,6 +396,7 @@ cfg.CONF.register_opts(A10_HOUSE_KEEPING_OPTS, group='a10_house_keeping')
 cfg.CONF.register_cli_opts(A10_HEALTH_MANAGER_OPTS, group='a10_health_manager')
 cfg.CONF.register_opts(A10_NOVA_OPTS, group='a10_nova')
 cfg.CONF.register_opts(A10_VTHUNDER_OPTS, group='vthunder')
+cfg.CONF.register_opts(A10_GLM_LICENSE, group='glm_license')
 cfg.CONF.register_opts(A10_SLB_OPTS, group='slb')
 cfg.CONF.register_opts(A10_HEALTH_MONITOR_OPTS, group='health_monitor')
 cfg.CONF.register_opts(A10_LISTENER_OPTS, group='listener')

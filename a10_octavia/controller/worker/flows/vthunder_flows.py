@@ -195,7 +195,6 @@ class VThunderFlows(object):
             create_amp_for_lb_subflow.add(database_tasks.MarkAmphoraMasterInDB(
                 name=sf_name + '-' + constants.MARK_AMP_MASTER_INDB,
                 requires=constants.AMPHORA))
-            create_amp_for_lb_subflow.add(self.get_glm_license_subflow(prefix))
         elif role == constants.ROLE_BACKUP:
             create_amp_for_lb_subflow.add(database_tasks.MarkAmphoraBackupInDB(
                 name=sf_name + '-' + constants.MARK_AMP_BACKUP_INDB,
@@ -205,6 +204,8 @@ class VThunderFlows(object):
                 database_tasks.MarkAmphoraStandAloneInDB(
                     name=sf_name + '-' + constants.MARK_AMP_STANDALONE_INDB,
                     requires=constants.AMPHORA))
+        create_amp_for_lb_subflow.add(
+            self.get_glm_license_subflow(prefix + '-' + role, role))
 
         return create_amp_for_lb_subflow
 
@@ -303,12 +304,16 @@ class VThunderFlows(object):
                     requires=constants.AMPHORA))
         return vthunder_for_amphora_subflow
 
-    def get_glm_license_subflow(self, prefix):
+    def get_glm_license_subflow(self, prefix, role):
         sf_name = prefix + '-' + a10constants.ACTIVATE_GLM_LICENSE_SUBFLOW
         glm_license_subflow = linear_flow.Flow(sf_name)
         glm_license_subflow.add(glm_tasks.DNSConfiguration(
-            name=a10constants.CONFIGURE_DNS_NAMESERVERS,
+            name=role + '-' + a10constants.CONFIGURE_DNS_NAMESERVERS,
             requires={a10constants.VTHUNDER, constants.FLAVOR}
+        ))
+        glm_license_subflow.add(glm_tasks.ActivateFlexpoolLicense(
+              name=role + '-' + a10constants.ACTIVATE_FLEXPOOL_LICENSE,
+            requires={a10constants.VTHUNDER, constants.AMPHORA_ID}
         ))
         return glm_license_subflow
 

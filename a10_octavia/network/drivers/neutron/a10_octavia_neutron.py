@@ -511,3 +511,11 @@ class A10OctaviaNeutronDriver(aap.AllowedAddressPairsDriver):
             LOG.error('Failed to delete port.  Resources may still be in '
                       'use for port: %(port)s due to error: %(except)s',
                       {constants.PORT: amphora.vrrp_port_id, 'except': str(e)})
+    
+    def show_subnet_detailed(self, subnet_id):
+        try:
+            subnet = self.neutron_client.show_subnet(subnet_id)
+            return subnet
+        except Exception as e:
+            LOG.exception(str(e))
+            raise e
