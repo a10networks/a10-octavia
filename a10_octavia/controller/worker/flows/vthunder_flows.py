@@ -188,11 +188,15 @@ class VThunderFlows(object):
             name=sf_name + '-' + a10constants.CREATE_VTHUNDER_ENTRY,
             requires=(constants.AMPHORA, constants.LOADBALANCER),
             inject={a10constants.ROLE: role, a10constants.STATUS: constants.PENDING_CREATE}))
+        create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+                name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,
+                requires=constants.LOADBALANCER,
+                provides=a10constants.VTHUNDER))
         # Get VThunder details from database
         if role == constants.ROLE_BACKUP:
             create_amp_for_lb_subflow.add(
                 a10_database_tasks.GetBackupVThunderByLoadBalancer(
-                    requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+                    requires=constants.LOADBALANCER,
                     provides=a10constants.BACKUP_VTHUNDER))
             create_amp_for_lb_subflow.add(
                 vthunder_tasks.VThunderComputeConnectivityWait(
@@ -200,10 +204,10 @@ class VThunderFlows(object):
                     rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                     requires=constants.AMPHORA))
         else:
-            create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-                name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,
-                requires=constants.LOADBALANCER,
-                provides=a10constants.VTHUNDER))
+            #create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            #    name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,
+            #    requires=constants.LOADBALANCER,
+            #    provides=a10constants.VTHUNDER))
             create_amp_for_lb_subflow.add(
                 vthunder_tasks.VThunderComputeConnectivityWait(
                     name=sf_name + '-' + a10constants.WAIT_FOR_VTHUNDER_CONNECTIVITY,
