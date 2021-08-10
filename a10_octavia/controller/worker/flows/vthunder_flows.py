@@ -169,11 +169,12 @@ class VThunderFlows(object):
             name=sf_name + '-' + constants.UPDATE_AMPHORA_INFO,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_OBJ),
             provides=constants.AMPHORA))
-        # create vThunder entry in custom DB
+        # Create vThunder entry in custom DB
         create_amp_for_lb_subflow.add(a10_database_tasks.CreateVThunderEntry(
             name=sf_name + '-' + a10constants.CREATE_VTHUNDER_ENTRY,
             requires=(constants.AMPHORA, constants.LOADBALANCER),
             inject={a10constants.ROLE: role, a10constants.STATUS: constants.PENDING_CREATE}))
+        # Rebind requires vthunder in store and vMaster requires vThunder
         create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
                 name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,
                 requires=constants.LOADBALANCER,
@@ -190,15 +191,11 @@ class VThunderFlows(object):
                     rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                     requires=constants.AMPHORA))
         else:
-            #create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-            #    name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,
-            #    requires=constants.LOADBALANCER,
-            #    provides=a10constants.VTHUNDER))
             create_amp_for_lb_subflow.add(
                 vthunder_tasks.VThunderComputeConnectivityWait(
                     name=sf_name + '-' + a10constants.WAIT_FOR_VTHUNDER_CONNECTIVITY,
                     requires=(a10constants.VTHUNDER, constants.AMPHORA)))
-        # License the vThunder-Amphora         
+        # License the vThunder-Amphora
         create_amp_for_lb_subflow.add(
             self.get_glm_license_subflow(prefix + '-' + role, role))
         create_amp_for_lb_subflow.add(
