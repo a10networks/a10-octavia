@@ -100,7 +100,6 @@ class LoadBalancerFlows(object):
         post_amp_prefix = constants.POST_LB_AMP_ASSOCIATION_SUBFLOW
         vthunder = self._vthunder_repo.get_vthunder_by_project_id(db_apis.get_session(),
                                                                   project_id)
-
         lb_create_flow.add(
             self.get_post_lb_vthunder_association_flow(
                 post_amp_prefix, load_balancer_id, topology, vthunder,
@@ -124,16 +123,6 @@ class LoadBalancerFlows(object):
             requires=a10constants.VTHUNDER))
         lb_create_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
-
-        # For first LB, vcs just setup and need sync. config and reload vBlade severial times.
-        if not vthunder and topology == constants.TOPOLOGY_ACTIVE_STANDBY:
-            lb_create_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
-                name="get-blade-thunder-for-checking",
-                requires=constants.LOADBALANCER,
-                provides=a10constants.BACKUP_VTHUNDER))
-            lb_create_flow.add(virtual_server_tasks.WaitVirtualServerReadyOnBlade(
-                requires=(constants.LOADBALANCER),
-                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
 
         return lb_create_flow
 
