@@ -18,7 +18,6 @@ from oslo_log import log as logging
 from requests.exceptions import ConnectionError
 from taskflow import task
 
-
 from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
 from a10_octavia.common import openstack_mappings
