@@ -527,21 +527,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         lb_task.vthunder_repo.get_vthunder_by_project_id.return_value = vthunder
         self.assertRaises(o_exceptions.InvalidTopology, lb_task.execute, LB, "SINGLE")
 
-    def test_GetListenerListInLoadbalancer(self):
-        vthunder = copy.deepcopy(VTHUNDER)
-        vthunder.loadbalancer_id = a10constants.MOCK_LOAD_BALANCER_ID
-        lb = copy.deepcopy(LB)
-        lb.provisioning_status = "ACTIVE"
-        mock_get_listener = task.GetListenerListInLoadbalancer()
-        mock_get_listener.loadbalancer_repo = mock.MagicMock()
-        mock_get_listener.loadbalancer_repo.get.return_value = lb
-        mock_get_listener.listener_repo = mock.MagicMock()
-        mock_get_listener.listener_repo.get_all.return_value = [LISTENER, None]
-        listeners = mock_get_listener.execute(vthunder)
-        self.assertEqual(listeners, LISTENER)
-
     @mock.patch('octavia.statistics.stats_base.update_stats_via_driver')
-    def test_UpdateListenersStats(self, mock_stats_base):
+    def test_update_listeners_stats_with_statistics(self, mock_stats_base):
         LISTENER_STATS = o_data_models.ListenerStatistics(listener_id=uuidutils.generate_uuid())
         mock_get_listener = task.UpdateListenersStats()
         mock_get_listener.listener_repo = mock.MagicMock()

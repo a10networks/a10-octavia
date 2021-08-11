@@ -18,14 +18,12 @@ from oslo_log import log as logging
 from requests.exceptions import ConnectionError
 from taskflow import task
 
-from octavia.common import data_models
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
-from a10_octavia.controller.worker.tasks.decorators import axapi_client_statistics_decorator
 from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
@@ -247,35 +245,3 @@ class ListenerDelete(ListenersParent, task.Task):
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to delete listener: %s", listener.id)
             raise e
-
-
-class GetListenersStats(ListenersParent, task.Task):
-    """Task for retrieving listener stats from vthunder"""
-
-    @axapi_client_statistics_decorator
-    def execute(self, vthunder, listeners):
-        listener_stats = []
-        if listeners:
-            for listener in listeners:
-                listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
-                                                                             listener.protocol)
-                try:
-                    response = self.axapi_client.slb.virtual_server.vport.get_stats(
-                        listener.load_balancer_id, listener.id, listener.protocol,
-                        listener.protocol_port)
-                    stats_model = data_models.ListenerStatistics(
-                        listener_id=listener.id,
-                        amphora_id=vthunder.amphora_id,
-                        bytes_in=response['port']['stats']['total_fwd_bytes'],
-                        bytes_out=response['port']['stats']['total_rev_bytes'],
-                        active_connections=response['port']['stats']['curr_conn'],
-                        total_connections=response['port']['stats']['total_conn'],
-                        request_errors=0,  # (ACOS don’t have related stats for this)
-                    )
-                    LOG.info("Listener %s / Amphora %s stats: %s",
-                             listener.id, vthunder.amphora_id, stats_model.get_stats())
-                    listener_stats.append(stats_model)
-                except (acos_errors.ACOSException, ConnectionError) as e:
-                    LOG.warning("Failed to retrieve statistics for  listener: %s "
-                                "due to %s", listener.id, str(e))
-        return listener_stats

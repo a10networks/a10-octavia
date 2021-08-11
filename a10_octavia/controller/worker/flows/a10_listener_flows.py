@@ -290,18 +290,11 @@ class ListenerFlows(object):
         listener_stats_flow = linear_flow.Flow(sf_name)
         vthunder_store = {}
         vthunder_store[vthunder] = vthunder
-        listener_stats_flow.add(a10_database_tasks.GetListenerListInLoadbalancer(
-            name='{flow}-{id}'.format(
-                id=vthunder.vthunder_id,
-                flow='GetListenerListInLoadbalancer'),
-            requires=a10constants.VTHUNDER,
-            rebind={a10constants.VTHUNDER: vthunder},
-            provides=constants.LISTENERS))
-        listener_stats_flow.add(virtual_port_tasks.GetListenersStats(
+        listener_stats_flow.add(vthunder_tasks.GetListenersStats(
             name='{flow}-{id}'.format(
                 id=vthunder.vthunder_id,
                 flow='GetListenersStats'),
-            requires=(a10constants.VTHUNDER, constants.LISTENERS),
+            requires=(a10constants.VTHUNDER),
             rebind={a10constants.VTHUNDER: vthunder},
             provides=a10constants.LISTENER_STATS))
         listener_stats_flow.add(a10_database_tasks.UpdateListenersStats(

@@ -1048,21 +1048,6 @@ class CountMembersOnThunderBySubnet(BaseDatabaseTask):
         return 0
 
 
-class GetListenerListInLoadbalancer(BaseDatabaseTask):
-    """Task for fetching the listeners of a loadbalancer"""
-
-    def execute(self, vthunder):
-        try:
-            lb = self.loadbalancer_repo.get(db_apis.get_session(), id=vthunder.loadbalancer_id)
-            if lb.provisioning_status == constants.ACTIVE:
-                listeners, _ = self.listener_repo.get_all(db_apis.get_session(),
-                                                          load_balancer_id=vthunder.loadbalancer_id)
-                return listeners
-        except Exception as e:
-            LOG.warning('Failed to get active listeners related to thunder '
-                        'due to: {}'.format(str(e)))
-
-
 class UpdateListenersStats(BaseDatabaseTask):
     """Task for updating the listener stats"""
 

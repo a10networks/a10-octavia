@@ -80,7 +80,7 @@ class VThunderUDPStatusGetter(object):
         try:
             data, srcaddr = self.sock.recvfrom(UDP_MAX_SIZE)
             ip, port = srcaddr
-            LOG.warning('Received packet from %s', ip)
+            LOG.info('Received packet from %s', ip)
             # get record id of first vThunder from srcaddr
             record_id = self.vthunder_repo.get_vthunder_from_src_addr(db_api.get_session(), ip)
 
