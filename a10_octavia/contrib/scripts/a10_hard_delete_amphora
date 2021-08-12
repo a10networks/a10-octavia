@@ -1,0 +1,13 @@
+#!/bin/bash
+mysql -u$1 -p$2 <<EOF
+USE octavia;
+DELETE FROM member;
+DELETE FROM l7rule;
+DELETE FROM l7policy;
+DELETE FROM listener;
+DELETE FROM pool;
+DELETE FROM vip;
+DELETE FROM amphora;
+DELETE FROM vthunders;
+DELETE FROM load_balancer;
+EOF

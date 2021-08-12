@@ -69,30 +69,29 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
     def execute(self, vthunder, amphora):
         """Execute get_info routine for a vThunder until it responds."""
         try:
-            if vthunder:
-                axapi_client = a10_utils.get_axapi_client(vthunder)
-                LOG.info("Attempting to connect vThunder device for connection.")
-                attempts = CONF.a10_controller_worker.amp_active_retries
-                while attempts >= 0:
-                    try:
-                        attempts = attempts - 1
-                        axapi_client.system.information()
-                        break
-                    except (acos_errors.ACOSSystemIsBusy, acos_errors.ACOSSystemNotReady,
-                            req_exceptions.ConnectionError, req_exceptions.ReadTimeout):
-                        # acos-client already wait default_axapi_timeout for these exceptions.
-                        axapi_timeout = CONF.vthunder.default_axapi_timeout
-                        attempt_wait = CONF.a10_controller_worker.amp_active_wait_sec
-                        if axapi_timeout > attempt_wait:
-                            attempts = attempts - (axapi_timeout / attempt_wait - 1)
-                        LOG.debug("VThunder connection retry cnt:" + str(attempts))
-                    except (acos_errors.ACOSException, http_client.BadStatusLine):
-                        time.sleep(CONF.a10_controller_worker.amp_active_wait_sec)
-                        LOG.debug("VThunder connection retry cnt:" + str(attempts))
-                if attempts < 0:
-                    LOG.error("Failed to connect vThunder in expected amount of boot time: %s",
-                              vthunder.id)
-                    raise req_exceptions.ConnectionError
+            axapi_client = a10_utils.get_axapi_client(vthunder)
+            LOG.info("Attempting to connect vThunder device for connection.")
+            attempts = CONF.a10_controller_worker.amp_active_retries
+            while attempts >= 0:
+                try:
+                    attempts = attempts - 1
+                    axapi_client.system.information()
+                    break
+                except (acos_errors.ACOSSystemIsBusy, acos_errors.ACOSSystemNotReady,
+                        req_exceptions.ConnectionError, req_exceptions.ReadTimeout):
+                    # acos-client already wait default_axapi_timeout for these exceptions.
+                    axapi_timeout = CONF.vthunder.default_axapi_timeout
+                    attempt_wait = CONF.a10_controller_worker.amp_active_wait_sec
+                    if axapi_timeout > attempt_wait:
+                        attempts = attempts - (axapi_timeout / attempt_wait - 1)
+                    LOG.debug("VThunder connection retry cnt:" + str(attempts))
+                except (acos_errors.ACOSException, http_client.BadStatusLine):
+                    time.sleep(CONF.a10_controller_worker.amp_active_wait_sec)
+                    LOG.debug("VThunder connection retry cnt:" + str(attempts))
+            if attempts < 0:
+                LOG.error("Failed to connect vThunder in expected amount of boot time: %s",
+                          vthunder.id)
+                raise req_exceptions.ConnectionError
 
         except driver_except.TimeOutException as e:
             LOG.exception("Amphora compute instance failed to become reachable. "
@@ -102,6 +101,8 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
             self.amphora_repo.update(db_apis.get_session(), amphora.id,
                                      status=constants.ERROR)
             raise e
+        except Exception as e:
+            LOG.warning("vThunder could not be connected too")
 
 
 class AmphoraePostVIPPlug(VThunderBaseTask):
