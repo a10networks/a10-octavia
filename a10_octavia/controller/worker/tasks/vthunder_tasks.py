@@ -128,13 +128,14 @@ class FailoverPostNetowrkPlug(VThunderBaseTask):
     """Task to reload vThunder after plug networks"""
 
     @axapi_client_decorator
-    def execute(self, vthunder):
+    def execute(self, vthunder, added_network):
         try:
-            self.axapi_client.system.action.write_memory()
-            self.axapi_client.system.action.reload_reboot_for_interface_attachment(
-                vthunder.acos_version)
-            LOG.debug("Waiting for 30 seconds to trigger vThunder reload.")
-            time.sleep(30)
+            if added_network and len(added_network) > 0:
+                self.axapi_client.system.action.write_memory()
+                self.axapi_client.system.action.reload_reboot_for_interface_attachment(
+                    vthunder.acos_version)
+                LOG.debug("Waiting for 30 seconds to trigger vThunder reload.")
+                time.sleep(30)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to reload vThunder for network interface plug-in"
                           " for amphora: %s", vthunder.amphora_id)
@@ -296,6 +297,24 @@ class EnableInterfaceForMembers(VThunderBaseTask):
             raise e
 
 
+class EnableInterfaceForFailover(VThunderBaseTask):
+    """Task to configure spare vThunder ports for failover"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder, added_network=None):
+        try:
+            # When create new amphora for failover case, the added_network will be None
+            if added_network is None or len(added_network) > 0:
+                interfaces = self.axapi_client.interface.get_list()
+                for i in range(len(interfaces['interface']['ethernet-list'])):
+                    if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
+                        ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
+                        self.axapi_client.system.action.setInterface(ifnum)
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+            LOG.exception("Failed to configure vthunder interface: %s", str(e))
+            raise e
+
+
 class ConfigureVRRPMaster(VThunderBaseTask):
     """Task to configure Master vThunder VRRP"""
 
@@ -316,6 +335,19 @@ class ConfigureVRRPBackup(VThunderBaseTask):
     def execute(self, vthunder, set_id=1):
         try:
             self.axapi_client.system.action.configureVRRP(2, set_id)
+            LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+            LOG.exception("Failed to configure backup vThunder VRRP: %s", str(e))
+            raise e
+
+
+class ConfigureVRRPFailover(VThunderBaseTask):
+    """Task to configure failover spare vThunder VRRP"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder, device_id, set_id):
+        try:
+            self.axapi_client.system.action.configureVRRP(device_id, set_id)
             LOG.debug("Successfully configured VRRP for vThunder: %s", vthunder.id)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure backup vThunder VRRP: %s", str(e))
@@ -392,6 +424,26 @@ class ConfigureaVCSBackup(VThunderBaseTask):
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure backup vThunder aVCS: %s", str(e))
             raise e
+
+
+class ConfigureaVCSFailover(VThunderBaseTask):
+    """Task to configure aVCS for failover replacement vthunder"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder, device_id, device_priority=200,
+                floating_ip="192.168.0.100", floating_ip_mask="255.255.255.0"):
+        if device_id is not None:
+            if device_id == 1:
+                device_priority = 200
+            else:
+                device_priority = 100
+
+            try:
+                configure_avcs(self.axapi_client, device_id, device_priority,
+                               floating_ip, floating_ip_mask)
+            except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+                LOG.exception("Failed to configure failover vThunder aVCS: %s", str(e))
+                raise e
 
 
 class CreateHealthMonitorOnVThunder(VThunderBaseTask):
@@ -1128,8 +1180,9 @@ class VCSSyncWait(VThunderBaseTask):
                 vcs_summary = self.axapi_client.system.action.get_vcs_summary_oper()
                 vcs_summary = vcs_summary['vcs-summary']['oper']
 
-                if acos_client.utils.acos_version_cmp(vthunder.acos_version,
-                                                      a10constants.ACOS_5_2_1_P2) >= 0:
+                if (vthunder.acos_version is not None and
+                    acos_client.utils.acos_version_cmp(vthunder.acos_version,
+                                                       a10constants.ACOS_5_2_1_P2) >= 0):
                     vcs_ready = False
                     for peer_vcs_state in vcs_summary['vcs-handshake-completed-list']:
                         if peer_vcs_state['vcs-handshake-completed'] == 1:

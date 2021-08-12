@@ -969,6 +969,28 @@ class DeleteProjectSetIdDB(BaseDatabaseTask):
             LOG.exception('Failed to delete VRRP-A set_id for project due to :{}'.format(str(e)))
 
 
+class GetProjectVRRPSetId(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        if len(CONF.a10_controller_worker.amp_boot_network_list) < 1:
+            raise exceptions.NoVrrpMgmtSubnet()
+        mgmt_subnet = CONF.a10_controller_worker.amp_boot_network_list[0]
+
+        try:
+            project_id = vthunder.project_id
+            entry = self.vrrp_set_repo.get(db_apis.get_session(),
+                                           mgmt_subnet=mgmt_subnet,
+                                           project_id=project_id)
+            if entry is None:
+                entry = self.vrrp_set_repo.get(db_apis.get_session(),
+                                               project_id=project_id)
+            if entry is not None:
+                return entry.set_id
+        except Exception as e:
+            LOG.exception('Failed to get VRRP-A set_id for project due to:{}'.format(str(e)))
+        raise exceptions.ProjectVrrpSetIdNotFound()
+
+
 class GetLoadBalancerListForDeletion(BaseDatabaseTask):
 
     def execute(self, vthunder, loadbalancer):
@@ -1189,9 +1211,66 @@ class SetVThunderToStandby(BaseDatabaseTask):
 
             if blade:
                 try:
+                    # only chnage role in vthunders table, don't change amphora table roles
+                    # since we need to know device-id when failover in GetVThunderDeviceID.
+                    # (which is 1 for master, 2 for backup)
                     self.vthunder_repo.update(db_apis.get_session(), blade.id,
                                               role=constants.ROLE_MASTER)
                     self.vthunder_repo.update(db_apis.get_session(), vthunder.id,
                                               role=constants.ROLE_BACKUP)
                 except Exception as e:
                     LOG.exception("Failed to switch VCS devices roles du to %s", str(e))
+
+
+class GetVThunderDeviceID(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        device_id = None
+
+        amphora = self.amphora_repo.get(db_apis.get_session(),
+                                        id=vthunder.amphora_id)
+        if amphora:
+            if amphora.role == constants.ROLE_MASTER:
+                device_id = 1
+            elif amphora.role == constants.ROLE_BACKUP:
+                device_id = 2
+            else:
+                LOG.info("GetVThunderDeviceID: Not VCS topology")
+        else:
+            LOG.info("Missing amphora for GetVThunderDeviceID")
+        return device_id
+
+
+class FailoverPostDbUpdate(BaseDatabaseTask):
+
+    def execute(self, vthunder, spare_vthunder):
+        if vthunder is None or spare_vthunder is None:
+            raise exceptions.MissThunderForFailover()
+
+        try:
+            spare_amphora = self.amphora_repo.get(db_apis.get_session(),
+                                                  id=spare_vthunder.amphora_id)
+
+            ip = spare_vthunder.ip_address
+            compute_id = spare_vthunder.compute_id
+            image_id = spare_amphora.image_id
+            compute_flavor = spare_amphora.compute_flavor
+            vthunders = self.vthunder_repo.get_all_vthunder_by_address(
+                db_apis.get_session(),
+                ip_address=vthunder.ip_address)
+            for thunder in vthunders:
+                # vthunder table update ip_address, compute_id
+                self.vthunder_repo.update(db_apis.get_session(),
+                                          id=thunder.id,
+                                          ip_address=ip,
+                                          compute_id=compute_id)
+
+                # amphora table update compute_id, lb_network_ip, image_id, compute_flavor
+                self.amphora_repo.update(db_apis.get_session(),
+                                         id=thunder.amphora_id,
+                                         compute_id=compute_id,
+                                         lb_network_ip=ip,
+                                         image_id=image_id,
+                                         compute_flavor=compute_flavor)
+        except Exception as e:
+            LOG.exception("Failover failed to update DB du to: %s", str(e))

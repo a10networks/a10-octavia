@@ -216,6 +216,11 @@ class VThunderRepository(BaseRepository):
     def set_vthunder_health_state(self, session, id, new_state):
         self.update(session, id, health_state=new_state)
 
+    def unset_vthunder_busy_health_state(self, session):
+        with session.begin(subtransactions=True):
+            session.query(self.model_class).filter_by(
+                health_state='BUSY').update({"health_state": 'UP'})
+
     def get_vthunder_from_lb(self, session, lb_id):
         model = session.query(self.model_class).filter(
             self.model_class.loadbalancer_id == lb_id).filter(
@@ -288,6 +293,13 @@ class VThunderRepository(BaseRepository):
 
         id_list = [model.id for model in model_list]
         return id_list
+
+    def get_all_vthunder_by_address(self, session, ip_address):
+        model_list = session.query(self.model_class).filter(
+            self.model_class.ip_address == ip_address).filter(
+            self.model_class.status == "ACTIVE")
+        model_list = model_list.options(noload('*'))
+        return model_list.all()
 
     def get_delete_compute_flag(self, session, compute_id):
         if compute_id:

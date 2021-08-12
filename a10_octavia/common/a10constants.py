@@ -104,6 +104,7 @@ SSL_TEMPLATE = "ssl_template"
 COMPUTE_BUSY = "compute_busy"
 VTHUNDER_LIST = "vthunder_list"
 NETWORK_LIST = "network_list"
+ADDED_NETWORK = "added_network"
 
 # ACOS versions
 ACOS_5_2_1_P2 = "5.2.1-P2"
@@ -141,12 +142,14 @@ WAIT_FOR_MASTER_SYNC = 'wait-for-master-sync'
 WAIT_FOR_BACKUP_SYNC = 'wait-for-backup-sync'
 CONFIGURE_AVCS_SYNC_FOR_MASTER = 'configure-avcs-sync-for-master'
 CONFIGURE_AVCS_SYNC_FOR_BACKUP = 'configure-avcs-sync-for-backup'
+CONFIGURE_AVCS_FOR_FAILOVER = 'configure-avcs-for-failover'
 CHECK_VRRP_STATUS = 'check-vrrp-status'
 CHECK_VRRP_MASTER_STATUS = 'check-vrrp-master-status'
 CHECK_VRRP_BACKUP_STATUS = 'check-vrrp-backup-status'
 CONFIRM_VRRP_STATUS = 'confirm-vrrp-status'
 ADD_VRRP_SET_ID_INDB = 'add-vrrp-set-id-db'
 DELETE_VRRP_SET_ID_INDB = 'delete-vrrp-set-id-db'
+GET_VRRP_SET_ID_INDB = 'get-vrrp-set-id-db'
 ALLOCATE_VIP = 'allocate-vip'
 UPDATE_VIP_AFTER_ALLOCATION = 'update-vip-after-allocation'
 ALLOW_L2DSR = 'allow-l2dsr'
@@ -210,6 +213,8 @@ GET_VTHUNDER_NETWORK_LIST = 'get-vthunder-network-list'
 GET_AMPHORA_FOR_FAILOVER = 'get-amphora-for-failover'
 PLUG_NETWORK_BY_IDS = 'plug-network-by-ids'
 POST_FAILOVER_PLUG_NETWORK = 'post-failover-plug-network'
+GET_VCS_DEVICE_ID = 'get-vcs-device-id'
+POST_FAILOVER_DB_UPDATE = 'post-failover-db-update'
 
 # ======================
 # Non-Taskflow Constants

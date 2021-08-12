@@ -22,6 +22,7 @@ from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_utils import excutils
 
+from octavia.common import constants
 from octavia.controller.healthmanager import health_manager
 from octavia.db import api as db_apis
 
@@ -39,6 +40,7 @@ class A10HealthManager(health_manager.HealthManager):
         self.threads = CONF.a10_health_manager.failover_threads
         self.executor = futures.ThreadPoolExecutor(max_workers=self.threads)
         self.vthunder_repo = a10repo.VThunderRepository()
+        self.loadbalancer_repo = a10repo.LoadBalancerRepository()
         self.dead = exit_event
 
     def health_check(self):
@@ -55,29 +57,46 @@ class A10HealthManager(health_manager.HealthManager):
                     seconds=CONF.a10_health_manager.failover_timeout)
                 vthunder = self.vthunder_repo.get_stale_vthunders(
                     lock_session, initial_setup_wait_time, failover_wait_time)
-                if vthunder:
+
+                if vthunder is not None:
+                    # Don't failover vthunders which has pending state LBs
+                    if self._is_vthunder_busy(lock_session, vthunder):
+                        self.vthunder_repo.set_vthunder_health_state(
+                            lock_session, vthunder.id, 'BUSY')
+                        LOG.info("vthunder %s heartbeat timeout but it is in "
+                                 "pending state, skip failover", vthunder.vthunder_id)
+                        lock_session.commit()
+                        continue
+
                     self.vthunder_repo.set_vthunder_health_state(
                         lock_session, vthunder.id, 'DOWN')
+
                 lock_session.commit()
 
             except db_exc.DBDeadlock:
+                vthunder = None
                 LOG.debug('Database reports deadlock. Skipping.')
                 lock_session.rollback()
             except db_exc.RetryRequest:
+                vthunder = None
                 LOG.debug('Database is requesting a retry. Skipping.')
                 lock_session.rollback()
             except db_exc.DBConnectionError:
+                vthunder = None
                 db_apis.wait_for_connection(self.dead)
                 lock_session.rollback()
                 if not self.dead.is_set():
                     time.sleep(CONF.health_manager.heartbeat_timeout)
             except Exception as e:
+                vthunder = None
                 with excutils.save_and_reraise_exception():
                     LOG.debug("Database error while health_check: %s", str(e))
                     if lock_session:
                         lock_session.rollback()
 
             if vthunder is None:
+                db_session = db_apis.get_session()
+                self.vthunder_repo.unset_vthunder_busy_health_state(db_session)
                 break
 
             LOG.info("Stale vThunder's id is: %s", vthunder.vthunder_id)
@@ -91,3 +110,14 @@ class A10HealthManager(health_manager.HealthManager):
                      len(futs))
             health_manager.wait_done_or_dead(futs, self.dead)
             LOG.info("Successfully completed failover for VThunders.")
+
+    def _is_vthunder_busy(self, session, vthunder):
+        """ prevent vthunder failover in pending status """
+
+        busy_status = [constants.PENDING_CREATE, constants.PENDING_UPDATE, constants.PENDING_DELETE]
+        vthunder_list = self.vthunder_repo.get_compute_vthunders(
+            session, vthunder.compute_id)
+        for thunder in vthunder_list:
+            lb = self.loadbalancer_repo.get(session, id=thunder.loadbalancer_id)
+            if lb.provisioning_status in busy_status:
+                return True

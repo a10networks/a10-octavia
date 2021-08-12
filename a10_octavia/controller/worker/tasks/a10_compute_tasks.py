@@ -181,3 +181,17 @@ class NovaServerGroupCreate(BaseComputeTask):
                       "still be in use for server group: %(sg)s due to "
                       "error: %(except)s",
                       {'sg': server_group_id, 'except': e})
+
+
+class DeleteStaleCompute(BaseComputeTask):
+    """Delete Stale Compute for Failover"""
+
+    def execute(self, vthunder):
+        if vthunder:
+            try:
+                self.compute.delete(vthunder.compute_id)
+            except Exception as e:
+                LOG.exception("Failed to delete stale compute %s due to: %s",
+                              vthunder.compute_id, str(e))
+                # pass here in case the compute is already deleted
+                pass

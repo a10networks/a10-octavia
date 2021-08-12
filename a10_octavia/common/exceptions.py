@@ -228,6 +228,12 @@ class NoFreeSetId(acos_errors.ACOSException):
         super(NoFreeSetId, self).__init__(msg=msg)
 
 
+class ProjectVrrpSetIdNotFound(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('Can not find VRRP-A set_id for this project.')
+        super(ProjectVrrpSetIdNotFound, self).__init__(msg=msg)
+
+
 class ProjectDeviceNotFound(acos_errors.ACOSException):
     def __init__(self):
         msg = ('No valid device found for this project, please check your configuration file.')
@@ -252,3 +258,9 @@ class NoComputeForLoadbalancer(acos_errors.ACOSException):
     def __init__(self):
         msg = ('No valid compute for the loadbalancer.')
         super(NoComputeForLoadbalancer, self).__init__(msg=msg)
+
+
+class MissThunderForFailover(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('Failover or spare vThunder is missing.')
+        super(MissThunderForFailover, self).__init__(msg=msg)

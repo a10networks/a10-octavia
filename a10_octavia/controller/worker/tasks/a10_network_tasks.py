@@ -226,6 +226,7 @@ class PlugNetworksByID(BaseNetworkTask):
                     self.added_network.append(net)
             except Exception:
                 LOG.exception("Failed to plug network: %s", net)
+        return self.added_network
 
     def revert(self, vthunder, network_list):
         for net in self.added_network:
