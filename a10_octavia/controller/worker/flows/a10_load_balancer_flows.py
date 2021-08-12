@@ -125,16 +125,6 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
 
-        # For first LB, vcs just setup and need sync. config and reload vBlade severial times.
-        if not vthunder and topology == constants.TOPOLOGY_ACTIVE_STANDBY:
-            lb_create_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
-                name="get-blade-thunder-for-checking",
-                requires=constants.LOADBALANCER,
-                provides=a10constants.BACKUP_VTHUNDER))
-            lb_create_flow.add(virtual_server_tasks.WaitVirtualServerReadyOnBlade(
-                requires=(constants.LOADBALANCER),
-                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-
         return lb_create_flow
 
     def _create_single_topology(self):
@@ -244,11 +234,19 @@ class LoadBalancerFlows(object):
                 requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
                 provides=a10constants.BACKUP_VTHUNDER))
         if not deleteCompute:
+            delete_LB_flow.add(a10_database_tasks.GetMemberListByProjectID(
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.MEMBER_LIST))
             delete_LB_flow.add(a10_network_tasks.CalculateDelta(
-                requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
+                requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST,
+                          a10constants.MEMBER_LIST),
                 provides=constants.DELTAS))
             delete_LB_flow.add(a10_network_tasks.HandleNetworkDeltas(
                 requires=constants.DELTAS, provides=constants.ADDED_PORTS))
+            if lb.topology == "ACTIVE_STANDBY":
+                delete_LB_flow.add(vthunder_tasks.VCSSyncWait(
+                    name="wait-vcs-ready-before-master-reload",
+                    requires=a10constants.VTHUNDER))
             delete_LB_flow.add(vthunder_tasks.AmphoraePostNetworkUnplug(
                 name=a10constants.AMPHORA_POST_NETWORK_UNPLUG,
                 requires=(constants.LOADBALANCER, constants.ADDED_PORTS, a10constants.VTHUNDER)))
@@ -257,15 +255,6 @@ class LoadBalancerFlows(object):
                     name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
                     requires=(a10constants.VTHUNDER, constants.AMPHORA)))
             if lb.topology == "ACTIVE_STANDBY":
-                delete_LB_flow.add(
-                    vthunder_tasks.VThunderComputeConnectivityWait(
-                        name=a10constants.BACKUP_CONNECTIVITY_WAIT + "-before-unplug",
-                        rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-                        requires=constants.AMPHORA))
-                delete_LB_flow.add(vthunder_tasks.AmphoraePostNetworkUnplug(
-                    name=a10constants.AMPHORA_POST_NETWORK_UNPLUG_FOR_BACKUP_VTHUNDER,
-                    requires=(constants.LOADBALANCER, constants.ADDED_PORTS),
-                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
                 delete_LB_flow.add(
                     vthunder_tasks.VThunderComputeConnectivityWait(
                         name=a10constants.BACKUP_CONNECTIVITY_WAIT,
@@ -359,15 +348,27 @@ class LoadBalancerFlows(object):
             name=a10constants.GET_VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        if vthunder and topology == constants.TOPOLOGY_SINGLE:
+        if vthunder:
             new_LB_net_subflow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.LOADBALANCERS_LIST))
+            new_LB_net_subflow.add(a10_database_tasks.GetMemberListByProjectID(
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.MEMBER_LIST))
             new_LB_net_subflow.add(a10_network_tasks.CalculateDelta(
-                requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
+                requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST,
+                          a10constants.MEMBER_LIST),
                 provides=constants.DELTAS))
             new_LB_net_subflow.add(a10_network_tasks.HandleNetworkDeltas(
                 requires=constants.DELTAS, provides=constants.ADDED_PORTS))
+            if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+                new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
+                    name="wait-vcs-ready-before-master-reload",
+                    requires=a10constants.VTHUNDER))
+                new_LB_net_subflow.add(vthunder_tasks.GetMasterVThunder(
+                    name=a10constants.GET_MASTER_VTHUNDER,
+                    requires=a10constants.VTHUNDER,
+                    provides=a10constants.VTHUNDER))
             # managing interface additions here
             new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
                 name=a10constants.AMPHORAE_POST_VIP_PLUG,
@@ -377,6 +378,25 @@ class LoadBalancerFlows(object):
                 vthunder_tasks.VThunderComputeConnectivityWait(
                     name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
                     requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+            if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+                new_LB_net_subflow.add(
+                    a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                        name=a10constants.GET_BACKUP_VTHUNDER_BY_LB,
+                        requires=constants.LOADBALANCER,
+                        provides=a10constants.BACKUP_VTHUNDER))
+                new_LB_net_subflow.add(
+                    vthunder_tasks.VThunderComputeConnectivityWait(
+                        name=a10constants.BACKUP_CONNECTIVITY_WAIT,
+                        rebind={
+                            a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                        requires=constants.AMPHORA))
+                new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
+                    name="wait-vcs-ready-after-reload",
+                    requires=a10constants.VTHUNDER))
+                new_LB_net_subflow.add(vthunder_tasks.GetMasterVThunder(
+                    name=a10constants.GET_VTHUNDER_MASTER,
+                    requires=a10constants.VTHUNDER,
+                    provides=a10constants.VTHUNDER))
             new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
                 name=a10constants.ENABLE_VTHUNDER_INTERFACE,
                 requires=(a10constants.VTHUNDER, constants.LOADBALANCER,
@@ -396,115 +416,13 @@ class LoadBalancerFlows(object):
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             new_LB_net_subflow.add(
                 a10_database_tasks.GetBackupVThunderByLoadBalancer(
-                    name=a10constants.GET_BACKUP_VTHUNDER_BY_LB,
+                    name=a10constants.BACKUP_VTHUNDER,
                     requires=constants.LOADBALANCER,
                     provides=a10constants.BACKUP_VTHUNDER))
             new_LB_net_subflow.add(vthunder_tasks.UpdateAcosVersionInVthunderEntry(
                 name=a10constants.UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER,
                 requires=constants.LOADBALANCER,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-            new_LB_net_subflow.add(
-                a10_database_tasks.GetBackupVThunderByLoadBalancer(
-                    name=a10constants.BACKUP_VTHUNDER,
-                    requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
-                    provides=a10constants.BACKUP_VTHUNDER))
-            if vthunder:
-                new_LB_net_subflow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
-                    requires=a10constants.VTHUNDER,
-                    provides=a10constants.LOADBALANCERS_LIST))
-                new_LB_net_subflow.add(a10_network_tasks.CalculateDelta(
-                    requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
-                    provides=constants.DELTAS))
-                new_LB_net_subflow.add(a10_network_tasks.HandleNetworkDeltas(
-                    requires=constants.DELTAS, provides=constants.ADDED_PORTS))
-
-                # Make sure vcs ready before first probe-network-devices on Master
-                new_LB_net_subflow.add(
-                    vthunder_tasks.VThunderComputeConnectivityWait(
-                        name="backup-compute-conn-wait-before-probe-device",
-                        rebind={
-                            a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-                        requires=constants.AMPHORA))
-                new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
-                    name="wait-vcs-ready-before-probe-device",
-                    requires=a10constants.VTHUNDER))
-                new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
-                    name=a10constants.AMPHORAE_POST_VIP_PLUG_FOR_MASTER,
-                    requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
-                              constants.ADDED_PORTS)))
-                new_LB_net_subflow.add(
-                    vthunder_tasks.VThunderComputeConnectivityWait(
-                        name="make-sure-backup-is-ready-after-reload-master",
-                        rebind={
-                            a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-                        requires=constants.AMPHORA))
-                new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
-                    name=a10constants.AMPHORAE_POST_VIP_PLUG_FOR_BACKUP,
-                    requires=(constants.LOADBALANCER, constants.ADDED_PORTS),
-                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-                new_LB_net_subflow.add(
-                    vthunder_tasks.VThunderComputeConnectivityWait(
-                        name=a10constants.MASTER_CONNECTIVITY_WAIT,
-                        requires=(a10constants.VTHUNDER, constants.AMPHORA)))
-                new_LB_net_subflow.add(
-                    vthunder_tasks.VThunderComputeConnectivityWait(
-                        name=a10constants.BACKUP_CONNECTIVITY_WAIT,
-                        rebind={
-                            a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-                        requires=constants.AMPHORA))
-                new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
-                    name="backup-plug-wait-vcs-ready",
-                    requires=a10constants.VTHUNDER))
-                new_LB_net_subflow.add(vthunder_tasks.GetVThunderInterface(
-                    name=a10constants.GET_MASTER_VTHUNDER_INTERFACE,
-                    requires=a10constants.VTHUNDER,
-                    provides=(a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
-                new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
-                    name=a10constants.MASTER_ENABLE_INTERFACE,
-                    requires=(a10constants.VTHUNDER, constants.LOADBALANCER, constants.ADDED_PORTS,
-                              a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
-                new_LB_net_subflow.add(vthunder_tasks.GetVThunderInterface(
-                    name=a10constants.GET_BACKUP_VTHUNDER_INTERFACE,
-                    requires=a10constants.VTHUNDER,
-                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-                    provides=(a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
-                new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
-                    name="wait-vcs-ready-before-master-reload",
-                    requires=a10constants.VTHUNDER))
-                new_LB_net_subflow.add(vthunder_tasks.AmphoraePostVIPPlug(
-                    name=a10constants.AMP_POST_VIP_PLUG,
-                    requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
-                              constants.ADDED_PORTS)))
-                new_LB_net_subflow.add(
-                    vthunder_tasks.VThunderComputeConnectivityWait(
-                        name=a10constants.CONNECTIVITY_WAIT_FOR_MASTER_VTHUNDER,
-                        requires=(a10constants.VTHUNDER, constants.AMPHORA)))
-                new_LB_net_subflow.add(
-                    vthunder_tasks.VThunderComputeConnectivityWait(
-                        name=a10constants.CONNECTIVITY_WAIT_FOR_BACKUP_VTHUNDER,
-                        rebind={
-                            a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-                        requires=constants.AMPHORA))
-                new_LB_net_subflow.add(vthunder_tasks.VCSSyncWait(
-                    name="int-sync-reload-wait-vcs-ready",
-                    requires=a10constants.VTHUNDER))
-                new_LB_net_subflow.add(vthunder_tasks.GetMasterVThunder(
-                    name=a10constants.GET_VTHUNDER_MASTER,
-                    requires=a10constants.VTHUNDER,
-                    provides=a10constants.VTHUNDER))
-                new_LB_net_subflow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
-                    name="get-backup-vthunder-after-get-master",
-                    requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
-                    provides=a10constants.BACKUP_VTHUNDER))
-                new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
-                    name=a10constants.BACKUP_ENABLE_INTERFACE,
-                    requires=(a10constants.VTHUNDER, constants.LOADBALANCER, constants.ADDED_PORTS,
-                              a10constants.IFNUM_MASTER, a10constants.IFNUM_BACKUP)))
-            else:
-                new_LB_net_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-                    name=a10constants.CONNECTIVITY_WAIT_FOR_BACKUP_VTHUNDER,
-                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-                    requires=constants.AMPHORA))
             new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
                 name=a10constants.ENABLE_BACKUP_VTHUNDER_INTERFACE,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
@@ -560,7 +478,7 @@ class LoadBalancerFlows(object):
             provides=constants.FLAVOR_DATA))
         update_LB_flow.add(virtual_server_tasks.UpdateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
-                      constants.FLAVOR_DATA)))
+                      constants.FLAVOR_DATA, constants.UPDATE_DICT)))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         update_LB_flow.add(database_tasks.MarkLBActiveInDB(
@@ -613,7 +531,7 @@ class LoadBalancerFlows(object):
 
         update_LB_flow.add(virtual_server_tasks.UpdateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
-                      constants.FLAVOR_DATA)))
+                      constants.FLAVOR_DATA, constants.UPDATE_DICT)))
         update_LB_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
         if CONF.a10_global.network_type == 'vlan':
@@ -828,7 +746,8 @@ class LoadBalancerFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER],
+                    a10constants.VTHUNDER,
+                    constants.LOADBALANCER],
                 provides=a10constants.VRID_LIST))
         handle_vrid_for_lb_subflow.add(vthunder_tasks.ConfigureVRID(
             requires=a10constants.VTHUNDER))
@@ -874,7 +793,8 @@ class LoadBalancerFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER],
+                    a10constants.VTHUNDER,
+                    constants.LOADBALANCER],
                 provides=a10constants.VRID_LIST))
         delete_lb_vrid_subflow.add(
             a10_network_tasks.DeleteVRIDPort(
@@ -909,7 +829,8 @@ class LoadBalancerFlows(object):
             a10_database_tasks.GetVRIDForLoadbalancerResource(
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER],
+                    a10constants.VTHUNDER,
+                    constants.LOADBALANCER],
                 provides=a10constants.VRID_LIST))
         delete_lb_vrid_subflow.add(
             a10_network_tasks.DeleteVRIDPort(

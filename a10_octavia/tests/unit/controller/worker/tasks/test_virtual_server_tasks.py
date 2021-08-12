@@ -24,6 +24,7 @@ from octavia.tests.common import constants as t_constants
 from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
 
+from a10_octavia.common import config_options
 from a10_octavia.common.data_models import VThunder
 import a10_octavia.controller.worker.tasks.virtual_server_tasks as task
 from a10_octavia.tests.common import a10constants
@@ -43,6 +44,10 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
         imp.reload(task)
         self.client_mock = mock.Mock()
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
+        self.conf.register_opts(config_options.A10_SLB_OPTS,
+                                group=a10constants.SERVICE_GROUP_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
+                                group=a10constants.A10_GLOBAL_CONF_SECTION)
 
     def tearDown(self):
         super(TestHandlerVirtualServerTasks, self).tearDown()
@@ -102,3 +107,24 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
         virtual_server_task.execute(LOADBALANCER, vthunder, flavor_data=flavor)
         args, kwargs = self.client_mock.slb.virtual_server.create.call_args
         self.assertEqual(kwargs['arp_disable'], 0)
+
+    def test_UpdateVirtualServerTask_Unset(self):
+        update_dict = {"name": None, "description": None}
+        virtual_server = {'virtual-server': {'name': '90d925bc-e39b-4be4-8826-bbfb0fd49caa',
+                                             'ip-address': '1.1.1.1', 'description': 'LB1',
+                                             'enable-disable-action': 'enable',
+                                             'redistribution-flagged': 0,
+                                             'arp-disable': 0,
+                                             'stats-data-action': 'stats-data-enable',
+                                             'extended-stats': 0, 'disable-vip-adv': 0,
+                                             'uuid': '75865ac4-ee59-11eb-9424-6742a21a08a9',
+                                             'a10-url': '/axapi/v3/slb/virtual-server/123'}}
+        config_args = {'arp_disable': False, 'port_list': None, 'vrid': 0, 'virtual_server': {},
+                       'status': mock.ANY, 'description': None}
+        mock_load_balancer = task.UpdateVirtualServerTask()
+        mock_load_balancer.axapi_client = self.client_mock
+        self.client_mock.slb.virtual_server.get.return_value = virtual_server
+        mock_load_balancer.execute(LOADBALANCER, VTHUNDER, update_dict)
+        self.client_mock.slb.virtual_server.replace.assert_called()
+        args, kwargs = self.client_mock.slb.virtual_server.replace.call_args
+        self.assertEqual(kwargs, config_args)

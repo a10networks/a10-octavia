@@ -17,7 +17,6 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from requests import exceptions
 from taskflow import task
-import time
 
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
@@ -108,8 +107,9 @@ class UpdateVirtualServerTask(LoadBalancerParent, task.Task):
     """Task to update a virtual server"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, vthunder, flavor_data=None):
+    def execute(self, loadbalancer, vthunder, flavor_data=None, update_dict={}):
         try:
+            loadbalancer.__dict__.update(update_dict)
             port_list = self.axapi_client.slb.virtual_server.get(
                 loadbalancer.id)['virtual-server'].get('port-list')
             self.set(self.axapi_client.slb.virtual_server.replace, loadbalancer,
@@ -118,28 +118,3 @@ class UpdateVirtualServerTask(LoadBalancerParent, task.Task):
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to update load balancer: %s", loadbalancer.id)
             raise e
-
-
-class WaitVirtualServerReadyOnBlade(LoadBalancerParent, task.Task):
-    """Task to wait vBlade get virtual-server configuration from vMaster"""
-
-    @axapi_client_decorator
-    def execute(self, loadbalancer, vthunder):
-        attempts = CONF.a10_controller_worker.amp_vcs_retries
-        while attempts >= 0:
-            try:
-                attempts = attempts - 1
-                self.axapi_client.slb.virtual_server.get(loadbalancer.id)
-                break
-            except exceptions.ReadTimeout:
-                # Don't retry for ReadTimout, since acos-client already already have
-                # tries and timeout for axapi request. And it will take very long to
-                # response this error.
-                if attempts < 0:
-                    # Don't raise, LB creation is success just not sync. to vBlade yet
-                    break
-            except Exception:
-                if attempts < 0:
-                    # Don't raise, LB creation is success just not sync. to vBlade yet
-                    break
-                time.sleep(CONF.a10_controller_worker.amp_vcs_wait_sec)

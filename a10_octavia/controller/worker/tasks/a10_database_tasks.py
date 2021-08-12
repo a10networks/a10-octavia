@@ -345,10 +345,21 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
 
 class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
-    def execute(self, partition_project_list, vthunder):
+    def execute(self, partition_project_list, vthunder, loadbalancer):
         vrid_list = []
         if vthunder:
-            owner = vthunder.ip_address + "_" + vthunder.partition_name
+            topology = CONF.a10_controller_worker.loadbalancer_topology
+            if topology == "SINGLE":
+                owner = [vthunder.ip_address + "_" + vthunder.partition_name]
+            else:
+                loadbalancer_id = loadbalancer.id
+                master_vthunder = self.vthunder_repo.get_vthunder_from_lb(
+                    db_apis.get_session(), loadbalancer_id)
+                backup_vthunder = self.vthunder_repo.get_backup_vthunder_from_lb(
+                    db_apis.get_session(), loadbalancer_id)
+                owner_master = master_vthunder.ip_address + "_" + master_vthunder.partition_name
+                owner_backup = backup_vthunder.ip_address + "_" + backup_vthunder.partition_name
+                owner = [owner_master, owner_backup]
             if partition_project_list:
                 try:
                     vrid_list = self.vrid_repo.get_vrid_from_owner(
@@ -1071,3 +1082,17 @@ class UpdateListenersStats(BaseDatabaseTask):
         except Exception as e:
             LOG.warning('Failed to update the listener statistics '
                         'due to: {}'.format(str(e)))
+
+
+class GetMemberListByProjectID(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        try:
+            if vthunder:
+                member_list = self.member_repo.get_members_by_project_id(
+                    db_apis.get_session(),
+                    vthunder.project_id)
+                return member_list
+        except Exception as e:
+            LOG.exception('Failed to get active Members related to vthunder '
+                          'due to: {}'.format(str(e)))

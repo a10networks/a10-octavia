@@ -91,6 +91,12 @@ class ListenersParent(object):
                 # Adding TERMINATED_HTTPS SSL cert, created in previous task
                 template_args["template_client_ssl"] = listener.id
 
+            if (update_dict and 'default_tls_container_ref' in update_dict
+                    and update_dict["default_tls_container_ref"] is None):
+                template_args["template_client_ssl"] = None
+            elif listener.protocol == 'https':
+                template_args["template_client_ssl"] = listener.id
+
             template_http = CONF.listener.template_http
             if template_http and template_http.lower() != 'none':
                 template_key = 'template-http'
@@ -195,9 +201,10 @@ class ListenerUpdate(ListenersParent, task.Task):
     """Task to update listener"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder, flavor_data=None, update_dict=None):
+    def execute(self, loadbalancer, listener, vthunder, flavor_data=None, update_dict={}):
         try:
             if listener:
+                listener.__dict__.update(update_dict)
                 self.set(self.axapi_client.slb.virtual_server.vport.replace,
                          loadbalancer, listener, vthunder, flavor_data, update_dict)
                 LOG.debug("Successfully updated listener: %s", listener.id)

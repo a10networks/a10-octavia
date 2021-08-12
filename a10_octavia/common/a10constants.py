@@ -105,6 +105,9 @@ SSL_TEMPLATE = "ssl_template"
 
 COMPUTE_BUSY = "compute_busy"
 
+# ACOS versions
+ACOS_5_2_1_P2 = "5.2.1-P2"
+
 # ============================
 # Taskflow flow and task names
 # ============================
