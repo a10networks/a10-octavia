@@ -25,6 +25,7 @@ from taskflow.types import failure
 
 from octavia.common import constants
 from octavia.controller.worker import task_utils
+from octavia.db import api as db_apis
 from octavia.network import base
 from octavia.network import data_models as n_data_models
 
@@ -33,6 +34,7 @@ from a10_octavia.common import data_models
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils as a10_task_utils
+from a10_octavia.db import repositories as a10_repo
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -45,6 +47,7 @@ class BaseNetworkTask(task.Task):
         super(BaseNetworkTask, self).__init__(**kwargs)
         self._network_driver = None
         self.task_utils = task_utils.TaskUtils()
+        self.vthunder_repo = a10_repo.VThunderRepository()
 
     @property
     def network_driver(self):
@@ -1120,6 +1123,17 @@ class GetVThunderNetworkList(BaseNetworkTask):
     def execute(self, vthunder):
         try:
             nics = self.network_driver.get_plugged_networks(vthunder.compute_id)
+
+            # in case the compute is deleted by some reason
+            if not nics:
+                if vthunder.role == constants.ROLE_MASTER:
+                    peer = self.vthunder_repo.get_backup_vthunder_from_lb(
+                        db_apis.get_session(), vthunder.loadbalancer_id)
+                else:
+                    peer = self.vthunder_repo.get_vthunder_from_lb(
+                        db_apis.get_session(), vthunder.loadbalancer_id)
+                nics = self.network_driver.get_plugged_networks(peer.compute_id)
+
             network_ids = [nic.network_id for nic in nics]
             return network_ids
         except Exception as e:
