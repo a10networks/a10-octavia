@@ -36,6 +36,7 @@ POOLS = 'pools'
 PARTITION_PROJECT_LIST = 'partition_project_list'
 IFNUM_BACKUP = 'ifnum_backup'
 IFNUM_MASTER = 'ifnum_master'
+LISTENER_STATS = 'listener_stats'
 
 # Octavia taskflow flow and task names (missing name in victoria octavia)
 RELOADLOAD_BALANCER = 'octavia-reloadload-balancer'
@@ -196,6 +197,7 @@ GET_LB_RESOURCE = 'get-lb-resource'
 GET_LB_RESOURCE_SUBNET = 'get-lb-resource-subnet'
 GET_PROJECT_COUNT = 'get-child-parent-project-count'
 GET_LB_COUNT_SUBNET = 'get-lb-count-by-subnet'
+UPDATE_LISTENER_STATS_FLOW = 'update-listener-stats-flow'
 
 # ======================
 # Non-Taskflow Constants

@@ -211,6 +211,12 @@ A10_HEALTH_MANAGER_OPTS = [
     cfg.IntOpt('heartbeat_interval',
                default=10,
                help=_('Sleep time between sending heartbeats.')),
+    cfg.IntOpt('stats_update_thread',
+               default=4,
+               help=_('Number of processes for thunder stats update')),
+    cfg.IntOpt('stats_update_timeout',
+               default=10,
+               help=_('VThunder axapi timeout for Listener stats')),
 ]
 
 A10_CONTROLLER_WORKER_OPTS = [

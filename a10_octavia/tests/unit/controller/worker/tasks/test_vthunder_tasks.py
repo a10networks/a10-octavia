@@ -1006,3 +1006,29 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.execute(SUBNET, AMPHORAE, lb_count, lb_count, flavor_data=DEPLOYMENT_FLAVOR)
         self.client_mock.remove_any_source_ip_on_egress.assert_called_with(
             SUBNET.network_id, AMPHORAE[0])
+
+    def test_get_listeners_stats(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.loadbalancer_id = a10constants.MOCK_LOAD_BALANCER_ID
+        lb = copy.deepcopy(LB)
+        lb.provisioning_status = "ACTIVE"
+        STATS = {
+            "port-list": [
+                {
+                    "stats": {
+                        "curr_conn": 0, "total_conn": 1,
+                        "total_fwd_bytes": 684, "total_rev_bytes": 705
+                    },
+                    "port-number": 80,
+                    "protocol": "http"
+                }
+            ]
+        }
+        mock_task = task.GetListenersStats()
+        mock_task.loadbalancer_repo = mock.MagicMock()
+        mock_task.loadbalancer_repo.get.return_value = lb
+        mock_task.axapi_client = self.client_mock
+        mock_task.axapi_client.slb.virtual_server.stats.return_value = STATS
+        mock_task.execute(vthunder)
+        self.client_mock.slb.virtual_server.stats.assert_called_with(
+            name=a10constants.MOCK_LOAD_BALANCER_ID, timeout=mock.ANY, max_retries=mock.ANY)
