@@ -19,7 +19,7 @@ from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
-from octavia.controller.worker.tasks import database_tasks
+from octavia.controller.worker.v1.tasks import database_tasks
 
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_compute_tasks as compute_tasks
@@ -127,7 +127,7 @@ class VThunderFlows(object):
             provides=constants.AMPHORA_ID))
         # VIP subnet integration at bootup
         create_amp_for_lb_subflow.add(database_tasks.ReloadLoadBalancer(
-            name=sf_name + '-' + constants.RELOADLOAD_BALANCER,
+            name=sf_name + '-' + a10constants.RELOADLOAD_BALANCER,
             requires=constants.LOADBALANCER_ID,
             provides=constants.LOADBALANCER))
         require_server_group_id_condition = (
@@ -251,7 +251,7 @@ class VThunderFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         vthunder_for_amphora_subflow.add(database_tasks.ReloadLoadBalancer(
-            name=sf_name + '-' + constants.RELOADLOAD_BALANCER,
+            name=sf_name + '-' + a10constants.RELOADLOAD_BALANCER,
             requires=constants.LOADBALANCER_ID,
             provides=constants.LOADBALANCER))
         vthunder_for_amphora_subflow.add(a10_network_tasks.GetLBResourceSubnet(
@@ -391,7 +391,7 @@ class VThunderFlows(object):
         """Checks whether vrrp is configured
         :returns: True if vrrp is configured
         """
-        return history[history.keys()[0]]
+        return history[list(history.keys())[0]]
 
     def get_write_memory_flow(self, vthunder, store, deleteCompute):
         """Perform write memory for thunder """

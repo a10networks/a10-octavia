@@ -15,6 +15,7 @@
 
 import acos_client
 from acos_client import errors as acos_errors
+
 import datetime
 try:
     import http.client as http_client
@@ -29,8 +30,10 @@ from oslo_log import log as logging
 
 from octavia.amphorae.driver_exceptions import exceptions as driver_except
 from octavia.common import constants
+from octavia.common import data_models
 from octavia.common import utils
 from octavia.db import api as db_apis
+from octavia.db import repositories as repo
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
@@ -40,7 +43,6 @@ from a10_octavia.controller.worker.tasks.decorators import activate_partition
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 from a10_octavia.controller.worker.tasks.decorators import device_context_switch_decorator
-from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 from a10_octavia.db import repositories as a10_repo
 
 
@@ -55,6 +57,7 @@ class VThunderBaseTask(task.Task):
         self._network_driver = None
         self.vthunder_repo = a10_repo.VThunderRepository()
         self.loadbalancer_repo = a10_repo.LoadBalancerRepository()
+        self.listener_repo = repo.ListenerRepository()
 
     @property
     def network_driver(self):
@@ -78,7 +81,8 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
                         attempts = attempts - 1
                         axapi_client.system.information()
                         break
-                    except a10_task_utils.thunder_busy_exceptions():
+                    except (acos_errors.ACOSSystemIsBusy, acos_errors.ACOSSystemNotReady,
+                            req_exceptions.ConnectionError, req_exceptions.ReadTimeout):
                         # acos-client already wait default_axapi_timeout for these exceptions.
                         axapi_timeout = CONF.vthunder.default_axapi_timeout
                         attempt_wait = CONF.a10_controller_worker.amp_active_wait_sec
@@ -113,6 +117,12 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
         if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
             try:
                 self.axapi_client.system.action.write_memory()
+                if CONF.a10_house_keeping.use_periodic_write_memory == 'enable':
+                    self.vthunder_repo.update_last_write_mem(
+                        db_apis.get_session(),
+                        vthunder.ip_address,
+                        vthunder.partition_name,
+                        last_write_mem=datetime.datetime.utcnow())
                 self.axapi_client.system.action.reload_reboot_for_interface_attachment(
                     vthunder.acos_version)
                 LOG.debug("Waiting for 30 seconds to trigger vThunder reload.")
@@ -190,6 +200,12 @@ class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
             amphora_id = loadbalancer.amphorae[0].id
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 self.axapi_client.system.action.write_memory()
+                if CONF.a10_house_keeping.use_periodic_write_memory == 'enable':
+                    self.vthunder_repo.update_last_write_mem(
+                        db_apis.get_session(),
+                        vthunder.ip_address,
+                        vthunder.partition_name,
+                        last_write_mem=datetime.datetime.utcnow())
                 self.axapi_client.system.action.reload_reboot_for_interface_attachment(
                     vthunder.acos_version)
                 LOG.debug("Waiting for 30 seconds to trigger vThunder reload/reboot.")
@@ -360,7 +376,8 @@ class ConfigureaVCSBackup(VThunderBaseTask):
                     attempts = 0
                     LOG.debug("Configured the backup vThunder for aVCS: %s", vthunder.id)
                     break
-                except a10_task_utils.thunder_busy_exceptions() as e:
+                except (acos_errors.ACOSSystemIsBusy, acos_errors.ACOSSystemNotReady,
+                        req_exceptions.ConnectionError, req_exceptions.ReadTimeout) as e:
                     # acos-client already wait default_axapi_timeout for these exceptions.
                     axapi_timeout = CONF.vthunder.default_axapi_timeout
                     attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
@@ -525,7 +542,7 @@ class SetupDeviceNetworkMap(VThunderBaseTask):
         if isinstance(CONF.hardware_thunder.devices, dict):
             vthunder_conf = (CONF.hardware_thunder.devices.get(device_name) or
                              CONF.hardware_thunder.devices.get(vthunder.project_id))
-        if vthunder_conf is not None:
+        if vthunder_conf:
             device_network_map = vthunder_conf.device_network_map
 
             # Case when device network map is not provided/length is 0
@@ -1055,6 +1072,12 @@ class AmphoraePostNetworkUnplug(VThunderBaseTask):
                 amphora_id = loadbalancer.amphorae[0].id
                 if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                     self.axapi_client.system.action.write_memory()
+                    if CONF.a10_house_keeping.use_periodic_write_memory == 'enable':
+                        self.vthunder_repo.update_last_write_mem(
+                            db_apis.get_session(),
+                            vthunder.ip_address,
+                            vthunder.partition_name,
+                            last_write_mem=datetime.datetime.utcnow())
                     self.axapi_client.system.action.reload_reboot_for_interface_detachment(
                         vthunder.acos_version)
                     LOG.debug("Waiting for 30 seconds to trigger vThunder reload/reboot.")
@@ -1128,7 +1151,8 @@ class VCSSyncWait(VThunderBaseTask):
                             msg="vMaster not found in vcs-summary")
                     if vmaster_ready is True and vblade_ready is True:
                         break
-            except a10_task_utils.thunder_busy_exceptions() as e:
+            except (acos_errors.ACOSSystemIsBusy, acos_errors.ACOSSystemNotReady,
+                    req_exceptions.ConnectionError, req_exceptions.ReadTimeout) as e:
                 # acos-client already wait default_axapi_timeout for these exceptions.
                 axapi_timeout = CONF.vthunder.default_axapi_timeout
                 attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
@@ -1166,7 +1190,8 @@ class GetMasterVThunder(VThunderBaseTask):
                         raise acos_errors.AxapiJsonFormatError(
                             msg="vMaster not found in vcs-summary")
                     return vthunder
-                except a10_task_utils.thunder_busy_exceptions() as e:
+                except (acos_errors.ACOSSystemIsBusy, acos_errors.ACOSSystemNotReady,
+                        req_exceptions.ConnectionError, req_exceptions.ReadTimeout) as e:
                     # acos-client already wait default_axapi_timeout for these exceptions.
                     axapi_timeout = CONF.vthunder.default_axapi_timeout
                     attempt_wait = CONF.a10_controller_worker.amp_vcs_wait_sec
@@ -1211,3 +1236,41 @@ class GetVthunderConfByFlavor(VThunderBaseTask):
                     raise exceptions.FlavorDeviceNotFound(device_flavor)
 
         return vthunder_config, False
+
+
+class GetListenersStats(VThunderBaseTask):
+    """Task for retrieving listener stats from vthunder"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder):
+        try:
+            listener_stats = []
+            lb = self.loadbalancer_repo.get(db_apis.get_session(), id=vthunder.loadbalancer_id)
+            if lb.provisioning_status == constants.ACTIVE:
+                response = self.axapi_client.slb.virtual_server.stats(
+                    name=vthunder.loadbalancer_id,
+                    timeout=CONF.a10_health_manager.stats_update_timeout,
+                    max_retries=1)
+                if response:
+                    for stats in response['port-list']:
+                        listener = self.listener_repo.get(
+                            db_apis.get_session(),
+                            load_balancer_id=vthunder.loadbalancer_id,
+                            protocol_port=stats['port-number'])
+                        if listener:
+                            stats_model = data_models.ListenerStatistics(
+                                listener_id=listener.id,
+                                amphora_id=vthunder.amphora_id,
+                                bytes_in=stats['stats']['total_fwd_bytes'],
+                                bytes_out=stats['stats']['total_rev_bytes'],
+                                active_connections=stats['stats']['curr_conn'],
+                                total_connections=stats['stats']['total_conn'],
+                                request_errors=0,  # (ACOS don’t have related stats for this)
+                            )
+                            LOG.info("Listener %s / Amphora %s stats: %s",
+                                     listener.id, vthunder.amphora_id, stats_model.get_stats())
+                            listener_stats.append(stats_model)
+        except Exception as e:
+            LOG.warning("Failed to retrieve statistics for loadbalancer: %s "
+                        "due to %s", vthunder.loadbalancer_id, str(e))
+        return listener_stats

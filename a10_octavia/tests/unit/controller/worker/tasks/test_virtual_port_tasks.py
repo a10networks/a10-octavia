@@ -492,3 +492,15 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
 
         args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
         self.assertEqual(kwargs['conn_limit'], 200)
+
+    def test_unset_http_virtual_port_conn_limit_with_config(self):
+        UPDATE_DICT = {"conn_limit": -1, "default_tls_container_ref": None}
+        listener = self._mock_listener('HTTP', -1)
+        listener_task = task.ListenerUpdate()
+        listener_task.axapi_client = self.client_mock
+        with mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol',
+                        return_value=listener.protocol):
+            listener_task.execute(LB, listener, VTHUNDER, None, UPDATE_DICT)
+        args, kwargs = self.client_mock.slb.virtual_server.vport.replace.call_args
+        self.assertEqual(kwargs['conn_limit'], 64000000)
+        self.assertEqual(kwargs['template_client_ssl'], None)

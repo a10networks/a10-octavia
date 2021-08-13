@@ -211,6 +211,12 @@ A10_HEALTH_MANAGER_OPTS = [
     cfg.IntOpt('heartbeat_interval',
                default=10,
                help=_('Sleep time between sending heartbeats.')),
+    cfg.IntOpt('stats_update_thread',
+               default=4,
+               help=_('Number of processes for thunder stats update')),
+    cfg.IntOpt('stats_update_timeout',
+               default=10,
+               help=_('VThunder axapi timeout for Listener stats')),
 ]
 
 A10_CONTROLLER_WORKER_OPTS = [
@@ -231,13 +237,7 @@ A10_CONTROLLER_WORKER_OPTS = [
                default='',
                help=_('Glance image tag for the VThunder image to boot. '
                       'Use this option to be able to update the image '
-                      'without reconfiguring Octavia. '
-                      'Ignored if amp_image_id is defined.')),
-    cfg.StrOpt('amp_image_id',
-               default='',
-               deprecated_for_removal=True,
-               deprecated_reason='Superseded by amp_image_tag option.',
-               help=_('Glance image id for the VThunder image to boot')),
+                      'without reconfiguring Octavia. ')),
     cfg.StrOpt('amp_image_owner_id',
                default='',
                help=_('Restrict glance image selection to a specific '
@@ -276,7 +276,19 @@ A10_CONTROLLER_WORKER_OPTS = [
     cfg.IntOpt('amp_busy_wait_sec',
                default=900,
                help=_('Timeout for waiting when vThunder instance is busy. '
-                      '(0 for no timeout'))
+                      '(0 for no timeout')),
+    cfg.IntOpt('retry_attempts',
+               default=15,
+               help=_('Retry attempts for Database Entry')),
+    cfg.IntOpt('retry_initial_delay',
+               default=1,
+               help=_('Retry initial delay for Database Entry')),
+    cfg.IntOpt('retry_bakcoff',
+               default=1,
+               help=_('Retry Backoff for Database Entry')),
+    cfg.IntOpt('retry_max',
+               default=5,
+               help=_('Maximum Retries for Database Entry'))
 ]
 
 A10_HOUSE_KEEPING_OPTS = [

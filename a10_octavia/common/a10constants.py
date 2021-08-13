@@ -36,6 +36,10 @@ POOLS = 'pools'
 PARTITION_PROJECT_LIST = 'partition_project_list'
 IFNUM_BACKUP = 'ifnum_backup'
 IFNUM_MASTER = 'ifnum_master'
+LISTENER_STATS = 'listener_stats'
+
+# Octavia taskflow flow and task names (missing name in victoria octavia)
+RELOADLOAD_BALANCER = 'octavia-reloadload-balancer'
 
 VTHUNDER = 'vthunder'
 STATUS = 'status'
@@ -123,6 +127,7 @@ MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB = 'mark-vthunder-backup-active-in-db'
 MARK_VTHUNDER_MASTER_DELETED_IN_DB = 'mark-vthunder-master-deleted-in-db'
 MARK_VTHUNDER_BACKUP_DELETED_IN_DB = 'mark-vthunder-backup-deleted-in-db'
 GET_BACKUP_VTHUNDER_BY_LB = 'get-backup-vthunder-by-lb'
+GET_VTHUNDER_FROM_LB = 'get-vthunder-from-lb'
 CREATE_HEALTH_MONITOR_ON_VTHUNDER_MASTER = 'create-health-monitor-on-vthunder-master'
 HANDLE_SESS_PERS = 'handle-session-persistence-delta-subflow'
 GET_LOADBALANCER_FROM_DB = 'Get-Loadbalancer-from-db'
@@ -192,6 +197,7 @@ GET_LB_RESOURCE = 'get-lb-resource'
 GET_LB_RESOURCE_SUBNET = 'get-lb-resource-subnet'
 GET_PROJECT_COUNT = 'get-child-parent-project-count'
 GET_LB_COUNT_SUBNET = 'get-lb-count-by-subnet'
+UPDATE_LISTENER_STATS_FLOW = 'update-listener-stats-flow'
 
 # ======================
 # Non-Taskflow Constants
