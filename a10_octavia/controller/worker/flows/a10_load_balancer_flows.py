@@ -413,7 +413,6 @@ class LoadBalancerFlows(object):
                     name=a10constants.BACKUP_VTHUNDER,
                     requires=constants.LOADBALANCER,
                     provides=a10constants.BACKUP_VTHUNDER))
-            # ytsai Get version
             new_LB_net_subflow.add(vthunder_tasks.UpdateAcosVersionInVthunderEntry(
                 name=a10constants.UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER,
                 requires=constants.LOADBALANCER,

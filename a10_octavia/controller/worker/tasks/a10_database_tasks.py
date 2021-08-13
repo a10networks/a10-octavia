@@ -70,6 +70,9 @@ class GetVThunderAmphora(BaseDatabaseTask):
     """Get vThunder Amphora for taskflow"""
 
     def execute(self, vthunder):
+        if not vthunder:
+            return None
+
         amphora = self.amphora_repo.get(db_apis.get_session(),
                                         id=vthunder.amphora_id)
         return amphora
@@ -1075,7 +1078,7 @@ class GetSpareComputeForProject(BaseDatabaseTask):
                 raise exceptions.NoComputeForLoadbalancer()
         return compute_id, self.spare
 
-    def revert(self, compute_id):
+    def revert(self, compute_id, *args, **kwargs):
         if self.spare is not None:
             self.vthunder_repo.set_spare_vthunder_status(
                 db_apis.get_session(), self.spare.id, "READY")

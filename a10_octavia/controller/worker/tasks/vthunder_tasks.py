@@ -124,13 +124,13 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
                 raise e
 
 
-class FailoverPostNetowrkPlug(VThunderBaseTask):
+class SparePostNetowrkPlug(VThunderBaseTask):
     """Task to reload vThunder after plug networks"""
 
     @axapi_client_decorator
     def execute(self, vthunder, added_network):
         try:
-            if added_network and len(added_network) > 0:
+            if vthunder and added_network and len(added_network) > 0:
                 self.axapi_client.system.action.write_memory()
                 self.axapi_client.system.action.reload_reboot_for_interface_attachment(
                     vthunder.acos_version)
@@ -297,19 +297,20 @@ class EnableInterfaceForMembers(VThunderBaseTask):
             raise e
 
 
-class EnableInterfaceForFailover(VThunderBaseTask):
+class EnableInterfaceOnSpare(VThunderBaseTask):
     """Task to configure spare vThunder ports for failover"""
 
     @axapi_client_decorator
     def execute(self, vthunder, added_network=None):
         try:
             # When create new amphora for failover case, the added_network will be None
-            if added_network is None or len(added_network) > 0:
+            if vthunder and (added_network is None or len(added_network) > 0):
                 interfaces = self.axapi_client.interface.get_list()
-                for i in range(len(interfaces['interface']['ethernet-list'])):
-                    if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
-                        ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
-                        self.axapi_client.system.action.setInterface(ifnum)
+                if 'ethernet-list' in interfaces['interface']:
+                    for i in range(len(interfaces['interface']['ethernet-list'])):
+                        if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
+                            ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
+                            self.axapi_client.system.action.setInterface(ifnum)
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure vthunder interface: %s", str(e))
             raise e
