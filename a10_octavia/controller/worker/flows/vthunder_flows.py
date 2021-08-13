@@ -341,7 +341,6 @@ class VThunderFlows(object):
                     name=sf_name + '-' + constants.MARK_AMP_STANDALONE_INDB,
                     requires=constants.AMPHORA))
 
-
         # If spare vThunder is used, remove spare vThunder the database
         vthunder_for_amphora_subflow.add(a10_database_tasks.DeleteStaleSpareVThunder(
             name=sf_name + '-' + a10constants.DELETE_STALE_SPARE_VTHUNDER,
