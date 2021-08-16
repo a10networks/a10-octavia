@@ -106,6 +106,8 @@ VTHUNDER_LIST = "vthunder_list"
 NETWORK_LIST = "network_list"
 ADDED_NETWORK = "added_network"
 
+COMPUTE_PAUSED = "PAUSED"
+
 # ACOS versions
 ACOS_5_2_1_P2 = "5.2.1-P2"
 

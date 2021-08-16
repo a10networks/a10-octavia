@@ -25,6 +25,7 @@ from oslo_utils import excutils
 from octavia.common import constants
 from octavia.controller.healthmanager import health_manager
 from octavia.db import api as db_apis
+from octavia.db import repositories as repo
 
 from a10_octavia.controller.worker import controller_worker as cw
 from a10_octavia.db import repositories as a10repo
@@ -40,6 +41,7 @@ class A10HealthManager(health_manager.HealthManager):
         self.threads = CONF.a10_health_manager.failover_threads
         self.executor = futures.ThreadPoolExecutor(max_workers=self.threads)
         self.vthunder_repo = a10repo.VThunderRepository()
+        self.amphora_repo = repo.AmphoraRepository()
         self.loadbalancer_repo = a10repo.LoadBalancerRepository()
         self.dead = exit_event
 
@@ -119,5 +121,5 @@ class A10HealthManager(health_manager.HealthManager):
             session, vthunder.compute_id)
         for thunder in vthunder_list:
             lb = self.loadbalancer_repo.get(session, id=thunder.loadbalancer_id)
-            if lb.provisioning_status in busy_status:
+            if lb and lb.provisioning_status in busy_status:
                 return True

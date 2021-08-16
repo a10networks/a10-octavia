@@ -530,6 +530,8 @@ class VThunderFlows(object):
         sf_name = 'a10-house-keeper-failover-spare-vthunder'
         failover_flow = linear_flow.Flow(sf_name)
 
+        failover_flow.add(compute_tasks.FailoverPausedCompute(
+            requires=a10constants.VTHUNDER))
         failover_flow.add(a10_database_tasks.GetVThunderAmphora(
             name=sf_name + '-' + a10constants.GET_VTHUNDER_AMPHORA,
             requires=a10constants.VTHUNDER,
@@ -670,6 +672,8 @@ class VThunderFlows(object):
         sf_name = 'a10-house-keeper-failover-vcs-vthunder'
         failover_flow = linear_flow.Flow(sf_name)
 
+        failover_flow.add(compute_tasks.FailoverPausedCompute(
+            requires=a10constants.VTHUNDER))
         failover_flow.add(a10_database_tasks.GetComputeVThundersAndLoadBalancers(
             name=sf_name + '-' + a10constants.GET_LBS_BY_THUNDER,
             requires=a10constants.VTHUNDER,

@@ -21,6 +21,11 @@ from taskflow.types import failure
 from octavia.common import constants
 from octavia.common import exceptions
 from octavia.controller.worker.tasks.compute_tasks import BaseComputeTask
+from octavia.db import api as db_apis
+
+from a10_octavia.common import exceptions as a10_exceptions
+from a10_octavia.common import a10constants
+from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -195,3 +200,18 @@ class DeleteStaleCompute(BaseComputeTask):
                               vthunder.compute_id, str(e))
                 # pass here in case the compute is already deleted
                 pass
+
+
+class FailoverPausedCompute(BaseComputeTask):
+    def __init__(self, **kwargs):
+        super(FailoverPausedCompute, self).__init__(**kwargs)
+        self.vthunder_repo = a10_repo.VThunderRepository()
+
+    def execute(self, vthunder):
+        if vthunder:
+            amp, fault = self.compute.get_amphora(vthunder.compute_id)
+            if amp.status == a10constants.COMPUTE_PAUSED:
+                self.vthunder_repo.set_vthunder_health_state(
+                    db_apis.get_session(), vthunder.id, amp.status)
+                LOG.info("The vThunder instance is paused or suspended,skipping the failover...")
+                raise a10_exceptions.FailoverOnPausedCompute()

@@ -264,3 +264,9 @@ class MissThunderForFailover(acos_errors.ACOSException):
     def __init__(self):
         msg = ('Failover or spare vThunder is missing.')
         super(MissThunderForFailover, self).__init__(msg=msg)
+
+
+class FailoverOnPausedCompute(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('Failover on a paused compute, skipping....')
+        super(FailoverOnPausedCompute, self).__init__(msg=msg)
