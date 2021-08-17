@@ -166,7 +166,8 @@ class MemberUpdate(task.Task):
     """Task to update member"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool, flavor=None):
+    def execute(self, member, vthunder, pool, flavor=None, update_dict={}):
+        member.__dict__.update(update_dict)
         server_args = utils.meta(member, 'server', {})
         server_args = utils.dash_to_underscore(server_args)
         server_args['conn_limit'] = CONF.server.conn_limit

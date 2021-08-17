@@ -28,6 +28,7 @@ from octavia.common import constants
 from octavia.common import exceptions as octavia_exceptions
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
+from octavia.statistics import stats_base
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
@@ -55,6 +56,7 @@ class BaseDatabaseTask(task.Task):
         self.flavor_profile_repo = repo.FlavorProfileRepository()
         self.nat_pool_repo = a10_repo.NatPoolRepository()
         self.vrrp_set_repo = a10_repo.VrrpSetRepository()
+        self.listener_stats_repo = repo.ListenerStatisticsRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -1018,7 +1020,7 @@ class CheckExistingVthunderTopology(BaseDatabaseTask):
             loadbalancer.project_id,
             topology)
 
-        if vthunder is not None:
+        if vthunder is not None and topology != vthunder.topology:
             LOG.error('Other loadbalancer exists in vthunder with: %s topology',
                       vthunder.topology)
             msg = ('vthunder has other loadbalancer with {0} ' +
@@ -1185,6 +1187,31 @@ class CountMembersOnThunderBySubnet(BaseDatabaseTask):
                               subnet.id, str(e))
                 raise e
         return 0
+
+
+class UpdateListenersStats(BaseDatabaseTask):
+    """Task for updating the listener stats"""
+
+    def execute(self, listener_stats):
+        try:
+            if listener_stats:
+                stats_base.update_stats_via_driver(listener_stats)
+                LOG.info('Updated the listeners statistics')
+
+            listeners, _ = self.listener_repo.get_all(db_apis.get_session())
+            listeners_stats, _ = self.listener_stats_repo.get_all(db_apis.get_session())
+
+            listeners_ids = [listener.id for listener in listeners]
+            listeners_stats_ids = [listener_stats.listener_id for listener_stats in listeners_stats]
+
+            for listeners_stats_id in listeners_stats_ids:
+                if listeners_stats_id not in listeners_ids:
+                    self.listener_stats_repo.delete(db_apis.get_session(),
+                                                    listener_id=listeners_stats_id)
+                    LOG.info('Delete the statictics entry of listener %s', listeners_stats_id)
+        except Exception as e:
+            LOG.warning('Failed to update the listener statistics '
+                        'due to: {}'.format(str(e)))
 
 
 class GetMemberListByProjectID(BaseDatabaseTask):

@@ -17,9 +17,9 @@ from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
-from octavia.controller.worker.tasks import database_tasks
-from octavia.controller.worker.tasks import lifecycle_tasks
-from octavia.controller.worker.tasks import model_tasks
+from octavia.controller.worker.v1.tasks import database_tasks
+from octavia.controller.worker.v1.tasks import lifecycle_tasks
+from octavia.controller.worker.v1.tasks import model_tasks
 
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows
@@ -140,7 +140,7 @@ class PoolFlows(object):
                     constants.ADDED_PORTS,
                     a10constants.VTHUNDER)))
         delete_pool_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER,
+            requires=constants.LOADBALANCER_ID,
             provides=constants.AMPHORA))
         delete_pool_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
             requires=(a10constants.VTHUNDER, constants.AMPHORA)))

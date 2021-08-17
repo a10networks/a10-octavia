@@ -20,7 +20,7 @@ from taskflow.types import failure
 
 from octavia.common import constants
 from octavia.common import exceptions
-from octavia.controller.worker.tasks.compute_tasks import BaseComputeTask
+from octavia.controller.worker.v1.tasks.compute_tasks import BaseComputeTask
 from octavia.db import api as db_apis
 
 from a10_octavia.common import exceptions as a10_exceptions
@@ -46,7 +46,6 @@ class ComputeCreate(BaseComputeTask):
                 network_ids.append(loadbalancer.vip.network_id)
         LOG.debug("Compute create execute for amphora with id %s", amphora_id)
         key_name = CONF.a10_controller_worker.amp_ssh_key_name
-
         try:
             if CONF.a10_controller_worker.build_rate_limit != -1:
                 self.rate_limit.add_to_build_request_queue(
@@ -55,7 +54,6 @@ class ComputeCreate(BaseComputeTask):
             compute_id = self.compute.build(
                 name="amphora-" + amphora_id,
                 amphora_flavor=CONF.a10_controller_worker.amp_flavor_id,
-                image_id=CONF.a10_controller_worker.amp_image_id,
                 image_tag=CONF.a10_controller_worker.amp_image_tag,
                 image_owner=CONF.a10_controller_worker.amp_image_owner_id,
                 key_name=key_name,

@@ -18,7 +18,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from taskflow import task
 
-from octavia.controller.worker import task_utils as task_utilities
+from octavia.controller.worker.v2 import task_utils as task_utilities
 
 import acos_client
 

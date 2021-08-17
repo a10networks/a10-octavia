@@ -528,3 +528,15 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         lb_task.vthunder_repo = mock.MagicMock()[1:999]
         lb_task.vthunder_repo.get_vthunder_by_project_id.return_value = vthunder
         self.assertRaises(o_exceptions.InvalidTopology, lb_task.execute, LB, "SINGLE")
+
+    @mock.patch('octavia.statistics.stats_base.update_stats_via_driver')
+    def test_update_listeners_stats_with_statistics(self, mock_stats_base):
+        LISTENER_STATS = o_data_models.ListenerStatistics(listener_id=uuidutils.generate_uuid())
+        mock_get_listener = task.UpdateListenersStats()
+        mock_get_listener.listener_repo = mock.MagicMock()
+        mock_get_listener.listener_repo.get_all.return_value = [LISTENER], None
+        mock_get_listener.listener_stats_repo = mock.MagicMock()
+        mock_get_listener.listener_stats_repo.get_all.return_value = [LISTENER_STATS], None
+        mock_get_listener.execute([LISTENER_STATS])
+        mock_stats_base.assert_called_once_with([LISTENER_STATS])
+        mock_get_listener.listener_stats_repo.delete.assert_called_once()

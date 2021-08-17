@@ -107,8 +107,9 @@ class UpdateVirtualServerTask(LoadBalancerParent, task.Task):
     """Task to update a virtual server"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, vthunder, flavor_data=None):
+    def execute(self, loadbalancer, vthunder, flavor_data=None, update_dict={}):
         try:
+            loadbalancer.__dict__.update(update_dict)
             port_list = self.axapi_client.slb.virtual_server.get(
                 loadbalancer.id)['virtual-server'].get('port-list')
             self.set(self.axapi_client.slb.virtual_server.replace, loadbalancer,

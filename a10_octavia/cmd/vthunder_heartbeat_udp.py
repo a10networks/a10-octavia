@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from concurrent import futures
 import datetime
 import socket
 
@@ -21,6 +22,7 @@ from oslo_log import log as logging
 from octavia.common import exceptions
 from octavia.db import api as db_api
 
+from a10_octavia.controller.worker import controller_worker as cw
 from a10_octavia.db import repositories as a10repo
 
 UDP_MAX_SIZE = 64 * 1024
@@ -42,6 +44,8 @@ class VThunderUDPStatusGetter(object):
         self.sock = None
         self.update(self.key, self.ip, self.port)
         self.vthunder_repo = a10repo.VThunderRepository()
+        self.stats_executor = futures.ProcessPoolExecutor(
+            max_workers=CONF.a10_health_manager.stats_update_thread)
 
     def update(self, key, ip, port):
         """Update the running config for the udp socket server
@@ -76,7 +80,7 @@ class VThunderUDPStatusGetter(object):
         try:
             data, srcaddr = self.sock.recvfrom(UDP_MAX_SIZE)
             ip, port = srcaddr
-            LOG.warning('Received packet from %s', ip)
+            LOG.info('Received packet from %s', ip)
             # get record id of first vThunder from srcaddr
             record_id = self.vthunder_repo.get_vthunder_from_src_addr(db_api.get_session(), ip)
 
@@ -95,3 +99,5 @@ class VThunderUDPStatusGetter(object):
             LOG.warning('Health Manager experienced an exception processing a'
                         'heartbeat packet. Ignoring this packet. '
                         'Exception: %s', ex)
+        else:
+            self.stats_executor.submit(cw.A10ControllerWorker().perform_vthunder_stats_update(ip))

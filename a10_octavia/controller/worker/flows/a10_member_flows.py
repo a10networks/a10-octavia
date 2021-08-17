@@ -17,9 +17,9 @@ from oslo_config import cfg
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
-from octavia.controller.worker.tasks import database_tasks
-from octavia.controller.worker.tasks import lifecycle_tasks
-from octavia.controller.worker.tasks import model_tasks
+from octavia.controller.worker.v1.tasks import database_tasks
+from octavia.controller.worker.v1.tasks import lifecycle_tasks
+from octavia.controller.worker.v1.tasks import model_tasks
 
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
@@ -55,7 +55,7 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER,
             provides=a10constants.LOADBALANCERS_LIST))
         create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER,
+            requires=constants.LOADBALANCER_ID,
             provides=constants.AMPHORA))
         create_member_flow.add(a10_database_tasks.GetMemberListByProjectID(
             requires=a10constants.VTHUNDER,
@@ -155,7 +155,7 @@ class MemberFlows(object):
                                DeleteModelObject(rebind={constants.OBJECT:
                                                          constants.MEMBER}))
         delete_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER,
+            requires=constants.LOADBALANCER_ID,
             provides=constants.AMPHORA))
         delete_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
@@ -576,7 +576,8 @@ class MemberFlows(object):
             provides=constants.FLAVOR))
         update_member_flow.add(server_tasks.MemberUpdate(
             requires=(constants.MEMBER, a10constants.VTHUNDER,
-                      constants.POOL, constants.FLAVOR)))
+                      constants.POOL, constants.FLAVOR,
+                      constants.UPDATE_DICT)))
         update_member_flow.add(database_tasks.UpdateMemberInDB(
             requires=[constants.MEMBER, constants.UPDATE_DICT]))
         update_member_flow.add(database_tasks.MarkMemberActiveInDB(
@@ -629,7 +630,8 @@ class MemberFlows(object):
         update_member_flow.add(self.handle_vrid_for_member_subflow())
         update_member_flow.add(server_tasks.MemberUpdate(
             requires=(constants.MEMBER, a10constants.VTHUNDER,
-                      constants.POOL, constants.FLAVOR)))
+                      constants.POOL, constants.FLAVOR,
+                      constants.UPDATE_DICT)))
         update_member_flow.add(database_tasks.UpdateMemberInDB(
             requires=[constants.MEMBER, constants.UPDATE_DICT]))
         if CONF.a10_global.network_type == 'vlan':

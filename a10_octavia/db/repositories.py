@@ -284,15 +284,19 @@ class VThunderRepository(BaseRepository):
         id_list = [model.id for model in model_list]
         return id_list
 
-    def get_vthunders_by_ip_address(self, session, ip_address):
+    def get_vthunders_by_ip_address(self, session, ip_address, vthunders=False):
         model_list = session.query(self.model_class).filter(
             self.model_class.ip_address == ip_address).filter(
             and_(self.model_class.status == "ACTIVE",
                  or_(self.model_class.role == "STANDALONE",
                      self.model_class.role == "MASTER")))
 
-        id_list = [model.id for model in model_list]
-        return id_list
+        if vthunders == False:
+            id_list = [model.id for model in model_list]
+            return id_list
+        else:
+            model_list = model_list.options(noload('*'))
+            return model_list.all()
 
     def get_all_vthunder_by_address(self, session, ip_address):
         model_list = session.query(self.model_class).filter(
