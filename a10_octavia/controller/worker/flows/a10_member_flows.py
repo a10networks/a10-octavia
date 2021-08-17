@@ -615,6 +615,16 @@ class MemberFlows(object):
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
         update_member_flow.add(self.handle_vrid_for_member_subflow())
+        update_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.AMPHORA))
+        update_member_flow.add(
+            a10_database_tasks.CountMembersInProjectBySubnet(
+                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+                provides=a10constants.MEMBER_COUNT))
+        update_member_flow.add(vthunder_tasks.UpdateLoadbalancerForwardWithAnySource(
+            requires=(constants.MEMBER, constants.AMPHORA,
+                      a10constants.MEMBER_COUNT)))
         update_member_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))

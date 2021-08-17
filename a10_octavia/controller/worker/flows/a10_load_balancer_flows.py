@@ -549,6 +549,16 @@ class LoadBalancerFlows(object):
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         # post_create_lb_flow.add(handle_vrid_for_loadbalancer_subflow())
         update_LB_flow.add(self.handle_vrid_for_loadbalancer_subflow())
+        update_LB_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
+            requires=constants.LOADBALANCER_ID,
+            provides=constants.AMPHORA))
+        update_LB_flow.add(
+            a10_database_tasks.CountLoadbalancersInProjectBySubnet(
+                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+                provides=a10constants.LB_COUNT_SUBNET))
+        update_LB_flow.add(vthunder_tasks.UpdateL2DSR(
+            requires=(constants.SUBNET, constants.AMPHORA,
+                      a10constants.LB_COUNT_SUBNET)))
         update_LB_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR_DATA))
