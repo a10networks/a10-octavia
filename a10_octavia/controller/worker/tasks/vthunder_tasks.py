@@ -30,8 +30,10 @@ from oslo_log import log as logging
 
 from octavia.amphorae.driver_exceptions import exceptions as driver_except
 from octavia.common import constants
+from octavia.common import data_models
 from octavia.common import utils
 from octavia.db import api as db_apis
+from octavia.db import repositories as repo
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
@@ -55,6 +57,7 @@ class VThunderBaseTask(task.Task):
         self._network_driver = None
         self.vthunder_repo = a10_repo.VThunderRepository()
         self.loadbalancer_repo = a10_repo.LoadBalancerRepository()
+        self.listener_repo = repo.ListenerRepository()
 
     @property
     def network_driver(self):
@@ -1234,3 +1237,41 @@ class GetVthunderConfByFlavor(VThunderBaseTask):
                     raise exceptions.FlavorDeviceNotFound(device_flavor)
 
         return vthunder_config, False
+
+
+class GetListenersStats(VThunderBaseTask):
+    """Task for retrieving listener stats from vthunder"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder):
+        try:
+            listener_stats = []
+            lb = self.loadbalancer_repo.get(db_apis.get_session(), id=vthunder.loadbalancer_id)
+            if lb.provisioning_status == constants.ACTIVE:
+                response = self.axapi_client.slb.virtual_server.stats(
+                    name=vthunder.loadbalancer_id,
+                    timeout=CONF.a10_health_manager.stats_update_timeout,
+                    max_retries=1)
+                if response:
+                    for stats in response['port-list']:
+                        listener = self.listener_repo.get(
+                            db_apis.get_session(),
+                            load_balancer_id=vthunder.loadbalancer_id,
+                            protocol_port=stats['port-number'])
+                        if listener:
+                            stats_model = data_models.ListenerStatistics(
+                                listener_id=listener.id,
+                                amphora_id=vthunder.amphora_id,
+                                bytes_in=stats['stats']['total_fwd_bytes'],
+                                bytes_out=stats['stats']['total_rev_bytes'],
+                                active_connections=stats['stats']['curr_conn'],
+                                total_connections=stats['stats']['total_conn'],
+                                request_errors=0,  # (ACOS don’t have related stats for this)
+                            )
+                            LOG.info("Listener %s / Amphora %s stats: %s",
+                                     listener.id, vthunder.amphora_id, stats_model.get_stats())
+                            listener_stats.append(stats_model)
+        except Exception as e:
+            LOG.warning("Failed to retrieve statistics for loadbalancer: %s "
+                        "due to %s", vthunder.loadbalancer_id, str(e))
+        return listener_stats
