@@ -400,6 +400,19 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
                     self.model_class.provisioning_status == consts.ACTIVE)).count()
 
+    def get_lbs_by_subnet(self,session, project_ids, subnet_id):
+        lb_list = []
+        query = session.query(self.model_class).join(base_models.Vip).filter(
+            and_(self.model_class.project_id.in_(project_ids),
+                 base_models.Vip.subnet_id == subnet_id,
+                 or_(self.model_class.provisioning_status == consts.PENDING_DELETE,
+                     self.model_class.provisioning_status == consts.ACTIVE,
+                     self.model_class.provisioning_status == consts.PENDING_UPDATE)))
+        model_list = query.all()
+        for data in model_list:
+            lb_list.append(data.to_data_model())
+        return lb_list
+
     def check_lb_exists_in_project(self, session, project_id):
         lb = session.query(self.model_class).join(base_models.Vip).filter(
             and_(self.model_class.project_id == project_id,

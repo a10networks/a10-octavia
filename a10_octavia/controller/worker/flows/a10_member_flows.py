@@ -618,13 +618,19 @@ class MemberFlows(object):
         update_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER_ID,
             provides=constants.AMPHORA))
-        update_member_flow.add(
-            a10_database_tasks.CountMembersInProjectBySubnet(
-                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
-                provides=a10constants.MEMBER_COUNT))
+        update_member_flow.add(a10_database_tasks.GetLoadbalancersInProjectBySubnet(
+            requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+            provides=a10constants.LOADBALANCERS_LIST))
+        update_member_flow.add(a10_database_tasks.CheckForL2DSRFlavor(
+            rebind={a10constants.LB_RESOURCE: a10constants.LOADBALANCERS_LIST},
+            provides=a10constants.L2DSR_FLAVOR))
+        update_member_flow.add(a10_database_tasks.CountLoadbalancersInProjectBySubnet(
+            requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+            provides=a10constants.LB_COUNT_SUBNET))
         update_member_flow.add(vthunder_tasks.UpdateLoadbalancerForwardWithAnySource(
-            requires=(constants.MEMBER, constants.AMPHORA,
-                      a10constants.MEMBER_COUNT)))
+            requires=(constants.SUBNET, constants.AMPHORA,
+                      a10constants.LB_COUNT_SUBNET, a10constants.L2DSR_FLAVOR)))
+
         update_member_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))

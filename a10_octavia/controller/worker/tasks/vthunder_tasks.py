@@ -173,14 +173,16 @@ class DeleteL2DSR(VThunderBaseTask):
 class UpdateL2DSR(VThunderBaseTask):
     """Task to update wildcat address in allowed_address_pair for L2DSR"""
 
-    def execute(self, subnet, amphora, lb_count_subnet):
+    def execute(self, subnet, amphora, member_count, l2dsr_flavor):
         if CONF.vthunder.l2dsr_support:
             for amp in amphora:
                 self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
-        if not CONF.vthunder.l2dsr_support:
-            if lb_count_subnet <= 1:
-                for amp in amphora:
-                    self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
+        else:
+            if not l2dsr_flavor:
+                if (CONF.vthunder.slb_no_snat_support and member_count < 1) or \
+                        (not CONF.vthunder.slb_no_snat_support):
+                    for amp in amphora:
+                        self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
 
 
 class AllowLoadbalancerForwardWithAnySource(VThunderBaseTask):
@@ -196,15 +198,16 @@ class AllowLoadbalancerForwardWithAnySource(VThunderBaseTask):
 class UpdateLoadbalancerForwardWithAnySource(VThunderBaseTask):
     """Task to update wildcat address in allowed_address_pair to allow any SNAT"""
 
-    def execute(self, subnet, member, amphora, member_count):
+    def execute(self, subnet, amphora, lb_count_subnet, l2dsr_flavor):
         if CONF.vthunder.slb_no_snat_support:
             for amp in amphora:
                 self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
-
-        if not CONF.vthunder.slb_no_snat_support:
-            if member_count <= 1:
-                for amp in amphora:
-                    self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
+        else:
+            if not l2dsr_flavor:
+                if (CONF.vthunder.l2dsr_support and lb_count_subnet < 1) or \
+                        not CONF.vthunder.l2dsr_support:
+                    for amp in amphora:
+                        self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
 
 
 class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
