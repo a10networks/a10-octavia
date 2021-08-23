@@ -52,7 +52,7 @@ class LoadBalancerParent(object):
             if len(desc) > 61:
                 LOG.warning('Description length exceeds the allowed character limit.'
                             ' Trimming the description length')
-                desc = '"{}"'.format(desc[0:61])
+            desc = '"{}"'.format(desc[0:61])
         config_args['description'] = desc
 
         if flavor_data:
