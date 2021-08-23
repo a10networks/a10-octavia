@@ -40,6 +40,7 @@ from a10_octavia.controller.worker.flows import vthunder_flows
 from a10_octavia.controller.worker.tasks import a10_compute_tasks
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
+from a10_octavia.controller.worker.tasks import glm_tasks
 from a10_octavia.controller.worker.tasks import nat_pool_tasks
 from a10_octavia.controller.worker.tasks import virtual_server_tasks
 from a10_octavia.controller.worker.tasks import vthunder_tasks
@@ -324,6 +325,13 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
                       a10constants.LB_COUNT_FLAVOR, constants.FLAVOR_DATA)))
         if deleteCompute:
+            delete_LB_flow.add(glm_tasks.RevokeFlexpoolLicense(
+                name=a10constants.REVOKE_ACTIVE_VTHUNDER_LICENSE,
+                requires=a10constants.VTHUNDER))
+            if lb.topology == "ACTIVE_STANDBY":
+                delete_LB_flow.add(glm_tasks.RevokeFlexpoolLicense(
+                    name=a10constants.REVOKE_BACKUP_VTHUNDER_LICENSE,
+                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             delete_LB_flow.add(compute_tasks.DeleteAmphoraeOnLoadBalancer(
                 requires=constants.LOADBALANCER))
         delete_LB_flow.add(a10_database_tasks.MarkVThunderStatusInDB(

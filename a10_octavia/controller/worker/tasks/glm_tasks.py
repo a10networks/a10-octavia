@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import acos_client
 from acos_client import errors as acos_errors
 
 from requests import exceptions as req_exceptions
@@ -24,6 +23,7 @@ from oslo_log import log as logging
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
+from a10_octavia.controller.worker.tasks.decorators import device_context_switch_decorator
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -117,7 +117,8 @@ class ActivateFlexpoolLicense(task.Task):
             return
         token = CONF.glm_license.flexpool_token
         bandwidth = CONF.glm_license.allocate_bandwidth
-        appliance_name = "amphora-"+amphora.id
+        hostname = "amphora-" + amphora.id
+        hostname = hostname[0:31]
         use_mgmt_port = False
 
         license_net_id = CONF.glm_license.amp_license_network
@@ -140,11 +141,29 @@ class ActivateFlexpoolLicense(task.Task):
                 ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                 self.axapi_client.system.action.setInterface(ifnum)
 
+        self.axapi_client.system.action.set_hostname(hostname)
+
         self.axapi_client.glm.create(
             token=token,
             allocate_bandwith=bandwidth,
-            appliance_name=appliance_name,
             use_mgmt_port=use_mgmt_port
         )
 
         self.axapi_client.glm.send.create(license_request=1)
+
+    @axapi_client_decorator_for_revert
+    def revert(self, vthunder, flavor=None, *args, **kwargs):
+        try:
+            self.axapi_client.delete.glm_license.post()
+        except req_exceptions.ConnectionError:
+            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
+
+
+class RevokeFlexpoolLicense(task.Task):
+
+    @axapi_client_decorator
+    def execute(self, vthunder):
+        if not vthunder:
+            LOG.warning("No vthunder therefore license revocation cannot occur.")
+            return
+        self.axapi_client.delete.glm_license.post()
