@@ -52,10 +52,10 @@ class ListenersParent(object):
         if listener.connection_limit != -1:
             conn_limit = listener.connection_limit
         if conn_limit < 1 or conn_limit > 64000000:
-            LOG.warning('The specified member server connection limit '
-                        '(configuration setting: conn-limit) is out of '
-                        'bounds with value {0}. Please set to between '
-                        '1-64000000. Defaulting to 64000000'.format(conn_limit))
+            raise Exception('The specified member server connection limit '
+                            '(configuration setting: conn-limit) is out of '
+                            'bounds with value {0}. Please set to between '
+                            '1-64000000.'.format(conn_limit))
         config_data['conn_limit'] = conn_limit
 
         no_dest_nat = CONF.listener.no_dest_nat
