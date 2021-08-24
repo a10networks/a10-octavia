@@ -1129,7 +1129,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                      a10constants.FAILOVER_VTHUNDER: vthunder}
             if vthunder.topology == a10constants.TOPOLOGY_SPARE:
                 try:
-                    failover_tf = self._taskflow_load(
+                    failover_tf = self.taskflow_load(
                         self._vthunder_flows.get_failover_spare_vthunder_flow(),
                         store=store)
                     with tf_logging.DynamicLoggingListener(failover_tf, log=LOG):
@@ -1142,12 +1142,12 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                     db_apis.get_session(), vthunder.loadbalancer_id)
                 try:
                     if health_vthunder_count > 0:
-                        failover_tf = self._taskflow_load(
+                        failover_tf = self.taskflow_load(
                             self._vthunder_flows.get_failover_vcs_vthnder_flow(),
                             store=store)
                     else:
                         LOG.warning("Failover for HA Pair Fully Failure is not support yet.")
-                        failover_tf = self._taskflow_load(
+                        failover_tf = self.taskflow_load(
                             self._vthunder_flows.get_failover_restore_vthunder_flow(),
                             store=store)
 

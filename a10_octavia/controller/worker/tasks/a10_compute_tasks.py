@@ -23,8 +23,8 @@ from octavia.common import exceptions
 from octavia.controller.worker.v1.tasks.compute_tasks import BaseComputeTask
 from octavia.db import api as db_apis
 
-from a10_octavia.common import exceptions as a10_exceptions
 from a10_octavia.common import a10constants
+from a10_octavia.common import exceptions as a10_exceptions
 from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF
@@ -107,7 +107,6 @@ class ComputeCreateWithNetworks(BaseComputeTask):
             compute_id = self.compute.build(
                 name="amphora-" + amphora_id,
                 amphora_flavor=CONF.a10_controller_worker.amp_flavor_id,
-                image_id=CONF.a10_controller_worker.amp_image_id,
                 image_tag=CONF.a10_controller_worker.amp_image_tag,
                 image_owner=CONF.a10_controller_worker.amp_image_owner_id,
                 key_name=CONF.a10_controller_worker.amp_ssh_key_name,
@@ -207,9 +206,15 @@ class FailoverPausedCompute(BaseComputeTask):
 
     def execute(self, vthunder):
         if vthunder:
-            amp, fault = self.compute.get_amphora(vthunder.compute_id)
-            if amp.status == a10constants.COMPUTE_PAUSED:
-                self.vthunder_repo.set_vthunder_health_state(
-                    db_apis.get_session(), vthunder.id, amp.status)
-                LOG.info("The vThunder instance is paused or suspended,skipping the failover...")
-                raise a10_exceptions.FailoverOnPausedCompute()
+            try:
+                amp, fault = self.compute.get_amphora(vthunder.compute_id)
+                if amp.status == a10constants.COMPUTE_PAUSED:
+                    self.vthunder_repo.set_vthunder_health_state(
+                        db_apis.get_session(), vthunder.id, amp.status)
+                    LOG.info("The vThunder instance is paused, skipping the failover...")
+                    raise a10_exceptions.FailoverOnPausedCompute()
+            except Exception as e:
+                LOG.exception("Failed to find compute %s du to: %s",
+                              vthunder.compute_id, str(e))
+                # pass here in case the compute is already deleted
+                pass
