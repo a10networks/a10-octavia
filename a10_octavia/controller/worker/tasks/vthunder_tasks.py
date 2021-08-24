@@ -180,6 +180,21 @@ class DeleteL2DSR(VThunderBaseTask):
                                 subnet.network_id, amp)
 
 
+class UpdateL2DSR(VThunderBaseTask):
+    """Task to update wildcat address in allowed_address_pair for L2DSR"""
+
+    def execute(self, subnet, amphora, member_count, l2dsr_flavor):
+        if CONF.vthunder.l2dsr_support:
+            for amp in amphora:
+                self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
+        else:
+            if not l2dsr_flavor:
+                if (CONF.vthunder.slb_no_snat_support and member_count < 1) or \
+                        (not CONF.vthunder.slb_no_snat_support):
+                    for amp in amphora:
+                        self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
+
+
 class AllowLoadbalancerForwardWithAnySource(VThunderBaseTask):
     """Task to add wildcat address in allowed_address_pair to allow any SNAT"""
 
@@ -188,6 +203,21 @@ class AllowLoadbalancerForwardWithAnySource(VThunderBaseTask):
         if CONF.vthunder.slb_no_snat_support:
             for amp in amphora:
                 self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
+
+
+class UpdateLoadbalancerForwardWithAnySource(VThunderBaseTask):
+    """Task to update wildcat address in allowed_address_pair to allow any SNAT"""
+
+    def execute(self, subnet, amphora, lb_count_subnet, l2dsr_flavor):
+        if CONF.vthunder.slb_no_snat_support:
+            for amp in amphora:
+                self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
+        else:
+            if not l2dsr_flavor:
+                if (CONF.vthunder.l2dsr_support and lb_count_subnet < 1) or \
+                        not CONF.vthunder.l2dsr_support:
+                    for amp in amphora:
+                        self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
 
 
 class AmphoraePostMemberNetworkPlug(VThunderBaseTask):

@@ -104,6 +104,7 @@ SUPPORTED_NETWORK_TYPE = [FLAT, VLAN]
 SSL_TEMPLATE = "ssl_template"
 
 COMPUTE_BUSY = "compute_busy"
+L2DSR_FLAVOR = "l2dsr_flavor"
 
 # ACOS versions
 ACOS_5_2_1_P2 = "5.2.1-P2"

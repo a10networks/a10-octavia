@@ -524,6 +524,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 update_lb_tf = self.taskflow_load(
                     self._lb_flows.get_update_load_balancer_flow(topology=topology),
                     store={constants.LOADBALANCER: lb,
+                           constants.LOADBALANCER_ID: lb.id,
                            constants.VIP: lb.vip,
                            a10constants.COMPUTE_BUSY: busy,
                            constants.LISTENERS: listeners,
@@ -705,6 +706,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                     store={constants.MEMBER: member,
                            constants.LISTENERS: listeners,
                            constants.LOADBALANCER: load_balancer,
+                           constants.LOADBALANCER_ID: load_balancer.id,
                            a10constants.COMPUTE_BUSY: busy,
                            constants.POOL: pool,
                            constants.UPDATE_DICT: member_updates,
