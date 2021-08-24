@@ -91,6 +91,9 @@ class DNSConfiguration(task.Task):
 
     @axapi_client_decorator
     def execute(self, vthunder, flavor=None):
+        if not vthunder:
+            LOG.warning("No vthunder therefore dns cannot be assigned.")
+            return
         primary_dns, secondary_dns = self._get_dns_nameservers(vthunder, flavor)
         try:
             self.axapi_client.dns.set(primary_dns, secondary_dns)
