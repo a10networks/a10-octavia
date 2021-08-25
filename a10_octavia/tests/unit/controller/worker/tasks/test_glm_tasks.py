@@ -412,10 +412,29 @@ class TestGLMTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.set_hostname.assert_called_with(expected_host)
 
     def test_ActivateFlexpoolLicense_revert_deactivate_license(self):
-        pass
+        vthunder = copy.deepcopy(VTHUNDER)
+        amphora = copy.deepcopy(AMPHORA)
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+
+        flexpool_task.revert(vthunder, amphora)
+        self.client_mock.delete.glm_license.post.assert_called()
 
     def test_RevokeFlexpoolLicense_execute_success(self):
-        pass
+        vthunder = copy.deepcopy(VTHUNDER)
+        revoke_task = task.RevokeFlexpoolLicense()
+        revoke_task.axapi_client = self.client_mock
+
+        revoke_task.execute(vthunder)
+        self.client_mock.delete.glm_license.post.assert_called()
 
     def test_RevokeFlexpoolLicense_execute_no_vthunder_warn(self):
-        pass
+        revoke_task = task.RevokeFlexpoolLicense()
+        revoke_task.axapi_client = self.client_mock
+
+        task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
+        log_message = str("No vthunder therefore license revocation cannot occur.")
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
+        with self.assertLogs(task_path, level='WARN') as cm:
+            revoke_task.execute(None)
+            self.assertEqual(expected_log, cm.output)
