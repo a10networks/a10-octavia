@@ -217,12 +217,14 @@ class PortIdMissing(keystone_exceptions.Error):
 
 
 class NoVrrpMgmtSubnet(acos_errors.ACOSException):
+
     def __init__(self):
         msg = ('amp_boot_network_list option is missing in configuration.')
         super(NoVrrpMgmtSubnet, self).__init__(msg=msg)
 
 
 class NoFreeSetId(acos_errors.ACOSException):
+
     def __init__(self):
         msg = ('No free VRRP-A set_id available.')
         super(NoFreeSetId, self).__init__(msg=msg)
@@ -235,12 +237,14 @@ class ProjectVrrpSetIdNotFound(acos_errors.ACOSException):
 
 
 class ProjectDeviceNotFound(acos_errors.ACOSException):
+
     def __init__(self):
         msg = ('No valid device found for this project, please check your configuration file.')
         super(ProjectDeviceNotFound, self).__init__(msg=msg)
 
 
 class FlavorDeviceNotFound(acos_errors.ACOSException):
+
     def __init__(self, device):
         msg = ('[device-name flavor] Device [{0}] not found in the configuration'
                ' file.').format(device)
@@ -248,6 +252,7 @@ class FlavorDeviceNotFound(acos_errors.ACOSException):
 
 
 class InterfaceNotFound(acos_errors.ACOSException):
+
     def __init__(self, comput_id, network_id):
         msg = ('vThunder instance {0} has no interface in network {1}.').format(comput_id,
                                                                                 network_id)
@@ -277,3 +282,11 @@ class FlavorNotFound(cfg.ConfigFileValueError):
         msg = ('Flavor {0} specified in the configuration file cannot be located,'
                ' Please create the flavor in advance.').format(flavor)
         super(FlavorNotFound, self).__init__(msg=msg)
+
+
+class PrimaryDNSMissing(acos_errors.ACOSException):
+
+    def __init__(self, secondary_dns):
+        msg = ('A secondary DNS with IP %s was specified without a primary DNS').format(
+            secondary_dns)
+        super(PrimaryDNSMissing, self).__init__(msg=msg)
