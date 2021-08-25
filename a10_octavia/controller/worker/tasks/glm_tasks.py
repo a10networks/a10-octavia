@@ -52,13 +52,13 @@ class DNSConfiguration(task.Task):
             else:
                 LOG.warning("No networks were configured therefore "
                             "nameservers cannot be set.")
-                return
+                return None, None
 
         license_net = self.network_driver.get_network(license_net_id)
         if len(license_net.subnets) < 1:
             LOG.warning("Network %s did not have subnet configured "
                         "therefore nameservers cannot be set.", license_net_id)
-            return
+            return None, None
         license_subnet_id = license_net.subnets[0]
         license_subnet = self.network_driver.show_subnet_detailed(license_subnet_id)
 
@@ -95,7 +95,11 @@ class DNSConfiguration(task.Task):
         if not vthunder:
             LOG.warning("No vthunder therefore dns cannot be assigned.")
             return
+
         primary_dns, secondary_dns = self._get_dns_nameservers(vthunder, flavor)
+        if not primary_dns:
+            return
+
         try:
             self.axapi_client.dns.set(primary_dns, secondary_dns)
         except acos_errors.ACOSException as e:
@@ -105,7 +109,10 @@ class DNSConfiguration(task.Task):
     
     @axapi_client_decorator_for_revert
     def revert(self, vthunder, flavor=None, *args, **kwargs):
-        primary_dns, secondary_dns = self._get_dns_nameservers(flavor)
+        primary_dns, secondary_dns = self._get_dns_nameservers(vthunder, flavor)
+        if not primary_dns:
+            return
+
         try:
             self.axapi_client.dns.delete(primary_dns, secondary_dns)
         except req_exceptions.ConnectionError:
