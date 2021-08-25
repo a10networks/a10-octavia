@@ -60,6 +60,7 @@ SERVICE_GROUP_CONF_SECTION = 'service_group'
 SERVER_CONF_SECTION = 'server'
 VIRTUAL_SERVER_CONFIG_SECTION = 'slb'
 HEALTH_MONITOR_SECTION = 'health_monitor'
+GLM_LICENSE_CONFIG_SECTION = 'glm_license'
 
 
 A10_HOUSE_KEEPING = 'a10_house_keeping'
