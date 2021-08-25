@@ -46,13 +46,13 @@ class DNSConfiguration(task.Task):
         license_net_id = CONF.glm_license.amp_license_network
         if not license_net_id:
             license_net_id = CONF.a10_controller_worker.amp_mgmt_network
-            if (not license_net_id and
-                    len(CONF.a10_controller_worker.amp_boot_network_list) >= 1):
-                license_net_id = CONF.a10_controller_worker.amp_boot_network_list[0]
-            else:
-                LOG.warning("No networks were configured therefore "
-                            "nameservers cannot be set.")
-                return None, None
+            if not license_net_id:
+                if len(CONF.a10_controller_worker.amp_boot_network_list) >= 1:
+                    license_net_id = CONF.a10_controller_worker.amp_boot_network_list[0]
+                else:
+                    LOG.warning("No networks were configured therefore "
+                                "nameservers cannot be set.")
+                    return None, None
 
         license_net = self.network_driver.get_network(license_net_id)
         if len(license_net.subnets) < 1:
