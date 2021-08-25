@@ -29,7 +29,6 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-
 class DNSConfiguration(task.Task):
 
     def __init__(self, **kwargs):
@@ -74,10 +73,10 @@ class DNSConfiguration(task.Task):
                 LOG.warning("More than one DNS nameserver detected on subnet %s. "
                             "Using %s as primary and %s as secondary.",
                             license_subnet_id, primary_dns, secondary_dns)
-        
+
         if CONF.glm_license.primary_dns:
             primary_dns = CONF.glm_license.primary_dns
-        
+
         if CONF.glm_license.secondary_dns:
             secondary_dns = CONF.glm_license.secondary_dns
 
@@ -110,7 +109,7 @@ class DNSConfiguration(task.Task):
             LOG.error("Could not set DNS configuration for amphora %s",
                       vthunder.amphora_id)
             raise e
-    
+
     @axapi_client_decorator_for_revert
     def revert(self, vthunder, flavor=None, *args, **kwargs):
         primary_dns, secondary_dns = self._get_dns_nameservers(vthunder, flavor)

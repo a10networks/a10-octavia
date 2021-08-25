@@ -108,7 +108,8 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
                                      status=constants.ERROR)
             raise e
         except Exception as e:
-            LOG.warning("vThunder could not be connected too")
+            LOG.warning("Could not connect to vThunder-Amphora due to following issue %s",
+                        e.message)
 
 
 class AmphoraePostVIPPlug(VThunderBaseTask):

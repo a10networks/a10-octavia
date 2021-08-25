@@ -287,6 +287,6 @@ class FlavorNotFound(cfg.ConfigFileValueError):
 class PrimaryDNSMissing(acos_errors.ACOSException):
 
     def __init__(self, secondary_dns):
-        msg = ('A secondary DNS with IP %s was specified without a primary DNS').format(
+        msg = ('A secondary DNS with IP {0} was specified without a primary DNS').format(
             secondary_dns)
         super(PrimaryDNSMissing, self).__init__(msg=msg)

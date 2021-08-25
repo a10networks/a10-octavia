@@ -14,7 +14,6 @@
 
 import copy
 import imp
-import json
 try:
     from unittest import mock
 except ImportError:
@@ -25,17 +24,12 @@ from oslo_config import fixture as oslo_fixture
 
 from octavia.common import data_models as o_data_models
 from octavia.network import data_models as n_data_models
-from octavia.network.drivers.neutron import utils
 from octavia.tests.common import constants as t_constants
-
-from acos_client import errors as acos_errors
 
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models as a10_data_models
 from a10_octavia.common import exceptions as a10_ex
-from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks import glm_tasks as task
-from a10_octavia.network.drivers.neutron import a10_octavia_neutron
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
@@ -171,6 +165,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
         with self.assertLogs(task_path, level='WARN') as cm:
             dns_task.execute(vthunder)
+            self.assertEqual(expected_log, cm.output)
 
     @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
     def test_DNSConfiguration_execute_use_amp_mgmt_net(self, network_driver_mock):
@@ -238,7 +233,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         dns_task.axapi_client = self.client_mock
         dns_task.execute(vthunder, flavor)
         args, kwargs = self.client_mock.dns.set.call_args
-        self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS)) 
+        self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS))
 
     @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
     def test_DNSConfiguration_execute_flavor_dns_precedence(self, network_driver_mock):
@@ -257,7 +252,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         dns_task.axapi_client = self.client_mock
         dns_task.execute(vthunder, flavor)
         args, kwargs = self.client_mock.dns.set.call_args
-        self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS)) 
+        self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS))
 
     @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
     def test_DNSConfiguration_execute_with_secondary_fail(self, network_driver_mock):
@@ -286,7 +281,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
         dns_task.revert(vthunder)
-        args, kwargs =  self.client_mock.dns.delete.call_args
+        args, kwargs = self.client_mock.dns.delete.call_args
         self.assertEqual(args, (None, SECONDARY_DNS))
 
     @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
@@ -337,7 +332,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         flexpool_task.execute(vthunder, amphora)
         self.client_mock.system.action.set_hostname.assert_called()
         args, kwargs = self.client_mock.glm.create.call_args
-        self.assertEqual(kwargs, expected_call) 
+        self.assertEqual(kwargs, expected_call)
 
     def test_ActivateFlexpoolLicense_execute_use_mgmt_port(self):
         self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
@@ -365,7 +360,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         flexpool_task.execute(vthunder, amphora)
         self.client_mock.system.action.set_hostname.assert_called()
         args, kwargs = self.client_mock.glm.create.call_args
-        self.assertEqual(kwargs, expected_call) 
+        self.assertEqual(kwargs, expected_call)
 
     def test_ActivateFlexpoolLicense_execute_iface_up(self):
         self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,

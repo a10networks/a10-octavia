@@ -190,9 +190,9 @@ class VThunderFlows(object):
             inject={a10constants.ROLE: role, a10constants.STATUS: constants.PENDING_CREATE}))
         # Rebind requires vthunder in store and vMaster requires vThunder
         create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-                name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,
-                requires=constants.LOADBALANCER,
-                provides=a10constants.VTHUNDER))
+            name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
         # Get VThunder details from database
         if role == constants.ROLE_BACKUP:
             create_amp_for_lb_subflow.add(
@@ -581,7 +581,6 @@ class VThunderFlows(object):
             rebind={a10constants.VTHUNDER: vthunder.vthunder_id}))
 
         store.update(vthunder_store)
-<<<<<<< HEAD
         return reload_check_flow
 
     def get_failover_spare_vthunder_flow(self):
@@ -767,6 +766,3 @@ class VThunderFlows(object):
         failover_flow = linear_flow.Flow(sf_name)
 
         return failover_flow
-=======
-        return reload_check_flow
->>>>>>> Added handling for when amp_license and amp_mgmt networks are not defined in the config

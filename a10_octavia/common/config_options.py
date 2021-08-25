@@ -57,7 +57,7 @@ A10_GLM_LICENSE_OPTS = [
                default='',
                help=_('Network used to connect the vThunder-Amphorae '
                       'to the GLM or ELM. If not specified, the '
-                      'amp_mgmt_network_list is used instead.')), 
+                      'amp_mgmt_network_list is used instead.')),
     cfg.StrOpt('flexpool_token',
                default=None,
                help=_('Alphanumeric string allowing for device licensing.')),
