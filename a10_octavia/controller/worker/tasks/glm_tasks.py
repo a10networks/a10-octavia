@@ -20,10 +20,10 @@ from taskflow import task
 from oslo_config import cfg
 from oslo_log import log as logging
 
+from a10_octavia.common import exceptions as a10_ex
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
-from a10_octavia.controller.worker.tasks.decorators import device_context_switch_decorator
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -97,7 +97,11 @@ class DNSConfiguration(task.Task):
             return
 
         primary_dns, secondary_dns = self._get_dns_nameservers(vthunder, flavor)
-        if not primary_dns:
+        if not primary_dns and secondary_dns:
+            LOG.error("A secondary DNS with IP %s was specified without a primary DNS",
+                      primary_dns)
+            raise a10_ex.PrimaryDNSMissing(secondary_dns)
+        elif not primary_dns and not secondary_dns:
             return
 
         try:
@@ -110,7 +114,7 @@ class DNSConfiguration(task.Task):
     @axapi_client_decorator_for_revert
     def revert(self, vthunder, flavor=None, *args, **kwargs):
         primary_dns, secondary_dns = self._get_dns_nameservers(vthunder, flavor)
-        if not primary_dns:
+        if not primary_dns and not secondary_dns:
             return
 
         try:
