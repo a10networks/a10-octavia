@@ -1032,3 +1032,43 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.execute(vthunder)
         self.client_mock.slb.virtual_server.stats.assert_called_with(
             name=a10constants.MOCK_LOAD_BALANCER_ID, timeout=mock.ANY, max_retries=mock.ANY)
+
+    @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.time')
+    def test_SparePostNetowrkPlug(self, mock_time):
+        mock_task = task.SparePostNetowrkPlug()
+        mock_task.axapi_client = self.client_mock
+        thunder = copy.deepcopy(VTHUNDER)
+        net_list = [1, 2]
+        mock_task.execute(thunder, net_list)
+        self.client_mock.system.action.write_memory.assert_called_with()
+        self.client_mock.system.action.reload_reboot_for_interface_attachment.assert_called_with(
+            thunder.acos_version)
+
+    def test_EnableInterfaceOnSpare(self):
+        mock_task = task.EnableInterfaceOnSpare()
+        mock_task.axapi_client = self.client_mock
+        thunder = copy.deepcopy(VTHUNDER)
+        net_list = [1, 2]
+        iface = {'interface': {'ethernet-list': [
+            {'action': "disable", 'ifnum': 2}
+        ]}}
+        mock_task.axapi_client.interface.get_list.return_value = iface
+        mock_task.execute(thunder, net_list)
+        self.client_mock.system.action.setInterface.assert_called_with(2)
+
+    def test_ConfigureVRRPFailover(self):
+        mock_task = task.ConfigureVRRPFailover()
+        mock_task.axapi_client = self.client_mock
+        thunder = copy.deepcopy(VTHUNDER)
+        mock_task.execute(thunder, 'device1', 'set1')
+        self.client_mock.system.action.configureVRRP.assert_called_with('device1', 'set1')
+
+    def test_ConfigureaVCSFailover(self):
+        mock_task = task.ConfigureaVCSFailover()
+        mock_task.axapi_client = self.client_mock
+        thunder = copy.deepcopy(VTHUNDER)
+        mock_task.execute(thunder, 'device1')
+        self.client_mock.system.action.set_vcs_device.assert_called_with('device1', 100)
+        self.client_mock.system.action.vcs_enable.assert_called_with()
+        self.client_mock.system.action.write_memory.assert_called_with()
+        self.client_mock.system.action.vcs_reload.assert_called_with()

@@ -21,6 +21,7 @@ MOCK_LISTENER_ID = 'mock-listener-1'
 MOCK_FLAVOR_ID = 'mock-flavor-1'
 MOCK_FLAVOR_PROF_ID = 'mock-flavor-prof-1'
 MOCK_AMPHORA_ID = 'amphora_id'
+MOCK_COMPUTE_ID = 'mock-compute-id'
 MOCK_COOKIE_NAME = 'mock-cookie-1'
 MOCK_CERT_FILENAME = 'mock-cert-filename-1'
 MOCK_CERT_CONTENT = 'mock-cert-content-1'
@@ -39,6 +40,7 @@ MOCK_SUBNET_CIDR = '10.10.10.0/24'
 MOCK_SUBNET_ID = 'mock-subnet-1'
 MOCK_VRRP_PORT_ID = 'mock-vrrp-port-id'
 MOCK_PORT_ID = 'mock-port-id'
+MOCK_SET_ID = 'mock-set-id'
 
 SERVICE_GROUP_CONF_SECTION = 'service_group'
 LISTENER_CONF_SECTION = 'listener'
@@ -71,3 +73,5 @@ MOCK_L7RULE_ID = "mock-l7-rule-1"
 
 MOCK_TLS_CERTIFICATE_ID = "mock_tls_certificate_id"
 MOCK_TOPOLOGY_ACTIVE_STANDBY = "ACTIVE_STANDBY"
+MOCK_TOPOLOGY_ROLE_MASTER = 'MASTER'
+MOCK_TOPOLOGY_ROLE_BACKUP = 'BACKUP'

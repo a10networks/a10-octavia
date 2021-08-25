@@ -31,6 +31,7 @@ from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
+LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
 MEMBER = o_data_models.Member(subnet_id=a10constants.MOCK_SUBNET_ID)
 VTHUNDER = data_models.VThunder()
 SUBNET = o_net_data_models.Subnet()
@@ -84,6 +85,12 @@ EXISTING_FIP_L3V_PARTITION = {
 class MockIP(object):
     def __init__(self, ip_address):
         self.ip_address = ip_address
+
+
+class MockNic(object):
+    def __init__(self, net_id):
+        self.network_id = net_id
+        self.subnet_id = net_id
 
 
 class TestNetworkTasks(base.BaseTaskTestCase):
@@ -588,3 +595,33 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         NAT_POOL.member_ref_count = 1
         mock_network_task.execute(MEMBER, NAT_FLAVOR, NAT_POOL)
         self.client_mock.delete_port.assert_called_with(NAT_POOL.port_id)
+
+    def test_PlugNetworksByID(self):
+        net_task = a10_network_tasks.PlugNetworksByID()
+        net_task.network_driver = self.client_mock
+        vthunder = copy.deepcopy(VTHUNDER)
+        NET_LIST = [1, 2, 3]
+        net_task.network_driver.get_plugged_networks.return_value = []
+        added_list = net_task.execute(vthunder, NET_LIST)
+        self.assertEqual(added_list, NET_LIST)
+
+    def test_GetVThunderNetworkList(self):
+        net_task = a10_network_tasks.GetVThunderNetworkList()
+        net_task.network_driver = self.client_mock
+        vthunder = copy.deepcopy(VTHUNDER)
+        nics = [MockNic(1), MockNic(2)]
+        net_task.network_driver.get_plugged_networks.return_value = nics
+        net_list = net_task.execute(vthunder)
+        self.assertEqual(net_list, [1, 2])
+
+    def test_PlugVipNetworkOnSpare(self):
+        net_task = a10_network_tasks.PlugVipNetworkOnSpare()
+        net_task.network_driver = self.client_mock
+        vthunder = copy.deepcopy(VTHUNDER)
+        lb = copy.deepcopy(LB)
+        lb.vip = MockNic(1)
+        nics = [MockNic(2), MockNic(3)]
+        net_task.network_driver.get_plugged_networks.return_value = nics
+        net_task.network_driver.get_subnet.return_value = MockNic(1)
+        added_list = net_task.execute(vthunder, lb)
+        self.assertEqual(added_list, [1])

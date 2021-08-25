@@ -1156,7 +1156,7 @@ class PlugVipNetworkOnSpare(BaseNetworkTask):
                 vip_net_id = self.network_driver.get_subnet(loadbalancer.vip.subnet_id).network_id
                 if vip_net_id not in network_ids:
                     self.network_driver.plug_network(spare_vthunder.compute_id, vip_net_id)
-                self.added_network.append(vip_net_id)
+                    self.added_network.append(vip_net_id)
             except Exception as e:
                 LOG.exception("Failed to check vip subnet on spare vThunder du to %s", str(e))
             return self.added_network
