@@ -185,5 +185,5 @@ class RevokeFlexpoolLicense(task.Task):
     def execute(self, vthunder):
         if not vthunder:
             LOG.warning("No vthunder therefore license revocation cannot occur.")
-            return
+            return None
         self.axapi_client.delete.glm_license.post()
