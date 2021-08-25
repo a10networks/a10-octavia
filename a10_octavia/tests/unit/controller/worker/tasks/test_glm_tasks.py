@@ -26,6 +26,7 @@ from oslo_config import fixture as oslo_fixture
 from octavia.common import data_models as o_data_models
 from octavia.network import data_models as n_data_models
 from octavia.network.drivers.neutron import utils
+from octavia.tests.common import constants as t_constants
 
 from acos_client import errors as acos_errors
 
@@ -40,6 +41,7 @@ from a10_octavia.tests.unit import base
 
 
 VTHUNDER = a10_data_models.VThunder()
+AMPHORA = o_data_models.Amphora(id=t_constants.MOCK_AMP_ID1)
 DNS_SUBNET = n_data_models.Subnet(id=a10constants.MOCK_SUBNET_ID)
 DNS_NETWORK = n_data_models.Network(id=a10constants.MOCK_NETWORK_ID,
                                     subnets=[DNS_SUBNET])
@@ -271,18 +273,91 @@ class TestGLMTasks(base.BaseTaskTestCase):
         dns_task.axapi_client = self.client_mock
         self.assertRaises(a10_ex.PrimaryDNSMissing, dns_task.execute, vthunder)
 
+    def test_ActivateFlexpoolLicense_execute_no_vthunder_warn(self):
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+        task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
+        log_message = str("No vthunder therefore licensing cannot occur.")
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
+        with self.assertLogs(task_path, level='WARN') as cm:
+            flexpool_task.execute(None, None)
+            self.assertEqual(expected_log, cm.output)
 
     def test_ActivateFlexpoolLicense_execute_success(self):
-        pass
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN)
+        vthunder = copy.deepcopy(VTHUNDER)
+        amphora = copy.deepcopy(AMPHORA)
+        interfaces = {
+            'interface': {
+                'ethernet-list': []
+            }
+        }
+        expected_call = {
+            'token': a10constants.MOCK_FLEXPOOL_TOKEN,
+            'allocate_bandwidth': None,
+            'use_mgmt_port': False
+        }
 
-    def test_ActivateFlexpoolLicense_execute_no_vthunder_warn(self):
-        pass
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+        flexpool_task.axapi_client.interface.get_list.return_value = interfaces
+
+        flexpool_task.execute(vthunder, amphora)
+        self.client_mock.system.action.set_hostname.assert_called()
+        args, kwargs = self.client_mock.glm.create.call_args
+        self.assertEqual(kwargs, expected_call) 
 
     def test_ActivateFlexpoolLicense_execute_use_mgmt_port(self):
-        pass
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_mgmt_network=DNS_NETWORK.id)
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN)
+        vthunder = copy.deepcopy(VTHUNDER)
+        amphora = copy.deepcopy(AMPHORA)
+        interfaces = {
+            'interface': {
+                'ethernet-list': []
+            }
+        }
+        expected_call = {
+            'token': a10constants.MOCK_FLEXPOOL_TOKEN,
+            'allocate_bandwidth': None,
+            'use_mgmt_port': True
+        }
+
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+        flexpool_task.axapi_client.interface.get_list.return_value = interfaces
+
+        flexpool_task.execute(vthunder, amphora)
+        self.client_mock.system.action.set_hostname.assert_called()
+        args, kwargs = self.client_mock.glm.create.call_args
+        self.assertEqual(kwargs, expected_call) 
 
     def test_ActivateFlexpoolLicense_execute_iface_up(self):
-        pass
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN)
+        vthunder = copy.deepcopy(VTHUNDER)
+        amphora = copy.deepcopy(AMPHORA)
+        interfaces = {
+            'interface': {
+                'ethernet-list': [{
+                    'ifnum': 2,
+                    'action': 'disable'
+                }]
+            }
+        }
+
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+        flexpool_task.axapi_client.interface.get_list.return_value = interfaces
+
+        flexpool_task.execute(vthunder, amphora)
+        self.client_mock.system.action.setInterface.assert_called_with(2)
 
     def test_ActivateFlexpoolLicense_execute_set_hostname(self):
         pass

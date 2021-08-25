@@ -40,6 +40,7 @@ MOCK_SUBNET_ID = 'mock-subnet-1'
 MOCK_NETWORK_ID = 'mock-network-1'
 MOCK_VRRP_PORT_ID = 'mock-vrrp-port-id'
 MOCK_PORT_ID = 'mock-port-id'
+MOCK_FLEXPOOL_TOKEN = '0XD34DB33F'
 
 SERVICE_GROUP_CONF_SECTION = 'service_group'
 LISTENER_CONF_SECTION = 'listener'
