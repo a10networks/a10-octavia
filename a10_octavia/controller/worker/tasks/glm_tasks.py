@@ -94,7 +94,7 @@ class DNSConfiguration(task.Task):
     def execute(self, vthunder, flavor=None):
         if not vthunder:
             LOG.warning("No vthunder therefore dns cannot be assigned.")
-            return
+            return None
 
         primary_dns, secondary_dns = self._get_dns_nameservers(vthunder, flavor)
         if not primary_dns and secondary_dns:
@@ -102,7 +102,7 @@ class DNSConfiguration(task.Task):
                       primary_dns)
             raise a10_ex.PrimaryDNSMissing(secondary_dns)
         elif not primary_dns and not secondary_dns:
-            return
+            return None
 
         try:
             self.axapi_client.dns.set(primary_dns, secondary_dns)
@@ -115,7 +115,7 @@ class DNSConfiguration(task.Task):
     def revert(self, vthunder, flavor=None, *args, **kwargs):
         primary_dns, secondary_dns = self._get_dns_nameservers(vthunder, flavor)
         if not primary_dns and not secondary_dns:
-            return
+            return None
 
         try:
             self.axapi_client.dns.delete(primary_dns, secondary_dns)
@@ -129,7 +129,10 @@ class ActivateFlexpoolLicense(task.Task):
     def execute(self, vthunder, amphora):
         if not vthunder:
             LOG.warning("No vthunder therefore licensing cannot occur.")
-            return
+            return None
+
+        amp_mgmt_net = CONF.a10_controller_worker.amp_mgmt_network
+        amp_boot_nets = CONF.a10_controller_worker.amp_boot_network_list
         token = CONF.glm_license.flexpool_token
         bandwidth = CONF.glm_license.allocate_bandwidth
         hostname = "amphora-" + amphora.id
@@ -139,15 +142,17 @@ class ActivateFlexpoolLicense(task.Task):
         license_net_id = CONF.glm_license.amp_license_network
         if not license_net_id:
             license_net_id = CONF.a10_controller_worker.amp_mgmt_network
-            if (not license_net_id and
-                    len(CONF.a10_controller_worker.amp_boot_network_list) >= 1):
-                license_net_id = CONF.a10_controller_worker.amp_boot_network_list[0]
-            else:
-                LOG.warning("No networks were configured therefore licensing cannot occur.")
-                return
+            if not license_net_id:
+                if len(CONF.a10_controller_worker.amp_boot_network_list) >= 1:
+                    license_net_id = CONF.a10_controller_worker.amp_boot_network_list[0]
+                else:
+                    LOG.warning("No networks were configured therefore "
+                                "nameservers cannot be set.")
+                    return None
 
-        if (license_net_id == CONF.a10_controller_worker.amp_mgmt_network or
-                license_net_id == CONF.a10_controller_worker.amp_boot_network_list[0]):
+        # ID provided to amp_license_network may be equal other provided mgmt network IDs
+        if (license_net_id == amp_mgmt_net or
+                (amp_boot_nets and license_net_id == amp_boot_nets[0])):
             use_mgmt_port = True
 
         interfaces = self.axapi_client.interface.get_list()
@@ -160,7 +165,7 @@ class ActivateFlexpoolLicense(task.Task):
 
         self.axapi_client.glm.create(
             token=token,
-            allocate_bandwith=bandwidth,
+            allocate_bandwidth=bandwidth,
             use_mgmt_port=use_mgmt_port
         )
 
