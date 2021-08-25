@@ -41,20 +41,27 @@ from a10_octavia.tests.unit import base
 
 VTHUNDER = a10_data_models.VThunder()
 DNS_SUBNET = n_data_models.Subnet(id=a10constants.MOCK_SUBNET_ID)
-DNS_NETWORK = n_data_models.Network(subnets=[DNS_SUBNET])
+DNS_NETWORK = n_data_models.Network(id=a10constants.MOCK_NETWORK_ID,
+                                    subnets=[DNS_SUBNET])
+PRIMARY_DNS = '1.3.3.7'
+SECONDARY_DNS = '1.0.0.7'
 
 class TestGLMTasks(base.BaseTaskTestCase):
 
     def setUp(self):
         super(TestGLMTasks, self).setUp()
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
-        self.conf.register_opts(config_options.A10_GLM_LICENSE,
+        self.conf.register_opts(config_options.A10_GLM_LICENSE_OPTS,
                                 group=a10constants.A10_GLOBAL_CONF_SECTION)
         imp.reload(task)
         self.client_mock = mock.Mock()
         self.db_session = mock.patch(
             'a10_octavia.controller.worker.tasks.a10_database_tasks.db_apis.get_session')
         self.db_session.start()
+
+    def tearDown(self):
+        super(TestGLMTasks, self).tearDown()
+        self.conf.reset()
 
     def test_DNSConfiguration_execute_no_vthunder_warn(self):
         dns_task = task.DNSConfiguration()
@@ -63,7 +70,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         log_message = str("No vthunder therefore dns cannot be assigned.")
         expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
         with self.assertLogs(task_path, level='WARN') as cm:
-            dns_task.execute()
+            dns_task.execute(None)
             self.assertEqual(expected_log, cm.output)
 
     def test_DNSConfiguration_execute_no_network_id_warn(self):
@@ -78,26 +85,89 @@ class TestGLMTasks(base.BaseTaskTestCase):
             dns_task.execute(vthunder)
             self.assertEqual(expected_log, cm.output)
 
-    @mock.patch('a10_octavia.controller.worker.tasks.glm_task.DNSConfiguration.network_driver')
-    def test_DNSConfiguration_execute_use_network_dns(self, network_driver_mock):
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_no_dns(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id)
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
-        dns_subnet = dns_net.subnets[0].to_dict()
-        dns_subnet['dns_nameservers'] = ['1.1.1.1', '2.2.2.2']
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed = dns_net.subnets[0].to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder)
+        self.client_mock.dns.set.assert_not_called()
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_use_license_net_primary_only(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id, primary_dns=PRIMARY_DNS)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
         dns_task.execute(vthunder)
         args, kwargs = self.client_mock.dns.set.call_args
-        self.assertEqual(args, ['1.1.1.1', '2.2.2.2'])
+        self.assertEqual(args, (PRIMARY_DNS, None))
 
-    def test_DNSConfiguration_execute_too_many_network_dns_warn(self):
-        pass
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_with_primary_secondary(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         primary_dns=PRIMARY_DNS, secondary_dns=SECONDARY_DNS)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
 
-    def test_DNSConfiguration_execute_use_license_net(self):
-        pass
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder)
+        args, kwargs = self.client_mock.dns.set.call_args
+        self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS))
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_use_network_dns(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        dns_subnet = dns_net.subnets[0].to_dict()
+        dns_subnet['dns_nameservers'] = [PRIMARY_DNS, SECONDARY_DNS]
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = dns_subnet
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder)
+        args, kwargs = self.client_mock.dns.set.call_args
+        self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS))
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_too_many_network_dns_warn(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        dns_subnet = dns_net.subnets[0].to_dict()
+        dns_subnet['dns_nameservers'] = [PRIMARY_DNS, SECONDARY_DNS, '3.3.3.3']
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = dns_subnet
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+
+        task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
+        log_message = ("More than one DNS nameserver detected on subnet %s. "
+                       "Using %s as primary and %s as secondary.",
+                       DNS_NETWORK.id, PRIMARY_DNS, SECONDARY_DNS)
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
+        with self.assertLogs(task_path, level='WARN') as cm:
+            dns_task.execute(vthunder)
 
     def test_DNSConfiguration_execute_use_amp_mgmt_net(self):
         pass
@@ -107,26 +177,6 @@ class TestGLMTasks(base.BaseTaskTestCase):
 
     def test_DNSConfiguration_execute_flavor_dns(self):
         pass
-
-    # def test_DNSConfiguration_execute_no_dns(self):
-    #     vthunder = copy.deepcopy(VTHUNDER)
-    #     dns_task = task.DNSConfiguration()
-    #     dns_task.axapi_client = self.client_mock
-    #     dns_task.execute(vthunder)
-        
-    # def test_DNSConfiguration_execute_with_primary(self):
-    #     self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
-    #                      primary_dns='1.1.1.1')
-    #     dns_task = task.DNSConfiguration()
-    #     dns_task.axapi_client = self.client_mock
-    #     dns_task.CONF = self.conf
-
-    # def test_DNSConfiguration_execute_with_primary_secondary(self):
-    #     self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
-    #                      primary_dns='1.1.1.1', secondary_dns='2.2.2.2')
-    #     dns_task = task.DNSConfiguration()
-    #     dns_task.axapi_client = self.client_mock
-    #     dns_task.CONF = self.conf
 
     # def test_DNSConfiguration_execute_with_secondary_revert(self):
     #     self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
