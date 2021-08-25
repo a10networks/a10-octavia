@@ -277,7 +277,7 @@ A10_CONTROLLER_WORKER_OPTS = [
     cfg.StrOpt('amp_ssh_key_name',
                default='',
                help=_('SSH key name used to boot the vThunder-Amphorae.')),
-    cfg.IntOpt('amp_mgmt_network',
+    cfg.StrOpt('amp_mgmt_network',
                default='',
                help=_('Network used to manage the vThunder-Amphorae. '
                       'If not specified, the first network in the '
