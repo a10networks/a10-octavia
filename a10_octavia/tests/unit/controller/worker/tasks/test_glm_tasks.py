@@ -273,6 +273,36 @@ class TestGLMTasks(base.BaseTaskTestCase):
         dns_task.axapi_client = self.client_mock
         self.assertRaises(a10_ex.PrimaryDNSMissing, dns_task.execute, vthunder)
 
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_revert_delete_dns(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         secondary_dns=SECONDARY_DNS)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.revert(vthunder)
+        args, kwargs =  self.client_mock.dns.delete.call_args
+        self.assertEqual(args, (None, SECONDARY_DNS))
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_revert_no_dns_return(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder)
+        self.client_mock.dns.delete.assert_not_called()
+
     def test_ActivateFlexpoolLicense_execute_no_vthunder_warn(self):
         flexpool_task = task.ActivateFlexpoolLicense()
         flexpool_task.axapi_client = self.client_mock
@@ -360,7 +390,26 @@ class TestGLMTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.setInterface.assert_called_with(2)
 
     def test_ActivateFlexpoolLicense_execute_set_hostname(self):
-        pass
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN)
+        vthunder = copy.deepcopy(VTHUNDER)
+        amphora = copy.deepcopy(AMPHORA)
+        amphora.id = '295990755083049101712519384016336453749'
+        interfaces = {
+            'interface': {
+                'ethernet-list': []
+            }
+        }
+
+        expected_host = 'amphora-29599075508304910171251'
+
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+        flexpool_task.axapi_client.interface.get_list.return_value = interfaces
+
+        flexpool_task.execute(vthunder, amphora)
+        self.client_mock.system.action.set_hostname.assert_called_with(expected_host)
 
     def test_ActivateFlexpoolLicense_revert_deactivate_license(self):
         pass
