@@ -199,11 +199,11 @@ SUPPORTED_FLAVOR_SCHEMA = {
             "type": "object",
             "description": "DNS name server information",
             "properties": {
-                "primary_dns": {
+                "primary-dns": {
                     "type": "string",
                     "description": "Primary nameserver used to contact the GLM or ELM"
                 },
-                "secondary_dns": {
+                "secondary-dns": {
                     "type": "string",
                     "description": "Secondary nameserver used to contact the GLM or ELM"
                 }
