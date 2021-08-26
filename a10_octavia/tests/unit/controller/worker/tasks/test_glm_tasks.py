@@ -1,0 +1,435 @@
+#    Copyright 2021, A10 Networks
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+import copy
+import imp
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
+from oslo_config import cfg
+from oslo_config import fixture as oslo_fixture
+
+from octavia.common import data_models as o_data_models
+from octavia.network import data_models as n_data_models
+from octavia.tests.common import constants as t_constants
+
+from a10_octavia.common import config_options
+from a10_octavia.common import data_models as a10_data_models
+from a10_octavia.common import exceptions as a10_ex
+from a10_octavia.controller.worker.tasks import glm_tasks as task
+from a10_octavia.tests.common import a10constants
+from a10_octavia.tests.unit import base
+
+
+VTHUNDER = a10_data_models.VThunder()
+AMPHORA = o_data_models.Amphora(id=t_constants.MOCK_AMP_ID1)
+DNS_SUBNET = n_data_models.Subnet(id=a10constants.MOCK_SUBNET_ID)
+DNS_NETWORK = n_data_models.Network(id=a10constants.MOCK_NETWORK_ID,
+                                    subnets=[DNS_SUBNET.id])
+PRIMARY_DNS = '1.3.3.7'
+SECONDARY_DNS = '1.0.0.7'
+
+
+class TestGLMTasks(base.BaseTaskTestCase):
+
+    def setUp(self):
+        super(TestGLMTasks, self).setUp()
+        self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
+        self.conf.register_opts(config_options.A10_GLM_LICENSE_OPTS,
+                                group=a10constants.A10_GLOBAL_CONF_SECTION)
+        imp.reload(task)
+        self.client_mock = mock.Mock()
+        self.db_session = mock.patch(
+            'a10_octavia.controller.worker.tasks.a10_database_tasks.db_apis.get_session')
+        self.db_session.start()
+
+    def tearDown(self):
+        super(TestGLMTasks, self).tearDown()
+        self.conf.reset()
+
+    def test_DNSConfiguration_execute_no_vthunder_warn(self):
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
+        log_message = str("No vthunder therefore dns cannot be assigned.")
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
+        with self.assertLogs(task_path, level='WARN') as cm:
+            dns_task.execute(None)
+            self.assertEqual(expected_log, cm.output)
+
+    def test_DNSConfiguration_execute_no_network_id_warn(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
+        log_message = str("No networks were configured therefore "
+                          "nameservers cannot be set.")
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
+        with self.assertLogs(task_path, level='WARN') as cm:
+            dns_task.execute(vthunder)
+            self.assertEqual(expected_log, cm.output)
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_no_dns(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder)
+        self.client_mock.dns.set.assert_not_called()
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_use_license_net_primary_only(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id, primary_dns=PRIMARY_DNS)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder)
+        args, kwargs = self.client_mock.dns.set.call_args
+        self.assertEqual(args, (PRIMARY_DNS, None))
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_with_primary_secondary(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         primary_dns=PRIMARY_DNS, secondary_dns=SECONDARY_DNS)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder)
+        args, kwargs = self.client_mock.dns.set.call_args
+        self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS))
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_use_network_dns(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
+        dns_subnet['dns_nameservers'] = [PRIMARY_DNS, SECONDARY_DNS]
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = dns_subnet
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder)
+        args, kwargs = self.client_mock.dns.set.call_args
+        self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS))
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_too_many_network_dns_warn(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
+        dns_subnet['dns_nameservers'] = [PRIMARY_DNS, SECONDARY_DNS, '3.3.3.3']
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = dns_subnet
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+
+        task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
+        log_message = ("More than one DNS nameserver detected on subnet {}. "
+                       "Using {} as primary and {} as secondary.".format(
+                           DNS_SUBNET.id, PRIMARY_DNS, SECONDARY_DNS))
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
+        with self.assertLogs(task_path, level='WARN') as cm:
+            dns_task.execute(vthunder)
+            self.assertEqual(expected_log, cm.output)
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_use_amp_mgmt_net(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         primary_dns=PRIMARY_DNS, secondary_dns=SECONDARY_DNS)
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_mgmt_network=DNS_NETWORK.id)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder)
+        args, kwargs = self.client_mock.dns.set.call_args
+        self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS))
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_use_first_amp_boot_net(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         primary_dns=PRIMARY_DNS, secondary_dns=SECONDARY_DNS)
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_boot_network_list=[DNS_NETWORK.id, 'random-net'])
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder)
+        args, kwargs = self.client_mock.dns.set.call_args
+        self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS))
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_config_precedence(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         primary_dns=PRIMARY_DNS, secondary_dns=SECONDARY_DNS)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
+        dns_subnet['dns_nameservers'] = ['8.8.8.8', '8.8.4.4']
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = dns_subnet
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder)
+        args, kwargs = self.client_mock.dns.set.call_args
+        self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS))
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_flavor_dns(self, network_driver_mock):
+        flavor = {'dns': {'primary-dns': PRIMARY_DNS, 'secondary-dns': SECONDARY_DNS}}
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder, flavor)
+        args, kwargs = self.client_mock.dns.set.call_args
+        self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS))
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_flavor_dns_precedence(self, network_driver_mock):
+        flavor = {'dns': {'primary-dns': PRIMARY_DNS, 'secondary-dns': SECONDARY_DNS}}
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         primary_dns='1.0.1.0', secondary_dns='0.1.0.1')
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
+        dns_subnet['dns_nameservers'] = ['8.8.8.8', '8.8.4.4']
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = dns_subnet
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder, flavor)
+        args, kwargs = self.client_mock.dns.set.call_args
+        self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS))
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_execute_with_secondary_fail(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         secondary_dns=SECONDARY_DNS)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        self.assertRaises(a10_ex.PrimaryDNSMissing, dns_task.execute, vthunder)
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_revert_delete_dns(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         secondary_dns=SECONDARY_DNS)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.revert(vthunder)
+        args, kwargs = self.client_mock.dns.delete.call_args
+        self.assertEqual(args, (None, SECONDARY_DNS))
+
+    @mock.patch('a10_octavia.controller.worker.tasks.glm_tasks.DNSConfiguration.network_driver')
+    def test_DNSConfiguration_revert_no_dns_return(self, network_driver_mock):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id)
+        vthunder = copy.deepcopy(VTHUNDER)
+        dns_net = copy.deepcopy(DNS_NETWORK)
+        network_driver_mock.get_network.return_value = dns_net
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+
+        dns_task = task.DNSConfiguration()
+        dns_task.axapi_client = self.client_mock
+        dns_task.execute(vthunder)
+        self.client_mock.dns.delete.assert_not_called()
+
+    def test_ActivateFlexpoolLicense_execute_no_vthunder_warn(self):
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+        task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
+        log_message = str("No vthunder therefore licensing cannot occur.")
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
+        with self.assertLogs(task_path, level='WARN') as cm:
+            flexpool_task.execute(None, None)
+            self.assertEqual(expected_log, cm.output)
+
+    def test_ActivateFlexpoolLicense_execute_success(self):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN)
+        vthunder = copy.deepcopy(VTHUNDER)
+        amphora = copy.deepcopy(AMPHORA)
+        interfaces = {
+            'interface': {
+                'ethernet-list': []
+            }
+        }
+        expected_call = {
+            'token': a10constants.MOCK_FLEXPOOL_TOKEN,
+            'allocate_bandwidth': None,
+            'use_mgmt_port': False
+        }
+
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+        flexpool_task.axapi_client.interface.get_list.return_value = interfaces
+
+        flexpool_task.execute(vthunder, amphora)
+        self.client_mock.system.action.set_hostname.assert_called()
+        args, kwargs = self.client_mock.glm.create.call_args
+        self.assertEqual(kwargs, expected_call)
+
+    def test_ActivateFlexpoolLicense_execute_use_mgmt_port(self):
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_mgmt_network=DNS_NETWORK.id)
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN)
+        vthunder = copy.deepcopy(VTHUNDER)
+        amphora = copy.deepcopy(AMPHORA)
+        interfaces = {
+            'interface': {
+                'ethernet-list': []
+            }
+        }
+        expected_call = {
+            'token': a10constants.MOCK_FLEXPOOL_TOKEN,
+            'allocate_bandwidth': None,
+            'use_mgmt_port': True
+        }
+
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+        flexpool_task.axapi_client.interface.get_list.return_value = interfaces
+
+        flexpool_task.execute(vthunder, amphora)
+        self.client_mock.system.action.set_hostname.assert_called()
+        args, kwargs = self.client_mock.glm.create.call_args
+        self.assertEqual(kwargs, expected_call)
+
+    def test_ActivateFlexpoolLicense_execute_iface_up(self):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN)
+        vthunder = copy.deepcopy(VTHUNDER)
+        amphora = copy.deepcopy(AMPHORA)
+        interfaces = {
+            'interface': {
+                'ethernet-list': [{
+                    'ifnum': 2,
+                    'action': 'disable'
+                }]
+            }
+        }
+
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+        flexpool_task.axapi_client.interface.get_list.return_value = interfaces
+
+        flexpool_task.execute(vthunder, amphora)
+        self.client_mock.system.action.setInterface.assert_called_with(2)
+
+    def test_ActivateFlexpoolLicense_execute_set_hostname(self):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN)
+        vthunder = copy.deepcopy(VTHUNDER)
+        amphora = copy.deepcopy(AMPHORA)
+        amphora.id = '295990755083049101712519384016336453749'
+        interfaces = {
+            'interface': {
+                'ethernet-list': []
+            }
+        }
+
+        expected_host = 'amphora-29599075508304910171251'
+
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+        flexpool_task.axapi_client.interface.get_list.return_value = interfaces
+
+        flexpool_task.execute(vthunder, amphora)
+        self.client_mock.system.action.set_hostname.assert_called_with(expected_host)
+
+    def test_ActivateFlexpoolLicense_revert_deactivate_license(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        amphora = copy.deepcopy(AMPHORA)
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+
+        flexpool_task.revert(vthunder, amphora)
+        self.client_mock.delete.glm_license.post.assert_called()
+
+    def test_RevokeFlexpoolLicense_execute_success(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        revoke_task = task.RevokeFlexpoolLicense()
+        revoke_task.axapi_client = self.client_mock
+
+        revoke_task.execute(vthunder)
+        self.client_mock.delete.glm_license.post.assert_called()
+
+    def test_RevokeFlexpoolLicense_execute_no_vthunder_warn(self):
+        revoke_task = task.RevokeFlexpoolLicense()
+        revoke_task.axapi_client = self.client_mock
+
+        task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
+        log_message = str("No vthunder therefore license revocation cannot occur.")
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
+        with self.assertLogs(task_path, level='WARN') as cm:
+            revoke_task.execute(None)
+            self.assertEqual(expected_log, cm.output)

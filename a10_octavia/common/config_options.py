@@ -50,12 +50,12 @@ A10_GLOBAL_OPTS = [
                 help=_('Use shared for template')),
 ]
 
-A10_GLM_LICENSE = [
+A10_GLM_LICENSE_OPTS = [
     cfg.StrOpt('amp_license_network',
                default='',
                help=_('Network used to connect the vThunder-Amphorae '
                       'to the GLM or ELM. If not specified, the '
-                      'amp_mgmt_network_list is used instead.')), 
+                      'amp_mgmt_network_list is used instead.')),
     cfg.StrOpt('flexpool_token',
                default=None,
                help=_('Alphanumeric string allowing for device licensing.')),
@@ -277,7 +277,7 @@ A10_CONTROLLER_WORKER_OPTS = [
     cfg.StrOpt('amp_ssh_key_name',
                default='',
                help=_('SSH key name used to boot the vThunder-Amphorae.')),
-    cfg.IntOpt('amp_mgmt_network',
+    cfg.StrOpt('amp_mgmt_network',
                default='',
                help=_('Network used to manage the vThunder-Amphorae. '
                       'If not specified, the first network in the '
@@ -402,7 +402,7 @@ cfg.CONF.register_opts(A10_HOUSE_KEEPING_OPTS, group='a10_house_keeping')
 cfg.CONF.register_cli_opts(A10_HEALTH_MANAGER_OPTS, group='a10_health_manager')
 cfg.CONF.register_opts(A10_NOVA_OPTS, group='a10_nova')
 cfg.CONF.register_opts(A10_VTHUNDER_OPTS, group='vthunder')
-cfg.CONF.register_opts(A10_GLM_LICENSE, group='glm_license')
+cfg.CONF.register_opts(A10_GLM_LICENSE_OPTS, group='glm_license')
 cfg.CONF.register_opts(A10_SLB_OPTS, group='slb')
 cfg.CONF.register_opts(A10_HEALTH_MONITOR_OPTS, group='health_monitor')
 cfg.CONF.register_opts(A10_LISTENER_OPTS, group='listener')

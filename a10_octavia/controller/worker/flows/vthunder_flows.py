@@ -176,9 +176,9 @@ class VThunderFlows(object):
             inject={a10constants.ROLE: role, a10constants.STATUS: constants.PENDING_CREATE}))
         # Rebind requires vthunder in store and vMaster requires vThunder
         create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-                name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,
-                requires=constants.LOADBALANCER,
-                provides=a10constants.VTHUNDER))
+            name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
         # Get VThunder details from database
         if role == constants.ROLE_BACKUP:
             create_amp_for_lb_subflow.add(
