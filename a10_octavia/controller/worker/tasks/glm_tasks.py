@@ -160,15 +160,17 @@ class ActivateFlexpoolLicense(task.Task):
                 ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                 self.axapi_client.system.action.setInterface(ifnum)
 
-        self.axapi_client.system.action.set_hostname(hostname)
-
-        self.axapi_client.glm.create(
-            token=token,
-            allocate_bandwidth=bandwidth,
-            use_mgmt_port=use_mgmt_port
-        )
-
-        self.axapi_client.glm.send.create(license_request=1)
+        try:
+            self.axapi_client.system.action.set_hostname(hostname)
+            self.axapi_client.glm.create(
+                token=token,
+                allocate_bandwidth=bandwidth,
+                use_mgmt_port=use_mgmt_port
+            )
+            self.axapi_client.glm.send.create(license_request=1)
+        except acos_errors.ACOSException as e:
+            LOG.error("Could not activate license for amphora %s", amphora.id)
+            raise e
 
     @axapi_client_decorator_for_revert
     def revert(self, vthunder, flavor=None, *args, **kwargs):
