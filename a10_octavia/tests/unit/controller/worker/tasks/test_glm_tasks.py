@@ -38,7 +38,7 @@ VTHUNDER = a10_data_models.VThunder()
 AMPHORA = o_data_models.Amphora(id=t_constants.MOCK_AMP_ID1)
 DNS_SUBNET = n_data_models.Subnet(id=a10constants.MOCK_SUBNET_ID)
 DNS_NETWORK = n_data_models.Network(id=a10constants.MOCK_NETWORK_ID,
-                                    subnets=[DNS_SUBNET])
+                                    subnets=[DNS_SUBNET.id])
 PRIMARY_DNS = '1.3.3.7'
 SECONDARY_DNS = '1.0.0.7'
 
@@ -89,7 +89,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -103,7 +103,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -119,7 +119,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -133,7 +133,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
                          amp_license_network=DNS_NETWORK.id)
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
-        dns_subnet = dns_net.subnets[0].to_dict()
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
         dns_subnet['dns_nameservers'] = [PRIMARY_DNS, SECONDARY_DNS]
         network_driver_mock.get_network.return_value = dns_net
         network_driver_mock.show_subnet_detailed.return_value = dns_subnet
@@ -150,7 +150,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
                          amp_license_network=DNS_NETWORK.id)
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
-        dns_subnet = dns_net.subnets[0].to_dict()
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
         dns_subnet['dns_nameservers'] = [PRIMARY_DNS, SECONDARY_DNS, '3.3.3.3']
         network_driver_mock.get_network.return_value = dns_net
         network_driver_mock.show_subnet_detailed.return_value = dns_subnet
@@ -159,9 +159,9 @@ class TestGLMTasks(base.BaseTaskTestCase):
         dns_task.axapi_client = self.client_mock
 
         task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
-        log_message = ("More than one DNS nameserver detected on subnet %s. "
-                       "Using %s as primary and %s as secondary.",
-                       DNS_NETWORK.id, PRIMARY_DNS, SECONDARY_DNS)
+        log_message = ("More than one DNS nameserver detected on subnet {}. "
+                       "Using {} as primary and {} as secondary.".format(
+                           DNS_SUBNET.id, PRIMARY_DNS, SECONDARY_DNS))
         expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
         with self.assertLogs(task_path, level='WARN') as cm:
             dns_task.execute(vthunder)
@@ -176,7 +176,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -193,7 +193,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -208,7 +208,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
                          primary_dns=PRIMARY_DNS, secondary_dns=SECONDARY_DNS)
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
-        dns_subnet = dns_net.subnets[0].to_dict()
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
         dns_subnet['dns_nameservers'] = ['8.8.8.8', '8.8.4.4']
         network_driver_mock.get_network.return_value = dns_net
         network_driver_mock.show_subnet_detailed.return_value = dns_subnet
@@ -227,7 +227,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -243,7 +243,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
                          primary_dns='1.0.1.0', secondary_dns='0.1.0.1')
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
-        dns_subnet = dns_net.subnets[0].to_dict()
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
         dns_subnet['dns_nameservers'] = ['8.8.8.8', '8.8.4.4']
         network_driver_mock.get_network.return_value = dns_net
         network_driver_mock.show_subnet_detailed.return_value = dns_subnet
@@ -262,7 +262,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -276,7 +276,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -291,7 +291,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = dns_net.subnets[0].to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
