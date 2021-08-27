@@ -616,7 +616,7 @@ class MemberFlows(object):
                 provides=a10constants.VTHUNDER))
         update_member_flow.add(self.handle_vrid_for_member_subflow())
         update_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER_ID,
+            requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
         update_member_flow.add(a10_database_tasks.GetLoadbalancersInProjectBySubnet(
             requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],

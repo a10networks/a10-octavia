@@ -550,7 +550,7 @@ class LoadBalancerFlows(object):
         # post_create_lb_flow.add(handle_vrid_for_loadbalancer_subflow())
         update_LB_flow.add(self.handle_vrid_for_loadbalancer_subflow())
         update_LB_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER_ID,
+            requires=constants.LOADBALANCER,
             provides=constants.AMPHORA))
         update_LB_flow.add(a10_database_tasks.GetLoadbalancersInProjectBySubnet(
             requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
