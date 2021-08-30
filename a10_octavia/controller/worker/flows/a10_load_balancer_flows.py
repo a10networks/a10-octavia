@@ -207,8 +207,17 @@ class LoadBalancerFlows(object):
 
         delete_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
+            inject={a10constants.MASTER_AMPHORA_STATUS: True},
             provides=a10constants.VTHUNDER))
         if lb.topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            delete_LB_flow.add(a10_compute_tasks.CheckAmphoraStatus(
+                name="check-master-amphora-status",
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.MASTER_AMPHORA_STATUS))
+            delete_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+                name="get vthunder on the basis of master amphora status",
+                requires=(constants.LOADBALANCER, a10constants.MASTER_AMPHORA_STATUS),
+                provides=a10constants.VTHUNDER))
             delete_LB_flow.add(vthunder_tasks.GetMasterVThunder(
                 name=a10constants.GET_MASTER_VTHUNDER,
                 requires=a10constants.VTHUNDER,
@@ -233,6 +242,15 @@ class LoadBalancerFlows(object):
             delete_LB_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
                 requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
                 provides=a10constants.BACKUP_VTHUNDER))
+            delete_LB_flow.add(a10_compute_tasks.CheckAmphoraStatus(
+                name="check-master-amphora-status-after_getting-backup",
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.MASTER_AMPHORA_STATUS))
+            delete_LB_flow.add(a10_compute_tasks.CheckAmphoraStatus(
+                name="check-backup-amphora-status",
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                provides=a10constants.BACKUP_AMPHORA_STATUS))
+
         if not deleteCompute:
             delete_LB_flow.add(a10_database_tasks.GetMemberListByProjectID(
                 requires=a10constants.VTHUNDER,
@@ -246,23 +264,30 @@ class LoadBalancerFlows(object):
             if lb.topology == "ACTIVE_STANDBY":
                 delete_LB_flow.add(vthunder_tasks.VCSSyncWait(
                     name="wait-vcs-ready-before-master-reload",
-                    requires=a10constants.VTHUNDER))
+                    requires=(a10constants.VTHUNDER,
+                              a10constants.MASTER_AMPHORA_STATUS,
+                              a10constants.BACKUP_AMPHORA_STATUS)))
             delete_LB_flow.add(vthunder_tasks.AmphoraePostNetworkUnplug(
                 name=a10constants.AMPHORA_POST_NETWORK_UNPLUG,
                 requires=(constants.LOADBALANCER, constants.ADDED_PORTS, a10constants.VTHUNDER)))
             delete_LB_flow.add(
                 vthunder_tasks.VThunderComputeConnectivityWait(
                     name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
-                    requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+                    requires=(a10constants.VTHUNDER, constants.AMPHORA,
+                              a10constants.MASTER_AMPHORA_STATUS)))
             if lb.topology == "ACTIVE_STANDBY":
                 delete_LB_flow.add(
                     vthunder_tasks.VThunderComputeConnectivityWait(
                         name=a10constants.BACKUP_CONNECTIVITY_WAIT,
-                        rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
-                        requires=constants.AMPHORA))
+                        rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER,
+                                a10constants.MASTER_AMPHORA_STATUS:
+                                a10constants.BACKUP_AMPHORA_STATUS},
+                        requires=(constants.AMPHORA)))
                 delete_LB_flow.add(vthunder_tasks.VCSSyncWait(
                     name="vip-unplug-wait-vcs-ready",
-                    requires=a10constants.VTHUNDER))
+                    requires=(a10constants.VTHUNDER,
+                              a10constants.MASTER_AMPHORA_STATUS,
+                              a10constants.BACKUP_AMPHORA_STATUS)))
                 delete_LB_flow.add(vthunder_tasks.GetMasterVThunder(
                     name=a10constants.GET_VTHUNDER_MASTER,
                     requires=a10constants.VTHUNDER,

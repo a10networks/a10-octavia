@@ -124,3 +124,15 @@ class NovaServerGroupCreate(BaseComputeTask):
                       "still be in use for server group: %(sg)s due to "
                       "error: %(except)s",
                       {'sg': server_group_id, 'except': e})
+
+
+class CheckAmphoraStatus(BaseComputeTask):
+    """Check for the compute driver for the amphora status."""
+
+    def execute(self, vthunder):
+        """Check for the compute driver for the amphora status."""
+        if vthunder:
+            amp, fault = self.compute.get_amphora(vthunder.compute_id)
+            if amp.status != constants.ACTIVE:
+                return False
+            return True
