@@ -31,6 +31,7 @@ from octavia.tests.common import constants as t_constants
 
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
+from a10_octavia.common import exceptions
 from a10_octavia.common import utils
 from a10_octavia.controller.worker.tasks import a10_database_tasks as task
 from a10_octavia.tests.common import a10constants
@@ -362,8 +363,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         flavor_task.flavor_repo.get.return_value = None
         flavor_task._flavor_search = mock.Mock(
             return_value=a10constants.MOCK_FLAVOR_ID)
-        ret_val = flavor_task.execute(LB)
-        self.assertEqual(ret_val, None)
+        ret_val = flavor_task.execute
+        self.assertRaises(exceptions.FlavorNotFound, ret_val, LB)
 
         flavor_task.flavor_repo.reset_mock()
         flavor_task.flavor_repo = mock.Mock()
