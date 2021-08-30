@@ -246,3 +246,10 @@ class InterfaceNotFound(acos_errors.ACOSException):
         msg = ('vThunder instance {0} has no interface in network {1}.').format(comput_id,
                                                                                 network_id)
         super(InterfaceNotFound, self).__init__(msg=msg)
+
+
+class FlavorNotFound(cfg.ConfigFileValueError):
+    def __init__(self, flavor):
+        msg = ('Flavor {0} specified in the configuration file is unable to locate,'
+               ' Please create the flavor in advance.').format(flavor)
+        super(FlavorNotFound, self).__init__(msg=msg)

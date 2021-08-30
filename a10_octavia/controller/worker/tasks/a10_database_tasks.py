@@ -717,8 +717,12 @@ class GetFlavorData(BaseDatabaseTask):
 
     def execute(self, lb_resource):
         flavor_id = a10_task_utils.attribute_search(lb_resource, 'flavor_id')
+        if not flavor_id:
+            flavor_id = CONF.a10_global.default_flavor_id
         if flavor_id:
             flavor = self.flavor_repo.get(db_apis.get_session(), id=flavor_id)
+            if not flavor and lb_resource.provisioning_status != "PENDING_DELETE":
+                raise exceptions.FlavorNotFound(flavor_id)
             if flavor and flavor.flavor_profile_id:
                 flavor_profile = self.flavor_profile_repo.get(
                     db_apis.get_session(),
