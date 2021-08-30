@@ -101,13 +101,13 @@ class LoadBalancerFlows(object):
         vthunder = self._vthunder_repo.get_vthunder_by_project_id(db_apis.get_session(),
                                                                   project_id)
 
+        lb_create_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR_DATA))
         lb_create_flow.add(
             self.get_post_lb_vthunder_association_flow(
                 post_amp_prefix, load_balancer_id, topology, vthunder,
                 mark_active=(not listeners)))
-        lb_create_flow.add(a10_database_tasks.GetFlavorData(
-            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
-            provides=constants.FLAVOR_DATA))
         lb_create_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.LB_COUNT_FLAVOR))
