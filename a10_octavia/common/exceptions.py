@@ -250,6 +250,6 @@ class InterfaceNotFound(acos_errors.ACOSException):
 
 class FlavorNotFound(cfg.ConfigFileValueError):
     def __init__(self, flavor):
-        msg = ('Flavor {0} specified in the configuration file is unable to locate,'
+        msg = ('Flavor {0} specified in the configuration file cannot be located,'
                ' Please create the flavor in advance.').format(flavor)
         super(FlavorNotFound, self).__init__(msg=msg)
