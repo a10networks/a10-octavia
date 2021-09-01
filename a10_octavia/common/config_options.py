@@ -48,6 +48,8 @@ A10_GLOBAL_OPTS = [
     cfg.BoolOpt('use_shared_for_template_lookup',
                 default=False,
                 help=_('Use shared for template')),
+    cfg.StrOpt('default_flavor_id', default=None,
+               help=_('Default flavor ID to apply globally to all users')),
 ]
 
 A10_VTHUNDER_OPTS = [
