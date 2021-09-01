@@ -41,6 +41,11 @@ DNS_NETWORK = n_data_models.Network(id=a10constants.MOCK_NETWORK_ID,
                                     subnets=[DNS_SUBNET.id])
 PRIMARY_DNS = '1.3.3.7'
 SECONDARY_DNS = '1.0.0.7'
+PROXY_HOST = '10.10.10.10'
+PROXY_PORT = 1111
+PROXY_USERNAME = 'user'
+PROXY_PASSWORD = True
+PROXY_PASSWORD_VALUE = 'password'
 
 
 class TestGLMTasks(base.BaseTaskTestCase):
@@ -432,4 +437,26 @@ class TestGLMTasks(base.BaseTaskTestCase):
         expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
         with self.assertLogs(task_path, level='WARN') as cm:
             revoke_task.execute(None)
+            self.assertEqual(expected_log, cm.output)
+
+    def test_ConfigureForwardProxyServer_execute_success(self):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         proxy_host=PROXY_HOST, proxy_port=PROXY_PORT,
+                         proxy_username=PROXY_USERNAME, proxy_password=PROXY_PASSWORD,
+                         proxy_secret_string=PROXY_PASSWORD_VALUE)
+        vthunder = copy.deepcopy(VTHUNDER)
+        proxy_server = task.ConfigureForwardProxyServer()
+        proxy_server.axapi_client = self.client_mock
+        proxy_server.execute(vthunder)
+        self.client_mock.glm_proxy_server.create.assert_called()
+
+    def test_ConfigureForwardProxyServer_execute_no_vthunder_warning(self):
+        proxy_server = task.ConfigureForwardProxyServer()
+        proxy_server.axapi_client = self.client_mock
+
+        task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
+        log_message = str("No vthunder therefore forward proxy server cannot be configured.")
+        expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
+        with self.assertLogs(task_path, level='WARN') as cm:
+            proxy_server.execute(None)
             self.assertEqual(expected_log, cm.output)
