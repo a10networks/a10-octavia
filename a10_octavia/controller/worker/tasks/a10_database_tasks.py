@@ -28,6 +28,7 @@ from octavia.common import constants
 from octavia.common import exceptions as octavia_exceptions
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
+from octavia.statistics import stats_base
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
@@ -55,6 +56,7 @@ class BaseDatabaseTask(task.Task):
         self.flavor_profile_repo = repo.FlavorProfileRepository()
         self.nat_pool_repo = a10_repo.NatPoolRepository()
         self.vrrp_set_repo = a10_repo.VrrpSetRepository()
+        self.listener_stats_repo = repo.ListenerStatisticsRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -343,10 +345,21 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
 
 class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
 
-    def execute(self, partition_project_list, vthunder):
+    def execute(self, partition_project_list, vthunder, loadbalancer):
         vrid_list = []
         if vthunder:
-            owner = vthunder.ip_address + "_" + vthunder.partition_name
+            topology = CONF.a10_controller_worker.loadbalancer_topology
+            if topology == "SINGLE":
+                owner = [vthunder.ip_address + "_" + vthunder.partition_name]
+            else:
+                loadbalancer_id = loadbalancer.id
+                master_vthunder = self.vthunder_repo.get_vthunder_from_lb(
+                    db_apis.get_session(), loadbalancer_id)
+                backup_vthunder = self.vthunder_repo.get_backup_vthunder_from_lb(
+                    db_apis.get_session(), loadbalancer_id)
+                owner_master = master_vthunder.ip_address + "_" + master_vthunder.partition_name
+                owner_backup = backup_vthunder.ip_address + "_" + backup_vthunder.partition_name
+                owner = [owner_master, owner_backup]
             if partition_project_list:
                 try:
                     vrid_list = self.vrid_repo.get_vrid_from_owner(
@@ -704,8 +717,12 @@ class GetFlavorData(BaseDatabaseTask):
 
     def execute(self, lb_resource):
         flavor_id = a10_task_utils.attribute_search(lb_resource, 'flavor_id')
+        if not flavor_id:
+            flavor_id = CONF.a10_global.default_flavor_id
         if flavor_id:
             flavor = self.flavor_repo.get(db_apis.get_session(), id=flavor_id)
+            if not flavor and lb_resource.provisioning_status != "PENDING_DELETE":
+                raise exceptions.FlavorNotFound(flavor_id)
             if flavor and flavor.flavor_profile_id:
                 flavor_profile = self.flavor_profile_repo.get(
                     db_apis.get_session(),
@@ -1001,7 +1018,7 @@ class CheckExistingVthunderTopology(BaseDatabaseTask):
             loadbalancer.project_id,
             topology)
 
-        if vthunder is not None:
+        if vthunder is not None and topology != vthunder.topology:
             LOG.error('Other loadbalancer exists in vthunder with: %s topology',
                       vthunder.topology)
             msg = ('vthunder has other loadbalancer with {0} ' +
@@ -1078,3 +1095,42 @@ class CountMembersOnThunderBySubnet(BaseDatabaseTask):
                               subnet.id, str(e))
                 raise e
         return 0
+
+
+class UpdateListenersStats(BaseDatabaseTask):
+    """Task for updating the listener stats"""
+
+    def execute(self, listener_stats):
+        try:
+            if listener_stats:
+                stats_base.update_stats_via_driver(listener_stats)
+                LOG.info('Updated the listeners statistics')
+
+            listeners, _ = self.listener_repo.get_all(db_apis.get_session())
+            listeners_stats, _ = self.listener_stats_repo.get_all(db_apis.get_session())
+
+            listeners_ids = [listener.id for listener in listeners]
+            listeners_stats_ids = [listener_stats.listener_id for listener_stats in listeners_stats]
+
+            for listeners_stats_id in listeners_stats_ids:
+                if listeners_stats_id not in listeners_ids:
+                    self.listener_stats_repo.delete(db_apis.get_session(),
+                                                    listener_id=listeners_stats_id)
+                    LOG.info('Delete the statictics entry of listener %s', listeners_stats_id)
+        except Exception as e:
+            LOG.warning('Failed to update the listener statistics '
+                        'due to: {}'.format(str(e)))
+
+
+class GetMemberListByProjectID(BaseDatabaseTask):
+
+    def execute(self, vthunder):
+        try:
+            if vthunder:
+                member_list = self.member_repo.get_members_by_project_id(
+                    db_apis.get_session(),
+                    vthunder.project_id)
+                return member_list
+        except Exception as e:
+            LOG.exception('Failed to get active Members related to vthunder '
+                          'due to: {}'.format(str(e)))

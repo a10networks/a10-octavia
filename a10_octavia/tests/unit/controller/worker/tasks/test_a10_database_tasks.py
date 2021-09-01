@@ -31,6 +31,7 @@ from octavia.tests.common import constants as t_constants
 
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
+from a10_octavia.common import exceptions
 from a10_octavia.common import utils
 from a10_octavia.controller.worker.tasks import a10_database_tasks as task
 from a10_octavia.tests.common import a10constants
@@ -47,6 +48,7 @@ HW_THUNDER = data_models.HardwareThunder(
     partition_name="shared")
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
                                 flavor_id=a10constants.MOCK_FLAVOR_ID)
+LB2 = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
 FIXED_IP = n_data_models.FixedIP(ip_address='10.10.10.10')
 PORT = n_data_models.Port(id=uuidutils.generate_uuid(), fixed_ips=[FIXED_IP])
 VRID = data_models.VRID(id=1, vrid=0,
@@ -86,6 +88,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.conf.register_opts(
             config_options.A10_HARDWARE_THUNDER_OPTS,
             group=a10constants.HARDWARE_THUNDER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
+                                group=a10constants.A10_GLOBAL_OPTS)
         self.db_session = mock.patch(
             'a10_octavia.controller.worker.tasks.a10_database_tasks.db_apis.get_session')
         self.db_session.start()
@@ -115,6 +119,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
 
     def test_get_vrid_for_project_member_hmt_use_partition(self):
         thunder = copy.deepcopy(HW_THUNDER)
+        lb = copy.deepcopy(LB)
         thunder.hierarchical_multitenancy = 'enable'
         thunder.vrid_floating_ip = VRID.vrid_floating_ip
         hardware_device_conf = self._generate_hardware_device_conf(thunder)
@@ -132,11 +137,12 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vthunder_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.get_vrid_from_owner.return_value = VRID
-        vrid = mock_vrid_entry.execute([a10constants.MOCK_PROJECT_ID], thunder)
+        vrid = mock_vrid_entry.execute([a10constants.MOCK_PROJECT_ID], thunder, lb)
         self.assertEqual(VRID, vrid)
 
     def test_get_vrid_for_project(self):
         thunder = copy.deepcopy(HW_THUNDER)
+        lb = copy.deepcopy(LB)
         thunder.hierarchical_multitenancy = 'disable'
         thunder.vrid_floating_ip = VRID.vrid_floating_ip
         hardware_device_conf = self._generate_hardware_device_conf(thunder)
@@ -154,7 +160,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vthunder_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.get_vrid_from_owner.return_value = VRID
-        vrid = mock_vrid_entry.execute(MEMBER_1, thunder)
+        vrid = mock_vrid_entry.execute(MEMBER_1, thunder, lb)
         mock_vrid_entry.vthunder_repo.get_partition_for_project.assert_not_called()
         self.assertEqual(VRID, vrid)
 
@@ -360,8 +366,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         flavor_task.flavor_repo.get.return_value = None
         flavor_task._flavor_search = mock.Mock(
             return_value=a10constants.MOCK_FLAVOR_ID)
-        ret_val = flavor_task.execute(LB)
-        self.assertEqual(ret_val, None)
+        ret_val = flavor_task.execute
+        self.assertRaises(exceptions.FlavorNotFound, ret_val, LB)
 
         flavor_task.flavor_repo.reset_mock()
         flavor_task.flavor_repo = mock.Mock()
@@ -370,6 +376,20 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         flavor_task.flavor_repo.get.return_value = flavor
         ret_val = flavor_task.execute(LB)
         self.assertEqual(ret_val, None)
+
+    def test_GetFlavorData_execute_with_default_flavor_id(self):
+        flavor_task = task.GetFlavorData()
+        flavor = copy.deepcopy(FLAVOR)
+        flavor_prof = copy.deepcopy(FLAVOR_PROFILE)
+        flavor_prof.flavor_data = "{}"
+        flavor_task.flavor_repo = mock.Mock()
+        flavor_task.flavor_repo.get.return_value = flavor
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         default_flavor_id=flavor)
+        flavor_task.flavor_profile_repo = mock.Mock()
+        flavor_task.flavor_profile_repo.get.return_value = flavor_prof
+        ret_val = flavor_task.execute(LB2)
+        self.assertEqual(ret_val, {})
 
     def test_GetFlavorData_execute_return_flavor(self):
         flavor_task = task.GetFlavorData()
@@ -526,3 +546,15 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         lb_task.vthunder_repo = mock.MagicMock()[1:999]
         lb_task.vthunder_repo.get_vthunder_by_project_id.return_value = vthunder
         self.assertRaises(o_exceptions.InvalidTopology, lb_task.execute, LB, "SINGLE")
+
+    @mock.patch('octavia.statistics.stats_base.update_stats_via_driver')
+    def test_update_listeners_stats_with_statistics(self, mock_stats_base):
+        LISTENER_STATS = o_data_models.ListenerStatistics(listener_id=uuidutils.generate_uuid())
+        mock_get_listener = task.UpdateListenersStats()
+        mock_get_listener.listener_repo = mock.MagicMock()
+        mock_get_listener.listener_repo.get_all.return_value = [LISTENER], None
+        mock_get_listener.listener_stats_repo = mock.MagicMock()
+        mock_get_listener.listener_stats_repo.get_all.return_value = [LISTENER_STATS], None
+        mock_get_listener.execute([LISTENER_STATS])
+        mock_stats_base.assert_called_once_with([LISTENER_STATS])
+        mock_get_listener.listener_stats_repo.delete.assert_called_once()

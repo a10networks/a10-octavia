@@ -13,8 +13,10 @@
 
 The A10 Networks Octavia Driver allows for configuration of Thunder, vThunder, and AX Series Appliances deployed in
 an Openstack enviroment. While the default Octavia provider leverages an "Amphora per VIP" architecture,
-this provider driver uses a "Thunder per Tenant" architecture. Therefore, each tenant may only be serviced by a single
-**active** Thunder device.
+this provider driver uses a "vThunder-Amphora per Tenant" architecture. Therefore, each tenant may only be serviced by a single
+**active** vThunder-Amphora device.
+
+No such limitation exists for hardware Thunder devices in versions >=1.3. Through the use of Octavia flavors, operators may now have any number of hadware Thunder devices servicing a singular project.
 
 ## Supported Versions
 

@@ -47,6 +47,10 @@ def hm_listener(exit_event):
             LOG.error('A10 Health Manager listener experienced unknown error: %s',
                       ex)
 
+    LOG.info('Waiting for executor to shutdown...')
+    udp_getter.stats_executor.shutdown()
+    LOG.info('Executor shutdown finished.')
+
 
 def hm_health_check(exit_event):
     hm = a10_health_manager.A10HealthManager(exit_event)

@@ -261,15 +261,19 @@ class VThunderRepository(BaseRepository):
         id_list = [model.id for model in model_list]
         return id_list
 
-    def get_vthunders_by_ip_address(self, session, ip_address):
+    def get_vthunders_by_ip_address(self, session, ip_address, vthunders=False):
         model_list = session.query(self.model_class).filter(
             self.model_class.ip_address == ip_address).filter(
             and_(self.model_class.status == "ACTIVE",
                  or_(self.model_class.role == "STANDALONE",
                      self.model_class.role == "MASTER")))
 
-        id_list = [model.id for model in model_list]
-        return id_list
+        if vthunders == False:
+            id_list = [model.id for model in model_list]
+            return id_list
+        else:
+            model_list = model_list.options(noload('*'))
+            return model_list.all()
 
     def get_delete_compute_flag(self, session, compute_id):
         if compute_id:
@@ -478,7 +482,7 @@ class VRIDRepository(BaseRepository):
         vrid_obj_list = []
 
         model = session.query(self.model_class).filter(
-            or_(self.model_class.owner == owner,
+            or_(self.model_class.owner.in_(owner),
                 self.model_class.owner.in_(project_ids)))
         for data in model:
             vrid_obj_list.append(data.to_data_model())
@@ -557,6 +561,19 @@ class MemberRepository(repo.MemberRepository):
         if not model:
             return None
         return model.to_data_model()
+
+    def get_members_by_project_id(self, session, project_id):
+        member_list = []
+        query = session.query(self.model_class).filter(
+            self.model_class.project_id == project_id).filter(
+            or_(self.model_class.provisioning_status == "ACTIVE",
+                self.model_class.provisioning_status == "PENDING_UPDATE",
+                self.model_class.provisioning_status == "PENDING_CREATE"))
+
+        model_list = query.all()
+        for data in model_list:
+            member_list.append(data.to_data_model())
+        return member_list
 
 
 class NatPoolRepository(BaseRepository):

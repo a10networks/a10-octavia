@@ -921,29 +921,8 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.write_memory.assert_not_called()
         self.client_mock.system.action.reload_reboot_for_interface_detachment.assert_not_called()
 
-    def test_GetVThunderInterface_execute_for_vMaster(self):
-        thunder = copy.deepcopy(VTHUNDER)
-        mock_task = task.GetVThunderInterface()
-        mock_task.axapi_client = self.client_mock
-        self.client_mock.system.action.get_vcs_summary_oper.return_value = VCS_MASTER_VBLADE
-        self.client_mock.interface.get_list.return_value = INTERFACES
-        thunder.ip_address = "10.0.0.1"
-        mock_task.execute(thunder)
-        self.client_mock.system.action.setInterface.assert_not_called()
-        self.assertEqual(mock_task.execute(thunder), ([1], []))
-
-    def test_GetVThunderInterface_execute_for_vBlade(self):
-        thunder = copy.deepcopy(VTHUNDER)
-        mock_task = task.GetVThunderInterface()
-        mock_task.axapi_client = self.client_mock
-        self.client_mock.system.action.get_vcs_summary_oper.return_value = VCS_MASTER_VBLADE
-        self.client_mock.interface.get_list.return_value = INTERFACES
-        thunder.ip_address = "10.0.0.2"
-        mock_task.execute(thunder)
-        self.client_mock.system.action.setInterface.assert_not_called()
-        self.assertEqual(mock_task.execute(thunder), ([], [1]))
-
-    def test_EnableInterface_execute_for_single_topology(self):
+    @mock.patch('stevedore.driver.DriverManager')
+    def test_EnableInterface_execute_for_single_topology(self, mock_drivermgr):
         thunder = copy.deepcopy(VTHUNDER)
         added_ports = {'amphora_id': ''}
         thunder.topology = "SINGLE"
@@ -952,10 +931,14 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.loadbalancer_repo.check_lb_exists_in_project.return_value = True
         mock_task.axapi_client = self.client_mock
         self.client_mock.interface.get_list.return_value = INTERFACES
+        mock_driver = mock.MagicMock()
+        mock_drivermgr.return_value = mock_driver
+        mock_drivermgr.get_plugged_networks.return_value = [NETWORK_11]
         mock_task.execute(thunder, LB, added_ports)
         self.client_mock.system.action.setInterface.assert_not_called()
 
-    def test_EnableInterface_execute_for_active_standby_topology(self):
+    @mock.patch('stevedore.driver.DriverManager')
+    def test_EnableInterface_execute_for_active_standby_topology(self, mock_drivermgr):
         thunder = copy.deepcopy(VTHUNDER)
         added_ports = {'amphora_id': ''}
         thunder.topology = "ACTIVE_STANDBY"
@@ -964,6 +947,9 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.loadbalancer_repo.check_lb_exists_in_project.return_value = True
         mock_task.axapi_client = self.client_mock
         self.client_mock.interface.get_list.return_value = INTERFACES
+        mock_driver = mock.MagicMock()
+        mock_drivermgr.return_value = mock_driver
+        mock_drivermgr.get_plugged_networks.return_value = [NETWORK_11]
         mock_task.execute(thunder, LB, added_ports)
         self.client_mock.system.action.setInterface.assert_not_called()
 
@@ -1020,3 +1006,29 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task.execute(SUBNET, AMPHORAE, lb_count, lb_count, flavor_data=DEPLOYMENT_FLAVOR)
         self.client_mock.remove_any_source_ip_on_egress.assert_called_with(
             SUBNET.network_id, AMPHORAE[0])
+
+    def test_get_listeners_stats(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.loadbalancer_id = a10constants.MOCK_LOAD_BALANCER_ID
+        lb = copy.deepcopy(LB)
+        lb.provisioning_status = "ACTIVE"
+        STATS = {
+            "port-list": [
+                {
+                    "stats": {
+                        "curr_conn": 0, "total_conn": 1,
+                        "total_fwd_bytes": 684, "total_rev_bytes": 705
+                    },
+                    "port-number": 80,
+                    "protocol": "http"
+                }
+            ]
+        }
+        mock_task = task.GetListenersStats()
+        mock_task.loadbalancer_repo = mock.MagicMock()
+        mock_task.loadbalancer_repo.get.return_value = lb
+        mock_task.axapi_client = self.client_mock
+        mock_task.axapi_client.slb.virtual_server.stats.return_value = STATS
+        mock_task.execute(vthunder)
+        self.client_mock.slb.virtual_server.stats.assert_called_with(
+            name=a10constants.MOCK_LOAD_BALANCER_ID, timeout=mock.ANY, max_retries=mock.ANY)
