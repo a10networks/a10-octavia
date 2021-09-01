@@ -188,3 +188,32 @@ class RevokeFlexpoolLicense(task.Task):
             LOG.warning("No vthunder therefore license revocation cannot occur.")
             return None
         self.axapi_client.delete.glm_license.post()
+
+
+class ConfigureForwardProxyServer(task.Task):
+
+    @axapi_client_decorator
+    def execute(self, vthunder):
+        if not vthunder:
+            LOG.warning("No vthunder therefore forward proxy server cannot be configured.")
+            return
+        host = CONF.glm_license.proxy_host
+        port = CONF.glm_license.proxy_port
+        username = CONF.glm_license.proxy_username
+        enable_password = CONF.glm_license.proxy_password
+        if host and port:
+            try:
+                if enable_password:
+                    secret_string = CONF.glm_license.proxy_secret_string \
+                        if CONF.glm_license.proxy_secret_string else ""
+                    self.axapi_client.glm_proxy_server.create(host, port, username,
+                                                              enable_password, secret_string)
+                else:
+                    self.axapi_client.glm_proxy_server.create(host, port, username)
+            except acos_errors.ACOSException as e:
+                LOG.error("Could not configure forward proxy server for A10 "
+                          "Thunder device", vthunder.ip_address)
+                raise e
+        else:
+            LOG.warning("Please provide forward proxy server IP address and port. ")
+            return
