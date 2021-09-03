@@ -118,3 +118,8 @@ class TestUtils(base.TestCase):
     def test_dash_to_underscore(self):
         obj_flavor = utils.dash_to_underscore(DASH_FLAVOR)
         self.assertEqual(UNDERSCORE_FLAVOR, obj_flavor)
+
+    def test_parse_name_expressions_with_no_name_specified(self):
+        expect_result = {}
+        obj_flavor = utils.parse_name_expressions(None, NAME_EXPRESSIONS)
+        self.assertEqual(expect_result, obj_flavor)
