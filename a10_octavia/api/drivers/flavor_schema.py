@@ -208,6 +208,21 @@ SUPPORTED_FLAVOR_SCHEMA = {
                     "description": "Secondary nameserver used to contact the GLM or ELM"
                 }
             }
+        },
+        "proxy-server": {
+            "type": "object",
+            "description": "Forward proxy-server configuration details.",
+            "properties": {
+                "proxy_host": {
+                    "type": "string"
+                },
+                "proxy_port": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535,
+                }
+            }
         }
+
     }
 }

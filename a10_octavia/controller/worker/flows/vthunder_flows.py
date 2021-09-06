@@ -324,6 +324,7 @@ class VThunderFlows(object):
         if role == constants.ROLE_BACKUP:
             glm_license_subflow.add(glm_tasks.ConfigureForwardProxyServer(
                 name=role + '-' + a10constants.CONFIGURE_PROXY_SERVER,
+                requires=constants.FLAVOR,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}
             ))
             glm_license_subflow.add(glm_tasks.DNSConfiguration(
@@ -339,7 +340,7 @@ class VThunderFlows(object):
         else:
             glm_license_subflow.add(glm_tasks.ConfigureForwardProxyServer(
                 name=role + '-' + a10constants.CONFIGURE_PROXY_SERVER,
-                requires=a10constants.VTHUNDER
+                requires=(constants.FLAVOR, a10constants.VTHUNDER)
             ))
             glm_license_subflow.add(glm_tasks.DNSConfiguration(
                 name=role + '-' + a10constants.CONFIGURE_DNS_NAMESERVERS,
