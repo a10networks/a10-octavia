@@ -81,7 +81,7 @@ def shared_template_modifier(template_type, template_name, device_templates):
 
 def parse_name_expressions(name, name_expressions):
     flavor_data = {}
-    if name_expressions:
+    if name and name_expressions:
         for expression in name_expressions:
             if 'regex' in expression:
                 if re.search(expression['regex'], name):
