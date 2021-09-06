@@ -450,13 +450,3 @@ class TestGLMTasks(base.BaseTaskTestCase):
         proxy_server.execute(vthunder)
         self.client_mock.glm_proxy_server.create.assert_called()
 
-    def test_ConfigureForwardProxyServer_execute_no_vthunder_warning(self):
-        proxy_server = task.ConfigureForwardProxyServer()
-        proxy_server.axapi_client = self.client_mock
-
-        task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
-        log_message = str("No vthunder therefore forward proxy server cannot be configured.")
-        expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
-        with self.assertLogs(task_path, level='WARN') as cm:
-            proxy_server.execute(None)
-            self.assertEqual(expected_log, cm.output)

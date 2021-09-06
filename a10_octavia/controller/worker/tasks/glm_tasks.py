@@ -191,29 +191,36 @@ class RevokeFlexpoolLicense(task.Task):
 
 
 class ConfigureForwardProxyServer(task.Task):
+    def __init__(self, *args, **kwargs):
+        self.host = self.port = self.username \
+            = self.enable_password = self.secret_string = None
+        super(ConfigureForwardProxyServer, self).__init__(*args, **kwargs)
 
     @axapi_client_decorator
-    def execute(self, vthunder):
+    def execute(self, vthunder, flavor=None):
         if not vthunder:
             LOG.warning("No vthunder therefore forward proxy server cannot be configured.")
             return
-        host = CONF.glm_license.proxy_host
-        port = CONF.glm_license.proxy_port
-        username = CONF.glm_license.proxy_username
-        enable_password = CONF.glm_license.proxy_password
-        if host and port:
+        self.fetch_configurations(flavor)
+        if self.host and self.port:
             try:
-                if enable_password:
-                    secret_string = CONF.glm_license.proxy_secret_string \
-                        if CONF.glm_license.proxy_secret_string else ""
-                    self.axapi_client.glm_proxy_server.create(host, port, username,
-                                                              enable_password, secret_string)
-                else:
-                    self.axapi_client.glm_proxy_server.create(host, port, username)
+                self.axapi_client.glm_proxy_server.create(self.host, self.port, self.username,
+                                                          self.enable_password, self.secret_string)
             except acos_errors.ACOSException as e:
                 LOG.error("Could not configure forward proxy server for A10 "
                           "Thunder device", vthunder.ip_address)
                 raise e
+
+    def fetch_configurations(self, flavor):
+        if flavor and flavor.get('proxy-server'):
+            self.host = flavor['proxy-server'].get('proxy_host')
+            self.port = flavor['proxy-server'].get('proxy_port')
+            self.username = flavor['proxy-server'].get('proxy_username')
+            self.enable_password = flavor['proxy-server'].get('proxy_password')
+            self.secret_string = CONF.glm_license.proxy_secret_string('proxy_secret_string')
         else:
-            LOG.warning("Please provide forward proxy server IP address and port. ")
-            return
+            self.host = CONF.glm_license.proxy_host
+            self.port = CONF.glm_license.proxy_port
+            self.username = CONF.glm_license.proxy_username
+            self.enable_password = CONF.glm_license.proxy_password
+            self.secret_string = CONF.glm_license.proxy_secret_string
