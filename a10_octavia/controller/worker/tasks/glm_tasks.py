@@ -204,7 +204,7 @@ class ConfigureForwardProxyServer(task.Task):
         self.fetch_configurations(flavor)
         if self.host and self.port:
             try:
-                self.axapi_client.glm_proxy_server.create(self.host, self.port, self.username,
+                self.axapi_client.glm.proxy_server.create(self.host, self.port, self.username,
                                                           self.enable_password, self.secret_string)
             except acos_errors.ACOSException as e:
                 LOG.error("Could not configure forward proxy server for A10 "
