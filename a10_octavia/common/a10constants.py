@@ -111,6 +111,7 @@ NETWORK_LIST = "network_list"
 ADDED_NETWORK = "added_network"
 
 COMPUTE_PAUSED = "PAUSED"
+L2DSR_FLAVOR = "l2dsr_flavor"
 
 # ACOS versions
 ACOS_5_2_1_P2 = "5.2.1-P2"

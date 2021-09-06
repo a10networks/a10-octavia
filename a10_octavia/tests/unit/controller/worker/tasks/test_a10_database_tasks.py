@@ -31,6 +31,7 @@ from octavia.tests.common import constants as t_constants
 
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
+from a10_octavia.common import exceptions
 from a10_octavia.common import utils
 from a10_octavia.controller.worker.tasks import a10_database_tasks as task
 from a10_octavia.tests.common import a10constants
@@ -48,6 +49,7 @@ HW_THUNDER = data_models.HardwareThunder(
     partition_name="shared")
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
                                 flavor_id=a10constants.MOCK_FLAVOR_ID)
+LB2 = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
 FIXED_IP = n_data_models.FixedIP(ip_address='10.10.10.10')
 PORT = n_data_models.Port(id=uuidutils.generate_uuid(), fixed_ips=[FIXED_IP])
 VRID = data_models.VRID(id=1, vrid=0,
@@ -93,6 +95,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.conf.register_opts(
             config_options.A10_HARDWARE_THUNDER_OPTS,
             group=a10constants.HARDWARE_THUNDER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
+                                group=a10constants.A10_GLOBAL_OPTS)
         self.db_session = mock.patch(
             'a10_octavia.controller.worker.tasks.a10_database_tasks.db_apis.get_session')
         self.db_session.start()
@@ -369,8 +373,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         flavor_task.flavor_repo.get.return_value = None
         flavor_task._flavor_search = mock.Mock(
             return_value=a10constants.MOCK_FLAVOR_ID)
-        ret_val = flavor_task.execute(LB)
-        self.assertEqual(ret_val, None)
+        ret_val = flavor_task.execute
+        self.assertRaises(exceptions.FlavorNotFound, ret_val, LB)
 
         flavor_task.flavor_repo.reset_mock()
         flavor_task.flavor_repo = mock.Mock()
@@ -379,6 +383,20 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         flavor_task.flavor_repo.get.return_value = flavor
         ret_val = flavor_task.execute(LB)
         self.assertEqual(ret_val, None)
+
+    def test_GetFlavorData_execute_with_default_flavor_id(self):
+        flavor_task = task.GetFlavorData()
+        flavor = copy.deepcopy(FLAVOR)
+        flavor_prof = copy.deepcopy(FLAVOR_PROFILE)
+        flavor_prof.flavor_data = "{}"
+        flavor_task.flavor_repo = mock.Mock()
+        flavor_task.flavor_repo.get.return_value = flavor
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         default_flavor_id=flavor)
+        flavor_task.flavor_profile_repo = mock.Mock()
+        flavor_task.flavor_profile_repo.get.return_value = flavor_prof
+        ret_val = flavor_task.execute(LB2)
+        self.assertEqual(ret_val, {})
 
     def test_GetFlavorData_execute_return_flavor(self):
         flavor_task = task.GetFlavorData()

@@ -395,6 +395,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                         '60 seconds.', 'load_balancer', load_balancer_id)
             raise db_exceptions.NoResultFound
 
+        flavor_id = lb.flavor_id if lb.flavor_id else CONF.a10_global.default_flavor_id
+
         store = {constants.LOADBALANCER_ID: load_balancer_id,
                  constants.VIP: lb.vip,
                  constants.BUILD_TYPE_PRIORITY:
@@ -405,7 +407,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
         store[constants.UPDATE_DICT] = {
-            constants.TOPOLOGY: topology
+            constants.TOPOLOGY: topology,
+            constants.FLAVOR_ID: flavor_id
         }
 
         ctx_flags = [False]
@@ -524,6 +527,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 update_lb_tf = self.taskflow_load(
                     self._lb_flows.get_update_load_balancer_flow(topology=topology),
                     store={constants.LOADBALANCER: lb,
+                           constants.LOADBALANCER_ID: lb.id,
                            constants.VIP: lb.vip,
                            a10constants.COMPUTE_BUSY: busy,
                            constants.LISTENERS: listeners,
@@ -705,6 +709,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                     store={constants.MEMBER: member,
                            constants.LISTENERS: listeners,
                            constants.LOADBALANCER: load_balancer,
+                           constants.LOADBALANCER_ID: load_balancer.id,
                            a10constants.COMPUTE_BUSY: busy,
                            constants.POOL: pool,
                            constants.UPDATE_DICT: member_updates,
