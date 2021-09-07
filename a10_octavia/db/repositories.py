@@ -197,12 +197,29 @@ class VThunderRepository(BaseRepository):
         model = session.query(self.model_class).filter(
             self.model_class.created_at < initial_setup_wait_time).filter(
             self.model_class.last_udp_update < failover_wait_time).filter(
-            self.model_class.status == 'ACTIVE').filter(
-            or_(self.model_class.role == "MASTER",
-                self.model_class.role == "BACKUP")).first()
+            or_(self.model_class.status == 'ACTIVE',
+                self.model_class.status == 'READY')).filter(
+            self.model_class.health_state == 'UP').first()
         if model is None:
             return None
         return model.to_data_model()
+
+    def get_compute_vthunders(self, session, compute_id):
+        vthunder_list = []
+        query = session.query(self.model_class).filter(
+            self.model_class.compute_id == compute_id)
+        model_list = query.all()
+        for data in model_list:
+            vthunder_list.append(data.to_data_model())
+        return vthunder_list
+
+    def set_vthunder_health_state(self, session, id, new_state):
+        self.update(session, id, health_state=new_state)
+
+    def unset_vthunder_busy_health_state(self, session):
+        with session.begin(subtransactions=True):
+            session.query(self.model_class).filter_by(
+                health_state='BUSY').update({"health_state": 'UP'})
 
     def get_vthunder_from_lb(self, session, lb_id):
         model = session.query(self.model_class).filter(
@@ -225,6 +242,12 @@ class VThunderRepository(BaseRepository):
             return None
 
         return model.to_data_model()
+
+    def get_health_vthunder_count_for_lb(self, session, lb_id):
+        count = session.query(self.model_class).filter(
+            self.model_class.loadbalancer_id == lb_id).filter(
+            self.model_class.health_state == "UP").count()
+        return count
 
     def get_vthunder_by_project_id(self, session, project_id):
         model = session.query(self.model_class).filter(
@@ -275,6 +298,13 @@ class VThunderRepository(BaseRepository):
             model_list = model_list.options(noload('*'))
             return model_list.all()
 
+    def get_all_vthunder_by_address(self, session, ip_address):
+        model_list = session.query(self.model_class).filter(
+            self.model_class.ip_address == ip_address).filter(
+            self.model_class.status == "ACTIVE")
+        model_list = model_list.options(noload('*'))
+        return model_list.all()
+
     def get_delete_compute_flag(self, session, compute_id):
         if compute_id:
             count = session.query(self.model_class).filter(
@@ -305,10 +335,20 @@ class VThunderRepository(BaseRepository):
 
         return model.to_data_model()
 
+    def set_spare_vthunder_status(self, session, id, new_status):
+        self.update(session, id, status=new_status)
+
     def get_spare_vthunder_count(self, session):
         with session.begin(subtransactions=True):
             count = session.query(self.model_class).filter_by(
                 status="READY", loadbalancer_id=None).count()
+
+        return count
+
+    def get_busy_spare_vthunder_count(self, session):
+        with session.begin(subtransactions=True):
+            count = session.query(self.model_class).filter_by(
+                status="BUSY", loadbalancer_id=None).count()
 
         return count
 

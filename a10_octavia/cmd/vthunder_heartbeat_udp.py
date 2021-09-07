@@ -87,7 +87,8 @@ class VThunderUDPStatusGetter(object):
             if record_id:
                 last_udp_update = datetime.datetime.utcnow()
                 self.vthunder_repo.update(db_api.get_session(), record_id,
-                                          last_udp_update=last_udp_update)
+                                          last_udp_update=last_udp_update,
+                                          health_state='UP')
         except socket.timeout:
             # Pass here as this is an expected cycling of the listen socket
             pass

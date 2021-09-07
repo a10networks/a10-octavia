@@ -21,6 +21,11 @@ from taskflow.types import failure
 from octavia.common import constants
 from octavia.common import exceptions
 from octavia.controller.worker.v1.tasks.compute_tasks import BaseComputeTask
+from octavia.db import api as db_apis
+
+from a10_octavia.common import a10constants
+from a10_octavia.common import exceptions as a10_exceptions
+from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -59,6 +64,60 @@ class ComputeCreate(BaseComputeTask):
 
             LOG.debug("Server created with id: %s for amphora id: %s",
                       compute_id, amphora_id)
+
+            return compute_id
+
+        except Exception as e:
+            LOG.error("Compute create for amphora id: %s failed",
+                      amphora_id)
+            raise e
+
+    def revert(self, result, amphora_id, *args, **kwargs):
+        """This method will revert the creation of the amphora"""
+
+        if isinstance(result, failure.Failure):
+            return
+        compute_id = result
+        LOG.warning("Reverting compute create for amphora with id"
+                    "%(amp)s and compute id: %(comp)s",
+                    {'amp': amphora_id, 'comp': compute_id})
+        try:
+            self.compute.delete(compute_id)
+        except Exception as e:
+            LOG.exception("Failed to revert creation of compute %s due to %s: ",
+                          compute_id, str(e))
+
+
+class ComputeCreateWithNetworks(BaseComputeTask):
+    """Create the compute instance for a new amphora."""
+
+    def execute(self, amphora_id, network_list=None):
+
+        network_ids = CONF.a10_controller_worker.amp_boot_network_list[:]
+        for net in network_list:
+            if net not in network_ids:
+                network_ids.append(net)
+        LOG.debug("Compute create execute for amphora with id %s", amphora_id)
+
+        try:
+            if CONF.a10_controller_worker.build_rate_limit != -1:
+                self.rate_limit.add_to_build_request_queue(
+                    amphora_id, constants.LB_CREATE_NORMAL_PRIORITY)
+
+            compute_id = self.compute.build(
+                name="amphora-" + amphora_id,
+                amphora_flavor=CONF.a10_controller_worker.amp_flavor_id,
+                image_tag=CONF.a10_controller_worker.amp_image_tag,
+                image_owner=CONF.a10_controller_worker.amp_image_owner_id,
+                key_name=CONF.a10_controller_worker.amp_ssh_key_name,
+                sec_groups=CONF.a10_controller_worker.amp_secgroup_list,
+                network_ids=network_ids,
+                port_ids=[],
+                server_group_id=None)
+
+            LOG.debug("Server created with id: %s for amphora id: %s",
+                      compute_id, amphora_id)
+
             return compute_id
 
         except Exception as e:
@@ -124,3 +183,38 @@ class NovaServerGroupCreate(BaseComputeTask):
                       "still be in use for server group: %(sg)s due to "
                       "error: %(except)s",
                       {'sg': server_group_id, 'except': e})
+
+
+class DeleteStaleCompute(BaseComputeTask):
+    """Delete Stale Compute for Failover"""
+
+    def execute(self, vthunder):
+        if vthunder:
+            try:
+                self.compute.delete(vthunder.compute_id)
+            except Exception as e:
+                LOG.exception("Failed to delete stale compute %s due to: %s",
+                              vthunder.compute_id, str(e))
+                # pass here in case the compute is already deleted
+                pass
+
+
+class FailoverPausedCompute(BaseComputeTask):
+    def __init__(self, **kwargs):
+        super(FailoverPausedCompute, self).__init__(**kwargs)
+        self.vthunder_repo = a10_repo.VThunderRepository()
+
+    def execute(self, vthunder):
+        if vthunder:
+            try:
+                amp, fault = self.compute.get_amphora(vthunder.compute_id)
+                if amp.status == a10constants.COMPUTE_PAUSED:
+                    self.vthunder_repo.set_vthunder_health_state(
+                        db_apis.get_session(), vthunder.id, amp.status)
+                    LOG.info("The vThunder instance is paused, skipping the failover...")
+                    raise a10_exceptions.FailoverOnPausedCompute()
+            except Exception as e:
+                LOG.exception("Failed to find compute %s du to: %s",
+                              vthunder.compute_id, str(e))
+                # pass here in case the compute is already deleted
+                pass

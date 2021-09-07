@@ -25,6 +25,7 @@ from taskflow.types import failure
 
 from octavia.common import constants
 from octavia.controller.worker import task_utils
+from octavia.db import api as db_apis
 from octavia.network import base
 from octavia.network import data_models as n_data_models
 
@@ -33,6 +34,7 @@ from a10_octavia.common import data_models
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils as a10_task_utils
+from a10_octavia.db import repositories as a10_repo
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -45,6 +47,7 @@ class BaseNetworkTask(task.Task):
         super(BaseNetworkTask, self).__init__(**kwargs)
         self._network_driver = None
         self.task_utils = task_utils.TaskUtils()
+        self.vthunder_repo = a10_repo.VThunderRepository()
 
     @property
     def network_driver(self):
@@ -206,6 +209,34 @@ class UnPlugNetworks(BaseNetworkTask):
                 LOG.debug("Network %d not found", nic.network_id)
             except Exception:
                 LOG.exception("Unable to unplug network")
+
+
+class PlugNetworksByID(BaseNetworkTask):
+    """Task to plug the networks in the list."""
+
+    def __init__(self, *arg, **kwargs):
+        self.added_network = []
+        super(PlugNetworksByID, self).__init__(*arg, **kwargs)
+
+    def execute(self, vthunder, network_list):
+        nics = self.network_driver.get_plugged_networks(vthunder.compute_id)
+        exist_ids = [nic.network_id for nic in nics]
+
+        for net in network_list:
+            try:
+                if net not in exist_ids:
+                    self.network_driver.plug_network(vthunder.compute_id, net)
+                    self.added_network.append(net)
+            except Exception:
+                LOG.exception("Failed to plug network: %s", net)
+        return self.added_network
+
+    def revert(self, vthunder, network_list, *args, **kwargs):
+        for net in self.added_network:
+            try:
+                self.network_driver.unplug_network(vthunder.compute_id, net)
+            except base.NetworkNotFound:
+                pass
 
 
 class GetMemberPorts(BaseNetworkTask):
@@ -1085,3 +1116,54 @@ class GetPoolsOnThunder(BaseNetworkTask):
                 raise e
         else:
             return
+
+
+class GetVThunderNetworkList(BaseNetworkTask):
+
+    def execute(self, vthunder):
+        try:
+            nics = self.network_driver.get_plugged_networks(vthunder.compute_id)
+
+            # in case the compute is deleted by some reason
+            if not nics:
+                if vthunder.role == constants.ROLE_MASTER:
+                    peer = self.vthunder_repo.get_backup_vthunder_from_lb(
+                        db_apis.get_session(), vthunder.loadbalancer_id)
+                else:
+                    peer = self.vthunder_repo.get_vthunder_from_lb(
+                        db_apis.get_session(), vthunder.loadbalancer_id)
+                nics = self.network_driver.get_plugged_networks(peer.compute_id)
+
+            network_ids = [nic.network_id for nic in nics]
+            return network_ids
+        except Exception as e:
+            LOG.exception("Failed to get network list for vthunder duo to %s", str(e))
+            raise e
+
+
+class PlugVipNetworkOnSpare(BaseNetworkTask):
+    """Task to plug vip network on spare vThunder"""
+
+    def __init__(self, *arg, **kwargs):
+        self.added_network = []
+        super(PlugVipNetworkOnSpare, self).__init__(*arg, **kwargs)
+
+    def execute(self, spare_vthunder, loadbalancer):
+        if spare_vthunder:
+            try:
+                nics = self.network_driver.get_plugged_networks(spare_vthunder.compute_id)
+                network_ids = [nic.network_id for nic in nics]
+                vip_net_id = self.network_driver.get_subnet(loadbalancer.vip.subnet_id).network_id
+                if vip_net_id not in network_ids:
+                    self.network_driver.plug_network(spare_vthunder.compute_id, vip_net_id)
+                    self.added_network.append(vip_net_id)
+            except Exception as e:
+                LOG.exception("Failed to check vip subnet on spare vThunder du to %s", str(e))
+            return self.added_network
+
+    def revert(self, spare_vthunder, loadbalancer, *args, **kwargs):
+        for net in self.added_network:
+            try:
+                self.network_driver.unplug_network(spare_vthunder.compute_id, net)
+            except base.NetworkNotFound:
+                pass
