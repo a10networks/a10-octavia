@@ -1132,39 +1132,33 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
             store = {a10constants.VTHUNDER: vthunder,
                      a10constants.FAILOVER_VTHUNDER: vthunder}
+            failover_tf = None
             if vthunder.topology == a10constants.TOPOLOGY_SPARE:
-                try:
-                    failover_tf = self.taskflow_load(
-                        self._vthunder_flows.get_failover_spare_vthunder_flow(),
-                        store=store)
-                    with tf_logging.DynamicLoggingListener(failover_tf, log=LOG):
-                        failover_tf.run()
-                except Exception as e:
-                    LOG.exception("Failover for spare vthunder failed: %s", str(e))
-                    raise e
+                failover_tf = self.taskflow_load(
+                    self._vthunder_flows.get_failover_spare_vthunder_flow(),
+                    store=store)
             elif vthunder.topology == constants.TOPOLOGY_ACTIVE_STANDBY:
                 health_vthunder_count = self._vthunder_repo.get_health_vthunder_count_for_lb(
                     db_apis.get_session(), vthunder.loadbalancer_id)
-                try:
-                    if health_vthunder_count > 0:
-                        failover_tf = self.taskflow_load(
-                            self._vthunder_flows.get_failover_vcs_vthnder_flow(),
-                            store=store)
-                    else:
-                        LOG.warning("Failover for HA Pair Fully Failure is not support yet.")
-                        failover_tf = self.taskflow_load(
-                            self._vthunder_flows.get_failover_restore_vthunder_flow(),
-                            store=store)
+                if health_vthunder_count > 0:
+                    failover_tf = self.taskflow_load(
+                        self._vthunder_flows.get_failover_vcs_vthunder_flow(),
+                        store=store)
+                else:
+                    LOG.warning("Failover for a total HA Pair failure is not supported. "
+                                "Pair will be kept in failed state.")
+                    failover_tf = self.taskflow_load(
+                        self._vthunder_flows.get_failover_restore_vthunder_flow(),
+                        store=store)
 
-                    with tf_logging.DynamicLoggingListener(failover_tf, log=LOG):
-                        failover_tf.run()
-                except Exception as e:
-                    LOG.exception("Failover for HA Pair failed: %s", str(e))
+            if failover_tf:
+                with tf_logging.DynamicLoggingListener(failover_tf, log=LOG):
+                    failover_tf.run()
 
         except Exception as e:
             with excutils.save_and_reraise_exception():
-                LOG.error("vThunder %(id)s failover exception: %(exc)s",
-                          {'id': vthunder_id, 'exc': e})
+                LOG.error("vThunder %(id)s topology %(topology)s failover exception: %(exc)s",
+                          {'id': vthunder_id, 'topology': vthunder.topology, 'exc': e})
 
     def failover_loadbalancer(self, load_balancer_id):
         """Perform failover operations for a load balancer.

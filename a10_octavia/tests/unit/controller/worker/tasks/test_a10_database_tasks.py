@@ -599,7 +599,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         db_task.vthunder_repo = mock.MagicMock()
         db_task.vthunder_repo.get_spare_vthunder.return_value = vthunder
-        vth = db_task.execute()
+        vth, cid = db_task.execute()
         self.assertEqual(vth, vthunder)
 
     def test_GetComputeVThundersAndLoadBalancers(self):

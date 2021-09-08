@@ -1100,7 +1100,6 @@ class GetSpareComputeForProject(BaseDatabaseTask):
 
     def execute(self, compute_id=None):
         if compute_id is None:
-            vthunder = None
             try:
                 vthunder = self.vthunder_repo.get_spare_vthunder(
                     db_apis.get_session())
@@ -1111,14 +1110,14 @@ class GetSpareComputeForProject(BaseDatabaseTask):
                         db_apis.get_session(), self.spare.id, "BUSY")
                     compute_id = vthunder.compute_id
             except Exception as e:
-                LOG.exception("Failed to find spare amphora du to %s", str(e))
+                LOG.exception("Failed to find spare amphora due to %s", str(e))
                 raise exceptions.NoComputeForLoadbalancer()
 
             if self.spare is None:
                 raise exceptions.NoComputeForLoadbalancer()
         return compute_id, self.spare
 
-    def revert(self, compute_id, *args, **kwargs):
+    def revert(self, compute_id=None, *args, **kwargs):
         if self.spare is not None:
             self.vthunder_repo.set_spare_vthunder_status(
                 db_apis.get_session(), self.spare.id, "READY")
@@ -1134,7 +1133,6 @@ class TryGetSpareCompute(BaseDatabaseTask):
                 db_apis.get_session())
         except Exception:
             LOG.debug('No spare amphora found for failover')
-            pass
 
         return vthunder
 
@@ -1287,7 +1285,7 @@ class SetVThunderToStandby(BaseDatabaseTask):
                     self.vthunder_repo.update(db_apis.get_session(), vthunder.id,
                                               role=constants.ROLE_BACKUP)
                 except Exception as e:
-                    LOG.exception("Failed to switch VCS devices roles du to %s", str(e))
+                    LOG.exception("Failed to switch VCS devices roles due to %s", str(e))
 
 
 class GetVThunderDeviceID(BaseDatabaseTask):

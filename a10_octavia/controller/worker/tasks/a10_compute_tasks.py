@@ -196,7 +196,6 @@ class DeleteStaleCompute(BaseComputeTask):
                 LOG.exception("Failed to delete stale compute %s due to: %s",
                               vthunder.compute_id, str(e))
                 # pass here in case the compute is already deleted
-                pass
 
 
 class FailoverPausedCompute(BaseComputeTask):
@@ -217,4 +216,3 @@ class FailoverPausedCompute(BaseComputeTask):
                 LOG.exception("Failed to find compute %s du to: %s",
                               vthunder.compute_id, str(e))
                 # pass here in case the compute is already deleted
-                pass

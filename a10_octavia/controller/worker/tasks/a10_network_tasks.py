@@ -219,16 +219,17 @@ class PlugNetworksByID(BaseNetworkTask):
         super(PlugNetworksByID, self).__init__(*arg, **kwargs)
 
     def execute(self, vthunder, network_list):
+        nets = set(network_list)
         nics = self.network_driver.get_plugged_networks(vthunder.compute_id)
-        exist_ids = [nic.network_id for nic in nics]
+        exist_ids = set([nic.network_id for nic in nics])
 
-        for net in network_list:
+        self.added_network = list(nets.difference(exist_ids))
+        for net in self.added_network:
             try:
-                if net not in exist_ids:
-                    self.network_driver.plug_network(vthunder.compute_id, net)
-                    self.added_network.append(net)
-            except Exception:
+                self.network_driver.plug_network(vthunder.compute_id, net)
+            except Exception as e:
                 LOG.exception("Failed to plug network: %s", net)
+                raise e
         return self.added_network
 
     def revert(self, vthunder, network_list, *args, **kwargs):
