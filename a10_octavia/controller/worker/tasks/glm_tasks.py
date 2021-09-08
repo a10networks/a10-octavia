@@ -196,6 +196,20 @@ class ConfigureForwardProxyServer(task.Task):
             = self.enable_password = self.secret_string = None
         super(ConfigureForwardProxyServer, self).__init__(*args, **kwargs)
 
+    def fetch_configurations(self, flavor):
+        if flavor and flavor.get('proxy-server'):
+            self.host = flavor['proxy-server'].get('proxy_host')
+            self.port = flavor['proxy-server'].get('proxy_port')
+            self.username = flavor['proxy-server'].get('proxy_username')
+            self.enable_password = flavor['proxy-server'].get('proxy_password')
+            self.secret_string = flavor['proxy-server'].get('proxy_secret_string')
+        else:
+            self.host = CONF.glm_license.proxy_host
+            self.port = CONF.glm_license.proxy_port
+            self.username = CONF.glm_license.proxy_username
+            self.enable_password = CONF.glm_license.proxy_password
+            self.secret_string = CONF.glm_license.proxy_secret_string
+
     @axapi_client_decorator
     def execute(self, vthunder, flavor=None):
         if not vthunder:
@@ -211,16 +225,9 @@ class ConfigureForwardProxyServer(task.Task):
                           "Thunder device", vthunder.ip_address)
                 raise e
 
-    def fetch_configurations(self, flavor):
-        if flavor and flavor.get('proxy-server'):
-            self.host = flavor['proxy-server'].get('proxy_host')
-            self.port = flavor['proxy-server'].get('proxy_port')
-            self.username = flavor['proxy-server'].get('proxy_username')
-            self.enable_password = flavor['proxy-server'].get('proxy_password')
-            self.secret_string = CONF.glm_license.proxy_secret_string('proxy_secret_string')
-        else:
-            self.host = CONF.glm_license.proxy_host
-            self.port = CONF.glm_license.proxy_port
-            self.username = CONF.glm_license.proxy_username
-            self.enable_password = CONF.glm_license.proxy_password
-            self.secret_string = CONF.glm_license.proxy_secret_string
+    @axapi_client_decorator_for_revert
+    def revert(self, vthunder, flavor=None, *args, **kwargs):
+        try:
+            self.axapi_client.glm.proxy_server.delete()
+        except req_exceptions.ConnectionError:
+            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
