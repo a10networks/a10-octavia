@@ -50,7 +50,8 @@ class DNSConfiguration(task.Task):
                     license_net_id = CONF.a10_controller_worker.amp_boot_network_list[0]
                 else:
                     LOG.warning("No networks were configured therefore "
-                                "nameservers cannot be set.")
+                                "nameservers cannot be set on the "
+                                "vThunder-Amphora %s", vthunder.id)
                     return None, None
 
         license_net = self.network_driver.get_network(license_net_id)
@@ -73,6 +74,14 @@ class DNSConfiguration(task.Task):
                 LOG.warning("More than one DNS nameserver detected on subnet %s. "
                             "Using %s as primary and %s as secondary.",
                             license_subnet_id, primary_dns, secondary_dns)
+
+        if flavor and flavor.get('use-network-dns'):
+            if not primary_dns and not secondary_dns:
+                LOG.warning("The flavor option `use_network_dns` was defined "
+                            "but no nameservers were found on the network. "
+                            "Nameservers will not be configure on the "
+                            "vThunder-Amphora %s", vthunder.id)
+            return primary_dns, secondary_dns
 
         if CONF.glm_license.primary_dns:
             primary_dns = CONF.glm_license.primary_dns
@@ -124,16 +133,30 @@ class DNSConfiguration(task.Task):
 
 class ActivateFlexpoolLicense(task.Task):
 
+    def build_configuration(self, flavor):
+        glm_config = dict(CONF.glm_license)
+        glm_config.update(flavor.get('glm'))
+
+        config_payload = {
+            "host": glm_config.get('host'),
+            "port": glm_config.get('port'),
+            "burst": glm_config.get('burst'),
+            "token": glm_config.get('token'),
+            "interval": glm_config.get('interval'),
+            "enable_requests": glm_config.get('enable_requests'),
+            "allocate_bandwidth": glm_config.get('allocate_bandwidth'),
+        }
+        return config_payload
+
     @axapi_client_decorator
-    def execute(self, vthunder, amphora):
+    def execute(self, vthunder, amphora, flavor=None):
         if not vthunder:
             LOG.warning("No vthunder therefore licensing cannot occur.")
             return None
 
         amp_mgmt_net = CONF.a10_controller_worker.amp_mgmt_network
         amp_boot_nets = CONF.a10_controller_worker.amp_boot_network_list
-        token = CONF.glm_license.flexpool_token
-        bandwidth = CONF.glm_license.allocate_bandwidth
+        config_payload = self.build_configuration(flavor)
         hostname = "amphora-" + amphora.id
         hostname = hostname[0:31]
         use_mgmt_port = False
@@ -163,9 +186,8 @@ class ActivateFlexpoolLicense(task.Task):
         try:
             self.axapi_client.system.action.set_hostname(hostname)
             self.axapi_client.glm.create(
-                token=token,
-                allocate_bandwidth=bandwidth,
-                use_mgmt_port=use_mgmt_port
+                use_mgmt_port=use_mgmt_port,
+                **config_payload
             )
             self.axapi_client.glm.send.create(license_request=1)
         except acos_errors.ACOSException as e:
