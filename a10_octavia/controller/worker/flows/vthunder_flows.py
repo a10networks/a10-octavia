@@ -329,7 +329,7 @@ class VThunderFlows(object):
             ))
             glm_license_subflow.add(glm_tasks.ActivateFlexpoolLicense(
                 name=role + '-' + a10constants.ACTIVATE_FLEXPOOL_LICENSE,
-                requires=(constants.AMPHORA),
+                requires=(constants.AMPHORA, constants.FLAVOR),
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
             ))
         else:
@@ -339,7 +339,7 @@ class VThunderFlows(object):
             ))
             glm_license_subflow.add(glm_tasks.ActivateFlexpoolLicense(
                 name=role + '-' + a10constants.ACTIVATE_FLEXPOOL_LICENSE,
-                requires=(constants.AMPHORA, a10constants.VTHUNDER),
+                requires=(constants.AMPHORA, a10constants.VTHUNDER, constants.FLAVOR),
             ))
         return glm_license_subflow
 
