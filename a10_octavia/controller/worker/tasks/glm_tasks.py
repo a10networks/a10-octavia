@@ -22,6 +22,7 @@ from oslo_log import log as logging
 
 from a10_octavia.common import exceptions as a10_ex
 from a10_octavia.common import utils as a10_utils
+from a10_octavia.controller.worker.tasks import utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 
@@ -41,7 +42,7 @@ class DNSConfiguration(task.Task):
             self._network_driver = a10_utils.get_network_driver()
         return self._network_driver
 
-    def _get_dns_nameservers(self, vthunder, flavor=None):
+    def _get_dns_nameservers(self, vthunder, flavor={}):
         license_net_id = CONF.glm_license.amp_license_network
         if not license_net_id:
             license_net_id = CONF.a10_controller_worker.amp_mgmt_network
@@ -104,6 +105,7 @@ class DNSConfiguration(task.Task):
             LOG.warning("No vthunder therefore dns cannot be assigned.")
             return None
 
+        flavor = flavor if flavor else {}
         primary_dns, secondary_dns = self._get_dns_nameservers(vthunder, flavor)
         if not primary_dns and secondary_dns:
             LOG.error("A secondary DNS with IP %s was specified without a primary DNS",
@@ -121,6 +123,7 @@ class DNSConfiguration(task.Task):
 
     @axapi_client_decorator_for_revert
     def revert(self, vthunder, flavor=None, *args, **kwargs):
+        flavor = flavor if flavor else {}
         primary_dns, secondary_dns = self._get_dns_nameservers(vthunder, flavor)
         if not primary_dns and not secondary_dns:
             return None
@@ -133,9 +136,9 @@ class DNSConfiguration(task.Task):
 
 class ActivateFlexpoolLicense(task.Task):
 
-    def build_configuration(self, flavor):
+    def build_configuration(self, flavor={}):
         glm_config = dict(CONF.glm_license)
-        glm_config.update(flavor.get('glm'))
+        glm_config.update(utils.dash_to_underscore(flavor.get('glm', {})))
 
         config_payload = {
             "host": glm_config.get('host'),
@@ -154,6 +157,7 @@ class ActivateFlexpoolLicense(task.Task):
             LOG.warning("No vthunder therefore licensing cannot occur.")
             return None
 
+        flavor = flavor if flavor else {}
         amp_mgmt_net = CONF.a10_controller_worker.amp_mgmt_network
         amp_boot_nets = CONF.a10_controller_worker.amp_boot_network_list
         config_payload = self.build_configuration(flavor)
@@ -184,6 +188,7 @@ class ActivateFlexpoolLicense(task.Task):
                 self.axapi_client.system.action.setInterface(ifnum)
 
         try:
+            import rpdb; rpdb.set_trace()
             self.axapi_client.system.action.set_hostname(hostname)
             self.axapi_client.glm.create(
                 use_mgmt_port=use_mgmt_port,
