@@ -260,7 +260,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
                     "description": "Enable bursting. Allows amphora to exceed allocated "
                                    "bandwidth limits. Ensures that packets never drop."
                 },
-                "enable_requests": {
+                "enable-requests": {
                     "type": "bool",
                     "description": "Enables license retrieval from the GLM/ELM server. "
                                    "Allows license changes to be replicated automatically.",
