@@ -213,13 +213,28 @@ SUPPORTED_FLAVOR_SCHEMA = {
             "type": "object",
             "description": "Forward proxy-server configuration details.",
             "properties": {
-                "proxy_host": {
-                    "type": "string"
+                "proxy-host": {
+                    "type": "string",
+                    "description": "Hostname of proxy server used for requests to GLM"
                 },
-                "proxy_port": {
+                "proxy-port": {
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 65535,
+                    "description": "Port number through which the forward proxy server "
+                                   "connects to the GLM account",
+                },
+                "proxy-username": {
+                    "type": "string",
+                    "description": "Username for proxy authentication"
+                },
+                "proxy-password": {
+                    "type": "bool",
+                    "description": "Password for proxy authentication"
+                },
+                "proxy-secret-string": {
+                    "type": "string",
+                    "description": "Password for proxy authentication"
                 }
             }
         },
