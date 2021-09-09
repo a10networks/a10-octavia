@@ -80,9 +80,10 @@ A10_GLM_LICENSE_OPTS = [
     cfg.StrOpt('proxy_secret_string',
                default=None,
                help=_('Password value used to authenticate to forward proxy')),
-    cfg.StrOpt('proxy_port',
+    cfg.IntOpt('proxy_port', min=1, max=65535,
                default=None,
-               help=_('Port to connect to on the forward proxy')),
+               help=_('Port number through which the forward proxy server '
+                      'connects to the GLM account')),
 ]
 
 A10_VTHUNDER_OPTS = [

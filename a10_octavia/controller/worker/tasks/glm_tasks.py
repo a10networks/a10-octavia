@@ -24,6 +24,7 @@ from a10_octavia.common import exceptions as a10_ex
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
+from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -191,42 +192,38 @@ class RevokeFlexpoolLicense(task.Task):
 
 
 class ConfigureForwardProxyServer(task.Task):
-    def __init__(self, *args, **kwargs):
-        self.host = self.port = self.username \
-            = self.enable_password = self.secret_string = None
-        super(ConfigureForwardProxyServer, self).__init__(*args, **kwargs)
 
-    def fetch_configurations(self, flavor):
-        if flavor and flavor.get('proxy-server'):
-            self.host = flavor['proxy-server'].get('proxy_host')
-            self.port = flavor['proxy-server'].get('proxy_port')
-            self.username = flavor['proxy-server'].get('proxy_username')
-            self.enable_password = flavor['proxy-server'].get('proxy_password')
-            self.secret_string = flavor['proxy-server'].get('proxy_secret_string')
-        else:
-            self.host = CONF.glm_license.proxy_host
-            self.port = CONF.glm_license.proxy_port
-            self.username = CONF.glm_license.proxy_username
-            self.enable_password = CONF.glm_license.proxy_password
-            self.secret_string = CONF.glm_license.proxy_secret_string
+    @staticmethod
+    def build_configuration(flavor):
+        glm_config = dict(CONF.glm_license)
+        glm_config.update(utils.dash_to_underscore(flavor.get('proxy-server', {})))
+
+        config_payload = {
+            "host": glm_config.get('proxy_host'),
+            "port": glm_config.get('proxy_port'),
+            "username": glm_config.get('proxy_username'),
+            "password": glm_config.get('proxy_password'),
+            "secret_string": glm_config.get('proxy_secret_string'),
+        }
+        return config_payload
 
     @axapi_client_decorator
-    def execute(self, vthunder, flavor=None):
+    def execute(self, vthunder, flavor={}):
         if not vthunder:
             LOG.warning("No vthunder therefore forward proxy server cannot be configured.")
             return
-        self.fetch_configurations(flavor)
-        if self.host and self.port:
+        flavor = {} if flavor is None else flavor
+        config_payload = self.build_configuration(flavor)
+        if config_payload['host'] and config_payload['port']:
             try:
-                self.axapi_client.glm.proxy_server.create(self.host, self.port, self.username,
-                                                          self.enable_password, self.secret_string)
+                self.axapi_client.glm.proxy_server.create(**config_payload)
             except acos_errors.ACOSException as e:
                 LOG.error("Could not configure forward proxy server for A10 "
                           "Thunder device", vthunder.ip_address)
                 raise e
 
     @axapi_client_decorator_for_revert
-    def revert(self, vthunder, flavor=None, *args, **kwargs):
+    def revert(self, vthunder, flavor={}, *args, **kwargs):
         try:
             self.axapi_client.glm.proxy_server.delete()
         except req_exceptions.ConnectionError:

@@ -463,10 +463,12 @@ class TestGLMTasks(base.BaseTaskTestCase):
         proxy_server = task.ConfigureForwardProxyServer()
         proxy_server.axapi_client = self.client_mock
         proxy_server.execute(vthunder, flavor)
-        self.client_mock.glm.proxy_server.create.assert_called_with(PROXY_HOST, PROXY_PORT,
-                                                                    PROXY_USERNAME,
-                                                                    PROXY_PASSWORD,
-                                                                    PROXY_PASSWORD_VALUE)
+        self.client_mock.glm.proxy_server.create.assert_called_with(**{'host': PROXY_HOST,
+                                                                       'port': PROXY_PORT,
+                                                                       'username': PROXY_USERNAME,
+                                                                       'password': PROXY_PASSWORD,
+                                                                       'secret_string':
+                                                                           PROXY_PASSWORD_VALUE})
 
     def test_ConfigureForwardProxyServer_execute_no_vthunder_warn(self):
         proxy_server = task.ConfigureForwardProxyServer()
