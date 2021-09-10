@@ -1017,9 +1017,9 @@ class ValidateComputeForProject(BaseDatabaseTask):
     """Validate compute_id got for the project"""
 
     def execute(self, loadbalancer, role):
+        vthunder = None
         vthunder_ids = self.vthunder_repo.get_vthunders_by_project_id_and_role(
             db_apis.get_session(), loadbalancer.project_id, role)
-        vthunder = None
         for vthunder_id in vthunder_ids:
             vthunder = self.vthunder_repo.get(
                 db_apis.get_session(),
@@ -1042,10 +1042,8 @@ class ValidateComputeForProject(BaseDatabaseTask):
                               vthunder.compute_id, vthunder.project_id)
                     break
 
-        if not vthunder:
-            # should not happen
-            raise exceptions.ProjectDeviceNotFound()
-
+        if vthunder is None:
+            return None
         return vthunder.compute_id
 
 
