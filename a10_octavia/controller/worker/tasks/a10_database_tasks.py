@@ -1019,6 +1019,7 @@ class ValidateComputeForProject(BaseDatabaseTask):
     def execute(self, loadbalancer, role):
         vthunder_ids = self.vthunder_repo.get_vthunders_by_project_id_and_role(
             db_apis.get_session(), loadbalancer.project_id, role)
+        vthunder = None
         for vthunder_id in vthunder_ids:
             vthunder = self.vthunder_repo.get(
                 db_apis.get_session(),
@@ -1027,10 +1028,24 @@ class ValidateComputeForProject(BaseDatabaseTask):
                 db_apis.get_session(), vthunder.loadbalancer_id)
             if lb:
                 amphora = self.amphora_repo.get(db_apis.get_session(), load_balancer_id=lb.id)
+                if not amphora:
+                    """
+                        We don't support create loadbalancer in Thunder derice and vthunder in
+                    smae project now. So, this should caused by some error configuration.
+                    """
+
+                    LOG.error("Already use hardware thunder to create loadbalancer for"
+                              " this project. Can't create vthunder for the project.")
+                    raise exceptions.ProjectDeviceNotFound()
                 if amphora.compute_id == vthunder.compute_id:
                     LOG.debug("Successfully validated comput_id %s for the project %s",
                               vthunder.compute_id, vthunder.project_id)
                     break
+
+        if not vthunder:
+            # should not happen
+            raise exceptions.ProjectDeviceNotFound()
+
         return vthunder.compute_id
 
 
