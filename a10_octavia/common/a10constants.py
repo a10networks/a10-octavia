@@ -100,6 +100,8 @@ SUPPORTED_NETWORK_TYPE = [FLAT, VLAN]
 SSL_TEMPLATE = "ssl_template"
 
 COMPUTE_BUSY = "compute_busy"
+L2DSR_FLAVOR = "l2dsr_flavor"
+FLAVOR_ID = "flavor_id"
 
 # ============================
 # Taskflow flow and task names

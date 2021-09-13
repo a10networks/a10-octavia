@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
 from sqlalchemy.orm import exc as db_exceptions
 import tenacity
 import time
@@ -116,6 +117,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._l7rule_flows = a10_l7rule_flows.L7RuleFlows()
         self._vthunder_flows = vthunder_flows.VThunderFlows()
         self._vthunder_repo = a10repo.VThunderRepository()
+        self._flavor_repo = repo.FlavorRepository()
+        self._flavor_profile_repo = repo.FlavorProfileRepository()
         self._exclude_result_logging_tasks = ()
         self.ctx_map = None
         self.ctx_lock = None
@@ -405,6 +408,10 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                         '60 seconds.', 'load_balancer', load_balancer_id)
             raise db_exceptions.NoResultFound
 
+        flavor_id = lb.flavor_id if lb.flavor_id else CONF.a10_global.default_flavor_id
+        if not flavor and flavor_id:
+            flavor = self._get_flavor_data(flavor_id)
+
         store = {constants.LOADBALANCER_ID: load_balancer_id,
                  constants.VIP: lb.vip,
                  constants.BUILD_TYPE_PRIORITY:
@@ -415,7 +422,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
         store[constants.UPDATE_DICT] = {
-            constants.TOPOLOGY: topology
+            constants.TOPOLOGY: topology,
+            a10constants.FLAVOR_ID: flavor_id
         }
 
         ctx_flags = [False]
@@ -533,6 +541,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 update_lb_tf = self._taskflow_load(
                     self._lb_flows.get_update_load_balancer_flow(topology=topology),
                     store={constants.LOADBALANCER: lb,
+                           constants.LOADBALANCER_ID: lb.id,
                            constants.VIP: lb.vip,
                            a10constants.COMPUTE_BUSY: busy,
                            constants.LISTENERS: listeners,
@@ -712,6 +721,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                     store={constants.MEMBER: member,
                            constants.LISTENERS: listeners,
                            constants.LOADBALANCER: load_balancer,
+                           constants.LOADBALANCER_ID: load_balancer.id,
                            a10constants.COMPUTE_BUSY: busy,
                            constants.POOL: pool,
                            constants.UPDATE_DICT: member_updates,
@@ -1351,3 +1361,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         kwargs = {'ctx_key': key, 'ctx_lock': self.ctx_lock, 'ctx_map': self.ctx_map,
                   'is_reload_thread': is_reload_thread, 'ctx_flags': flags}
         engine.notifier.register('*', flow_notification_handler, kwargs=kwargs)
+
+    def _get_flavor_data(self, flavor_id):
+        flavor = self._flavor_repo.get(db_apis.get_session(), id=flavor_id)
+        if flavor and flavor.flavor_profile_id:
+            flavor_profile = self._flavor_profile_repo.get(
+                db_apis.get_session(),
+                id=flavor.flavor_profile_id)
+            flavor_data = json.loads(flavor_profile.flavor_data)
+            return flavor_data
+        return None

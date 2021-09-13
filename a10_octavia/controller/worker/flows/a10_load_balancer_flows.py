@@ -99,13 +99,13 @@ class LoadBalancerFlows(object):
         vthunder = self._vthunder_repo.get_vthunder_by_project_id(db_apis.get_session(),
                                                                   project_id)
 
+        lb_create_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR_DATA))
         lb_create_flow.add(
             self.get_post_lb_vthunder_association_flow(
                 post_amp_prefix, load_balancer_id, topology, vthunder,
                 mark_active=(not listeners)))
-        lb_create_flow.add(a10_database_tasks.GetFlavorData(
-            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
-            provides=constants.FLAVOR_DATA))
         lb_create_flow.add(a10_database_tasks.CountLoadbalancersWithFlavor(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.LB_COUNT_FLAVOR))
@@ -549,6 +549,21 @@ class LoadBalancerFlows(object):
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         # post_create_lb_flow.add(handle_vrid_for_loadbalancer_subflow())
         update_LB_flow.add(self.handle_vrid_for_loadbalancer_subflow())
+        update_LB_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPHORA))
+        update_LB_flow.add(a10_database_tasks.GetLoadbalancersInProjectBySubnet(
+            requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+            provides=a10constants.LOADBALANCERS_LIST))
+        update_LB_flow.add(a10_database_tasks.CheckForL2DSRFlavor(
+            rebind={a10constants.LB_RESOURCE: a10constants.LOADBALANCERS_LIST},
+            provides=a10constants.L2DSR_FLAVOR))
+        update_LB_flow.add(a10_database_tasks.CountMembersInProjectBySubnet(
+            requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+            provides=a10constants.MEMBER_COUNT))
+        update_LB_flow.add(vthunder_tasks.UpdateL2DSR(
+            requires=(constants.SUBNET, constants.AMPHORA,
+                      a10constants.MEMBER_COUNT, a10constants.L2DSR_FLAVOR)))
         update_LB_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR_DATA))
