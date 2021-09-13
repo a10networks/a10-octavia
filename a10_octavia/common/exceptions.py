@@ -271,7 +271,7 @@ class FailoverOnPausedCompute(acos_errors.ACOSException):
         msg = ('Failover on a paused compute, skipping....')
         super(FailoverOnPausedCompute, self).__init__(msg=msg)
 
-        
+
 class FlavorNotFound(cfg.ConfigFileValueError):
     def __init__(self, flavor):
         msg = ('Flavor {0} specified in the configuration file cannot be located,'
