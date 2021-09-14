@@ -22,9 +22,9 @@ from oslo_log import log as logging
 
 from a10_octavia.common import exceptions as a10_ex
 from a10_octavia.common import utils as a10_utils
-from a10_octavia.controller.worker.tasks import utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
+from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -141,7 +141,6 @@ class ActivateFlexpoolLicense(task.Task):
         glm_config.update(utils.dash_to_underscore(flavor.get('glm', {})))
 
         config_payload = {
-            "host": glm_config.get('host'),
             "port": glm_config.get('port'),
             "burst": glm_config.get('burst'),
             "token": glm_config.get('flexpool_token'),

@@ -69,20 +69,20 @@ A10_GLM_LICENSE_OPTS = [
                min=2, max=204800,
                help=_('Bandwidth allocated per amphora')),
     cfg.BoolOpt('burst',
-               default=False,
-               help=_('Enable bursting. Allows amphora to exceed allocated '
-                      'bandwidth limits. Ensures that packets never drop.')),
+                default=False,
+                help=_('Enable bursting. Allows amphora to exceed allocated '
+                       'bandwidth limits. Ensures that packets never drop.')),
     cfg.IntOpt('interval',
                min=1, max=8760,
                help=_('Interval for license manager heartbeat in hours')),
-    cfg.IntOpt('port', 
+    cfg.IntOpt('port',
                min=1, max=65535,
                default=443,
                help=_('Port with which to send HTTP/S license request')),
     cfg.BoolOpt('enable_requests',
-               default=True,
-               help=_('Enables license retrieval from the GLM/ELM server. '
-                      'Allows license changes to be replicated automatically.')),
+                default=True,
+                help=_('Enables license retrieval from the GLM/ELM server. '
+                       'Allows license changes to be replicated automatically.')),
     cfg.StrOpt('proxy_host',
                default=None,
                help=_('Hostname or IP of the forward proxy')),

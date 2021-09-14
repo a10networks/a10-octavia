@@ -34,7 +34,7 @@ from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
 
-VTHUNDER = a10_data_models.VThunder()
+VTHUNDER = a10_data_models.VThunder(id=a10constants.MOCK_VTHUNDER_ID)
 AMPHORA = o_data_models.Amphora(id=t_constants.MOCK_AMP_ID1)
 DNS_SUBNET = n_data_models.Subnet(id=a10constants.MOCK_SUBNET_ID)
 DNS_NETWORK = n_data_models.Network(id=a10constants.MOCK_NETWORK_ID,
@@ -76,7 +76,8 @@ class TestGLMTasks(base.BaseTaskTestCase):
         dns_task.axapi_client = self.client_mock
         task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
         log_message = str("No networks were configured therefore "
-                          "nameservers cannot be set.")
+                          "nameservers cannot be set on the "
+                          "vThunder-Amphora {}").format(a10constants.MOCK_VTHUNDER_ID)
         expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
         with self.assertLogs(task_path, level='WARN') as cm:
             dns_task.execute(vthunder)
@@ -308,6 +309,18 @@ class TestGLMTasks(base.BaseTaskTestCase):
             flexpool_task.execute(None, None)
             self.assertEqual(expected_log, cm.output)
 
+    def _template_glm_call(self):
+        expected_call = {
+            'token': a10constants.MOCK_FLEXPOOL_TOKEN,
+            'burst': False,
+            'enable_requests': True,
+            'interval': None,
+            'port': 443,
+            'allocate_bandwidth': None,
+            'use_mgmt_port': False
+        }
+        return expected_call
+
     def test_ActivateFlexpoolLicense_execute_success(self):
         self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
                          amp_license_network=DNS_NETWORK.id,
@@ -319,11 +332,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
                 'ethernet-list': []
             }
         }
-        expected_call = {
-            'token': a10constants.MOCK_FLEXPOOL_TOKEN,
-            'allocate_bandwidth': None,
-            'use_mgmt_port': False
-        }
+        expected_call = self._template_glm_call()
 
         flexpool_task = task.ActivateFlexpoolLicense()
         flexpool_task.axapi_client = self.client_mock
@@ -347,11 +356,8 @@ class TestGLMTasks(base.BaseTaskTestCase):
                 'ethernet-list': []
             }
         }
-        expected_call = {
-            'token': a10constants.MOCK_FLEXPOOL_TOKEN,
-            'allocate_bandwidth': None,
-            'use_mgmt_port': True
-        }
+        expected_call = self._template_glm_call()
+        expected_call['use_mgmt_port'] = True
 
         flexpool_task = task.ActivateFlexpoolLicense()
         flexpool_task.axapi_client = self.client_mock

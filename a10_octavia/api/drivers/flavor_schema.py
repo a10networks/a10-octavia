@@ -241,11 +241,6 @@ SUPPORTED_FLAVOR_SCHEMA = {
                     "minimum": 1,
                     "maximum": 65535
                 },
-                "burst": {
-                    "type": "bool",
-                    "description": "Enable bursting. Allows amphora to exceed allocated "
-                                   "bandwidth limits. Ensures that packets never drop."
-                },
                 "enable-requests": {
                     "type": "bool",
                     "description": "Enables license retrieval from the GLM/ELM server. "
