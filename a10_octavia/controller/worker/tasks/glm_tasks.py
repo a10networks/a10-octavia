@@ -137,7 +137,7 @@ class DNSConfiguration(task.Task):
 
 class ActivateFlexpoolLicense(task.Task):
 
-    def build_configuration(self, flavor={}):
+    def _build_configuration(self, flavor={}):
         glm_config = dict(CONF.glm_license)
         glm_config.update(utils.dash_to_underscore(flavor.get('glm', {})))
 
@@ -145,7 +145,7 @@ class ActivateFlexpoolLicense(task.Task):
             "host": glm_config.get('host'),
             "port": glm_config.get('port'),
             "burst": glm_config.get('burst'),
-            "token": glm_config.get('token'),
+            "token": glm_config.get('flexpool_token'),
             "interval": glm_config.get('interval'),
             "enable_requests": glm_config.get('enable_requests'),
             "allocate_bandwidth": glm_config.get('allocate_bandwidth'),
@@ -161,7 +161,7 @@ class ActivateFlexpoolLicense(task.Task):
         flavor = flavor if flavor else {}
         amp_mgmt_net = CONF.a10_controller_worker.amp_mgmt_network
         amp_boot_nets = CONF.a10_controller_worker.amp_boot_network_list
-        config_payload = self.build_configuration(flavor)
+        config_payload = self._build_configuration(flavor)
         hostname = "amphora-" + amphora.id
         hostname = hostname[0:31]
         use_mgmt_port = False
@@ -189,7 +189,6 @@ class ActivateFlexpoolLicense(task.Task):
                 self.axapi_client.system.action.setInterface(ifnum)
 
         try:
-            import rpdb; rpdb.set_trace()
             self.axapi_client.system.action.set_hostname(hostname)
             self.axapi_client.glm.create(
                 use_mgmt_port=use_mgmt_port,
