@@ -780,8 +780,8 @@ class MemberFlows(object):
                       a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
         return create_member_snat_subflow
 
-    def get_rack_batch_update_members_flow(self, old_members, new_members,
-                                           updated_members, vthunder_conf, device_dict):
+    def get_rack_vthunder_batch_update_members_flow(self, old_members, new_members,
+                                                    updated_members, vthunder_conf, device_dict):
         """Create a flow to batch update members
         :returns: The flow for batch updating members
         """
