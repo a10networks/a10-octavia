@@ -922,6 +922,7 @@ class MemberFlows(object):
 
             """ flow for snat
             create_member_flow.add(self.get_create_member_snat_pool_subflow())"""
+            batch_update_members_flow.add(self.get_batch_update_member_snat_pool_subflow(m))
 
             batch_update_members_flow.add(server_tasks.MemberCreate(
                 name='member-create-' + m.id,
@@ -980,3 +981,28 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER))
 
         return batch_update_members_flow
+
+    def get_batch_update_member_snat_pool_subflow(self, member):
+        batch_update_member_snat_subflow = linear_flow.Flow(
+            a10constants.CREATE_MEMBER_SNAT_POOL_SUBFLOW)
+        batch_update_member_snat_subflow.add(server_tasks.MemberFindNatPool(
+            name='find-member-nat-pool-' + member.id,
+            inject={constants.MEMBER: member},
+            requires=[a10constants.VTHUNDER, constants.POOL,
+                      constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
+        batch_update_member_snat_subflow.add(a10_database_tasks.GetNatPoolEntry(
+            name='get-nat-pool-entry-' + member.id,
+            inject={constants.MEMBER: member},
+            requires=a10constants.NAT_FLAVOR,
+            provides=a10constants.NAT_POOL))
+        batch_update_member_snat_subflow.add(a10_network_tasks.ReserveSubnetAddressForMember(
+            name='reserve-subnet-address-for-member' + member.id,
+            inject={constants.MEMBER: member},
+            requires=[a10constants.NAT_FLAVOR, a10constants.NAT_POOL],
+            provides=a10constants.SUBNET_PORT))
+        batch_update_member_snat_subflow.add(a10_database_tasks.UpdateNatPoolDB(
+            name='update-nat-pool-DB-' + member.id,
+            inject={constants.MEMBER: member},
+            requires=[a10constants.NAT_FLAVOR,
+                      a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
+        return batch_update_member_snat_subflow
