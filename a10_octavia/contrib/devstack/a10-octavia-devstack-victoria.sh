@@ -30,7 +30,9 @@ cat <<EOF > $HOME/devstack/localrc
 enable_plugin barbican https://opendev.org/openstack/barbican stable/victoria
 enable_plugin neutron https://opendev.org/openstack/neutron stable/victoria
 enable_plugin octavia https://opendev.org/openstack/octavia stable/victoria
+
 KEYSTONE_TOKEN_FORMAT=fernet
+
 DATABASE_PASSWORD=password
 RABBIT_PASSWORD=password
 ADMIN_PASSWORD=password
@@ -74,4 +76,3 @@ echo 'source /opt/stack/devstack/openrc admin admin' >> /opt/stack/.bashrc
 
 # Drop into a shell
 exec su - stack
-© 2021 GitHub, Inc.
