@@ -341,9 +341,6 @@ class LoadBalancerFlows(object):
             name=a10constants.GET_VTHUNDER_FROM_LB,
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
-        new_LB_net_subflow.add(vthunder_tasks.UpdateAcosVersionInVthunderEntry(
-            name=a10constants.UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY,
-            requires=(constants.LOADBALANCER, a10constants.VTHUNDER)))
         new_LB_net_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=a10constants.GET_VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
@@ -419,10 +416,6 @@ class LoadBalancerFlows(object):
                     name=a10constants.BACKUP_VTHUNDER,
                     requires=constants.LOADBALANCER,
                     provides=a10constants.BACKUP_VTHUNDER))
-            new_LB_net_subflow.add(vthunder_tasks.UpdateAcosVersionInVthunderEntry(
-                name=a10constants.UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER,
-                requires=constants.LOADBALANCER,
-                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
             new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
                 name=a10constants.ENABLE_BACKUP_VTHUNDER_INTERFACE,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},

@@ -22,4 +22,3 @@ def upgrade():
 
 def downgrade():
     op.drop_column('vthunders', 'health_state')
-    pass

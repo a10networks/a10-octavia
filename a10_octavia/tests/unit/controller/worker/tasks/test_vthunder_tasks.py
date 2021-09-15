@@ -1035,7 +1035,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
 
     @mock.patch('a10_octavia.controller.worker.tasks.vthunder_tasks.time')
     def test_SparePostNetowrkPlug(self, mock_time):
-        mock_task = task.SparePostNetowrkPlug()
+        mock_task = task.SparePostNetworkPlug()
         mock_task.axapi_client = self.client_mock
         thunder = copy.deepcopy(VTHUNDER)
         net_list = [1, 2]

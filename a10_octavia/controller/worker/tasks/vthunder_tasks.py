@@ -134,7 +134,7 @@ class AmphoraePostVIPPlug(VThunderBaseTask):
                 raise e
 
 
-class SparePostNetowrkPlug(VThunderBaseTask):
+class SparePostNetworkPlug(VThunderBaseTask):
     """Task to reload vThunder after plug networks"""
 
     @axapi_client_decorator
@@ -532,7 +532,6 @@ class CreateHealthMonitorOnVThunder(VThunderBaseTask):
             LOG.debug("Successfully created health monitor for vThunder %s", vthunder.id)
         except acos_errors.Exists:
             LOG.debug("health monitor slb server already exist on vThunder %s", vthunder.id)
-            pass
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to create health monitor: %s", str(e))
             raise e

@@ -613,15 +613,3 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         net_task.network_driver.get_plugged_networks.return_value = nics
         net_list = net_task.execute(vthunder)
         self.assertEqual(net_list, [1, 2])
-
-    def test_PlugVipNetworkOnSpare(self):
-        net_task = a10_network_tasks.PlugVipNetworkOnSpare()
-        net_task.network_driver = self.client_mock
-        vthunder = copy.deepcopy(VTHUNDER)
-        lb = copy.deepcopy(LB)
-        lb.vip = MockNic(1)
-        nics = [MockNic(2), MockNic(3)]
-        net_task.network_driver.get_plugged_networks.return_value = nics
-        net_task.network_driver.get_subnet.return_value = MockNic(1)
-        added_list = net_task.execute(vthunder, lb)
-        self.assertEqual(added_list, [1])
