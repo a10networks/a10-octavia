@@ -153,11 +153,13 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         self.client.cast({}, 'update_member', **payload)
 
     def member_batch_update(self, members):
-        # The DB should not have updated yet, so we can still use the pool
         pool_id = members[0].pool_id
+        # The DB should not have updated yet, so we can still use the pool
         db_pool = self.repositories.pool.get(db_apis.get_session(), id=pool_id)
+
         old_members = db_pool.members
         old_member_ids = [m.id for m in old_members]
+
         # The driver will always pass objects with IDs.
         new_member_ids = [m.member_id for m in members]
 
