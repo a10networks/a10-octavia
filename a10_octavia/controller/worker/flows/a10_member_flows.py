@@ -854,7 +854,7 @@ class MemberFlows(object):
             batch_update_members_flow.add(server_tasks.MemberFindNatPool(
                 name='member-find-nat-pool-' + m.id,
                 inject={constants.MEMBER: m},
-                requires=[a10constants.VTHUNDER, constants.POOL,
+                requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                           constants.FLAVOR],
                 provides=a10constants.NAT_FLAVOR))
 
@@ -873,7 +873,7 @@ class MemberFlows(object):
             batch_update_members_flow.add(server_tasks.MemberDelete(
                 name='member-delete-' + m.id,
                 inject={constants.MEMBER: m},
-                requires=(a10constants.VTHUNDER, constants.POOL,
+                requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                           a10constants.MEMBER_COUNT_IP,
                           a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL)))
             """For deleting Interface tag and vrid"""
@@ -906,7 +906,7 @@ class MemberFlows(object):
         for m in new_members:
             batch_update_members_flow.add(database_tasks.MarkMemberPendingCreateInDB(
                 name='mark-member-pending-create-in-db-' + m.id,
-                requires=constants.MEMBER))
+                inject={constants.MEMBER: m}))
 
             """For deleting Interface tag and vrid
             create_member_flow.add(self.handle_vrid_for_member_subflow())
@@ -927,7 +927,7 @@ class MemberFlows(object):
             batch_update_members_flow.add(server_tasks.MemberCreate(
                 name='member-create-' + m.id,
                 inject={constants.MEMBER: m},
-                requires=(a10constants.VTHUNDER, constants.POOL,
+                requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                           a10constants.MEMBER_COUNT_IP, constants.FLAVOR)))
             batch_update_members_flow.add(database_tasks.MarkMemberActiveInDB(
                 inject={constants.MEMBER: m},
@@ -955,7 +955,7 @@ class MemberFlows(object):
             batch_update_members_flow.add(server_tasks.MemberUpdate(
                 name='member-update-' + m.id,
                 inject={constants.MEMBER: m},
-                requires=(a10constants.VTHUNDER,
+                requires=(constants.MEMBER, a10constants.VTHUNDER,
                           constants.POOL, constants.FLAVOR)))
             #need to see what will be UPDATE_DICT is in batch member==>um
             #batch_update_members_flow.add(database_tasks.UpdateMemberInDB(
@@ -986,10 +986,10 @@ class MemberFlows(object):
         batch_update_member_snat_subflow = linear_flow.Flow(
             a10constants.CREATE_MEMBER_SNAT_POOL_SUBFLOW)
         batch_update_member_snat_subflow.add(server_tasks.MemberFindNatPool(
-            name='find-member-nat-pool-' + member.id,
+            name='member-find-nat-pool-' + member.id,
             inject={constants.MEMBER: member},
-            requires=[a10constants.VTHUNDER, constants.POOL,
-                      constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
+            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL, constants.FLAVOR),
+            provides=a10constants.NAT_FLAVOR))
         batch_update_member_snat_subflow.add(a10_database_tasks.GetNatPoolEntry(
             name='get-nat-pool-entry-' + member.id,
             inject={constants.MEMBER: member},
