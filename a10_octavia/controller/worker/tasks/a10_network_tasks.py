@@ -211,13 +211,6 @@ class UnPlugNetworks(BaseNetworkTask):
                 LOG.exception("Unable to unplug network")
 
 
-class GetNetworkFromVIP(BaseNetworkTask):
-
-    def execute(self, loadbalancer):
-        LOG.debug("Getting network for LB: %s", loadbalancer.id)
-        return [self.network_driver.get_subnet(loadbalancer.vip.subnet_id).network_id]
-
-
 class PlugNetworksByID(BaseNetworkTask):
     """Task to plug the networks in the list."""
 
@@ -1147,3 +1140,31 @@ class GetVThunderNetworkList(BaseNetworkTask):
         except Exception as e:
             LOG.exception("Failed to get network list for vthunder duo to %s", str(e))
             raise e
+
+
+class PlugVipNetworkOnSpare(BaseNetworkTask):
+    """Task to plug vip network on spare vThunder"""
+
+    def __init__(self, *arg, **kwargs):
+        self.added_network = []
+        super(PlugVipNetworkOnSpare, self).__init__(*arg, **kwargs)
+
+    def execute(self, spare_vthunder, loadbalancer):
+        if spare_vthunder:
+            try:
+                nics = self.network_driver.get_plugged_networks(spare_vthunder.compute_id)
+                network_ids = [nic.network_id for nic in nics]
+                vip_net_id = self.network_driver.get_subnet(loadbalancer.vip.subnet_id).network_id
+                if vip_net_id not in network_ids:
+                    self.network_driver.plug_network(spare_vthunder.compute_id, vip_net_id)
+                    self.added_network.append(vip_net_id)
+            except Exception as e:
+                LOG.exception("Failed to check vip subnet on spare vThunder du to %s", str(e))
+            return self.added_network
+
+    def revert(self, spare_vthunder, loadbalancer, *args, **kwargs):
+        for net in self.added_network:
+            try:
+                self.network_driver.unplug_network(spare_vthunder.compute_id, net)
+            except base.NetworkNotFound:
+                pass

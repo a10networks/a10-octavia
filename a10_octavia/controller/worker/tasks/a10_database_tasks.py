@@ -376,8 +376,11 @@ class GetVRIDForLoadbalancerResource(BaseDatabaseTask):
                 backup_vthunder = self.vthunder_repo.get_backup_vthunder_from_lb(
                     db_apis.get_session(), loadbalancer_id)
                 owner_master = master_vthunder.ip_address + "_" + master_vthunder.partition_name
-                owner_backup = backup_vthunder.ip_address + "_" + backup_vthunder.partition_name
-                owner = [owner_master, owner_backup]
+                if backup_vthunder:
+                    owner_backup = backup_vthunder.ip_address + "_" + backup_vthunder.partition_name
+                    owner = [owner_master, owner_backup]
+                else:
+                    owner = [owner_master]
             if partition_project_list:
                 try:
                     vrid_list = self.vrid_repo.get_vrid_from_owner(
