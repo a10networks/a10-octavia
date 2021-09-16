@@ -24,6 +24,7 @@ from a10_octavia.common import exceptions as a10_ex
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
+from a10_octavia.controller.worker.tasks import utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -188,3 +189,42 @@ class RevokeFlexpoolLicense(task.Task):
             LOG.warning("No vthunder therefore license revocation cannot occur.")
             return None
         self.axapi_client.delete.glm_license.post()
+
+
+class ConfigureForwardProxyServer(task.Task):
+
+    @staticmethod
+    def build_configuration(flavor):
+        glm_config = dict(CONF.glm_license)
+        glm_config.update(utils.dash_to_underscore(flavor.get('proxy-server', {})))
+
+        config_payload = {
+            "host": glm_config.get('proxy_host'),
+            "port": glm_config.get('proxy_port'),
+            "username": glm_config.get('proxy_username'),
+            "password": glm_config.get('proxy_password'),
+            "secret_string": glm_config.get('proxy_secret_string'),
+        }
+        return config_payload
+
+    @axapi_client_decorator
+    def execute(self, vthunder, flavor={}):
+        if not vthunder:
+            LOG.warning("No vthunder therefore forward proxy server cannot be configured.")
+            return
+        flavor = {} if flavor is None else flavor
+        config_payload = self.build_configuration(flavor)
+        if config_payload['host'] and config_payload['port']:
+            try:
+                self.axapi_client.glm.proxy_server.create(**config_payload)
+            except acos_errors.ACOSException as e:
+                LOG.error("Could not configure forward proxy server for A10 "
+                          "Thunder device", vthunder.ip_address)
+                raise e
+
+    @axapi_client_decorator_for_revert
+    def revert(self, vthunder, flavor={}, *args, **kwargs):
+        try:
+            self.axapi_client.glm.proxy_server.delete()
+        except req_exceptions.ConnectionError:
+            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)

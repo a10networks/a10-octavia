@@ -322,17 +322,26 @@ class VThunderFlows(object):
         glm_license_subflow = linear_flow.Flow(sf_name)
 
         if role == constants.ROLE_BACKUP:
+            glm_license_subflow.add(glm_tasks.ConfigureForwardProxyServer(
+                name=role + '-' + a10constants.CONFIGURE_PROXY_SERVER,
+                requires=constants.FLAVOR,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}
+            ))
             glm_license_subflow.add(glm_tasks.DNSConfiguration(
                 name=role + '-' + a10constants.CONFIGURE_DNS_NAMESERVERS,
-                requires=(constants.FLAVOR),
+                requires=constants.FLAVOR,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
             ))
             glm_license_subflow.add(glm_tasks.ActivateFlexpoolLicense(
                 name=role + '-' + a10constants.ACTIVATE_FLEXPOOL_LICENSE,
-                requires=(constants.AMPHORA),
+                requires=constants.AMPHORA,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
             ))
         else:
+            glm_license_subflow.add(glm_tasks.ConfigureForwardProxyServer(
+                name=role + '-' + a10constants.CONFIGURE_PROXY_SERVER,
+                requires=(constants.FLAVOR, a10constants.VTHUNDER)
+            ))
             glm_license_subflow.add(glm_tasks.DNSConfiguration(
                 name=role + '-' + a10constants.CONFIGURE_DNS_NAMESERVERS,
                 requires=(constants.FLAVOR, a10constants.VTHUNDER)
