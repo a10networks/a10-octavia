@@ -217,8 +217,7 @@ class RevokeFlexpoolLicense(task.Task):
 
 class ConfigureForwardProxyServer(task.Task):
 
-    @staticmethod
-    def build_configuration(flavor):
+    def _build_configuration(self, flavor):
         glm_config = dict(CONF.glm_license)
         glm_config.update(utils.dash_to_underscore(flavor.get('proxy-server', {})))
 
@@ -237,7 +236,7 @@ class ConfigureForwardProxyServer(task.Task):
             LOG.warning("No vthunder therefore forward proxy server cannot be configured.")
             return
         flavor = {} if flavor is None else flavor
-        config_payload = self.build_configuration(flavor)
+        config_payload = self._build_configuration(flavor)
         if config_payload['host'] and config_payload['port']:
             try:
                 self.axapi_client.glm.proxy_server.create(**config_payload)
