@@ -785,6 +785,9 @@ class MemberFlows(object):
         """Create a flow to batch update members
         :returns: The flow for batch updating members
         """
+        existing_members = [m[0] for m in updated_members]
+        pool_members = new_members + existing_members
+
         batch_update_members_flow = linear_flow.Flow(
             constants.BATCH_UPDATE_MEMBERS_FLOW)
         # unordered_members_flow = unordered_flow.Flow(
@@ -969,6 +972,7 @@ class MemberFlows(object):
                 inject={constants.MEMBER: m},
                 name='{flow}-{id}'.format(
                     id=m.id, flow=constants.MARK_MEMBER_ACTIVE_INDB)))
+        batch_update_members_flow.add(self.get_handle_member_vrid_internal_subflow(pool_members))
 
         batch_update_members_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
@@ -1006,3 +1010,44 @@ class MemberFlows(object):
             requires=[a10constants.NAT_FLAVOR,
                       a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
         return batch_update_member_snat_subflow
+
+    def get_handle_member_vrid_internal_subflow(self, pool_members):
+        handle_vrid_for_member_subflow = linear_flow.Flow(
+            a10constants.DELETE_MEMBER_VRID_INTERNAL_SUBFLOW)
+        handle_vrid_for_member_subflow.add(
+            a10_database_tasks.GetChildProjectsOfParentPartition(
+                name='get_child_project_of_parent_partition',
+                rebind={a10constants.LB_RESOURCE: constants.POOL},
+                provides=a10constants.PARTITION_PROJECT_LIST))
+        handle_vrid_for_member_subflow.add(
+            a10_network_tasks.GetAllResourceSubnet(
+                inject={a10constants.MEMBERS: pool_members},
+                provides=constants.SUBNET))
+        handle_vrid_for_member_subflow.add(
+            a10_database_tasks.GetVRIDForLoadbalancerResource(
+                name='get_vrid_for_loadbalancer_resource',
+                requires=[
+                    a10constants.PARTITION_PROJECT_LIST,
+                    a10constants.VTHUNDER],
+                provides=a10constants.VRID_LIST))
+        handle_vrid_for_member_subflow.add(
+            a10_network_tasks.HandleVRIDFloatingIP(
+                name='handle-vrid-floating-IP',
+                requires=[
+                    a10constants.VTHUNDER,
+                    a10constants.VRID_LIST,
+                    constants.SUBNET,
+                    a10constants.VTHUNDER_CONFIG,
+                    a10constants.USE_DEVICE_FLAVOR],
+                rebind={
+                    a10constants.LB_RESOURCE: constants.POOL},
+                provides=a10constants.VRID_LIST))
+        handle_vrid_for_member_subflow.add(
+            a10_database_tasks.UpdateVRIDForLoadbalancerResource(
+                name='update-vrid-for-loadbalancer-resource',
+                requires=[
+                    a10constants.VRID_LIST,
+                    a10constants.VTHUNDER],
+                rebind={
+                    a10constants.LB_RESOURCE: constants.POOL}))
+        return handle_vrid_for_member_subflow
