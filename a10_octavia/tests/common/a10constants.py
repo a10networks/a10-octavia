@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+MOCK_VTHUNDER_ID = 'mock-vthunder-1'
 MOCK_HM_ID = 'mock-hm-cd61-49ed-8508-f22a12d770c5'
 MOCK_POOL_ID = 'mock-pool-1'
 MOCK_MEMBER_ID = 'mock-member-1'
