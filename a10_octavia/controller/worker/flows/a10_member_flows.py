@@ -523,7 +523,7 @@ class MemberFlows(object):
         delete_member_vrid_subflow.add(
             a10_database_tasks.GetSubnetForDeletionInPool(
                 name='get_subnet_for_deletion_in_pool' + pool,
-                rebind={a10constants.MEMBER_LIST: pool_members},
+                inject={a10constants.MEMBER_LIST: pool_members},
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
                     a10constants.USE_DEVICE_FLAVOR,
@@ -785,9 +785,6 @@ class MemberFlows(object):
         """Create a flow to batch update members
         :returns: The flow for batch updating members
         """
-        existing_members = [m[0] for m in updated_members]
-        pool_members = new_members + existing_members
-
         batch_update_members_flow = linear_flow.Flow(
             constants.BATCH_UPDATE_MEMBERS_FLOW)
         batch_update_members_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
@@ -806,6 +803,9 @@ class MemberFlows(object):
                       a10constants.DEVICE_CONFIG_DICT),
             rebind={constants.FLAVOR_DATA: constants.FLAVOR},
             provides=(a10constants.VTHUNDER_CONFIG, a10constants.USE_DEVICE_FLAVOR)))
+        batch_update_members_flow.add(a10_network_tasks.GetPoolsOnThunder(
+            requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
+            provides=a10constants.POOLS))
 
         # Delete old members
         batch_update_members_flow.add(
@@ -875,6 +875,9 @@ class MemberFlows(object):
                 name='{flow}-{id}'.format(
                     id=m.id, flow=constants.DECREMENT_MEMBER_QUOTA_FLOW)))
 
+        batch_update_members_flow.add(
+            self.get_delete_member_vrid_internal_subflow(constants.POOL, old_members))
+
         # for creation of members
         batch_update_members_flow.add(lifecycle_tasks.MembersToErrorOnRevertTask(
             name='{flow}-created'.format(
@@ -930,10 +933,16 @@ class MemberFlows(object):
                 inject={constants.MEMBER: m},
                 requires=(constants.MEMBER, a10constants.VTHUNDER,
                           constants.POOL, constants.FLAVOR)))
+            batch_update_members_flow.add(database_tasks.UpdateMemberInDB(
+                name='update-member-in-db-' + m.id,
+                inject={constants.MEMBER: m, constants.UPDATE_DICT: um}))
             batch_update_members_flow.add(database_tasks.MarkMemberActiveInDB(
                 inject={constants.MEMBER: m},
                 name='{flow}-{id}'.format(
                     id=m.id, flow=constants.MARK_MEMBER_ACTIVE_INDB)))
+
+        existing_members = [m[0] for m in updated_members]
+        pool_members = new_members + existing_members
         batch_update_members_flow.add(self.get_handle_member_vrid_internal_subflow(pool_members))
 
         batch_update_members_flow.add(database_tasks.MarkPoolActiveInDB(
