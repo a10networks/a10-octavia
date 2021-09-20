@@ -683,8 +683,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                        for mid in old_member_ids]
 
         updated_members = [
-                (self._member_repo.get(db_apis.get_session(), id=m.get('id')), m)
-                 for m in updated_members]
+            (self._member_repo.get(db_apis.get_session(), id=m.get('id')), m)
+            for m in updated_members]
 
         if old_members:
             pool = old_members[0].pool
@@ -692,7 +692,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             pool = new_members[0].pool
         else:
             pool = updated_members[0][0].pool
-        
+
         load_balancer = pool.load_balancer
         listeners = pool.listeners
 
@@ -705,9 +705,29 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                     self._member_flows.get_rack_vthunder_batch_update_members_flow(
                         old_members, new_members, updated_members,
                         vthunder_conf, device_dict),
-                        store={constants.LISTENERS: listeners,
-                               constants.LOADBALANCER: load_balancer,
-                               constants.POOL: pool})
+                    store={constants.LISTENERS: listeners,
+                           constants.LOADBALANCER: load_balancer,
+                           constants.POOL: pool})
+            else:
+                topology = CONF.a10_controller_worker.loadbalancer_topology
+                busy = self._vthunder_busy_check(load_balancer.project_id, True,
+                                                 ctx_flags, load_balancer)
+                batch_update_members_tf = self._taskflow_load(
+                    self._member_flows.get_batch_update_members_flow(
+                        old_members, new_members, updated_members, topology),
+                    store={constants.LISTENERS: listeners,
+                           constants.LOADBALANCER: load_balancer,
+                           a10constants.COMPUTE_BUSY: busy,
+                           constants.POOL: pool,
+                           a10constants.VTHUNDER_CONFIG: None,
+                           a10constants.USE_DEVICE_FLAVOR: False,
+                           a10constants.LB_COUNT_THUNDER: None,
+                           a10constants.MEMBER_COUNT_THUNDER: None}
+                )
+                self._register_flow_notify_handler(batch_update_members_tf,
+                                                   load_balancer.project_id, True,
+                                                   busy, ctx_flags, load_balancer)
+
                 with tf_logging.DynamicLoggingListener(batch_update_members_tf,
                                                        log=LOG):
                     batch_update_members_tf.run()
