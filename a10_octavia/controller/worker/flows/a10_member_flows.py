@@ -1029,6 +1029,11 @@ class MemberFlows(object):
         batch_update_members_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY: 
+            batch_update_members_flow.add(vthunder_tasks.GetMasterVThunder(
+                name='get-master-vtthunder',
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
         batch_update_members_flow.add(
             lifecycle_tasks.MembersToErrorOnRevertTask(
                 inject={constants.MEMBERS: old_members},
