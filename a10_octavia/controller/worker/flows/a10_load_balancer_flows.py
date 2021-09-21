@@ -175,12 +175,12 @@ class LoadBalancerFlows(object):
         # IMP: here we will inject network flow
         new_LB_net_subflow = self.get_new_lb_networking_subflow(topology, vthunder)
         post_create_lb_flow.add(new_LB_net_subflow)
-
+        
+        post_create_lb_flow.add(
+            vthunder_tasks.CreateHealthMonitorOnVThunder(
+                name=a10constants.CREATE_HEALTH_MONITOR_ON_VTHUNDER_MASTER,
+                requires=a10constants.VTHUNDER))
         if not vthunder and topology == constants.TOPOLOGY_ACTIVE_STANDBY:
-            post_create_lb_flow.add(
-                vthunder_tasks.CreateHealthMonitorOnVThunder(
-                    name=a10constants.CREATE_HEALTH_MONITOR_ON_VTHUNDER_MASTER,
-                    requires=a10constants.VTHUNDER))
             vrrp_subflow = self.vthunder_flows.get_vrrp_subflow(prefix)
             post_create_lb_flow.add(vrrp_subflow)
 
