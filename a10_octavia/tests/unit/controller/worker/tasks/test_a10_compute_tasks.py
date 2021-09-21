@@ -42,10 +42,10 @@ class TestA10ComputeTasks(base.BaseTaskTestCase):
         self.assertEqual(status, True)
 
     @mock.patch('stevedore.driver.DriverManager.driver')
-    def test_compute_amphora_status_shutdown(self, mock_driver):
+    def test_compute_amphora_status_shutoff(self, mock_driver):
         VTHUNDER.compute_id = COMPUTE_ID
         _amphora_mock = mock.MagicMock()
-        _amphora_mock.status = "SHUT_OFF"
+        _amphora_mock.status = "SHUTOFF"
         mock_driver.get_amphora.return_value = _amphora_mock, None
         computestatus = task.CheckAmphoraStatus()
         status = computestatus.execute(VTHUNDER)

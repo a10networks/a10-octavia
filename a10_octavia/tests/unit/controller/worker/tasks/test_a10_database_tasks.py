@@ -113,7 +113,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         vthunder = mock_get_vthunder.execute(LB)
         self.assertEqual(vthunder, None)
 
-    def test_get_vthunder_by_loadbalancer_backup(self):
+    def test_get_backup_vthunder_by_loadbalancer(self):
         self.conf.config(
             group=a10constants.A10_GLOBAL_CONF_SECTION,
             use_parent_partition=True)
