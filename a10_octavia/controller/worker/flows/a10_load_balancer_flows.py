@@ -215,7 +215,7 @@ class LoadBalancerFlows(object):
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.MASTER_AMPHORA_STATUS))
             delete_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-                name="get vthunder on the basis of master amphora status",
+                name="get-vthunder-on-the-basis-of-master-amphora-status",
                 requires=(constants.LOADBALANCER, a10constants.MASTER_AMPHORA_STATUS),
                 provides=a10constants.VTHUNDER))
             delete_LB_flow.add(vthunder_tasks.GetMasterVThunder(

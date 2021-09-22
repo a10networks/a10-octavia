@@ -143,10 +143,15 @@ class CheckAmphoraStatus(BaseComputeTask):
     def execute(self, vthunder):
         """Check for the compute driver for the amphora status."""
         if vthunder:
-            amp, fault = self.compute.get_amphora(vthunder.compute_id)
-            if amp.status != constants.ACTIVE:
+            try:
+                amp, fault = self.compute.get_amphora(vthunder.compute_id)
+                if amp.status != constants.ACTIVE:
+                    return False
+                return True
+            except Exception as e:
+                LOG.exception("Failed to find compute %s du to: %s",
+                              vthunder.compute_id, str(e))
                 return False
-            return True
 
 
 class DeleteStaleCompute(BaseComputeTask):
