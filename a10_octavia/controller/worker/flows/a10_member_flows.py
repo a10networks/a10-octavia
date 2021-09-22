@@ -998,11 +998,14 @@ class MemberFlows(object):
         batch_update_members_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
-        if topology == constants.TOPOLOGY_ACTIVE_STANDBY: 
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             batch_update_members_flow.add(vthunder_tasks.GetMasterVThunder(
                 name='get-master-vtthunder',
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
+        batch_update_members_flow.add(a10_network_tasks.GetPoolsOnThunder(
+            requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
+            provides=a10constants.POOLS))
         batch_update_members_flow.add(
             lifecycle_tasks.MembersToErrorOnRevertTask(
                 inject={constants.MEMBERS: old_members},
@@ -1053,14 +1056,14 @@ class MemberFlows(object):
                         constants.POOL,
                         a10constants.MEMBER_COUNT_IP,
                         a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL)))
-            # TODO: Handle VRID Deletion
-            # delete_member_flow.add(self.get_delete_member_vrid_subflow())
             batch_update_members_flow.add(database_tasks.DeleteMemberInDB(
                 name='delete-member-in-db' + m.id,
                 inject={constants.MEMBER: m}))
             batch_update_members_flow.add(database_tasks.DecrementMemberQuota(
                 name='decrement-member-quota' + m.id,
                 inject={constants.MEMBER: m}))
+        batch_update_members_flow.add(
+            self.get_delete_member_vrid_internal_subflow(constants.POOL, old_members))
 
         # for creation of members
         batch_update_members_flow.add(lifecycle_tasks.MembersToErrorOnRevertTask(
@@ -1074,8 +1077,6 @@ class MemberFlows(object):
             batch_update_members_flow.add(database_tasks.MarkMemberPendingCreateInDB(
                 name='mark-member-pending-create-in-DB' + m.id,
                 inject={constants.MEMBER: m}))
-            # TODO: Handle VRID creation
-            # create_member_flow.add(self.handle_vrid_for_member_subflow())
             batch_update_members_flow.add(a10_database_tasks.CountMembersWithIP(
                 name='count-members-with-ip' + m.id,
                 inject={constants.MEMBER: m},
@@ -1084,8 +1085,6 @@ class MemberFlows(object):
                 name=a10constants.ALLOW_NO_SNAT + m.id,
                 inject={constants.MEMBER: m},
                 requires=(constants.AMPHORA)))
-
-            batch_update_members_flow.add(self.get_batch_update_member_snat_pool_subflow(m))
 
             batch_update_members_flow.add(server_tasks.MemberCreate(
                 name='member-create' + m.id,
@@ -1111,8 +1110,17 @@ class MemberFlows(object):
             batch_update_members_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
                 inject={constants.MEMBER: m},
                 name='mark-member-pending-update-in-db-' + m.id))
-            # TODO: Handle VRID
-            '''batch_update_members_flow.add(a10_database_tasks.GetLoadbalancersInProjectBySubnet(
+            batch_update_members_flow.add(
+                a10_database_tasks.GetChildProjectsOfParentPartition(
+                    name='get_child_project_of_parent_partition_',
+                    rebind={a10constants.LB_RESOURCE: constants.POOL},
+                    provides=a10constants.PARTITION_PROJECT_LIST))
+            batch_update_members_flow.add(a10_network_tasks.GetLBResourceSubnet(
+                name='{flow}-{id}'.format(
+                    id=m.id, flow=a10constants.GET_LB_RESOURCE_SUBNET),
+                inject={a10constants.LB_RESOURCE: m},
+                provides=constants.SUBNET))
+            batch_update_members_flow.add(a10_database_tasks.GetLoadbalancersInProjectBySubnet(
                 name='get-lb-in-project-by-subnet' + m.id,
                 requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
                 provides=a10constants.LOADBALANCERS_LIST))
@@ -1127,7 +1135,7 @@ class MemberFlows(object):
             batch_update_members_flow.add(vthunder_tasks.UpdateLoadbalancerForwardWithAnySource(
                 name='update-lb-forward-with-any-source' + m.id,
                 requires=(constants.SUBNET, constants.AMPHORA,
-                          a10constants.LB_COUNT_SUBNET, a10constants.L2DSR_FLAVOR)))'''
+                          a10constants.LB_COUNT_SUBNET, a10constants.L2DSR_FLAVOR)))
             batch_update_members_flow.add(server_tasks.MemberUpdate(
                 name='member-update' + m.id,
                 inject={constants.MEMBER: m},
@@ -1241,6 +1249,14 @@ class MemberFlows(object):
                         constants.ADDED_PORTS,
                         constants.LOADBALANCER,
                         a10constants.VTHUNDER]))
+        existing_members = [m[0] for m in updated_members]
+        pool_members = new_members + existing_members
+        if pool_members:
+            batch_update_members_flow.add(
+                self.get_handle_member_vrid_internal_subflow(pool_members))
+        for m in new_members:
+            batch_update_members_flow.add(self.get_batch_update_member_snat_pool_subflow(m))
+
         batch_update_members_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
         batch_update_members_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
@@ -1250,7 +1266,6 @@ class MemberFlows(object):
         batch_update_members_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return batch_update_members_flow
-
 
     def get_handle_member_vrid_internal_subflow(self, pool_members):
         handle_vrid_for_member_subflow = linear_flow.Flow(
