@@ -266,7 +266,7 @@ class MemberFlows(object):
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
         delete_member_flow.add(server_tasks.MemberFindNatPool(
-            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+            requires=[a10constants.VTHUNDER, constants.POOL,
                       constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
         delete_member_flow.add(a10_database_tasks.GetNatPoolEntry(
             requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
@@ -354,7 +354,7 @@ class MemberFlows(object):
                     a10constants.MEMBERS],
                 provides=a10constants.MEMBER_COUNT_THUNDER))
         delete_member_flow.add(server_tasks.MemberFindNatPool(
-            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+            requires=[a10constants.VTHUNDER, constants.POOL,
                       constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
         delete_member_flow.add(a10_database_tasks.GetNatPoolEntry(
             requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
@@ -420,9 +420,9 @@ class MemberFlows(object):
             provides=constants.FLAVOR))
         delete_member_thunder_subflow.add(server_tasks.MemberFindNatPool(
             name='member_find_nat_pool_' + member_id,
-            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+            requires=[a10constants.VTHUNDER, constants.POOL,
                       constants.FLAVOR], provides=a10constants.NAT_FLAVOR,
-            rebind={constants.MEMBER: member_id, constants.POOL: pool}))
+            rebind={constants.POOL: pool}))
         delete_member_thunder_subflow.add(a10_database_tasks.GetNatPoolEntry(
             name='get_nat_pool_db_entry_' + member_id,
             requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
@@ -767,7 +767,7 @@ class MemberFlows(object):
         create_member_snat_subflow = linear_flow.Flow(
             a10constants.CREATE_MEMBER_SNAT_POOL_SUBFLOW)
         create_member_snat_subflow.add(server_tasks.MemberFindNatPool(
-            requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+            requires=[a10constants.VTHUNDER, constants.POOL,
                       constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
         create_member_snat_subflow.add(a10_database_tasks.GetNatPoolEntry(
             requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
@@ -806,6 +806,9 @@ class MemberFlows(object):
         batch_update_members_flow.add(a10_network_tasks.GetPoolsOnThunder(
             requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
             provides=a10constants.POOLS))
+        batch_update_members_flow.add(server_tasks.MemberFindNatPool(
+            requires=[a10constants.VTHUNDER, constants.POOL, constants.FLAVOR],
+            provides=a10constants.NAT_FLAVOR))
 
         # Delete old members
         batch_update_members_flow.add(
@@ -835,12 +838,6 @@ class MemberFlows(object):
                     id=m.id, flow=a10constants.GET_LB_RESOURCE_SUBNET),
                 inject={a10constants.LB_RESOURCE: m},
                 provides=constants.SUBNET))
-            batch_update_members_flow.add(server_tasks.MemberFindNatPool(
-                name='member-find-nat-pool-' + m.id,
-                inject={constants.MEMBER: m},
-                requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
-                          constants.FLAVOR],
-                provides=a10constants.NAT_FLAVOR))
             batch_update_members_flow.add(a10_database_tasks.GetNatPoolEntry(
                 name='get-nat-pool-entry-' + m.id,
                 inject={constants.MEMBER: m},
@@ -956,8 +953,7 @@ class MemberFlows(object):
             a10constants.CREATE_MEMBER_SNAT_POOL_SUBFLOW)
         batch_update_member_snat_subflow.add(server_tasks.MemberFindNatPool(
             name='member-find-nat-pool-' + member.id,
-            inject={constants.MEMBER: member},
-            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL, constants.FLAVOR),
+            requires=(a10constants.VTHUNDER, constants.POOL, constants.FLAVOR),
             provides=a10constants.NAT_FLAVOR))
         batch_update_member_snat_subflow.add(a10_database_tasks.GetNatPoolEntry(
             name='get-nat-pool-entry-' + member.id,
