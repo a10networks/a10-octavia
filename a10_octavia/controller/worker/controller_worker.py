@@ -682,9 +682,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         old_members = [self._member_repo.get(db_apis.get_session(), id=mid)
                        for mid in old_member_ids]
 
-        updated_members = [
-            (self._member_repo.get(db_apis.get_session(), id=m.get('id')), m)
-            for m in updated_members]
+        updated_members = [(self._member_repo.get(
+                            db_apis.get_session(), id=m.get('id')), m)
+                           for m in updated_members]
 
         if old_members:
             pool = old_members[0].pool
@@ -728,9 +728,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                                                    load_balancer.project_id, True,
                                                    busy, ctx_flags, load_balancer)
 
-                with tf_logging.DynamicLoggingListener(batch_update_members_tf,
-                                                       log=LOG):
-                    batch_update_members_tf.run()
+            with tf_logging.DynamicLoggingListener(batch_update_members_tf,
+                                                   log=LOG):
+                batch_update_members_tf.run()
         finally:
             self._set_vthunder_available(pool.project_id, True, ctx_flags, load_balancer)
 

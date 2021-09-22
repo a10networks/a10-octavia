@@ -523,7 +523,7 @@ class MemberFlows(object):
         delete_member_vrid_subflow.add(
             a10_database_tasks.GetSubnetForDeletionInPool(
                 name='get_subnet_for_deletion_in_pool' + pool,
-                rebind={a10constants.MEMBER_LIST: pool_members},
+                inject={a10constants.MEMBER_LIST: pool_members},
                 requires=[
                     a10constants.PARTITION_PROJECT_LIST,
                     a10constants.USE_DEVICE_FLAVOR,
@@ -787,11 +787,6 @@ class MemberFlows(object):
         """
         batch_update_members_flow = linear_flow.Flow(
             constants.BATCH_UPDATE_MEMBERS_FLOW)
-        # unordered_members_flow = unordered_flow.Flow(
-        #    constants.UNORDERED_MEMBER_UPDATES_FLOW)
-        # unordered_members_active_flow = unordered_flow.Flow(
-        #    constants.UNORDERED_MEMBER_ACTIVE_FLOW)
-
         batch_update_members_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -808,6 +803,9 @@ class MemberFlows(object):
                       a10constants.DEVICE_CONFIG_DICT),
             rebind={constants.FLAVOR_DATA: constants.FLAVOR},
             provides=(a10constants.VTHUNDER_CONFIG, a10constants.USE_DEVICE_FLAVOR)))
+        batch_update_members_flow.add(a10_network_tasks.GetPoolsOnThunder(
+            requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
+            provides=a10constants.POOLS))
 
         # Delete old members
         batch_update_members_flow.add(
@@ -837,27 +835,12 @@ class MemberFlows(object):
                     id=m.id, flow=a10constants.GET_LB_RESOURCE_SUBNET),
                 inject={a10constants.LB_RESOURCE: m},
                 provides=constants.SUBNET))
-
-            """Requires to delete vrid
-            delete_member_flow.add(
-                a10_network_tasks.GetMembersOnThunder(
-                    requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
-                    provides=a10constants.MEMBERS))
-            delete_member_flow.add(
-                a10_database_tasks.CountMembersOnThunderBySubnet(
-                    requires=[
-                        constants.SUBNET,
-                        a10constants.USE_DEVICE_FLAVOR,
-                        a10constants.MEMBERS],
-                    provides=a10constants.MEMBER_COUNT_THUNDER))"""
-
             batch_update_members_flow.add(server_tasks.MemberFindNatPool(
                 name='member-find-nat-pool-' + m.id,
                 inject={constants.MEMBER: m},
-                requires=[constants.MEMBER,a10constants.VTHUNDER, constants.POOL,
+                requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                           constants.FLAVOR],
                 provides=a10constants.NAT_FLAVOR))
-
             batch_update_members_flow.add(a10_database_tasks.GetNatPoolEntry(
                 name='get-nat-pool-entry-' + m.id,
                 inject={constants.MEMBER: m},
@@ -873,19 +856,17 @@ class MemberFlows(object):
             batch_update_members_flow.add(server_tasks.MemberDelete(
                 name='member-delete-' + m.id,
                 inject={constants.MEMBER: m},
-                requires=(a10constants.VTHUNDER, constants.POOL,
+                requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                           a10constants.MEMBER_COUNT_IP,
                           a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL)))
-            """For deleting Interface tag and vrid"""
-            # if CONF.a10_global.network_type == 'vlan':
-            #    delete_member_flow.add(
-            #        vthunder_tasks.DeleteInterfaceTagIfNotInUseForMember(
-            #            requires=[
-            #                constants.MEMBER,
-            #                a10constants.VTHUNDER]))
-            # Handle VRID setting
-            # delete_member_flow.add(self.get_delete_member_vrid_subflow())
-
+            if CONF.a10_global.network_type == 'vlan':
+                batch_update_members_flow.add(
+                    vthunder_tasks.DeleteInterfaceTagIfNotInUseForMember(
+                        name='delete_unused_interface_tag_in_member_' + m.id,
+                        inject={constants.MEMBER: m},
+                        requires=[
+                            constants.MEMBER,
+                            a10constants.VTHUNDER]))
             batch_update_members_flow.add(database_tasks.DeleteMemberInDB(
                 inject={constants.MEMBER: m},
                 name='{flow}-{id}'.format(
@@ -894,40 +875,27 @@ class MemberFlows(object):
                 inject={constants.MEMBER: m},
                 name='{flow}-{id}'.format(
                     id=m.id, flow=constants.DECREMENT_MEMBER_QUOTA_FLOW)))
+        batch_update_members_flow.add(
+            self.get_delete_member_vrid_internal_subflow(constants.POOL, old_members))
 
         # for creation of members
         batch_update_members_flow.add(lifecycle_tasks.MembersToErrorOnRevertTask(
             name='{flow}-created'.format(
                 flow=constants.MEMBER_TO_ERROR_ON_REVERT_FLOW),
-            inject={constants.MEMBERS: new_members},
-            requires=[constants.LISTENERS,
-                      constants.LOADBALANCER,
-                      constants.POOL]))
+            inject={constants.MEMBERS: new_members}))
         for m in new_members:
             batch_update_members_flow.add(database_tasks.MarkMemberPendingCreateInDB(
                 name='mark-member-pending-create-in-db-' + m.id,
-                requires=constants.MEMBER))
-
-            """For deleting Interface tag and vrid
-            create_member_flow.add(self.handle_vrid_for_member_subflow())
-            if CONF.a10_global.network_type == 'vlan':
-                create_member_flow.add(vthunder_tasks.TagInterfaceForMember(
-                    requires=[constants.MEMBER,
-                              a10constants.VTHUNDER]))"""
-
+                inject={constants.MEMBER: m}))
             batch_update_members_flow.add(a10_database_tasks.CountMembersWithIP(
                 name='count-member-with-ip-' + m.id,
                 inject={constants.MEMBER: m},
                 provides=a10constants.MEMBER_COUNT_IP))
-
-            """ flow for snat
-            create_member_flow.add(self.get_create_member_snat_pool_subflow())"""
             batch_update_members_flow.add(self.get_batch_update_member_snat_pool_subflow(m))
-
             batch_update_members_flow.add(server_tasks.MemberCreate(
                 name='member-create-' + m.id,
                 inject={constants.MEMBER: m},
-                requires=(a10constants.VTHUNDER, constants.POOL,
+                requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                           a10constants.MEMBER_COUNT_IP, constants.FLAVOR)))
             batch_update_members_flow.add(database_tasks.MarkMemberActiveInDB(
                 inject={constants.MEMBER: m},
@@ -940,35 +908,36 @@ class MemberFlows(object):
                 name='{flow}-updated'.format(
                     flow=constants.MEMBER_TO_ERROR_ON_REVERT_FLOW),
                 # updated_members is a list of (obj, dict), only pass `obj`
-                inject={constants.MEMBERS: [m[0] for m in updated_members]},
-                requires=[constants.LISTENERS,
-                          constants.LOADBALANCER,
-                          constants.POOL]))
+                inject={constants.MEMBERS: [m[0] for m in updated_members]}))
         for m, um in updated_members:
             um.pop('id', None)
             batch_update_members_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
                 inject={constants.MEMBER: m},
                 name='mark-member-pending-update-in-db-' + m.id))
-
-            # Handle VRID settings
-            #update_member_flow.add(self.handle_vrid_for_member_subflow())
             batch_update_members_flow.add(server_tasks.MemberUpdate(
                 name='member-update-' + m.id,
                 inject={constants.MEMBER: m},
-                requires=(a10constants.VTHUNDER,
+                requires=(constants.MEMBER, a10constants.VTHUNDER,
                           constants.POOL, constants.FLAVOR)))
-            #need to see what will be UPDATE_DICT is in batch member==>um
-            #batch_update_members_flow.add(database_tasks.UpdateMemberInDB(
-            #    name='update-member-in-db-' + m.id,
-            #    inject={constants.MEMBER: m},
-            #    requires=constants.UPDATE_DICT))
-            #if CONF.a10_global.network_type == 'vlan':
-            #    update_member_flow.add(vthunder_tasks.TagInterfaceForMember(
-            #        requires=[constants.MEMBER, a10constants.VTHUNDER]))
+            batch_update_members_flow.add(database_tasks.UpdateMemberInDB(
+                name='update-member-in-db-' + m.id,
+                inject={constants.MEMBER: m, constants.UPDATE_DICT: um}))
             batch_update_members_flow.add(database_tasks.MarkMemberActiveInDB(
                 inject={constants.MEMBER: m},
                 name='{flow}-{id}'.format(
                     id=m.id, flow=constants.MARK_MEMBER_ACTIVE_INDB)))
+
+        existing_members = [m[0] for m in updated_members]
+        pool_members = new_members + existing_members
+        if pool_members:
+            batch_update_members_flow.add(
+                self.get_handle_member_vrid_internal_subflow(pool_members))
+            if CONF.a10_global.network_type == 'vlan':
+                batch_update_members_flow.add(vthunder_tasks.TagInterfaceForMember(
+                    name='update_tagged_interface_for_members',
+                    inject={constants.MEMBER: pool_members},
+                    requires=[constants.MEMBER,
+                              a10constants.VTHUNDER]))
 
         batch_update_members_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
@@ -986,7 +955,7 @@ class MemberFlows(object):
         batch_update_member_snat_subflow = linear_flow.Flow(
             a10constants.CREATE_MEMBER_SNAT_POOL_SUBFLOW)
         batch_update_member_snat_subflow.add(server_tasks.MemberFindNatPool(
-            name='find-member-nat-pool-' + member.id,
+            name='member-find-nat-pool-' + member.id,
             inject={constants.MEMBER: member},
             requires=[constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                       constants.FLAVOR],
@@ -1281,3 +1250,45 @@ class MemberFlows(object):
         batch_update_members_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
         return batch_update_members_flow
+
+
+    def get_handle_member_vrid_internal_subflow(self, pool_members):
+        handle_vrid_for_member_subflow = linear_flow.Flow(
+            a10constants.DELETE_MEMBER_VRID_INTERNAL_SUBFLOW)
+        handle_vrid_for_member_subflow.add(
+            a10_database_tasks.GetChildProjectsOfParentPartition(
+                name='get_child_project_of_parent_partition',
+                rebind={a10constants.LB_RESOURCE: constants.POOL},
+                provides=a10constants.PARTITION_PROJECT_LIST))
+        handle_vrid_for_member_subflow.add(
+            a10_network_tasks.GetAllResourceSubnet(
+                inject={a10constants.MEMBERS: pool_members},
+                provides=constants.SUBNET))
+        handle_vrid_for_member_subflow.add(
+            a10_database_tasks.GetVRIDForLoadbalancerResource(
+                name='get_vrid_for_loadbalancer_resource',
+                requires=[
+                    a10constants.PARTITION_PROJECT_LIST,
+                    a10constants.VTHUNDER],
+                provides=a10constants.VRID_LIST))
+        handle_vrid_for_member_subflow.add(
+            a10_network_tasks.HandleVRIDFloatingIP(
+                name='handle-vrid-floating-IP',
+                requires=[
+                    a10constants.VTHUNDER,
+                    a10constants.VRID_LIST,
+                    constants.SUBNET,
+                    a10constants.VTHUNDER_CONFIG,
+                    a10constants.USE_DEVICE_FLAVOR],
+                rebind={
+                    a10constants.LB_RESOURCE: constants.POOL},
+                provides=a10constants.VRID_LIST))
+        handle_vrid_for_member_subflow.add(
+            a10_database_tasks.UpdateVRIDForLoadbalancerResource(
+                name='update-vrid-for-loadbalancer-resource',
+                requires=[
+                    a10constants.VRID_LIST,
+                    a10constants.VTHUNDER],
+                rebind={
+                    a10constants.LB_RESOURCE: constants.POOL}))
+        return handle_vrid_for_member_subflow
