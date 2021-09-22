@@ -228,6 +228,12 @@ class NoFreeSetId(acos_errors.ACOSException):
         super(NoFreeSetId, self).__init__(msg=msg)
 
 
+class ProjectVrrpSetIdNotFound(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('Can not find VRRP-A set_id for this project.')
+        super(ProjectVrrpSetIdNotFound, self).__init__(msg=msg)
+
+
 class ProjectDeviceNotFound(acos_errors.ACOSException):
     def __init__(self):
         msg = ('No valid device found for this project, please check your configuration file.')
@@ -246,3 +252,28 @@ class InterfaceNotFound(acos_errors.ACOSException):
         msg = ('vThunder instance {0} has no interface in network {1}.').format(comput_id,
                                                                                 network_id)
         super(InterfaceNotFound, self).__init__(msg=msg)
+
+
+class NoComputeForLoadbalancer(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('No valid compute for the loadbalancer.')
+        super(NoComputeForLoadbalancer, self).__init__(msg=msg)
+
+
+class MissThunderForFailover(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('Failover or spare vThunder is missing.')
+        super(MissThunderForFailover, self).__init__(msg=msg)
+
+
+class FailoverOnPausedCompute(acos_errors.ACOSException):
+    def __init__(self):
+        msg = ('Failover on a paused compute, skipping....')
+        super(FailoverOnPausedCompute, self).__init__(msg=msg)
+
+
+class FlavorNotFound(cfg.ConfigFileValueError):
+    def __init__(self, flavor):
+        msg = ('Flavor {0} specified in the configuration file cannot be located,'
+               ' Please create the flavor in advance.').format(flavor)
+        super(FlavorNotFound, self).__init__(msg=msg)

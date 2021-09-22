@@ -41,6 +41,8 @@ class SpareAmphora(object):
         session = db_api.get_session()
         conf_spare_cnt = CONF.a10_house_keeping.spare_amphora_pool_size
         curr_spare_cnt = self.vthunder_repo.get_spare_vthunder_count(session)
+        busy_spare_cnt = self.vthunder_repo.get_busy_spare_vthunder_count(session)
+        curr_spare_cnt = curr_spare_cnt + busy_spare_cnt
         LOG.debug("Required Spare vThunder count : %d", conf_spare_cnt)
         LOG.debug("Current Spare vThunder count : %d", curr_spare_cnt)
         diff_count = conf_spare_cnt - curr_spare_cnt

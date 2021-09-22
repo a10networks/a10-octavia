@@ -31,12 +31,14 @@ from octavia.tests.common import constants as t_constants
 
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
+from a10_octavia.common import exceptions
 from a10_octavia.common import utils
 from a10_octavia.controller.worker.tasks import a10_database_tasks as task
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
-VTHUNDER = data_models.VThunder()
+VTHUNDER = data_models.VThunder(amphora_id=a10constants.MOCK_AMPHORA_ID,
+                                compute_id=a10constants.MOCK_COMPUTE_ID)
 HW_THUNDER = data_models.HardwareThunder(
     project_id=a10constants.MOCK_PROJECT_ID,
     device_name="rack_thunder_1",
@@ -47,12 +49,14 @@ HW_THUNDER = data_models.HardwareThunder(
     partition_name="shared")
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
                                 flavor_id=a10constants.MOCK_FLAVOR_ID)
+LB2 = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
 FIXED_IP = n_data_models.FixedIP(ip_address='10.10.10.10')
 PORT = n_data_models.Port(id=uuidutils.generate_uuid(), fixed_ips=[FIXED_IP])
 VRID = data_models.VRID(id=1, vrid=0,
                         owner=a10constants.MOCK_PROJECT_ID,
                         vrid_port_id=uuidutils.generate_uuid(),
                         vrid_floating_ip='10.0.12.32')
+VRRP_SET = data_models.VrrpSet(set_id=a10constants.MOCK_SET_ID)
 LISTENER = o_data_models.Listener(id=a10constants.MOCK_LISTENER_ID, load_balancer=LB)
 POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID, load_balancer=LB)
 HM = o_data_models.HealthMonitor(id=a10constants, pool=POOL)
@@ -72,6 +76,11 @@ SUBNET = n_data_models.Subnet(id=uuidutils.generate_uuid())
 NAT_POOL = data_models.NATPool(id=uuidutils.generate_uuid(),
                                port_id=a10constants.MOCK_PORT_ID)
 
+AMPHORA = o_data_models.Amphora(id=a10constants.MOCK_AMPHORA_ID,
+                                role=a10constants.MOCK_TOPOLOGY_ROLE_MASTER)
+AMPHORA_BLADE = o_data_models.Amphora(id=a10constants.MOCK_AMPHORA_ID,
+                                      role=a10constants.MOCK_TOPOLOGY_ROLE_BACKUP)
+
 
 class TestA10DatabaseTasks(base.BaseTaskTestCase):
 
@@ -86,6 +95,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         self.conf.register_opts(
             config_options.A10_HARDWARE_THUNDER_OPTS,
             group=a10constants.HARDWARE_THUNDER_CONF_SECTION)
+        self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
+                                group=a10constants.A10_GLOBAL_OPTS)
         self.db_session = mock.patch(
             'a10_octavia.controller.worker.tasks.a10_database_tasks.db_apis.get_session')
         self.db_session.start()
@@ -374,8 +385,8 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         flavor_task.flavor_repo.get.return_value = None
         flavor_task._flavor_search = mock.Mock(
             return_value=a10constants.MOCK_FLAVOR_ID)
-        ret_val = flavor_task.execute(LB)
-        self.assertEqual(ret_val, None)
+        ret_val = flavor_task.execute
+        self.assertRaises(exceptions.FlavorNotFound, ret_val, LB)
 
         flavor_task.flavor_repo.reset_mock()
         flavor_task.flavor_repo = mock.Mock()
@@ -384,6 +395,20 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         flavor_task.flavor_repo.get.return_value = flavor
         ret_val = flavor_task.execute(LB)
         self.assertEqual(ret_val, None)
+
+    def test_GetFlavorData_execute_with_default_flavor_id(self):
+        flavor_task = task.GetFlavorData()
+        flavor = copy.deepcopy(FLAVOR)
+        flavor_prof = copy.deepcopy(FLAVOR_PROFILE)
+        flavor_prof.flavor_data = "{}"
+        flavor_task.flavor_repo = mock.Mock()
+        flavor_task.flavor_repo.get.return_value = flavor
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         default_flavor_id=flavor)
+        flavor_task.flavor_profile_repo = mock.Mock()
+        flavor_task.flavor_profile_repo.get.return_value = flavor_prof
+        ret_val = flavor_task.execute(LB2)
+        self.assertEqual(ret_val, {})
 
     def test_GetFlavorData_execute_return_flavor(self):
         flavor_task = task.GetFlavorData()
@@ -552,3 +577,95 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_get_listener.execute([LISTENER_STATS])
         mock_stats_base.assert_called_once_with([LISTENER_STATS])
         mock_get_listener.listener_stats_repo.delete.assert_called_once()
+
+    def test_GetVThunderAmphora(self):
+        db_task = task.GetVThunderAmphora()
+        vthunder = copy.deepcopy(VTHUNDER)
+        db_task.amphora_repo = mock.MagicMock()
+        db_task.amphora_repo.get.return_value = AMPHORA
+        amp = db_task.execute(vthunder)
+        self.assertEqual(amp.id, a10constants.MOCK_AMPHORA_ID)
+
+    def test_GetProjectVRRPSetId(self):
+        db_task = task.GetProjectVRRPSetId()
+        self.conf.config(
+            group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+            amp_boot_network_list=[1, 2])
+        vthunder = copy.deepcopy(VTHUNDER)
+        db_task.vrrp_set_repo = mock.MagicMock()
+        db_task.vrrp_set_repo.get.return_value = VRRP_SET
+        setid = db_task.execute(vthunder)
+        self.assertEqual(setid, a10constants.MOCK_SET_ID)
+
+    def test_GetSpareComputeForProject(self):
+        db_task = task.GetSpareComputeForProject()
+        vthunder = copy.deepcopy(VTHUNDER)
+        db_task.vthunder_repo = mock.MagicMock()
+        db_task.vthunder_repo.get_spare_vthunder.return_value = vthunder
+        db_task.vthunder_repo.set_spare_vthunder_status = mock.Mock()
+        cid, vth = db_task.execute()
+        self.assertEqual(cid, a10constants.MOCK_COMPUTE_ID)
+
+    def test_TryGetSpareCompute(self):
+        db_task = task.TryGetSpareCompute()
+        vthunder = copy.deepcopy(VTHUNDER)
+        db_task.vthunder_repo = mock.MagicMock()
+        db_task.vthunder_repo.get_spare_vthunder.return_value = vthunder
+        vth = db_task.execute()
+        self.assertEqual(vth, vthunder)
+
+    def test_GetComputeVThundersAndLoadBalancers(self):
+        db_task = task.GetComputeVThundersAndLoadBalancers()
+        vthunder = copy.deepcopy(VTHUNDER)
+        db_task.vthunder_repo = mock.MagicMock()
+        db_task.vthunder_repo.get_compute_vthunders.return_value = [vthunder]
+        db_task.loadbalancer_repo = mock.MagicMock()
+        db_task.loadbalancer_repo.get = mock.MagicMock()
+        db_task.loadbalancer_repo.get.return_value = LB
+        vlist, llist = db_task.execute(vthunder)
+        self.assertEqual(vlist[0], vthunder)
+        self.assertEqual(llist[0], LB)
+
+    def test_DeleteStaleSpareVThunder(self):
+        db_task = task.DeleteStaleSpareVThunder()
+        vthunder = copy.deepcopy(VTHUNDER)
+        db_task.amphora_repo = mock.Mock()
+        db_task.amphora_repo.delete = mock.Mock()
+        db_task.vthunder_repo = mock.Mock()
+        db_task.vthunder_repo.delete = mock.Mock()
+        db_task.execute(vthunder)
+        db_task.amphora_repo.delete.assert_called_once_with(mock.ANY,
+                                                            id=a10constants.MOCK_AMPHORA_ID)
+        db_task.vthunder_repo.delete.assert_called_once_with(mock.ANY, id=vthunder.id)
+
+    def test_GetVThunderDeviceID(self):
+        db_task = task.GetVThunderDeviceID()
+        vthunder = copy.deepcopy(VTHUNDER)
+        db_task.amphora_repo = mock.MagicMock()
+        db_task.amphora_repo.get.return_value = AMPHORA
+        setid = db_task.execute(vthunder)
+        self.assertEqual(setid, 1)
+        db_task.amphora_repo.get.return_value = AMPHORA_BLADE
+        setid = db_task.execute(vthunder)
+        self.assertEqual(setid, 2)
+
+    def test_FailoverPostDbUpdate(self):
+        db_task = task.FailoverPostDbUpdate()
+        vthunder = copy.deepcopy(VTHUNDER)
+        db_task.amphora_repo = mock.Mock()
+        db_task.amphora_repo.get.return_value = AMPHORA
+        db_task.amphora_repo.update = mock.Mock()
+        db_task.vthunder_repo = mock.Mock()
+        db_task.vthunder_repo.get_all_vthunder_by_address.return_value = [vthunder]
+        db_task.vthunder_repo.update = mock.Mock()
+        db_task.execute(vthunder, vthunder)
+        db_task.vthunder_repo.update.assert_called_once_with(mock.ANY,
+                                                             id=vthunder.id,
+                                                             ip_address=mock.ANY,
+                                                             compute_id=mock.ANY)
+        db_task.amphora_repo.update.assert_called_once_with(mock.ANY,
+                                                            id=a10constants.MOCK_AMPHORA_ID,
+                                                            compute_id=mock.ANY,
+                                                            lb_network_ip=mock.ANY,
+                                                            image_id=mock.ANY,
+                                                            compute_flavor=mock.ANY)

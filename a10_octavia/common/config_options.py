@@ -48,6 +48,8 @@ A10_GLOBAL_OPTS = [
     cfg.BoolOpt('use_shared_for_template_lookup',
                 default=False,
                 help=_('Use shared for template')),
+    cfg.StrOpt('default_flavor_id', default=None,
+               help=_('Default flavor ID to apply globally to all users')),
 ]
 
 A10_VTHUNDER_OPTS = [
@@ -294,7 +296,8 @@ A10_CONTROLLER_WORKER_OPTS = [
 A10_HOUSE_KEEPING_OPTS = [
     cfg.IntOpt('spare_check_interval',
                default=30,
-               help=_('Spare check interval in seconds')),
+               help=_('The interval in seconds for Hourkeeper to check remaining'
+                      ' spare amphora in the pool')),
     cfg.IntOpt('spare_amphora_pool_size',
                default=0,
                help=_('Number of spare vthunders')),

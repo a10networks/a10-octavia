@@ -21,6 +21,11 @@ from taskflow.types import failure
 from octavia.common import constants
 from octavia.common import exceptions
 from octavia.controller.worker.v1.tasks.compute_tasks import BaseComputeTask
+from octavia.db import api as db_apis
+
+from a10_octavia.common import a10constants
+from a10_octavia.common import exceptions as a10_exceptions
+from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -31,10 +36,15 @@ class ComputeCreate(BaseComputeTask):
 
     def execute(self, amphora_id, loadbalancer=None,
                 build_type_priority=constants.LB_CREATE_NORMAL_PRIORITY,
-                server_group_id=None, ports=None):
+                server_group_id=None, ports=None, network_list=None):
 
         ports = ports or []
         network_ids = CONF.a10_controller_worker.amp_boot_network_list[:]
+        if network_list:
+            for net in network_list:
+                if net not in network_ids:
+                    network_ids.append(net)
+
         # Injecting VIP network ID
         if loadbalancer:
             if loadbalancer.vip.network_id not in network_ids:
@@ -59,6 +69,7 @@ class ComputeCreate(BaseComputeTask):
 
             LOG.debug("Server created with id: %s for amphora id: %s",
                       compute_id, amphora_id)
+
             return compute_id
 
         except Exception as e:
@@ -136,3 +147,36 @@ class CheckAmphoraStatus(BaseComputeTask):
             if amp.status != constants.ACTIVE:
                 return False
             return True
+
+
+class DeleteStaleCompute(BaseComputeTask):
+    """Delete Stale Compute for Failover"""
+
+    def execute(self, vthunder):
+        if vthunder:
+            try:
+                self.compute.delete(vthunder.compute_id)
+            except Exception as e:
+                LOG.exception("Failed to delete stale compute %s due to: %s",
+                              vthunder.compute_id, str(e))
+                # pass here in case the compute is already deleted
+
+
+class FailoverPausedCompute(BaseComputeTask):
+    def __init__(self, **kwargs):
+        super(FailoverPausedCompute, self).__init__(**kwargs)
+        self.vthunder_repo = a10_repo.VThunderRepository()
+
+    def execute(self, vthunder):
+        if vthunder:
+            try:
+                amp, fault = self.compute.get_amphora(vthunder.compute_id)
+                if amp.status == a10constants.COMPUTE_PAUSED:
+                    self.vthunder_repo.set_vthunder_health_state(
+                        db_apis.get_session(), vthunder.id, amp.status)
+                    LOG.info("The vThunder instance is paused, skipping the failover...")
+                    raise a10_exceptions.FailoverOnPausedCompute()
+            except Exception as e:
+                LOG.exception("Failed to find compute %s du to: %s",
+                              vthunder.compute_id, str(e))
+                # pass here in case the compute is already deleted

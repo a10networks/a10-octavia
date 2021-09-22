@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
 from sqlalchemy.orm import exc as db_exceptions
 import tenacity
 import time
@@ -116,6 +117,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         self._l7rule_flows = a10_l7rule_flows.L7RuleFlows()
         self._vthunder_flows = vthunder_flows.VThunderFlows()
         self._vthunder_repo = a10repo.VThunderRepository()
+        self._flavor_repo = repo.FlavorRepository()
+        self._flavor_profile_repo = repo.FlavorProfileRepository()
         self._exclude_result_logging_tasks = ()
         self.ctx_map = None
         self.ctx_lock = None
@@ -395,6 +398,10 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                         '60 seconds.', 'load_balancer', load_balancer_id)
             raise db_exceptions.NoResultFound
 
+        flavor_id = lb.flavor_id if lb.flavor_id else CONF.a10_global.default_flavor_id
+        if not flavor and flavor_id:
+            flavor = self._get_flavor_data(flavor_id)
+
         store = {constants.LOADBALANCER_ID: load_balancer_id,
                  constants.VIP: lb.vip,
                  constants.BUILD_TYPE_PRIORITY:
@@ -405,7 +412,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         topology = CONF.a10_controller_worker.loadbalancer_topology
 
         store[constants.UPDATE_DICT] = {
-            constants.TOPOLOGY: topology
+            constants.TOPOLOGY: topology,
+            constants.FLAVOR_ID: flavor_id
         }
 
         ctx_flags = [False]
@@ -1112,50 +1120,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         finally:
             self._set_vthunder_available(l7rule.project_id, False, ctx_flags, load_balancer)
 
-    def _switch_roles_for_ha_flow(self, vthunder):
-        lock_session = db_apis.get_session(autocommit=False)
-        if vthunder.role == constants.ROLE_MASTER:
-            LOG.info("Master vThunder %s has failed, searching for existing backup vThunder.",
-                     vthunder.ip_address)
-            backup_vthunder = self._vthunder_repo.get_backup_vthunder_from_lb(
-                lock_session,
-                lb_id=vthunder.loadbalancer_id)
-            if backup_vthunder:
-                LOG.info("Making Backup vThunder %s as MASTER NOW",
-                         backup_vthunder.ip_address)
-                self._vthunder_repo.update(
-                    lock_session,
-                    backup_vthunder.id, role=constants.ROLE_MASTER)
-
-                LOG.info("Putting %s to failed vThunders",
-                         vthunder.ip_address)
-
-                self._vthunder_repo.update(
-                    lock_session,
-                    vthunder.id, role=constants.ROLE_BACKUP, status=a10constants.FAILED)
-
-                lock_session.commit()
-                LOG.info("vThunder %s's status is FAILED", vthunder.ip_address)
-                status = {'vthunders': [{"id": vthunder.vthunder_id,
-                                         "status": a10constants.FAILED,
-                                         "ip_address": vthunder.ip_address}]}
-                LOG.info(str(status))
-            else:
-                LOG.warning("No backup found for failed MASTER %s", vthunder.ip_address)
-
-        elif vthunder.role == constants.ROLE_BACKUP:
-            LOG.info("BACKUP vThunder %s has failed", vthunder.ip_address)
-            self._vthunder_repo.update(
-                lock_session,
-                vthunder.id, status=a10constants.FAILED)
-            LOG.info("vThunder %s's status is FAILED", vthunder.ip_address)
-            status = {'vthunders': [{"id": vthunder.vthunder_id,
-                                     "status": a10constants.FAILED,
-                                     "ip_address": vthunder.ip_address}]}
-            lock_session.commit()
-            LOG.info(str(status))
-        # TODO(ytsai-a10) check if we need to call lock_session.close() to release db lock
-
     def failover_amphora(self, vthunder_id):
         """Perform failover operations for an vThunder.
         :param vthunder_id: ID for vThunder to failover
@@ -1170,17 +1134,36 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 return
 
             LOG.info("Starting Failover process on %s", vthunder.ip_address)
-            # feature : db role switching for HA flow
-            self._switch_roles_for_ha_flow(vthunder)
 
-            # TODO(hthompson6) delete failed one
-            # TODO(hthompson6) boot up new amps
-            # TODO(hthompson6) vrrp sync
+            store = {a10constants.VTHUNDER: vthunder,
+                     a10constants.FAILOVER_VTHUNDER: vthunder}
+            failover_tf = None
+            if vthunder.topology == a10constants.TOPOLOGY_SPARE:
+                failover_tf = self.taskflow_load(
+                    self._vthunder_flows.get_failover_spare_vthunder_flow(),
+                    store=store)
+            elif vthunder.topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+                health_vthunder_count = self._vthunder_repo.get_health_vthunder_count_for_lb(
+                    db_apis.get_session(), vthunder.loadbalancer_id)
+                if health_vthunder_count > 0:
+                    failover_tf = self.taskflow_load(
+                        self._vthunder_flows.get_failover_vcs_vthunder_flow(),
+                        store=store)
+                else:
+                    LOG.warning("Failover for a total HA Pair failure is not supported. "
+                                "Pair will be kept in failed state.")
+                    failover_tf = self.taskflow_load(
+                        self._vthunder_flows.get_failover_restore_vthunder_flow(),
+                        store=store)
+
+            if failover_tf:
+                with tf_logging.DynamicLoggingListener(failover_tf, log=LOG):
+                    failover_tf.run()
 
         except Exception as e:
             with excutils.save_and_reraise_exception():
-                LOG.error("vThunder %(id)s failover exception: %(exc)s",
-                          {'id': vthunder_id, 'exc': e})
+                LOG.error("vThunder %(id)s topology %(topology)s failover exception: %(exc)s",
+                          {'id': vthunder_id, 'topology': vthunder.topology, 'exc': e})
 
     def failover_loadbalancer(self, load_balancer_id):
         """Perform failover operations for a load balancer.
@@ -1358,3 +1341,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         kwargs = {'ctx_key': key, 'ctx_lock': self.ctx_lock, 'ctx_map': self.ctx_map,
                   'is_reload_thread': is_reload_thread, 'ctx_flags': flags}
         engine.notifier.register('*', flow_notification_handler, kwargs=kwargs)
+
+    def _get_flavor_data(self, flavor_id):
+        flavor = self._flavor_repo.get(db_apis.get_session(), id=flavor_id)
+        if flavor and flavor.flavor_profile_id:
+            flavor_profile = self._flavor_profile_repo.get(
+                db_apis.get_session(),
+                id=flavor.flavor_profile_id)
+            flavor_data = json.loads(flavor_profile.flavor_data)
+            return flavor_data
+        return None
