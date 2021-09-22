@@ -862,7 +862,7 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
                         LOG.warning("Subnet id argument was not specified during "
                                     "issuance of create command/API call for member %s. "
                                     "Skipping TagInterfaceForMember task", m.id)
-                        return
+                        continue
                     try:
                         vlan_id = self.get_vlan_id(m.subnet_id, False)
                         self.tag_interfaces(vthunder, vlan_id)
@@ -898,7 +898,7 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
                     LOG.warning("Subnet id argument was not specified during "
                                 "issuance of create command/API call for member %s. "
                                 "Skipping TagInterfaceForMember task", m.id)
-                    return
+                    continue
                 try:
                     if vthunder and vthunder.device_network_map:
                         vlan_id = self.get_vlan_id(m.subnet_id, False)
