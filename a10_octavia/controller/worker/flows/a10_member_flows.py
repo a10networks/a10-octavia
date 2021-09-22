@@ -951,10 +951,6 @@ class MemberFlows(object):
     def get_batch_update_member_snat_pool_subflow(self, member):
         batch_update_member_snat_subflow = linear_flow.Flow(
             a10constants.CREATE_MEMBER_SNAT_POOL_SUBFLOW)
-        batch_update_member_snat_subflow.add(server_tasks.MemberFindNatPool(
-            name='member-find-nat-pool-' + member.id,
-            requires=(a10constants.VTHUNDER, constants.POOL, constants.FLAVOR),
-            provides=a10constants.NAT_FLAVOR))
         batch_update_member_snat_subflow.add(a10_database_tasks.GetNatPoolEntry(
             name='get-nat-pool-entry-' + member.id,
             inject={constants.MEMBER: member},
