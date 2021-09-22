@@ -684,10 +684,22 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
     def _add_vrid_to_list(self, vrid_list, subnet, owner):
         vrid_value = CONF.a10_global.vrid
-        filtered_vrid_list = list(filter(lambda x: x.subnet_id == subnet.id, vrid_list))
-        if not filtered_vrid_list:
-            vrid_list.append(
-                data_models.VRID(
+        if isinstance(subnet, list):
+            subnet_ids = set([s.id for s in subnet])
+            for subnet_id in subnet_ids:
+                filtered_vrid_list = list(filter(lambda x: x.subnet_id == subnet_id, vrid_list))
+                if not filtered_vrid_list:
+                    vrid_list.append(data_models.VRID(
+                        id=uuidutils.generate_uuid(),
+                        vrid=vrid_value,
+                        owner=owner,
+                        vrid_port_id=None,
+                        vrid_floating_ip=None,
+                        subnet_id=subnet_id))
+        else:
+            filtered_vrid_list = list(filter(lambda x: x.subnet_id == subnet.id, vrid_list))
+            if not filtered_vrid_list:
+                vrid_list.append(data_models.VRID(
                     id=uuidutils.generate_uuid(),
                     vrid=vrid_value,
                     owner=owner,
@@ -811,8 +823,13 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 if new_ip != vrid.vrid_floating_ip:
                     vrid = self._replace_vrid_port(vrid, vrid_subnet, lb_resource, new_ip)
                     update_vrid_flag = True
-            if vrid_subnet.id == subnet.id or vrid.vrid_floating_ip in existing_fips:
-                vrid_floating_ips.append(vrid.vrid_floating_ip)
+            if isinstance(subnet, list):
+                subnet_ids = set([s.id for s in subnet])
+                if vrid_subnet.id in subnet_ids or vrid.vrid_floating_ip in existing_fips:
+                    vrid_floating_ips.append(vrid.vrid_floating_ip)
+            else:
+                if vrid_subnet.id == subnet.id or vrid.vrid_floating_ip in existing_fips:
+                    vrid_floating_ips.append(vrid.vrid_floating_ip)
 
         if (prev_vrid_value is not None) and (prev_vrid_value != vrid_value):
             self._remove_device_vrid_fip(vthunder.partition_name, prev_vrid_value)
@@ -990,6 +1007,16 @@ class GetLBResourceSubnet(BaseNetworkTask):
             subnet = self.network_driver.get_subnet(lb_resource.vip.subnet_id)
         else:
             subnet = self.network_driver.get_subnet(lb_resource.subnet_id)
+        return subnet
+
+
+class GetAllResourceSubnet(BaseNetworkTask):
+    "Provides subnet ID for LB resources"
+
+    def execute(self, members):
+        subnet = []
+        for member in members:
+            subnet.append(self.network_driver.get_subnet(member.subnet_id))
         return subnet
 
 
