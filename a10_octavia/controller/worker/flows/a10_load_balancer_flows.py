@@ -178,7 +178,7 @@ class LoadBalancerFlows(object):
         
         post_create_lb_flow.add(
             vthunder_tasks.CreateHealthMonitorOnVThunder(
-                name=a10constants.CREATE_HEALTH_MONITOR_ON_VTHUNDER_MASTER,
+                name=a10constants.CREATE_HEALTH_MONITOR_ON_VTHUNDER,
                 requires=a10constants.VTHUNDER))
         if not vthunder and topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             vrrp_subflow = self.vthunder_flows.get_vrrp_subflow(prefix)
@@ -727,6 +727,10 @@ class LoadBalancerFlows(object):
                 provides=constants.LOADBALANCER))
         post_create_lb_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
+        post_create_lb_flow.add(
+            vthunder_tasks.CreateHealthMonitorOnVThunder(
+                name=a10constants.CREATE_HEALTH_MONITOR_ON_VTHUNDER,
+                requires=a10constants.VTHUNDER))
         if CONF.a10_global.network_type == 'vlan':
             post_create_lb_flow.add(vthunder_tasks.TagInterfaceForLB(
                 requires=[constants.LOADBALANCER,
