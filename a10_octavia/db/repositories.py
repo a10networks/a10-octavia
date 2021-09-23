@@ -320,6 +320,7 @@ class VThunderRepository(BaseRepository):
 
     def get_vthunder_from_src_addr(self, session, srcaddr):
         model = session.query(self.model_class).filter(
+            self.model_class.status != "DELETED").filter(
             self.model_class.ip_address == srcaddr).first()
 
         if not model:
