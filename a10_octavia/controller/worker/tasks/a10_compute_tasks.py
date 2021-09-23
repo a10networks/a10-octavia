@@ -164,6 +164,8 @@ class FailoverPausedCompute(BaseComputeTask):
                         db_apis.get_session(), vthunder.id, amp.status)
                     LOG.info("The vThunder instance is paused, skipping the failover...")
                     raise a10_exceptions.FailoverOnPausedCompute()
+            except a10_exceptions.FailoverOnPausedCompute as e:
+                raise e
             except Exception as e:
                 LOG.exception("Failed to find compute %s du to: %s",
                               vthunder.compute_id, str(e))
