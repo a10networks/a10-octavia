@@ -997,6 +997,11 @@ class MemberFlows(object):
         batch_update_members_flow.add(a10_network_tasks.GetPoolsOnThunder(
             requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
             provides=a10constants.POOLS))
+        batch_update_members_flow.add(server_tasks.MemberFindNatPool(
+            name='find-nat-pool-for-member',
+            requires=[a10constants.VTHUNDER,
+                      constants.POOL, constants.FLAVOR],
+            provides=a10constants.NAT_FLAVOR))
         batch_update_members_flow.add(
             lifecycle_tasks.MembersToErrorOnRevertTask(
                 inject={constants.MEMBERS: old_members},
@@ -1019,12 +1024,6 @@ class MemberFlows(object):
                     inject={constants.MEMBER: m},
                     requires=constants.POOL,
                     provides=a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL))
-            batch_update_members_flow.add(server_tasks.MemberFindNatPool(
-                name='find-nat-pool' + m.id,
-                inject={constants.MEMBER: m},
-                requires=[constants.MEMBER, a10constants.VTHUNDER,
-                          constants.POOL, constants.FLAVOR],
-                provides=a10constants.NAT_FLAVOR))
             batch_update_members_flow.add(a10_database_tasks.GetNatPoolEntry(
                 name='get-nat-pool' + m.id,
                 inject={constants.MEMBER: m},
