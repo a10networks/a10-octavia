@@ -176,10 +176,13 @@ class DeleteVThunderEntry(BaseDatabaseTask):
 class GetVThunderByLoadBalancer(BaseDatabaseTask):
     """Get VThunder from db using LoadBalancer"""
 
-    def execute(self, loadbalancer):
+    def execute(self, loadbalancer, master_amphora_status=True):
         loadbalancer_id = loadbalancer.id
         vthunder = self.vthunder_repo.get_vthunder_from_lb(
             db_apis.get_session(), loadbalancer_id)
+        if not master_amphora_status:
+            vthunder = self.vthunder_repo.get_backup_vthunder_from_lb(
+                db_apis.get_session(), loadbalancer_id)
         if vthunder is None:
             return None
         return vthunder

@@ -69,10 +69,12 @@ class VThunderBaseTask(task.Task):
 class VThunderComputeConnectivityWait(VThunderBaseTask):
     """Task to wait for the compute instance to be up"""
 
-    def execute(self, vthunder, amphora):
+    def execute(self, vthunder, amphora, master_amphora_status=True):
         """Execute get_info routine for a vThunder until it responds."""
         try:
             if vthunder:
+                if not master_amphora_status:
+                    return
                 axapi_client = a10_utils.get_axapi_client(vthunder)
                 LOG.info("Attempting to connect vThunder device for connection.")
                 attempts = CONF.a10_controller_worker.amp_active_retries
@@ -1221,8 +1223,11 @@ class VCSSyncWait(VThunderBaseTask):
     """Task to wait VCS reload, VCS negotiagtion or VCS configuration sync ready."""
 
     @axapi_client_decorator
-    def execute(self, vthunder):
+    def execute(self, vthunder, master_amphora_status=True, backup_amphora_status=True):
         if not vthunder or CONF.a10_controller_worker.loadbalancer_topology != "ACTIVE_STANDBY":
+            return
+
+        if not (master_amphora_status and backup_amphora_status):
             return
 
         attempts = CONF.a10_controller_worker.amp_vcs_retries

@@ -124,6 +124,19 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         vthunder = mock_get_vthunder.execute(LB)
         self.assertEqual(vthunder, None)
 
+    def test_get_backup_vthunder_by_loadbalancer(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.role = "BACKUP"
+        self.conf.config(
+            group=a10constants.A10_GLOBAL_CONF_SECTION,
+            use_parent_partition=True)
+        mock_get_vthunder = task.GetVThunderByLoadBalancer()
+        mock_get_vthunder.vthunder_repo = mock.MagicMock()
+        mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = None
+        mock_get_vthunder.vthunder_repo.get_backup_vthunder_from_lb.return_value = vthunder
+        backup_vthunder = mock_get_vthunder.execute(LB, False)
+        self.assertEqual(backup_vthunder, vthunder)
+
     def test_get_vrid_for_project_member_hmt_use_partition(self):
         thunder = copy.deepcopy(HW_THUNDER)
         lb = copy.deepcopy(LB)
