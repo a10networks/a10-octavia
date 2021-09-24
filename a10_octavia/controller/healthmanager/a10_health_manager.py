@@ -73,6 +73,11 @@ class A10HealthManager(health_manager.HealthManager):
                     self.vthunder_repo.set_vthunder_health_state(
                         lock_session, vthunder.id, 'DOWN')
 
+                    if not vthunder.amphora_id:
+                        LOG.info("Hardware vthunder %s heartbeat timeout", vthunder.vthunder_id)
+                        lock_session.commit()
+                        continue
+
                 lock_session.commit()
 
             except db_exc.DBDeadlock:
