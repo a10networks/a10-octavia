@@ -684,20 +684,9 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
     def _add_vrid_to_list(self, vrid_list, subnet, owner):
         vrid_value = CONF.a10_global.vrid
-        if isinstance(subnet, list):
-            subnet_ids = set([s.id for s in subnet])
-            for subnet_id in subnet_ids:
-                filtered_vrid_list = list(filter(lambda x: x.subnet_id == subnet_id, vrid_list))
-                if not filtered_vrid_list:
-                    vrid_list.append(data_models.VRID(
-                        id=uuidutils.generate_uuid(),
-                        vrid=vrid_value,
-                        owner=owner,
-                        vrid_port_id=None,
-                        vrid_floating_ip=None,
-                        subnet_id=subnet_id))
-        else:
-            filtered_vrid_list = list(filter(lambda x: x.subnet_id == subnet.id, vrid_list))
+        subnet_ids = set([s.id for s in subnet]) if isinstance(subnet, list) else [subnet.id]
+        for subnet_id in subnet_ids:
+            filtered_vrid_list = list(filter(lambda x: x.subnet_id == subnet_id, vrid_list))
             if not filtered_vrid_list:
                 vrid_list.append(data_models.VRID(
                     id=uuidutils.generate_uuid(),
@@ -705,7 +694,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                     owner=owner,
                     vrid_port_id=None,
                     vrid_floating_ip=None,
-                    subnet_id=subnet.id))
+                    subnet_id=subnet_id))
 
     def _remove_device_vrid_fip(self, partition_name, vrid_value):
         try:
