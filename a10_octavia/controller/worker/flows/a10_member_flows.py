@@ -968,6 +968,259 @@ class MemberFlows(object):
                       a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
         return batch_update_member_snat_subflow
 
+    def get_batch_update_members_flow(self, old_members, new_members, updated_members, topology):
+        """Create a flow to batch update members
+        :returns: The flow for batch updating members
+        """
+        batch_update_members_flow = linear_flow.Flow(
+            constants.BATCH_UPDATE_MEMBERS_FLOW)
+        batch_update_members_flow.add(vthunder_tasks.VthunderInstanceBusy(
+            requires=a10constants.COMPUTE_BUSY))
+        batch_update_members_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
+            requires=constants.LOADBALANCER,
+            provides=constants.AMPHORA))
+        batch_update_members_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        batch_update_members_flow.add(a10_database_tasks.GetFlavorData(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            batch_update_members_flow.add(vthunder_tasks.GetMasterVThunder(
+                name='get-master-vtthunder',
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
+        batch_update_members_flow.add(a10_network_tasks.GetPoolsOnThunder(
+            requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
+            provides=a10constants.POOLS))
+        batch_update_members_flow.add(server_tasks.MemberFindNatPool(
+            name='find-nat-pool-for-member',
+            requires=[a10constants.VTHUNDER, constants.POOL, constants.FLAVOR],
+            provides=a10constants.NAT_FLAVOR))
+        batch_update_members_flow.add(
+            a10_database_tasks.GetChildProjectsOfParentPartition(
+                name='get_child_project_of_parent_partition_',
+                rebind={a10constants.LB_RESOURCE: constants.POOL},
+                provides=a10constants.PARTITION_PROJECT_LIST))
+        batch_update_members_flow.add(lifecycle_tasks.MembersToErrorOnRevertTask(
+            inject={constants.MEMBERS: old_members},
+            name='{flow}-deleted'.format(
+                flow=constants.MEMBER_TO_ERROR_ON_REVERT_FLOW)))
+        for m in old_members:
+            batch_update_members_flow.add(database_tasks.MarkMemberPendingDeleteInDB(
+                name='Mark-pending-delete-in-DB' + m.id,
+                inject={constants.MEMBER: m}))
+            batch_update_members_flow.add(model_tasks.DeleteModelObject(
+                name='delete-model-object' + m.id,
+                inject={constants.OBJECT: m}))
+            batch_update_members_flow.add(a10_database_tasks.CountMembersWithIP(
+                name='Count-members-with-ip' + m.id,
+                inject={constants.MEMBER: m},
+                provides=a10constants.MEMBER_COUNT_IP))
+            batch_update_members_flow.add(a10_database_tasks.CountMembersWithIPPortProtocol(
+                name='count-member-with-ip-address' + m.id,
+                inject={constants.MEMBER: m},
+                requires=constants.POOL,
+                provides=a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL))
+            batch_update_members_flow.add(a10_database_tasks.GetNatPoolEntry(
+                name='get-nat-pool' + m.id,
+                inject={constants.MEMBER: m},
+                requires=[a10constants.NAT_FLAVOR],
+                provides=a10constants.NAT_POOL))
+            batch_update_members_flow.add(a10_network_tasks.ReleaseSubnetAddressForMember(
+                name='release-subnet-address-for-member' + m.id,
+                inject={constants.MEMBER: m},
+                requires=[a10constants.NAT_FLAVOR, a10constants.NAT_POOL]))
+            batch_update_members_flow.add(a10_database_tasks.DeleteNatPoolEntry(
+                name='delete-nat-pool-entry' + m.id,
+                requires=a10constants.NAT_POOL))
+            batch_update_members_flow.add(server_tasks.MemberDelete(
+                name='member-delete' + m.id,
+                inject={constants.MEMBER: m},
+                requires=(constants.MEMBER, a10constants.VTHUNDER,
+                          constants.POOL, a10constants.MEMBER_COUNT_IP,
+                          a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL)))
+            batch_update_members_flow.add(database_tasks.DeleteMemberInDB(
+                name='delete-member-in-db' + m.id,
+                inject={constants.MEMBER: m}))
+            batch_update_members_flow.add(database_tasks.DecrementMemberQuota(
+                name='decrement-member-quota' + m.id,
+                inject={constants.MEMBER: m}))
+        batch_update_members_flow.add(
+            self.get_delete_member_vrid_internal_subflow(constants.POOL, old_members))
+
+        # for creation of members
+        batch_update_members_flow.add(lifecycle_tasks.MembersToErrorOnRevertTask(
+            name='{flow}-created'.format(
+                flow=constants.MEMBER_TO_ERROR_ON_REVERT_FLOW),
+            inject={constants.MEMBERS: new_members}))
+        for m in new_members:
+            batch_update_members_flow.add(database_tasks.MarkMemberPendingCreateInDB(
+                name='mark-member-pending-create-in-DB' + m.id,
+                inject={constants.MEMBER: m}))
+            batch_update_members_flow.add(a10_database_tasks.CountMembersWithIP(
+                name='count-members-with-ip' + m.id,
+                inject={constants.MEMBER: m},
+                provides=a10constants.MEMBER_COUNT_IP))
+            batch_update_members_flow.add(vthunder_tasks.AllowLoadbalancerForwardWithAnySource(
+                name=a10constants.ALLOW_NO_SNAT + m.id,
+                inject={constants.MEMBER: m},
+                requires=(constants.AMPHORA)))
+            batch_update_members_flow.add(server_tasks.MemberCreate(
+                name='member-create' + m.id,
+                inject={constants.MEMBER: m},
+                requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+                          a10constants.MEMBER_COUNT_IP, constants.FLAVOR)))
+            batch_update_members_flow.add(database_tasks.MarkMemberActiveInDB(
+                name='mark-active-in-DB' + m.id,
+                inject={constants.MEMBER: m}))
+
+        # for updating of members
+        batch_update_members_flow.add(
+            lifecycle_tasks.MembersToErrorOnRevertTask(
+                name='{flow}-updated'.format(
+                    flow=constants.MEMBER_TO_ERROR_ON_REVERT_FLOW),
+                # updated_members is a list of (obj, dict), only pass `obj`
+                inject={constants.MEMBERS: [m[0] for m in updated_members]}))
+        for m, um in updated_members:
+            um.pop('id', None)
+            batch_update_members_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
+                inject={constants.MEMBER: m},
+                name='mark-member-pending-update-in-db-' + m.id))
+            batch_update_members_flow.add(a10_network_tasks.GetLBResourceSubnet(
+                name='{flow}-{id}'.format(
+                    id=m.id, flow=a10constants.GET_LB_RESOURCE_SUBNET),
+                inject={a10constants.LB_RESOURCE: m},
+                provides=constants.SUBNET))
+            batch_update_members_flow.add(a10_database_tasks.GetLoadbalancersInProjectBySubnet(
+                name='get-lb-in-project-by-subnet' + m.id,
+                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+                provides=a10constants.LOADBALANCERS_LIST))
+            batch_update_members_flow.add(a10_database_tasks.CheckForL2DSRFlavor(
+                name='check-for-L2DSR' + m.id,
+                rebind={a10constants.LB_RESOURCE: a10constants.LOADBALANCERS_LIST},
+                provides=a10constants.L2DSR_FLAVOR))
+            batch_update_members_flow.add(a10_database_tasks.CountLoadbalancersInProjectBySubnet(
+                name='count-lbs-in-project-by-subnet' + m.id,
+                requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
+                provides=a10constants.LB_COUNT_SUBNET))
+            batch_update_members_flow.add(vthunder_tasks.UpdateLoadbalancerForwardWithAnySource(
+                name='update-lb-forward-with-any-source' + m.id,
+                requires=(constants.SUBNET, constants.AMPHORA,
+                          a10constants.LB_COUNT_SUBNET, a10constants.L2DSR_FLAVOR)))
+            batch_update_members_flow.add(server_tasks.MemberUpdate(
+                name='member-update' + m.id,
+                inject={constants.MEMBER: m},
+                requires=(constants.MEMBER, a10constants.VTHUNDER,
+                          constants.POOL, constants.FLAVOR)))
+            batch_update_members_flow.add(database_tasks.UpdateMemberInDB(
+                name='update-member-in-db' + m.id,
+                inject={constants.MEMBER: m, constants.UPDATE_DICT: um}))
+            batch_update_members_flow.add(database_tasks.MarkMemberActiveInDB(
+                name='mark-member-active-in-db' + m.id,
+                inject={constants.MEMBER: m}))
+        batch_update_members_flow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.LOADBALANCERS_LIST))
+        batch_update_members_flow.add(a10_network_tasks.CalculateDelta(
+            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
+            provides=constants.DELTAS))
+        batch_update_members_flow.add(a10_network_tasks.HandleNetworkDeltas(
+            requires=constants.DELTAS, provides=constants.ADDED_PORTS))
+        # managing interface additions here
+        if topology == constants.TOPOLOGY_SINGLE:
+            batch_update_members_flow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
+                requires=(constants.LOADBALANCER, constants.ADDED_PORTS,
+                          a10constants.VTHUNDER)))
+            batch_update_members_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+                name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
+                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+            batch_update_members_flow.add(vthunder_tasks.EnableInterfaceForMembers(
+                requires=[constants.ADDED_PORTS, constants.LOADBALANCER,
+                          a10constants.VTHUNDER]))
+        # configure member flow for HA
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            batch_update_members_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                name="get_backup_vThunder",
+                requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+                provides=a10constants.BACKUP_VTHUNDER))
+            batch_update_members_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+                name="backup_compute_conn_wait_before_probe_device",
+                requires=constants.AMPHORA,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+            batch_update_members_flow.add(vthunder_tasks.VCSSyncWait(
+                name="vcs_sync_wait_before_probe_device",
+                requires=a10constants.VTHUNDER))
+            batch_update_members_flow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
+                requires=(constants.LOADBALANCER, constants.ADDED_PORTS,
+                          a10constants.VTHUNDER)))
+            batch_update_members_flow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
+                name="backup_amphora_network_plug",
+                requires=[constants.ADDED_PORTS, constants.LOADBALANCER],
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+            batch_update_members_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+                name=a10constants.MASTER_CONNECTIVITY_WAIT,
+                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+            batch_update_members_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+                name=a10constants.BACKUP_CONNECTIVITY_WAIT,
+                requires=constants.AMPHORA,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
+            batch_update_members_flow.add(vthunder_tasks.VCSSyncWait(
+                name="backup-plug-wait-vcs-ready",
+                requires=a10constants.VTHUNDER))
+            batch_update_members_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
+            batch_update_members_flow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                name="get_backup_vThunder_after_get_master",
+                requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
+                provides=a10constants.BACKUP_VTHUNDER))
+            batch_update_members_flow.add(vthunder_tasks.EnableInterfaceForMembers(
+                name=a10constants.ENABLE_MASTER_VTHUNDER_INTERFACE,
+                requires=[constants.ADDED_PORTS, constants.LOADBALANCER,
+                          a10constants.VTHUNDER]))
+            batch_update_members_flow.add(vthunder_tasks.AmphoraePostMemberNetworkPlug(
+                name="amphorae-post-member-network-plug-for-master",
+                requires=(constants.LOADBALANCER, constants.ADDED_PORTS,
+                          a10constants.VTHUNDER)))
+            batch_update_members_flow.add(
+                vthunder_tasks.VThunderComputeConnectivityWait(
+                    name=a10constants.CONNECTIVITY_WAIT_FOR_MASTER_VTHUNDER,
+                    requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+            batch_update_members_flow.add(
+                vthunder_tasks.VThunderComputeConnectivityWait(
+                    name=a10constants.CONNECTIVITY_WAIT_FOR_BACKUP_VTHUNDER,
+                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                    requires=constants.AMPHORA))
+            batch_update_members_flow.add(vthunder_tasks.VCSSyncWait(
+                name="member_enable_interface_vcs_sync_wait",
+                requires=a10constants.VTHUNDER))
+            batch_update_members_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=a10constants.GET_VTHUNDER_MASTER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
+            batch_update_members_flow.add(vthunder_tasks.EnableInterfaceForMembers(
+                requires=[constants.ADDED_PORTS, constants.LOADBALANCER,
+                          a10constants.VTHUNDER]))
+        existing_members = [m[0] for m in updated_members]
+        pool_members = new_members + existing_members
+        if pool_members:
+            batch_update_members_flow.add(
+                self.get_handle_member_vrid_internal_subflow(pool_members))
+        for m in new_members:
+            batch_update_members_flow.add(self.get_batch_update_member_snat_pool_subflow(m))
+
+        batch_update_members_flow.add(database_tasks.MarkPoolActiveInDB(
+            requires=constants.POOL))
+        batch_update_members_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
+            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+        batch_update_members_flow.add(vthunder_tasks.WriteMemory(
+            requires=a10constants.VTHUNDER))
+        batch_update_members_flow.add(a10_database_tasks.SetThunderUpdatedAt(
+            requires=a10constants.VTHUNDER))
+        return batch_update_members_flow
+
     def get_handle_member_vrid_internal_subflow(self, pool_members):
         handle_vrid_for_member_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBER_VRID_INTERNAL_SUBFLOW)

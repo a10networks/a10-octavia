@@ -708,9 +708,29 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                     store={constants.LISTENERS: listeners,
                            constants.LOADBALANCER: load_balancer,
                            constants.POOL: pool})
-                with tf_logging.DynamicLoggingListener(batch_update_members_tf,
-                                                       log=LOG):
-                    batch_update_members_tf.run()
+            else:
+                topology = CONF.a10_controller_worker.loadbalancer_topology
+                busy = self._vthunder_busy_check(load_balancer.project_id, True,
+                                                 ctx_flags, load_balancer)
+                batch_update_members_tf = self._taskflow_load(
+                    self._member_flows.get_batch_update_members_flow(
+                        old_members, new_members, updated_members, topology),
+                    store={constants.LISTENERS: listeners,
+                           constants.LOADBALANCER: load_balancer,
+                           a10constants.COMPUTE_BUSY: busy,
+                           constants.POOL: pool,
+                           a10constants.VTHUNDER_CONFIG: None,
+                           a10constants.USE_DEVICE_FLAVOR: False,
+                           a10constants.LB_COUNT_THUNDER: None,
+                           a10constants.MEMBER_COUNT_THUNDER: None}
+                )
+                self._register_flow_notify_handler(batch_update_members_tf,
+                                                   load_balancer.project_id, True,
+                                                   busy, ctx_flags, load_balancer)
+
+            with tf_logging.DynamicLoggingListener(batch_update_members_tf,
+                                                   log=LOG):
+                batch_update_members_tf.run()
         finally:
             self._set_vthunder_available(pool.project_id, True, ctx_flags, load_balancer)
 
