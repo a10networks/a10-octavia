@@ -160,9 +160,11 @@ class ActivateFlexpoolLicense(task.Task):
         amp_mgmt_net = CONF.a10_controller_worker.amp_mgmt_network
         amp_boot_nets = CONF.a10_controller_worker.amp_boot_network_list
         config_payload = self._build_configuration(flavor)
-        hostname = "amphora-" + amphora.id
-        hostname = hostname[0:31]
         use_mgmt_port = False
+
+        if not config_payload["token"]:
+            LOG.warning("No token was set in config therefore the vthunder-amphora could not be licensed")
+            return None
 
         license_net_id = CONF.glm_license.amp_license_network
         if not license_net_id:
@@ -172,7 +174,7 @@ class ActivateFlexpoolLicense(task.Task):
                     license_net_id = CONF.a10_controller_worker.amp_boot_network_list[0]
                 else:
                     LOG.warning("No networks were configured therefore "
-                                "nameservers cannot be set.")
+                                "vthunder cannot be licensed.")
                     return None
 
         # ID provided to amp_license_network may be equal other provided mgmt network IDs
@@ -187,7 +189,6 @@ class ActivateFlexpoolLicense(task.Task):
                 self.axapi_client.system.action.setInterface(ifnum)
 
         try:
-            self.axapi_client.system.action.set_hostname(hostname)
             self.axapi_client.glm.create(
                 use_mgmt_port=use_mgmt_port,
                 **config_payload
