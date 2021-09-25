@@ -178,9 +178,12 @@ class ActivateFlexpoolLicense(task.Task):
                     return None
 
         # ID provided to amp_license_network may be equal other provided mgmt network IDs
-        if (license_net_id == amp_mgmt_net or
-                (amp_boot_nets and license_net_id == amp_boot_nets[0])):
-            use_mgmt_port = True
+        if amp_mgmt_net:
+            if license_net_id == amp_mgmt_net:
+                use_mgmt_port = True
+        else:
+            if license_net_id == amp_boot_nets[0]:
+                use_mgmt_port = True
 
         interfaces = self.axapi_client.interface.get_list()
         for i in range(len(interfaces['interface']['ethernet-list'])):

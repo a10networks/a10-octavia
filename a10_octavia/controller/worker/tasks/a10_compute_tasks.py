@@ -40,19 +40,16 @@ class ComputeCreate(BaseComputeTask):
 
         ports = ports or []
         mgmt_net = CONF.a10_controller_worker.amp_mgmt_network
-        network_ids = [mgmt_net] if mgmt_net else []
-        network_ids.extend(CONF.a10_controller_worker.amp_boot_network_list[:])
-        if (CONF.glm_license.amp_license_network and
-                network_ids[0] != CONF.glm_license.amp_license_network):
-            network_ids.append(CONF.glm_license.amp_license_network)
+        network_ids = {mgmt_net} if mgmt_net else {}
+        network_ids = network_ids.union(set(CONF.a10_controller_worker.amp_boot_network_list))
+
+        if CONF.glm_license.amp_license_network:
+            network_ids.add(CONF.glm_license.amp_license_network)
         if network_list:
-            for net in network_list:
-                if net not in network_ids:
-                    network_ids.append(net)
-        # Injecting VIP network ID
+            network_ids.add(set(network_list))
         if loadbalancer:
-            if loadbalancer.vip.network_id not in network_ids:
-                network_ids.append(loadbalancer.vip.network_id)
+            network_ids.add(loadbalancer.vip.network_id)
+
         LOG.debug("Compute create execute for amphora with id %s", amphora_id)
         key_name = CONF.a10_controller_worker.amp_ssh_key_name
         try:
