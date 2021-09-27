@@ -19,6 +19,8 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 
 from octavia.common import constants
+from octavia.db import api as db_apis
+from octavia.db import repositories
 from octavia_lib.api.drivers import exceptions
 from octavia_lib.api.drivers import provider_base as driver_base
 
@@ -41,6 +43,7 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         self._args['version'] = '1.0'
         self.target = messaging.Target(**self._args)
         self.client = messaging.RPCClient(self.transport, target=self.target)
+        self.repositories = repositories.Repositories()
 
     # Load Balancer
     def loadbalancer_create(self, loadbalancer):
@@ -148,6 +151,43 @@ class A10ProviderDriver(driver_base.ProviderDriver):
         payload = {constants.MEMBER_ID: member_id,
                    constants.MEMBER_UPDATES: member_dict}
         self.client.cast({}, 'update_member', **payload)
+
+    def member_batch_update(self, members):
+        pool_id = members[0].pool_id
+        # The DB should not have updated yet, so we can still use the pool
+        db_pool = self.repositories.pool.get(db_apis.get_session(), id=pool_id)
+
+        old_members = db_pool.members
+        old_member_ids = [m.id for m in old_members]
+
+        # The driver will always pass objects with IDs.
+        new_member_ids = [m.member_id for m in members]
+
+        # Find members that are brand new or updated
+        new_members = []
+        updated_members = []
+        for m in members:
+            if m.member_id not in old_member_ids:
+                new_members.append(m)
+            else:
+                member_dict = m.to_dict(render_unsets=False)
+                member_dict['id'] = member_dict.pop('member_id')
+                if 'address' in member_dict:
+                    member_dict['ip_address'] = member_dict.pop('address')
+                if 'admin_state_up' in member_dict:
+                    member_dict['enabled'] = member_dict.pop('admin_state_up')
+                updated_members.append(member_dict)
+
+        # Find members that are deleted
+        deleted_members = []
+        for m in old_members:
+            if m.id not in new_member_ids:
+                deleted_members.append(m)
+
+        payload = {'old_member_ids': [m.id for m in deleted_members],
+                   'new_member_ids': [m.member_id for m in new_members],
+                   'updated_members': updated_members}
+        self.client.cast({}, 'batch_update_members', **payload)
 
     # Health Monitor
     def health_monitor_create(self, healthmonitor):
