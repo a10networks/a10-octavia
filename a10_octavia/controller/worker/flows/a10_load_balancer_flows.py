@@ -206,8 +206,7 @@ class LoadBalancerFlows(object):
             requires=a10constants.COMPUTE_BUSY))
 
         delete_LB_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-            requires=constants.LOADBALANCER,
-            inject={a10constants.MASTER_AMPHORA_STATUS: True},
+            requires=(constants.LOADBALANCER, a10constants.MASTER_AMPHORA_STATUS),
             provides=a10constants.VTHUNDER))
         if lb.topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             delete_LB_flow.add(a10_compute_tasks.CheckAmphoraStatus(
