@@ -180,7 +180,8 @@ DEV_CONF_DICT = {'[dev]rack_thunder_1': FLAVOR_DEV1,
 DEV_FLAVOR = {'device_name': 'rack_thunder_1'}
 
 VIP = o_data_models.Vip(ip_address="1.1.1.1")
-AMPHORAE = [o_data_models.Amphora(id=a10constants.MOCK_AMPHORA_ID)]
+AMPHORA = o_data_models.Amphora(id=a10constants.MOCK_AMPHORA_ID)
+AMPHORAE = [AMPHORA]
 LB = o_data_models.LoadBalancer(
     id=a10constants.MOCK_LOAD_BALANCER_ID, vip=VIP,
     amphorae=AMPHORAE, project_id=PROJECT_ID)
@@ -1072,3 +1073,22 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         self.client_mock.system.action.vcs_enable.assert_called_with()
         self.client_mock.system.action.write_memory.assert_called_with()
         self.client_mock.system.action.vcs_reload.assert_called_with()
+
+    def test_SetHostName_execute_set_hostname(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        amphora = copy.deepcopy(AMPHORA)
+        amphora.id = '295990755083049101712519384016336453749'
+        interfaces = {
+            'interface': {
+                'ethernet-list': []
+            }
+        }
+
+        expected_host = 'amphora-29599075508304910171251'
+
+        flexpool_task = task.SetVThunderHostname()
+        flexpool_task.axapi_client = self.client_mock
+        flexpool_task.axapi_client.interface.get_list.return_value = interfaces
+
+        flexpool_task.execute(vthunder, amphora)
+        self.client_mock.system.action.set_hostname.assert_called_with(expected_host)

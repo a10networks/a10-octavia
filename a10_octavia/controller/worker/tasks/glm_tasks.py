@@ -163,7 +163,8 @@ class ActivateFlexpoolLicense(task.Task):
         use_mgmt_port = False
 
         if not config_payload["token"]:
-            LOG.warning("No token was set in config therefore the vthunder-amphora could not be licensed")
+            LOG.warning("No token was set in config therefore the "
+                        "vthunder-amphora cannot be licensed.")
             return None
 
         license_net_id = CONF.glm_license.amp_license_network
@@ -181,7 +182,7 @@ class ActivateFlexpoolLicense(task.Task):
         if amp_mgmt_net:
             if license_net_id == amp_mgmt_net:
                 use_mgmt_port = True
-        else:
+        elif amp_boot_nets:
             if license_net_id == amp_boot_nets[0]:
                 use_mgmt_port = True
 

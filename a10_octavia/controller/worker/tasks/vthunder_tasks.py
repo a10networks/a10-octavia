@@ -1394,6 +1394,7 @@ class GetListenersStats(VThunderBaseTask):
                         "due to %s", vthunder.loadbalancer_id, str(e))
         return listener_stats
 
+
 class SetVThunderHostname(VThunderBaseTask):
     """Task for retrieving listener stats from vthunder"""
 

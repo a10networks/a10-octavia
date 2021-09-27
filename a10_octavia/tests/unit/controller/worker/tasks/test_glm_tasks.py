@@ -168,7 +168,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
         log_message = ("More than one DNS nameserver detected on subnet {}. "
                        "Using {} as primary and {} as secondary.".format(
-            DNS_SUBNET.id, PRIMARY_DNS, SECONDARY_DNS))
+                           DNS_SUBNET.id, PRIMARY_DNS, SECONDARY_DNS))
         expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
         with self.assertLogs(task_path, level='WARN') as cm:
             dns_task.execute(vthunder)
@@ -345,7 +345,6 @@ class TestGLMTasks(base.BaseTaskTestCase):
         flexpool_task.axapi_client.interface.get_list.return_value = interfaces
 
         flexpool_task.execute(vthunder, amphora)
-        self.client_mock.system.action.set_hostname.assert_called()
         args, kwargs = self.client_mock.glm.create.call_args
         self.assertEqual(kwargs, expected_call)
 
@@ -370,7 +369,6 @@ class TestGLMTasks(base.BaseTaskTestCase):
         flexpool_task.axapi_client.interface.get_list.return_value = interfaces
 
         flexpool_task.execute(vthunder, amphora)
-        self.client_mock.system.action.set_hostname.assert_called()
         args, kwargs = self.client_mock.glm.create.call_args
         self.assertEqual(kwargs, expected_call)
 
@@ -395,28 +393,6 @@ class TestGLMTasks(base.BaseTaskTestCase):
 
         flexpool_task.execute(vthunder, amphora)
         self.client_mock.system.action.setInterface.assert_called_with(2)
-
-    def test_ActivateFlexpoolLicense_execute_set_hostname(self):
-        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
-                         amp_license_network=DNS_NETWORK.id,
-                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN)
-        vthunder = copy.deepcopy(VTHUNDER)
-        amphora = copy.deepcopy(AMPHORA)
-        amphora.id = '295990755083049101712519384016336453749'
-        interfaces = {
-            'interface': {
-                'ethernet-list': []
-            }
-        }
-
-        expected_host = 'amphora-29599075508304910171251'
-
-        flexpool_task = task.ActivateFlexpoolLicense()
-        flexpool_task.axapi_client = self.client_mock
-        flexpool_task.axapi_client.interface.get_list.return_value = interfaces
-
-        flexpool_task.execute(vthunder, amphora)
-        self.client_mock.system.action.set_hostname.assert_called_with(expected_host)
 
     def test_ActivateFlexpoolLicense_revert_deactivate_license(self):
         vthunder = copy.deepcopy(VTHUNDER)
