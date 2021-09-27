@@ -434,10 +434,15 @@ class TestGLMTasks(base.BaseTaskTestCase):
         self.client_mock.glm.proxy_server.create.assert_called()
 
     def test_ConfigureForwardProxyServer_execute_flavor_success(self):
-        flavor = {'proxy-server': {'proxy_host': PROXY_HOST, 'proxy_port': PROXY_PORT,
-                                   'proxy_username': PROXY_USERNAME,
-                                   'proxy_password': PROXY_PASSWORD,
-                                   'proxy_secret_string': PROXY_PASSWORD_VALUE}}
+        flavor = {
+            'glm-proxy-server': {
+                'proxy_host': PROXY_HOST,
+                'proxy_port': PROXY_PORT,
+                'proxy_username': PROXY_USERNAME,
+                'proxy_password': PROXY_PASSWORD,
+                'proxy_secret_string': PROXY_PASSWORD_VALUE
+            }
+        }
         self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
                          proxy_host="10.10.10.11", proxy_port=8888,
                          proxy_username='configuser', proxy_password=False,

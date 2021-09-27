@@ -209,7 +209,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
                 }
             }
         },
-        "proxy-server": {
+        "glm-proxy-server": {
             "type": "object",
             "description": "Forward proxy-server configuration details.",
             "properties": {

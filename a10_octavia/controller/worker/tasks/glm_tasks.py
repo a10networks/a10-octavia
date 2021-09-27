@@ -224,7 +224,7 @@ class ConfigureForwardProxyServer(task.Task):
 
     def _build_configuration(self, flavor):
         glm_config = dict(CONF.glm_license)
-        glm_config.update(utils.dash_to_underscore(flavor.get('proxy-server', {})))
+        glm_config.update(utils.dash_to_underscore(flavor.get('glm-proxy-server', {})))
 
         config_payload = {
             "host": glm_config.get('proxy_host'),
