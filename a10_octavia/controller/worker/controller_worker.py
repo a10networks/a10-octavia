@@ -478,6 +478,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                               constants.VIP: lb.vip,
                               constants.SERVER_GROUP_ID: lb.server_group_id,
                               constants.LOADBALANCER_ID: lb.id,
+                              a10constants.MASTER_AMPHORA_STATUS: True,
                               a10constants.VTHUNDER_CONFIG: None,
                               a10constants.USE_DEVICE_FLAVOR: False,
                               a10constants.LB_COUNT_THUNDER: None,
