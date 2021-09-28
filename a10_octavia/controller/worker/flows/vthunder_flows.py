@@ -88,6 +88,10 @@ class VThunderFlows(object):
             vthunder_tasks.CreateHealthMonitorOnVThunder(
                 name=sf_name + '-' + a10constants.CREATE_HEALTH_MONITOR_ON_SPARE,
                 requires=(a10constants.VTHUNDER)))
+
+        create_vthunder_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
+            requires=(a10constants.VTHUNDER),
+            inject={"status": a10constants.READY}))
         return create_vthunder_flow
 
     def get_vthunder_for_lb_subflow(
@@ -624,6 +628,9 @@ class VThunderFlows(object):
                 name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
                 requires=constants.AMPHORA,
                 rebind={a10constants.VTHUNDER: a10constants.SPARE_VTHUNDER}))
+        create_amp_flow.add(a10_database_tasks.MarkVThunderStatusInDB(
+            rebind={a10constants.VTHUNDER: a10constants.SPARE_VTHUNDER},
+            inject={"status": a10constants.READY}))
         create_amp_flow.add(
             vthunder_tasks.UpdateAcosVersionInVthunderEntry(
                 name=sf_name + '-' + a10constants.UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY,

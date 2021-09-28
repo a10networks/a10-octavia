@@ -235,3 +235,4 @@ POST_FAILOVER_DB_UPDATE = 'post-failover-db-update'
 
 OCTAVIA_OWNER = 'Octavia'
 TOPOLOGY_SPARE = 'SPARE'
+READY = "READY"

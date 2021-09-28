@@ -356,7 +356,7 @@ class CreateSpareVThunderEntry(BaseDatabaseTask):
             compute_id=amphora.compute_id,
             topology=a10constants.TOPOLOGY_SPARE,
             role="MASTER",
-            status="READY",
+            status="BOOTING",
             created_at=datetime.utcnow(),
             last_udp_update=datetime.utcnow(),
             updated_at=datetime.utcnow())
