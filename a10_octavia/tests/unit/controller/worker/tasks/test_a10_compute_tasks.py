@@ -12,41 +12,183 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+import imp
 
 try:
     from unittest import mock
 except ImportError:
     import mock
+
+from oslo_config import cfg
+from oslo_config import fixture as oslo_fixture
 from oslo_utils import uuidutils
 
 from octavia.common import constants as o_constants
+from octavia.common import data_models as o_data_models
 
+from a10_octavia.common import config_options
 from a10_octavia.common import data_models
 from a10_octavia.controller.worker.tasks import a10_compute_tasks as task
+from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
-VTHUNDER = data_models.VThunder()
-COMPUTE_ID = uuidutils.generate_uuid()
+AMPHORA = o_data_models.Amphora(id=a10constants.MOCK_AMPHORA_ID)
+VTHUNDER = data_models.VThunder(compute_id=a10constants.MOCK_COMPUTE_ID)
 
 
 class TestA10ComputeTasks(base.BaseTaskTestCase):
 
+    def setUp(self):
+        super(TestA10ComputeTasks, self).setUp()
+        self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
+        self.conf.register_opts(config_options.A10_GLM_LICENSE_OPTS,
+                                group=a10constants.A10_GLOBAL_CONF_SECTION)
+        imp.reload(task)
+        self.client_mock = mock.Mock()
+        self.db_session = mock.patch(
+            'a10_octavia.controller.worker.tasks.a10_database_tasks.db_apis.get_session')
+        self.db_session.start()
+
+    def tearDown(self):
+        super(TestA10ComputeTasks, self).tearDown()
+        self.conf.reset()
+
     @mock.patch('stevedore.driver.DriverManager.driver')
-    def test_compute_amphora_status_active(self, mock_driver):
-        VTHUNDER.compute_id = COMPUTE_ID
+    def test_ComputeCreate_execute_no_nets(self, mock_driver):
+        compute_task = task.ComputeCreate()
+        compute_task.compute = mock.MagicMock()
+        compute_task.execute(AMPHORA.id)
+        args, kwargs = compute_task.compute.build.call_args
+        self.assertEqual(kwargs.get('network_ids'), [])
+
+    @mock.patch('stevedore.driver.DriverManager.driver')
+    def test_ComputeCreate_execute_mgmt_only(self, mock_driver):
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_mgmt_network=a10constants.MOCK_NETWORK_ID)
+        compute_task = task.ComputeCreate()
+        compute_task.compute = mock.MagicMock()
+        compute_task.execute(AMPHORA.id)
+        args, kwargs = compute_task.compute.build.call_args
+        self.assertEqual(kwargs.get('network_ids'), [a10constants.MOCK_NETWORK_ID])
+
+    @mock.patch('stevedore.driver.DriverManager.driver')
+    def test_ComputeCreate_execute_boot_only(self, mock_driver):
+        boot_list = [a10constants.MOCK_NETWORK_ID, 'mock-network-id-2']
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_boot_network_list=boot_list)
+        compute_task = task.ComputeCreate()
+        compute_task.compute = mock.MagicMock()
+        compute_task.execute(AMPHORA.id)
+        args, kwargs = compute_task.compute.build.call_args
+
+        actual_net_ids = kwargs.get('network_ids')
+        self.assertEqual(set(boot_list), set(actual_net_ids))
+        self.assertEqual(len(boot_list), len(actual_net_ids))
+
+    @mock.patch('stevedore.driver.DriverManager.driver')
+    def test_ComputeCreate_execute_glm_only(self, mock_driver):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=a10constants.MOCK_NETWORK_ID)
+        compute_task = task.ComputeCreate()
+        compute_task.compute.build = mock.MagicMock()
+        compute_task.execute(AMPHORA.id)
+        args, kwargs = compute_task.compute.build.call_args
+        self.assertEqual(kwargs.get('network_ids'), [a10constants.MOCK_NETWORK_ID])
+
+    @mock.patch('stevedore.driver.DriverManager.driver')
+    def test_ComputeCreate_execute_mgmt_is_glm(self, mock_driver):
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_mgmt_network=a10constants.MOCK_NETWORK_ID)
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=a10constants.MOCK_NETWORK_ID)
+        compute_task = task.ComputeCreate()
+        compute_task.compute.build = mock.MagicMock()
+        compute_task.execute(AMPHORA.id)
+        args, kwargs = compute_task.compute.build.call_args
+        self.assertEqual(kwargs.get('network_ids'), [a10constants.MOCK_NETWORK_ID])
+
+    @mock.patch('stevedore.driver.DriverManager.driver')
+    def test_ComputeCreate_execute_mgmt_is_first_boot(self, mock_driver):
+        mgmt_id = a10constants.MOCK_NETWORK_ID
+        boot_list = [mgmt_id, 'mock-network-id-2']
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_mgmt_network=mgmt_id,
+                         amp_boot_network_list=boot_list)
+        compute_task = task.ComputeCreate()
+        compute_task.compute = mock.MagicMock()
+        compute_task.execute(AMPHORA.id)
+        args, kwargs = compute_task.compute.build.call_args
+
+        actual_net_ids = kwargs.get('network_ids')
+        self.assertEqual(actual_net_ids, boot_list)
+
+    @mock.patch('stevedore.driver.DriverManager.driver')
+    def test_ComputeCreate_execute_net_list_no_diff(self, mock_driver):
+        mgmt_id = 'mock-mgmt-net-id'
+        license_id = 'mock-mock-license-net-id'
+        boot_list = ['mock-data-net-id-1']
+        net_list = [mgmt_id, boot_list[0], license_id]
+
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_mgmt_network=mgmt_id,
+                         amp_boot_network_list=boot_list)
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=license_id)
+
+        compute_task = task.ComputeCreate()
+        compute_task.compute = mock.MagicMock()
+        compute_task.execute(AMPHORA.id, network_list=net_list)
+        args, kwargs = compute_task.compute.build.call_args
+
+        actual_net_ids = kwargs.get('network_ids')
+        self.assertEqual(actual_net_ids[0], mgmt_id)
+        self.assertEqual(set(actual_net_ids), set(net_list))
+        self.assertEqual(len(actual_net_ids), len(net_list))
+
+    @mock.patch('stevedore.driver.DriverManager.driver')
+    def test_ComputeCreate_execute_net_list_with_diff(self, mock_driver):
+        mgmt_id = 'mock-mgmt-net-id'
+        license_id = 'mock-mock-license-net-id'
+        boot_list = ['mock-data-net-id-1', 'mock-data-net-id-2']
+        net_list = [mgmt_id, boot_list[0], license_id]
+
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_mgmt_network=mgmt_id,
+                         amp_boot_network_list=boot_list)
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=license_id)
+
+        compute_task = task.ComputeCreate()
+        compute_task.compute = mock.MagicMock()
+        compute_task.execute(AMPHORA.id, network_list=net_list)
+        args, kwargs = compute_task.compute.build.call_args
+
+        actual_net_ids = kwargs.get('network_ids')
+        expected_net_ids = {mgmt_id, license_id}.union(boot_list)
+
+        self.assertEqual(actual_net_ids[0], mgmt_id)
+        self.assertNotEqual(set(actual_net_ids), set(net_list))
+        self.assertNotEqual(len(actual_net_ids), len(net_list))
+        self.assertEqual(set(actual_net_ids), expected_net_ids)
+        self.assertEqual(len(actual_net_ids), len(expected_net_ids))
+
+    @mock.patch('stevedore.driver.DriverManager.driver')
+    def test_CheckAmphoraStatus_execute_status_active(self, mock_driver):
+        vthunder = copy.deepcopy(VTHUNDER)
         _amphora_mock = mock.MagicMock()
         _amphora_mock.status = o_constants.ACTIVE
         mock_driver.get_amphora.return_value = _amphora_mock, None
         computestatus = task.CheckAmphoraStatus()
-        status = computestatus.execute(VTHUNDER)
+        status = computestatus.execute(vthunder)
         self.assertEqual(status, True)
 
     @mock.patch('stevedore.driver.DriverManager.driver')
-    def test_compute_amphora_status_shutoff(self, mock_driver):
-        VTHUNDER.compute_id = COMPUTE_ID
+    def test_CheckAmphoraStatus_status_execute_shutoff(self, mock_driver):
+        vthunder = copy.deepcopy(VTHUNDER)
         _amphora_mock = mock.MagicMock()
         _amphora_mock.status = "SHUTOFF"
         mock_driver.get_amphora.return_value = _amphora_mock, None
         computestatus = task.CheckAmphoraStatus()
-        status = computestatus.execute(VTHUNDER)
+        status = computestatus.execute(vthunder)
         self.assertEqual(status, False)
