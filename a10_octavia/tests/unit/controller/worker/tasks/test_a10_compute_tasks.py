@@ -22,7 +22,6 @@ except ImportError:
 
 from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
-from oslo_utils import uuidutils
 
 from octavia.common import constants as o_constants
 from octavia.common import data_models as o_data_models
