@@ -14,6 +14,7 @@
 
 import copy
 import imp
+from json import load
 
 try:
     from unittest import mock
@@ -25,6 +26,7 @@ from oslo_config import fixture as oslo_fixture
 
 from octavia.common import constants as o_constants
 from octavia.common import data_models as o_data_models
+from octavia.tests.common import constants as o_test_constants
 
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
@@ -34,6 +36,9 @@ from a10_octavia.tests.unit import base
 
 AMPHORA = o_data_models.Amphora(id=a10constants.MOCK_AMPHORA_ID)
 VTHUNDER = data_models.VThunder(compute_id=a10constants.MOCK_COMPUTE_ID)
+VIP = o_data_models.Vip(ip_address="1.1.1.1", network_id=o_test_constants.MOCK_VIP_NET_ID)
+LB = o_data_models.LoadBalancer(
+    id=a10constants.MOCK_LOAD_BALANCER_ID, vip=VIP)
 
 
 class TestA10ComputeTasks(base.BaseTaskTestCase):
@@ -96,6 +101,14 @@ class TestA10ComputeTasks(base.BaseTaskTestCase):
         self.assertEqual(kwargs.get('network_ids'), [a10constants.MOCK_NETWORK_ID])
 
     @mock.patch('stevedore.driver.DriverManager.driver')
+    def test_ComputeCreate_execute_lb_only(self, mock_driver):
+        compute_task = task.ComputeCreate()
+        compute_task.compute.build = mock.MagicMock()
+        compute_task.execute(AMPHORA.id, loadbalancer=LB)
+        args, kwargs = compute_task.compute.build.call_args
+        self.assertEqual(kwargs.get('network_ids'), [VIP.network_id])
+
+    @mock.patch('stevedore.driver.DriverManager.driver')
     def test_ComputeCreate_execute_mgmt_is_glm(self, mock_driver):
         self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
                          amp_mgmt_network=a10constants.MOCK_NETWORK_ID)
@@ -123,11 +136,41 @@ class TestA10ComputeTasks(base.BaseTaskTestCase):
         self.assertEqual(actual_net_ids, boot_list)
 
     @mock.patch('stevedore.driver.DriverManager.driver')
+    def test_ComputeCreate_execute_mgmt_is_lb(self, mock_driver):
+        loadbalancer = copy.deepcopy(LB)
+        loadbalancer.vip.network_id = a10constants.MOCK_NETWORK_ID
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_mgmt_network=a10constants.MOCK_NETWORK_ID)
+        compute_task = task.ComputeCreate()
+        compute_task.compute.build = mock.MagicMock()
+        compute_task.execute(AMPHORA.id, loadbalancer=loadbalancer)
+        args, kwargs = compute_task.compute.build.call_args
+        self.assertEqual(kwargs.get('network_ids'), [a10constants.MOCK_NETWORK_ID])
+
+    @mock.patch('stevedore.driver.DriverManager.driver')
+    def test_ComputeCreate_execute_glm_in_boot(self, mock_driver):
+        boot_list = ['mock-mgmt-net-id', a10constants.MOCK_NETWORK_ID]
+
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_boot_network_list=boot_list)
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=a10constants.MOCK_NETWORK_ID)
+
+        compute_task = task.ComputeCreate()
+        compute_task.compute = mock.MagicMock()
+        compute_task.execute(AMPHORA.id)
+        args, kwargs = compute_task.compute.build.call_args
+
+        actual_net_ids = kwargs.get('network_ids')
+        self.assertIn(a10constants.MOCK_NETWORK_ID, actual_net_ids)
+        self.assertEqual(len(actual_net_ids), len(boot_list))
+
+    @mock.patch('stevedore.driver.DriverManager.driver')
     def test_ComputeCreate_execute_net_list_no_diff(self, mock_driver):
         mgmt_id = 'mock-mgmt-net-id'
         license_id = 'mock-mock-license-net-id'
         boot_list = ['mock-data-net-id-1']
-        net_list = [mgmt_id, boot_list[0], license_id]
+        net_list = [mgmt_id, boot_list[0], LB.vip.network_id, license_id]
 
         self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
                          amp_mgmt_network=mgmt_id,
@@ -137,7 +180,7 @@ class TestA10ComputeTasks(base.BaseTaskTestCase):
 
         compute_task = task.ComputeCreate()
         compute_task.compute = mock.MagicMock()
-        compute_task.execute(AMPHORA.id, network_list=net_list)
+        compute_task.execute(AMPHORA.id, loadbalancer=LB, network_list=net_list)
         args, kwargs = compute_task.compute.build.call_args
 
         actual_net_ids = kwargs.get('network_ids')
@@ -160,11 +203,11 @@ class TestA10ComputeTasks(base.BaseTaskTestCase):
 
         compute_task = task.ComputeCreate()
         compute_task.compute = mock.MagicMock()
-        compute_task.execute(AMPHORA.id, network_list=net_list)
+        compute_task.execute(AMPHORA.id, loadbalancer=LB, network_list=net_list)
         args, kwargs = compute_task.compute.build.call_args
 
         actual_net_ids = kwargs.get('network_ids')
-        expected_net_ids = {mgmt_id, license_id}.union(boot_list)
+        expected_net_ids = {mgmt_id, license_id, LB.vip.network_id}.union(boot_list)
 
         self.assertEqual(actual_net_ids[0], mgmt_id)
         self.assertNotEqual(set(actual_net_ids), set(net_list))

@@ -39,8 +39,10 @@ class ComputeCreate(BaseComputeTask):
                 server_group_id=None, ports=None, network_list=None):
 
         ports = ports or []
-
         boot_net_list = CONF.a10_controller_worker.amp_boot_network_list
+        mgmt_net = CONF.a10_controller_worker.amp_mgmt_network
+        mgmt_net = boot_net_list[0] if boot_net_list and not mgmt_net else mgmt_net
+
         network_ids = set(boot_net_list) if boot_net_list else set()
         if CONF.glm_license.amp_license_network:
             network_ids.add(CONF.glm_license.amp_license_network)
@@ -49,7 +51,6 @@ class ComputeCreate(BaseComputeTask):
         if loadbalancer:
             network_ids.add(loadbalancer.vip.network_id)
 
-        mgmt_net = CONF.a10_controller_worker.amp_mgmt_network
         if mgmt_net in network_ids:
             network_ids.remove(mgmt_net)
 
