@@ -189,10 +189,11 @@ class AllowLoadbalancerForwardWithAnySource(VThunderBaseTask):
     """Task to add wildcat address in allowed_address_pair to allow any SNAT"""
 
     def execute(self, member, amphora):
-        subnet = self.network_driver.get_subnet(member.subnet_id)
-        if CONF.vthunder.slb_no_snat_support:
-            for amp in amphora:
-                self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
+        if member.subnet_id:
+            subnet = self.network_driver.get_subnet(member.subnet_id)
+            if CONF.vthunder.slb_no_snat_support:
+                for amp in amphora:
+                    self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
 
 
 class UpdateLoadbalancerForwardWithAnySource(VThunderBaseTask):
