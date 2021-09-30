@@ -450,31 +450,33 @@ class GetLoadbalancersInProjectBySubnet(BaseDatabaseTask):
 class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
 
     def execute(self, subnet, partition_project_list, use_device_flavor):
-        if not use_device_flavor and partition_project_list:
-            try:
-                return self.loadbalancer_repo.get_lb_count_by_subnet(
-                    db_apis.get_session(),
-                    project_ids=partition_project_list, subnet_id=subnet.id)
-            except Exception as e:
-                LOG.exception("Failed to get LB count for subnet %s due to %s ",
-                              subnet.id, str(e))
-                raise e
+        if subnet:
+            if not use_device_flavor and partition_project_list:
+                try:
+                    return self.loadbalancer_repo.get_lb_count_by_subnet(
+                        db_apis.get_session(),
+                        project_ids=partition_project_list, subnet_id=subnet.id)
+                except Exception as e:
+                    LOG.exception("Failed to get LB count for subnet %s due to %s ",
+                                  subnet.id, str(e))
+                    raise e
         return 0
 
 
 class CountMembersInProjectBySubnet(BaseDatabaseTask):
 
     def execute(self, subnet, partition_project_list):
-        if partition_project_list:
-            try:
-                return self.member_repo.get_member_count_by_subnet(
-                    db_apis.get_session(),
-                    project_ids=partition_project_list, subnet_id=subnet.id)
-            except Exception as e:
-                LOG.exception(
-                    "Failed to get LB member count for subnet %s due to %s",
-                    subnet.id, str(e))
-                raise e
+        if subnet:
+            if partition_project_list:
+                try:
+                    return self.member_repo.get_member_count_by_subnet(
+                        db_apis.get_session(),
+                        project_ids=partition_project_list, subnet_id=subnet.id)
+                except Exception as e:
+                    LOG.exception(
+                        "Failed to get LB member count for subnet %s due to %s",
+                        subnet.id, str(e))
+                    raise e
         return 0
 
 
