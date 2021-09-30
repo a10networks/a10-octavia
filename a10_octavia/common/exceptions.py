@@ -253,3 +253,11 @@ class FlavorNotFound(cfg.ConfigFileValueError):
         msg = ('Flavor {0} specified in the configuration file cannot be located,'
                ' Please create the flavor in advance.').format(flavor)
         super(FlavorNotFound, self).__init__(msg=msg)
+
+
+class IPAddressNotInSubentRangeError(base.NetworkException):
+    def __init__(self, ip, subnet):
+        msg = ('Invalid IP address specified. ' +
+               'IP {0} out of range ' +
+               'for subnet {1}.').format(ip, subnet)
+        super(IPAddressNotInSubentRangeError, self).__init__(msg)
