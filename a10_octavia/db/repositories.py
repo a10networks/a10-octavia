@@ -298,16 +298,6 @@ class VThunderRepository(BaseRepository):
             model_list = model_list.options(noload('*'))
             return model_list.all()
 
-    def get_vthunders_by_ip_address_statistics(self, session, ip_address):
-        model_list = session.query(self.model_class).filter(
-            self.model_class.ip_address == ip_address).filter(
-            and_(self.model_class.status == "ACTIVE",
-                 or_(self.model_class.role == "STANDALONE",
-                     self.model_class.role == "MASTER",
-                     self.model_class.role == "BACKUP")))
-        model_list = model_list.options(noload('*'))
-        return model_list.all()
-
     def get_all_vthunder_by_address(self, session, ip_address):
         model_list = session.query(self.model_class).filter(
             self.model_class.ip_address == ip_address).filter(

@@ -1246,7 +1246,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         store = {}
         try:
-            thunders = self._vthunder_repo.get_vthunders_by_ip_address_statistics(
+            thunders = self._vthunder_repo.get_all_vthunder_by_address(
                 db_apis.get_session(),
                 ip_address=ip)
             for vthunder in thunders:
