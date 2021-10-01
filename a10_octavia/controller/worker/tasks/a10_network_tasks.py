@@ -1119,8 +1119,10 @@ class GetPoolsOnThunder(BaseNetworkTask):
 class ValidateSubnet(BaseNetworkTask):
 
     def execute(self, member):
-        member_subnet = self.network_driver.get_subnet(member.subnet_id)
-        subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(member_subnet.cidr)
-        if not a10_utils.check_ip_in_subnet_range(
-                member.ip_address, subnet_ip, subnet_mask):
-            raise exceptions.IPAddressNotInSubentRangeError(member.ip_address, member_subnet.cidr)
+        if member.subnet_id:
+            member_subnet = self.network_driver.get_subnet(member.subnet_id)
+            subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(member_subnet.cidr)
+            if not a10_utils.check_ip_in_subnet_range(
+                    member.ip_address, subnet_ip, subnet_mask):
+                raise exceptions.IPAddressNotInSubentRangeError(
+                    member.ip_address, member_subnet.cidr)
