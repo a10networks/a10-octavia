@@ -56,7 +56,7 @@ class BaseDatabaseTask(task.Task):
         self.flavor_profile_repo = repo.FlavorProfileRepository()
         self.nat_pool_repo = a10_repo.NatPoolRepository()
         self.vrrp_set_repo = a10_repo.VrrpSetRepository()
-        self.listener_stats_repo = repo.ListenerStatisticsRepository()
+        self.listener_stats_repo = a10_repo.ListenerStatisticsRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
