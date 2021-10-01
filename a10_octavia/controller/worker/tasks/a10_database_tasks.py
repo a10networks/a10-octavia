@@ -56,7 +56,6 @@ class BaseDatabaseTask(task.Task):
         self.flavor_profile_repo = repo.FlavorProfileRepository()
         self.nat_pool_repo = a10_repo.NatPoolRepository()
         self.vrrp_set_repo = a10_repo.VrrpSetRepository()
-        self.listener_stats_repo = a10_repo.ListenerStatisticsRepository()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -1249,17 +1248,6 @@ class UpdateListenersStats(BaseDatabaseTask):
                 stats_base.update_stats_via_driver(listener_stats)
                 LOG.info('Updated the listeners statistics')
 
-            listeners, _ = self.listener_repo.get_all(db_apis.get_session())
-            listeners_stats, _ = self.listener_stats_repo.get_all(db_apis.get_session())
-
-            listeners_ids = [listener.id for listener in listeners]
-            listeners_stats_ids = [listener_stats.listener_id for listener_stats in listeners_stats]
-
-            for listeners_stats_id in listeners_stats_ids:
-                if listeners_stats_id not in listeners_ids:
-                    self.listener_stats_repo.delete_multiple(db_apis.get_session(),
-                                                             listener_id=listeners_stats_id)
-                    LOG.info('Delete the statictics entry of listener %s', listeners_stats_id)
         except Exception as e:
             LOG.warning('Failed to update the listener statistics '
                         'due to: {}'.format(str(e)))
