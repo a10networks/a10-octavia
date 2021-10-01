@@ -67,11 +67,15 @@ class CalculateAmphoraDelta(BaseNetworkTask):
         member_networks = []
         for loadbalancer in loadbalancers_list:
             for pool in loadbalancer.pools:
-                member_networks = [
-                    self.network_driver.get_subnet(member.subnet_id).network_id
-                    for member in pool.members
-                    if member.subnet_id
-                ]
+                for member in pool.members:
+                    if member.subnet_id:
+                        member_networks = [
+                            self.network_driver.get_subnet(member.subnet_id).network_id]
+                    else:
+                        LOG.warning("Subnet id argument was not specified during "
+                                    "issuance of create command/API call for member %s. "
+                                    "Skipping interface attachment", member.id)
+
                 desired_network_ids.update(member_networks)
 
         loadbalancer_networks = [
@@ -758,6 +762,9 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         :return: return the update list of VRID object, If empty the need to remove all VRID
         objects from DB else need update existing ones.
         """
+        updated_vrid_list = []
+        if not subnet:
+            return updated_vrid_list
         vrid_value = CONF.a10_global.vrid
         prev_vrid_value = vrid_list[0].vrid if vrid_list else None
         updated_vrid_list = copy.copy(vrid_list)
@@ -864,6 +871,8 @@ class DeleteVRIDPort(BaseNetworkTask):
     def execute(self, vthunder, vrid_list, subnet,
                 use_device_flavor, lb_count_subnet, member_count,
                 lb_count_thunder, member_count_thunder, lb_resource):
+        if not subnet:
+            return None, False
         vrid = None
         vrid_floating_ip_list = []
         existing_fips = []
@@ -995,8 +1004,10 @@ class GetLBResourceSubnet(BaseNetworkTask):
             # Special case for load balancers as their vips have the subnet
             # info
             subnet = self.network_driver.get_subnet(lb_resource.vip.subnet_id)
-        else:
+        elif lb_resource.subnet_id:
             subnet = self.network_driver.get_subnet(lb_resource.subnet_id)
+        else:
+            return
         return subnet
 
 
@@ -1006,7 +1017,8 @@ class GetAllResourceSubnet(BaseNetworkTask):
     def execute(self, members):
         subnet = []
         for member in members:
-            subnet.append(self.network_driver.get_subnet(member.subnet_id))
+            if member.subnet_id:
+                subnet.append(self.network_driver.get_subnet(member.subnet_id))
         return subnet
 
 
