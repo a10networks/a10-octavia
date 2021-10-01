@@ -609,6 +609,9 @@ class MemberFlows(object):
 
         update_member_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
             requires=constants.MEMBER))
+        update_member_flow.add(a10_network_tasks.ValidateSubnet(
+            name='validate-subnet',
+            requires=constants.MEMBER))
         update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -668,6 +671,9 @@ class MemberFlows(object):
                       constants.LOADBALANCER,
                       constants.POOL]))
         update_member_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
+            requires=constants.MEMBER))
+        update_member_flow.add(a10_network_tasks.ValidateSubnet(
+            name='validate-subnet',
             requires=constants.MEMBER))
         update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
@@ -920,6 +926,9 @@ class MemberFlows(object):
             batch_update_members_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
                 inject={constants.MEMBER: m},
                 name='mark-member-pending-update-in-db-' + m.id))
+            batch_update_members_flow.add(a10_network_tasks.ValidateSubnet(
+                name='validate-subnet' + m.id,
+                inject={constants.MEMBER: m}))
             batch_update_members_flow.add(server_tasks.MemberUpdate(
                 name='member-update-' + m.id,
                 inject={constants.MEMBER: m},
@@ -1099,6 +1108,9 @@ class MemberFlows(object):
             batch_update_members_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
                 inject={constants.MEMBER: m},
                 name='mark-member-pending-update-in-db-' + m.id))
+            batch_update_members_flow.add(a10_network_tasks.ValidateSubnet(
+                name='validate-subnet' + m.id,
+                inject={constants.MEMBER: m}))
             batch_update_members_flow.add(a10_network_tasks.GetLBResourceSubnet(
                 name='{flow}-{id}'.format(
                     id=m.id, flow=a10constants.GET_LB_RESOURCE_SUBNET),
