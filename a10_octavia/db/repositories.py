@@ -631,3 +631,14 @@ class VrrpSetRepository(BaseRepository):
         model_list = query.all()
         set_id_list = [model.set_id for model in model_list]
         return set_id_list
+
+class ListenerStatisticsRepository(repo.ListenerStatisticsRepository):
+
+    def delete_multiple(self, session, **filters):
+        """Deletes entities from the database."""
+
+        models = session.query(self.model_class).filter_by(**filters).all()
+        for model in models:
+            with session.begin(subtransactions=True):
+                session.delete(model)
+                session.flush()

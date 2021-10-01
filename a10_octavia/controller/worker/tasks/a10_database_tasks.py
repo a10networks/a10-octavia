@@ -1257,8 +1257,8 @@ class UpdateListenersStats(BaseDatabaseTask):
 
             for listeners_stats_id in listeners_stats_ids:
                 if listeners_stats_id not in listeners_ids:
-                    self.listener_stats_repo.delete(db_apis.get_session(),
-                                                    listener_id=listeners_stats_id)
+                    self.listener_stats_repo.delete_multiple(db_apis.get_session(),
+                                                             listener_id=listeners_stats_id)
                     LOG.info('Delete the statictics entry of listener %s', listeners_stats_id)
         except Exception as e:
             LOG.warning('Failed to update the listener statistics '
