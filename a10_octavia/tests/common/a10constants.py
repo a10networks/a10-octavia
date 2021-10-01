@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+MOCK_VTHUNDER_ID = 'mock-vthunder-1'
 MOCK_HM_ID = 'mock-hm-cd61-49ed-8508-f22a12d770c5'
 MOCK_POOL_ID = 'mock-pool-1'
 MOCK_MEMBER_ID = 'mock-member-1'
@@ -38,9 +38,11 @@ MOCK_VRID_PARTIAL_FLOATING_IP = '45'
 MOCK_VRID_FULL_FLOATING_IP = '10.10.10.45'
 MOCK_SUBNET_CIDR = '10.10.10.0/24'
 MOCK_SUBNET_ID = 'mock-subnet-1'
+MOCK_NETWORK_ID = 'mock-network-1'
 MOCK_VRRP_PORT_ID = 'mock-vrrp-port-id'
 MOCK_PORT_ID = 'mock-port-id'
 MOCK_SET_ID = 'mock-set-id'
+MOCK_FLEXPOOL_TOKEN = '0XD34DB33F'
 
 SERVICE_GROUP_CONF_SECTION = 'service_group'
 LISTENER_CONF_SECTION = 'listener'
@@ -60,6 +62,7 @@ SERVICE_GROUP_CONF_SECTION = 'service_group'
 SERVER_CONF_SECTION = 'server'
 VIRTUAL_SERVER_CONFIG_SECTION = 'slb'
 HEALTH_MONITOR_SECTION = 'health_monitor'
+GLM_LICENSE_CONFIG_SECTION = 'glm_license'
 
 
 A10_HOUSE_KEEPING = 'a10_house_keeping'

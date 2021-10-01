@@ -107,6 +107,8 @@ class VThunderComputeConnectivityWait(VThunderBaseTask):
             self.amphora_repo.update(db_apis.get_session(), amphora.id,
                                      status=constants.ERROR)
             raise e
+        except Exception as e:
+            LOG.warning("Could not connect to vThunder-Amphora due to following issue %s", e)
 
 
 class AmphoraePostVIPPlug(VThunderBaseTask):
@@ -1391,3 +1393,17 @@ class GetListenersStats(VThunderBaseTask):
             LOG.warning("Failed to retrieve statistics for loadbalancer: %s "
                         "due to %s", vthunder.loadbalancer_id, str(e))
         return listener_stats
+
+
+class SetVThunderHostname(VThunderBaseTask):
+    """Task for retrieving listener stats from vthunder"""
+
+    @axapi_client_decorator
+    def execute(self, vthunder, amphora):
+        hostname = "amphora-" + amphora.id
+        hostname = hostname[0:31]
+        try:
+            self.axapi_client.system.action.set_hostname(hostname)
+        except acos_errors.ACOSException as e:
+            LOG.error("Could not set hostname for amphora %s", amphora.id)
+            raise e

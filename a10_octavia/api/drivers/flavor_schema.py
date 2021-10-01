@@ -22,12 +22,12 @@ SUPPORTED_FLAVOR_SCHEMA = {
     "properties": {
         "virtual-server": {
             "type": "object",
-            "description": "Specify axapi that will apply to the slb virtual-server",
+            "description": "Specify AXAPI that will apply to the slb virtual-server",
             "properties": {
                 "name-expressions": {
                     "type": "array",
                     "description": "Specify name expression to match loadbalancers "
-                                   "and axapi that will apply to the slb virtual-server",
+                                   "and AXAPI that will apply to the slb virtual-server",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -44,12 +44,12 @@ SUPPORTED_FLAVOR_SCHEMA = {
         },
         "virtual-port": {
             "type": "object",
-            "description": "Specify axapi that will apply to the vport",
+            "description": "Specify AXAPI that will apply to the vport",
             "properties": {
                 "name-expressions": {
                     "type": "array",
                     "description": "Specify name expression to match listeners "
-                                   "and axapi that will apply to the vport",
+                                   "and AXAPI that will apply to the vport",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -75,12 +75,12 @@ SUPPORTED_FLAVOR_SCHEMA = {
         },
         "service-group": {
             "type": "object",
-            "description": "Specify axapi that will apply to the service-group",
+            "description": "Specify AXAPI that will apply to the service-group",
             "properties": {
                 "name-expressions": {
                     "type": "array",
                     "description": "Specify name expression to match pools "
-                                   "and axapi that will apply to the service-group",
+                                   "and AXAPI that will apply to the service-group",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -97,12 +97,12 @@ SUPPORTED_FLAVOR_SCHEMA = {
         },
         "server": {
             "type": "object",
-            "description": "Specify axapi that will apply to the server",
+            "description": "Specify AXAPI that will apply to the server",
             "properties": {
                 "name-expressions": {
                     "type": "array",
                     "description": "Specify name expression to match members "
-                                   "and axapi that will apply to the server",
+                                   "and AXAPI that will apply to the server",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -130,12 +130,12 @@ SUPPORTED_FLAVOR_SCHEMA = {
         },
         "health-monitor": {
             "type": "object",
-            "description": "Specify axapi that will apply to the health monitor",
+            "description": "Specify AXAPI that will apply to the health monitor",
             "properties": {
                 "name-expressions": {
                     "type": "array",
                     "description": "Specify name expression to match healthmonitor "
-                                   "and axapi that will apply to the health monitor",
+                                   "and AXAPI that will apply to the health monitor",
                     "items": {
                         "type": "object",
                         "properties": {
@@ -152,7 +152,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
         },
         "nat-pool": {
             "type": "object",
-            "description": "Specify axapi of default nat pool for loadbalancer",
+            "description": "Specify AXAPI of default nat pool for loadbalancer",
             "properties": {
                 "pool-name": {
                     "type": "string",
@@ -170,7 +170,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
         },
         "nat-pool-list": {
             "type": "array",
-            "description": "Specify axapi of nat pools for loadbalancer",
+            "description": "Specify AXAPI of nat pools for loadbalancer",
             "items": {
                 "type": "object",
                 "properties": {
@@ -193,6 +193,88 @@ SUPPORTED_FLAVOR_SCHEMA = {
                     "description": "Specify deployment DSR type[l2dsr_transparent]"
                                    " for the loadbalancer"
                 }
+            }
+        },
+        "dns": {
+            "type": "object",
+            "description": "DNS nameserver information",
+            "properties": {
+                "primary-dns": {
+                    "type": "string",
+                    "description": "Primary nameserver used to contact the GLM or ELM"
+                },
+                "secondary-dns": {
+                    "type": "string",
+                    "description": "Secondary nameserver used to contact the GLM or ELM"
+                }
+            }
+        },
+        "glm-proxy-server": {
+            "type": "object",
+            "description": "Forward proxy-server configuration details.",
+            "properties": {
+                "proxy-host": {
+                    "type": "string",
+                    "description": "Hostname of proxy server used for requests to GLM"
+                },
+                "proxy-port": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "description": "Port number through which the forward proxy server "
+                                   "connects to the GLM account",
+                },
+                "proxy-username": {
+                    "type": "string",
+                    "description": "Username for proxy authentication"
+                },
+                "proxy-password": {
+                    "type": "bool",
+                    "description": "Password for proxy authentication"
+                },
+                "proxy-secret-string": {
+                    "type": "string",
+                    "description": "Password for proxy authentication"
+                }
+            }
+        },
+        "glm": {
+            "type": "object",
+            "description": "Global License Manager configuration settings",
+            "properties": {
+                "use-network-dns": {
+                    "type": "bool",
+                    "description": "Use the network dns nameservers instead of "
+                                   "those in the config or flavor."
+                },
+                "allocate-bandwidth": {
+                    "type": "integer",
+                    "description": "Bandwidth allocated per amphora",
+                    "minimum": 2,
+                    "maximum": 204800
+                },
+                "burst": {
+                    "type": "bool",
+                    "description": "Enable bursting. Allows amphora to exceed allocated "
+                                   "bandwidth limits. Ensures that packets never drop."
+                },
+                "interval": {
+                    "type": "integer",
+                    "description": "Interval for license manager heartbeat in hours",
+                    "minimum": 1,
+                    "maximum": 8760
+                },
+                "port": {
+                    "type": "integer",
+                    "description": "Port with which to send HTTP/S license request",
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "enable-requests": {
+                    "type": "bool",
+                    "description": "Enables license retrieval from the GLM/ELM server. "
+                                   "Allows license changes to be replicated automatically.",
+                },
             }
         }
     }
