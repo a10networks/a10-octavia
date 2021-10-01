@@ -30,6 +30,7 @@ from octavia.network import data_models as n_data_models
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
+from a10_octavia.common import exceptions
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils as a10_task_utils
@@ -1101,3 +1102,13 @@ class GetPoolsOnThunder(BaseNetworkTask):
                 raise e
         else:
             return
+
+
+class ValidateSubnet(BaseNetworkTask):
+
+    def execute(self, member):
+        member_subnet = self.network_driver.get_subnet(member.subnet_id)
+        subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(member_subnet.cidr)
+        if not a10_utils.check_ip_in_subnet_range(
+                member.ip_address, subnet_ip, subnet_mask):
+            raise exceptions.IPAddressNotInSubentRangeError(member.ip_address, member_subnet.cidr)
