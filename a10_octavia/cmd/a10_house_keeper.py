@@ -33,6 +33,7 @@ CONF = cfg.CONF
 spare_amp_thread_event = threading.Event()
 db_cleanup_thread_event = threading.Event()
 write_memory_thread_event = threading.Event()
+stats_cleanup_thread_event = threading.Event()
 
 
 def spare_amphora_check():
@@ -94,6 +95,23 @@ def write_memory():
         LOG.warning("Write memory flag is disabled...")
 
 
+def stats_cleanup():
+    """Perform statistics cleanup for deleted listeners"""
+
+    interval = CONF.a10_house_keeping.stats_cleanup_interval
+    LOG.info("Statistics cleanup interval is set to %d sec", interval)
+
+    stats_cleanup = house_keeping.StatisticsCleanup()
+    while not stats_cleanup_thread_event.is_set():
+        LOG.info("Initiating the cleanup of statistics..")
+        try:
+            stats_cleanup.delete_listener_stats()
+        except Exception as e:
+            LOG.info('Statistics_cleanup caught the following exception and '
+                     'is restarting: {}'.format(e))
+        stats_cleanup_thread_event.wait(interval)
+
+
 def _mutate_config(*args, **kwargs):
     LOG.info("Housekeeping recieved HUP signal, mutating config.")
     CONF.mutate_config_files()
@@ -122,6 +140,11 @@ def main():
     write_memory_thread.daemon = True
     write_memory_thread.start()
 
+    # Thread to perform clean stats
+    stats_cleanup_thread = threading.Thread(target=stats_cleanup)
+    stats_cleanup_thread.daemon = True
+    stats_cleanup_thread.start()
+
     signal.signal(signal.SIGHUP, _mutate_config)
 
     # Try-Exception block should be at the end to gracefully exit threads
@@ -133,7 +156,9 @@ def main():
         spare_amp_thread_event.set()
         db_cleanup_thread_event.set()
         write_memory_thread_event.set()
+        stats_cleanup_thread_event.set()
         spare_amp_thread.join()
         db_cleanup_thread.join()
         write_memory_thread.join()
+        stats_cleanup_thread.join()
         LOG.info("House-Keeping process terminated")

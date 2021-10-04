@@ -20,6 +20,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 from octavia.db import api as db_api
+from octavia.db import repositories as repo
 
 from a10_octavia.controller.worker import controller_worker as cw
 from a10_octavia.db import repositories as a10repo
@@ -96,6 +97,26 @@ class DatabaseCleanup(object):
             LOG.info('Attempting to delete load balancer id : %s', lb_id)
             self.lb_repo.delete(session, id=lb_id)
             LOG.info('Deleted load balancer id : %s', lb_id)
+
+
+class StatisticsCleanup(object):
+    def __init__(self):
+        self.listener_repo = repo.ListenerRepository()
+        self.listener_stats_repo = a10repo.ListenerStatisticsRepository()
+
+    def delete_listener_stats(self):
+
+        listeners, _ = self.listener_repo.get_all(db_api.get_session())
+        listeners_stats, _ = self.listener_stats_repo.get_all(db_api.get_session())
+
+        listeners_ids = [listener.id for listener in listeners]
+        listeners_stats_ids = [listener_stats.listener_id for listener_stats in listeners_stats]
+
+        for listeners_stats_id in listeners_stats_ids:
+            if listeners_stats_id not in listeners_ids:
+                self.listener_stats_repo.delete_multiple(db_api.get_session(),
+                                                         listener_id=listeners_stats_id)
+                LOG.info('Delete the statictics entry of listener %s', listeners_stats_id)
 
 
 class WriteMemory(object):
