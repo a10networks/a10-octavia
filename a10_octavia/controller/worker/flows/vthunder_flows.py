@@ -201,7 +201,7 @@ class VThunderFlows(object):
                     provides=a10constants.BACKUP_VTHUNDER))
             create_amp_for_lb_subflow.add(
                 vthunder_tasks.VThunderComputeConnectivityWait(
-                    name=a10constants.BACKUP_CONNECTIVITY_WAIT,
+                    name=sf_name + '-' + a10constants.BACKUP_CONNECTIVITY_WAIT,
                     rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                     requires=constants.AMPHORA))
         else:
