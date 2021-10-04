@@ -311,7 +311,7 @@ A10_HOUSE_KEEPING_OPTS = [
                default=604800,
                help=_('Load balancer expiry age in seconds')),
     cfg.IntOpt('stats_cleanup_interval',
-               default=300,
+               default=3600,
                help=_('Statistics cleanup interval in seconds')),
     cfg.IntOpt('cert_interval',
                default=3600,
