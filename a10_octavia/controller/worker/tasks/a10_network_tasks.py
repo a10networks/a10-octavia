@@ -1124,5 +1124,5 @@ class ValidateSubnet(BaseNetworkTask):
             subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(member_subnet.cidr)
             if not a10_utils.check_ip_in_subnet_range(
                     member.ip_address, subnet_ip, subnet_mask):
-                raise exceptions.IPAddressNotInSubentRangeError(
+                raise exceptions.IPAddressNotInSubnetRangeError(
                     member.ip_address, member_subnet.cidr)
