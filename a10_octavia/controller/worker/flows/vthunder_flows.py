@@ -84,7 +84,7 @@ class VThunderFlows(object):
                 name=sf_name + '-' + a10constants.MARK_AMPHORA_READY_INDB,
                 requires=(constants.AMPHORA)))
         create_vthunder_flow.add(self.get_glm_license_subflow(
-            prefix=a10constants.SPARE_VTHUNDER_CREATE))
+            prefix=a10constants.SPARE_VTHUNDER_CREATE, role=a10constants.SPARE_VTHUNDER))
         create_vthunder_flow.add(
             vthunder_tasks.CreateHealthMonitorOnVThunder(
                 name=sf_name + '-' + a10constants.CREATE_HEALTH_MONITOR_ON_SPARE,
@@ -215,7 +215,7 @@ class VThunderFlows(object):
                     requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         # License the vThunder-Amphora
         create_amp_for_lb_subflow.add(
-            self.get_glm_license_subflow(prefix + '-' + role, role))
+            *self.get_glm_license_subflow(prefix + '-' + role, role))
         create_amp_for_lb_subflow.add(
             database_tasks.MarkAmphoraAllocatedInDB(
                 name=sf_name + '-' + constants.MARK_AMPHORA_ALLOCATED_INDB,
@@ -389,40 +389,40 @@ class VThunderFlows(object):
 
         if role == constants.ROLE_BACKUP:
             glm_license_subflow.add(vthunder_tasks.SetVThunderHostname(
-                name=role + '-' + a10constants.SET_VTHUNDER_HOSTNAME,
+                name=sf_name + '-' + a10constants.SET_VTHUNDER_HOSTNAME,
                 requires=constants.AMPHORA,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}
             ))
             glm_license_subflow.add(glm_tasks.ConfigureForwardProxyServer(
-                name=role + '-' + a10constants.CONFIGURE_PROXY_SERVER,
+                name=sf_name + '-' + a10constants.CONFIGURE_PROXY_SERVER,
                 requires=constants.FLAVOR,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}
             ))
             glm_license_subflow.add(glm_tasks.DNSConfiguration(
-                name=role + '-' + a10constants.CONFIGURE_DNS_NAMESERVERS,
+                name=sf_name + '-' + a10constants.CONFIGURE_DNS_NAMESERVERS,
                 requires=constants.FLAVOR,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
             ))
             glm_license_subflow.add(glm_tasks.ActivateFlexpoolLicense(
-                name=role + '-' + a10constants.ACTIVATE_FLEXPOOL_LICENSE,
+                name=sf_name + '-' + a10constants.ACTIVATE_FLEXPOOL_LICENSE,
                 requires=(constants.AMPHORA, constants.FLAVOR),
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
             ))
         else:
             glm_license_subflow.add(vthunder_tasks.SetVThunderHostname(
-                name=role + '-' + a10constants.SET_VTHUNDER_HOSTNAME,
+                name=sf_name + '-' + a10constants.SET_VTHUNDER_HOSTNAME,
                 requires=(constants.AMPHORA, a10constants.VTHUNDER)
             ))
             glm_license_subflow.add(glm_tasks.ConfigureForwardProxyServer(
-                name=role + '-' + a10constants.CONFIGURE_PROXY_SERVER,
+                name=sf_name + '-' + a10constants.CONFIGURE_PROXY_SERVER,
                 requires=(constants.FLAVOR, a10constants.VTHUNDER)
             ))
             glm_license_subflow.add(glm_tasks.DNSConfiguration(
-                name=role + '-' + a10constants.CONFIGURE_DNS_NAMESERVERS,
+                name=sf_name + '-' + a10constants.CONFIGURE_DNS_NAMESERVERS,
                 requires=(constants.FLAVOR, a10constants.VTHUNDER)
             ))
             glm_license_subflow.add(glm_tasks.ActivateFlexpoolLicense(
-                name=role + '-' + a10constants.ACTIVATE_FLEXPOOL_LICENSE,
+                name=sf_name + '-' + a10constants.ACTIVATE_FLEXPOOL_LICENSE,
                 requires=(constants.AMPHORA, a10constants.VTHUNDER, constants.FLAVOR),
             ))
         return glm_license_subflow
