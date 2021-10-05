@@ -88,10 +88,10 @@ class LoadBalancerFlows(object):
         # Attaching vThunder to LB in database
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
             lb_create_flow.add(*self._create_active_standby_topology())
-            LOG.info("TOPOLOGY ===" + str(topology))
+            LOG.info("TOPOLOGY === " + str(topology))
         elif topology == constants.TOPOLOGY_SINGLE:
             lb_create_flow.add(*self._create_single_topology())
-            LOG.info("TOPOLOGY ===" + str(topology))
+            LOG.info("TOPOLOGY === " + str(topology))
         else:
             LOG.error("Unknown topology: %s.  Unable to build load balancer.",
                       topology)
