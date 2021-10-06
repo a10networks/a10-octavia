@@ -61,20 +61,20 @@ class A10HealthManager(health_manager.HealthManager):
                     lock_session, initial_setup_wait_time, failover_wait_time)
 
                 if vthunder is not None:
+                    self.vthunder_repo.set_vthunder_health_state(
+                        lock_session, vthunder.id, 'DOWN')
+
+                    if not vthunder.amphora_id:
+                        LOG.info("Hardware vthunder %s heartbeat timeout", vthunder.vthunder_id)
+                        lock_session.commit()
+                        continue
+
                     # Don't failover vthunders which has pending state LBs
                     if self._is_vthunder_busy(lock_session, vthunder):
                         self.vthunder_repo.set_vthunder_health_state(
                             lock_session, vthunder.id, 'BUSY')
                         LOG.info("vthunder %s heartbeat timeout but it is in "
                                  "pending state, skip failover", vthunder.vthunder_id)
-                        lock_session.commit()
-                        continue
-
-                    self.vthunder_repo.set_vthunder_health_state(
-                        lock_session, vthunder.id, 'DOWN')
-
-                    if not vthunder.amphora_id:
-                        LOG.info("Hardware vthunder %s heartbeat timeout", vthunder.vthunder_id)
                         lock_session.commit()
                         continue
 
@@ -128,3 +128,4 @@ class A10HealthManager(health_manager.HealthManager):
             lb = self.loadbalancer_repo.get(session, id=thunder.loadbalancer_id)
             if lb and lb.provisioning_status in busy_status:
                 return True
+        return False
