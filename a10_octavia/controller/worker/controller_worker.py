@@ -667,12 +667,77 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         finally:
             self._set_vthunder_available(member.project_id, True, ctx_flags, load_balancer)
 
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
+        wait=tenacity.wait_incrementing(
+            RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
+        stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def batch_update_members(self, old_member_ids, new_member_ids,
                              updated_members):
 
-        raise exceptions.NotImplementedError(
-            user_fault_string='This provider does not support members yet',
-            operator_fault_string='This provider does not support members yet')
+        new_members = [self._member_repo.get(db_apis.get_session(), id=mid)
+                       for mid in new_member_ids]
+        # The API may not have commited all of the new member records yet.
+        # Make sure we retry looking them up.
+        if None in new_members or len(new_members) != len(new_member_ids):
+            LOG.warning('Failed to fetch one of the new members from DB. '
+                        'Retrying for up to 60 seconds.')
+            raise db_exceptions.NoResultFound
+
+        old_members = [self._member_repo.get(db_apis.get_session(), id=mid)
+                       for mid in old_member_ids]
+
+        updated_members = [(self._member_repo.get(
+                            db_apis.get_session(), id=m.get('id')), m)
+                           for m in updated_members]
+
+        if old_members:
+            pool = old_members[0].pool
+        elif new_members:
+            pool = new_members[0].pool
+        else:
+            pool = updated_members[0][0].pool
+
+        load_balancer = pool.load_balancer
+        listeners = pool.listeners
+
+        ctx_flags = [False]
+        try:
+            if self._is_rack_flow(pool.project_id, loadbalancer=load_balancer):
+                vthunder_conf = CONF.hardware_thunder.devices.get(load_balancer.project_id, None)
+                device_dict = CONF.hardware_thunder.devices
+                batch_update_members_tf = self._taskflow_load(
+                    self._member_flows.get_rack_vthunder_batch_update_members_flow(
+                        old_members, new_members, updated_members,
+                        vthunder_conf, device_dict),
+                    store={constants.LISTENERS: listeners,
+                           constants.LOADBALANCER: load_balancer,
+                           constants.POOL: pool})
+            else:
+                topology = CONF.a10_controller_worker.loadbalancer_topology
+                busy = self._vthunder_busy_check(load_balancer.project_id, True,
+                                                 ctx_flags, load_balancer)
+                batch_update_members_tf = self._taskflow_load(
+                    self._member_flows.get_batch_update_members_flow(
+                        old_members, new_members, updated_members, topology),
+                    store={constants.LISTENERS: listeners,
+                           constants.LOADBALANCER: load_balancer,
+                           a10constants.COMPUTE_BUSY: busy,
+                           constants.POOL: pool,
+                           a10constants.VTHUNDER_CONFIG: None,
+                           a10constants.USE_DEVICE_FLAVOR: False,
+                           a10constants.LB_COUNT_THUNDER: None,
+                           a10constants.MEMBER_COUNT_THUNDER: None}
+                )
+                self._register_flow_notify_handler(batch_update_members_tf,
+                                                   load_balancer.project_id, True,
+                                                   busy, ctx_flags, load_balancer)
+
+            with tf_logging.DynamicLoggingListener(batch_update_members_tf,
+                                                   log=LOG):
+                batch_update_members_tf.run()
+        finally:
+            self._set_vthunder_available(pool.project_id, True, ctx_flags, load_balancer)
 
     def update_member(self, member_id, member_updates):
         """Updates a pool member.

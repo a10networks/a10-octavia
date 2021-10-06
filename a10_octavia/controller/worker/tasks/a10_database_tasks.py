@@ -450,6 +450,8 @@ class GetLoadbalancersInProjectBySubnet(BaseDatabaseTask):
 class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
 
     def execute(self, subnet, partition_project_list, use_device_flavor):
+        if not subnet:
+            return 0
         if not use_device_flavor and partition_project_list:
             try:
                 return self.loadbalancer_repo.get_lb_count_by_subnet(
@@ -465,6 +467,8 @@ class CountLoadbalancersInProjectBySubnet(BaseDatabaseTask):
 class CountMembersInProjectBySubnet(BaseDatabaseTask):
 
     def execute(self, subnet, partition_project_list):
+        if not subnet:
+            return 0
         if partition_project_list:
             try:
                 return self.member_repo.get_member_count_by_subnet(
