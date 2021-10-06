@@ -416,6 +416,11 @@ class VThunderRepository(BaseRepository):
         id_list = [model.id for model in model_list]
         return id_list
 
+    def get_lb_count_vthunder_partition(self, session, ip_address, partition):
+        return session.query(self.model_class).filter(self.model_class.ip_address == ip_address,
+                                                    self.model_class.partition_name == partition,
+                                                    self.model_class.status == "ACTIVE").count()
+
 
 class LoadBalancerRepository(repo.LoadBalancerRepository):
     thunder_model_class = models.VThunder

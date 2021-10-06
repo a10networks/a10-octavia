@@ -725,12 +725,12 @@ class GetChildProjectsOfParentPartition(BaseDatabaseTask):
 class GetFlavorData(BaseDatabaseTask):
 
     def _format_keys(self, flavor_data):
-        if type(flavor_data) is list:
+        if isinstance(flavor_data, list):
             item_list = []
             for item in flavor_data:
                 item_list.append(self._format_keys(item))
             return item_list
-        elif type(flavor_data) is dict:
+        elif isinstance(flavor_data, dict):
             item_dict = {}
             for k, v in flavor_data.items():
                 item_dict[k.replace('-', '_')] = self._format_keys(v)
@@ -1343,3 +1343,13 @@ class FailoverPostDbUpdate(BaseDatabaseTask):
                                          compute_flavor=compute_flavor)
         except Exception as e:
             LOG.exception("Failover failed to update DB du to: %s", str(e))
+
+
+class CountLBThunderPartition(BaseDatabaseTask):
+    def execute(self, vthunder):
+        if not vthunder:
+            return 0
+
+        return self.vthunder_repo.get_lb_count_vthunder_partition(db_apis.get_session(),
+                                                                  vthunder.ip_address,
+                                                                  vthunder.partition_name)

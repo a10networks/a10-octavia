@@ -706,6 +706,11 @@ class LoadBalancerFlows(object):
         delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
                       a10constants.LB_COUNT_FLAVOR, constants.FLAVOR_DATA)))
+        delete_LB_flow.add(a10_database_tasks.CountLBThunderPartition(
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.LB_COUNT_THUNDER_PARTITION))
+        delete_LB_flow.add(vthunder_tasks.DeleteHealthMonitorOnVThunder(
+            requires=(a10constants.LB_COUNT_THUNDER_PARTITION, a10constants.VTHUNDER)))
         if CONF.a10_global.network_type == 'vlan':
             delete_LB_flow.add(
                 vthunder_tasks.DeleteInterfaceTagIfNotInUseForLB(

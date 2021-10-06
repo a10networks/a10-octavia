@@ -89,6 +89,7 @@ MEMBER_COUNT = 'member_count'
 DELETE_VRID = 'delete_vrid'
 LB_COUNT_THUNDER = 'lb_count_thunder'
 MEMBER_COUNT_THUNDER = 'member_count_thunder'
+LB_COUNT_THUNDER_PARTITION = 'lb_count_thunder_partition'
 
 ID = 'id'
 SECURITY_GROUPS = 'security_groups'
