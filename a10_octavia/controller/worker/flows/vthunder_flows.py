@@ -367,15 +367,32 @@ class VThunderFlows(object):
             vthunder_for_amphora_subflow.add(database_tasks.MarkAmphoraMasterInDB(
                 name=sf_name + '-' + constants.MARK_AMP_MASTER_INDB,
                 requires=constants.AMPHORA))
+            vthunder_for_amphora_subflow.add(
+                vthunder_tasks.UpdateAcosVersionInVthunderEntry(
+                    name=sf_name + '-' + a10constants.UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER,
+                    requires=(a10constants.VTHUNDER)))
         elif role == constants.ROLE_BACKUP:
             vthunder_for_amphora_subflow.add(database_tasks.MarkAmphoraBackupInDB(
                 name=sf_name + '-' + constants.MARK_AMP_BACKUP_INDB,
                 requires=constants.AMPHORA))
+            vthunder_for_amphora_subflow.add(
+                a10_database_tasks.GetBackupVThunderByLoadBalancer(
+                    name=sf_name + '-' + a10constants.BACKUP_VTHUNDER,
+                    requires=constants.LOADBALANCER,
+                    provides=a10constants.BACKUP_VTHUNDER))
+            vthunder_for_amphora_subflow.add(
+                vthunder_tasks.UpdateAcosVersionInVthunderEntry(
+                    name=sf_name + '-' + a10constants.UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER,
+                    rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
         elif role == constants.ROLE_STANDALONE:
             vthunder_for_amphora_subflow.add(
                 database_tasks.MarkAmphoraStandAloneInDB(
                     name=sf_name + '-' + constants.MARK_AMP_STANDALONE_INDB,
                     requires=constants.AMPHORA))
+            vthunder_for_amphora_subflow.add(
+                vthunder_tasks.UpdateAcosVersionInVthunderEntry(
+                    name=sf_name + '-' + a10constants.UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER,
+                    requires=(a10constants.VTHUNDER)))
 
         # If spare vThunder is used, remove spare vThunder the database
         vthunder_for_amphora_subflow.add(a10_database_tasks.DeleteStaleSpareVThunder(

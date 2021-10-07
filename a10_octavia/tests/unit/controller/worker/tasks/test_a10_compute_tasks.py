@@ -14,7 +14,6 @@
 
 import copy
 import imp
-from json import load
 
 try:
     from unittest import mock

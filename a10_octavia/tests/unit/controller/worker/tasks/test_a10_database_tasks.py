@@ -577,7 +577,6 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_get_listener.listener_stats_repo.get_all.return_value = [LISTENER_STATS], None
         mock_get_listener.execute([LISTENER_STATS])
         mock_stats_base.assert_called_once_with([LISTENER_STATS])
-        mock_get_listener.listener_stats_repo.delete.assert_called_once()
 
     def test_GetVThunderAmphora(self):
         db_task = task.GetVThunderAmphora()
