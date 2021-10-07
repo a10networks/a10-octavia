@@ -241,6 +241,9 @@ A10_HEALTH_MANAGER_OPTS = [
     cfg.IntOpt('health_update_threads',
                default=None,
                help=_('Number of processes for vthunder health update.')),
+    cfg.IntOpt('stats_update_threads',
+               default=None,
+               help=_('Number of processes for vthunder stats update.')),
     cfg.StrOpt('heartbeat_key',
                help=_('key used to validate vthunder sending'
                       'the message'), secret=True),
