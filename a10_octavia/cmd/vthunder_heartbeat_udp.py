@@ -45,7 +45,7 @@ class VThunderUDPStatusGetter(object):
         self.update(self.key, self.ip, self.port)
         self.vthunder_repo = a10repo.VThunderRepository()
         self.stats_executor = futures.ProcessPoolExecutor(
-            max_workers=CONF.a10_health_manager.stats_update_thread)
+            max_workers=CONF.a10_health_manager.stats_update_threads)
 
     def update(self, key, ip, port):
         """Update the running config for the udp socket server
