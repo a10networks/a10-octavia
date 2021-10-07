@@ -552,8 +552,7 @@ class CreateHealthMonitorOnVThunder(VThunderBaseTask):
 
 
 class DeleteHealthMonitorOnVThunder(VThunderBaseTask):
-    """Task to remove health monitor configurations from vthunder device
-    if no more loadbalancer exists"""
+    """Task to remove health monitor configurations from vthunder device"""
 
     @axapi_client_decorator
     def execute(self, lb_count_thunder_partition, vthunder):
