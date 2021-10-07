@@ -241,9 +241,6 @@ A10_HEALTH_MANAGER_OPTS = [
     cfg.IntOpt('health_update_threads',
                default=None,
                help=_('Number of processes for vthunder health update.')),
-    cfg.IntOpt('stats_update_threads',
-               default=None,
-               help=_('Number of processes for vthunder stats update.')),
     cfg.StrOpt('heartbeat_key',
                help=_('key used to validate vthunder sending'
                       'the message'), secret=True),
@@ -270,6 +267,9 @@ A10_HEALTH_MANAGER_OPTS = [
     cfg.IntOpt('stats_update_timeout',
                default=10,
                help=_('VThunder axapi timeout for Listener stats')),
+    cfg.BoolOpt('stats_update_disable',
+                default=False,
+                help=_('Disable loadbalancer listener statistics update')),
 ]
 
 A10_CONTROLLER_WORKER_OPTS = [

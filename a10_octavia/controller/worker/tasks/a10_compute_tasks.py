@@ -21,11 +21,6 @@ from taskflow.types import failure
 from octavia.common import constants
 from octavia.common import exceptions
 from octavia.controller.worker.v1.tasks.compute_tasks import BaseComputeTask
-from octavia.db import api as db_apis
-
-from a10_octavia.common import a10constants
-from a10_octavia.common import exceptions as a10_exceptions
-from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -47,7 +42,7 @@ class ComputeCreate(BaseComputeTask):
         if CONF.glm_license.amp_license_network:
             network_ids.add(CONF.glm_license.amp_license_network)
         if network_list:
-            network_ids.union(network_list)
+            network_ids = network_ids.union(set(network_list))
         if loadbalancer:
             network_ids.add(loadbalancer.vip.network_id)
 
@@ -172,27 +167,5 @@ class DeleteStaleCompute(BaseComputeTask):
                 self.compute.delete(vthunder.compute_id)
             except Exception as e:
                 LOG.exception("Failed to delete stale compute %s due to: %s",
-                              vthunder.compute_id, str(e))
-                # pass here in case the compute is already deleted
-
-
-class FailoverPausedCompute(BaseComputeTask):
-    def __init__(self, **kwargs):
-        super(FailoverPausedCompute, self).__init__(**kwargs)
-        self.vthunder_repo = a10_repo.VThunderRepository()
-
-    def execute(self, vthunder):
-        if vthunder:
-            try:
-                amp, fault = self.compute.get_amphora(vthunder.compute_id)
-                if amp.status == a10constants.COMPUTE_PAUSED:
-                    self.vthunder_repo.set_vthunder_health_state(
-                        db_apis.get_session(), vthunder.id, amp.status)
-                    LOG.info("The vThunder instance is paused, skipping the failover...")
-                    raise a10_exceptions.FailoverOnPausedCompute()
-            except a10_exceptions.FailoverOnPausedCompute as e:
-                raise e
-            except Exception as e:
-                LOG.exception("Failed to find compute %s du to: %s",
                               vthunder.compute_id, str(e))
                 # pass here in case the compute is already deleted
