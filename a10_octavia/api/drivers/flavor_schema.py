@@ -229,7 +229,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
                     "description": "Username for proxy authentication"
                 },
                 "proxy-password": {
-                    "type": "bool",
+                    "type": "boolean",
                     "description": "Password for proxy authentication"
                 },
                 "proxy-secret-string": {
@@ -243,7 +243,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
             "description": "Global License Manager configuration settings",
             "properties": {
                 "use-network-dns": {
-                    "type": "bool",
+                    "type": "boolean",
                     "description": "Use the network dns nameservers instead of "
                                    "those in the config or flavor."
                 },
@@ -254,7 +254,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
                     "maximum": 204800
                 },
                 "burst": {
-                    "type": "bool",
+                    "type": "boolean",
                     "description": "Enable bursting. Allows amphora to exceed allocated "
                                    "bandwidth limits. Ensures that packets never drop."
                 },
@@ -271,7 +271,7 @@ SUPPORTED_FLAVOR_SCHEMA = {
                     "maximum": 65535
                 },
                 "enable-requests": {
-                    "type": "bool",
+                    "type": "boolean",
                     "description": "Enables license retrieval from the GLM/ELM server. "
                                    "Allows license changes to be replicated automatically.",
                 },
