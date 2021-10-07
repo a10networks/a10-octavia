@@ -559,7 +559,7 @@ class DeleteHealthMonitorOnVThunder(VThunderBaseTask):
     def execute(self, lb_count_thunder_partition, vthunder):
         name = a10constants.OCTAVIA_HEALTH_MANAGER_CONTROLLER
         health_check = a10constants.OCTAVIA_HEALTH_MONITOR
-        if lb_count_thunder_partition:
+        if not vthunder or lb_count_thunder_partition:
             return
 
         try:
