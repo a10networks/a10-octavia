@@ -100,4 +100,6 @@ class VThunderUDPStatusGetter(object):
                         'heartbeat packet. Ignoring this packet. '
                         'Exception: %s', ex)
         else:
-            self.stats_executor.submit(cw.A10ControllerWorker().perform_vthunder_stats_update(ip))
+            if not CONF.a10_health_manager.stats_update_disable:
+                self.stats_executor.submit(
+                    cw.A10ControllerWorker().perform_vthunder_stats_update(ip))

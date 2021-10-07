@@ -267,6 +267,9 @@ A10_HEALTH_MANAGER_OPTS = [
     cfg.IntOpt('stats_update_timeout',
                default=10,
                help=_('VThunder axapi timeout for Listener stats')),
+    cfg.BoolOpt('stats_update_disable',
+                default=False,
+                help=_('Disable loadbalancer listener statistics update')),
 ]
 
 A10_CONTROLLER_WORKER_OPTS = [
