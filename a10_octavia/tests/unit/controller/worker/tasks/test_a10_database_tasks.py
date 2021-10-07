@@ -670,3 +670,16 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
                                                             lb_network_ip=mock.ANY,
                                                             image_id=mock.ANY,
                                                             compute_flavor=mock.ANY)
+
+    def test_count_lb_thunder_partition_success(self):
+        vthunder = copy.deepcopy(VTHUNDER)
+        mock_count_lb = task.CountLBThunderPartition()
+        mock_count_lb.vthunder_repo.get_lb_count_vthunder_partition = mock.Mock()
+        mock_count_lb.vthunder_repo.get_lb_count_vthunder_partition.return_value = 1
+        lb_count = mock_count_lb.execute(vthunder)
+        self.assertEqual(1, lb_count)
+
+    def test_count_lb_thunder_partition_no_thunder(self):
+        mock_count_lb = task.CountLBThunderPartition()
+        lb_count = mock_count_lb.execute(None)
+        self.assertEqual(0, lb_count)
