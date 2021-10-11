@@ -34,21 +34,22 @@ class HandleSessionPersistenceDelta(task.Task):
         sess_pers = pool.session_persistence
         if pool.session_persistence and hasattr(pool.session_persistence, 'to_dict'):
             sess_pers = pool.session_persistence.to_dict()
-        if sess_pers and sess_pers['type'] in SP_OBJ_DICT:
 
-            # Remove existing persistence template if any
-            for sp_type in PERS_TYPE:
-                try:
-                    sp_template = getattr(self.axapi_client.slb.template, sp_type)
-                    sp_template.delete(pool.id)
-                    LOG.debug("Successfully deleted existing session persistence template "
-                              "for pool: %s", pool.id)
-                except acos_errors.NotFound:
-                    pass
-                except (acos_errors.ACOSException, ConnectionError) as e:
-                    LOG.exception("Failed to delete existing session persistence for pool: %s",
-                                  pool.id)
-                    raise e
+        # Remove existing persistence template if any
+        for sp_type in PERS_TYPE:
+            try:
+                sp_template = getattr(self.axapi_client.slb.template, sp_type)
+                sp_template.delete(pool.id)
+                LOG.debug("Successfully deleted existing session persistence template "
+                          "for pool: %s", pool.id)
+            except acos_errors.NotFound:
+                pass
+            except (acos_errors.ACOSException, ConnectionError) as e:
+                LOG.exception("Failed to delete existing session persistence for pool: %s",
+                              pool.id)
+                raise e
+
+        if sess_pers and sess_pers['type'] in SP_OBJ_DICT:
             sp_template = getattr(self.axapi_client.slb.template, SP_OBJ_DICT[sess_pers['type']])
 
             try:
