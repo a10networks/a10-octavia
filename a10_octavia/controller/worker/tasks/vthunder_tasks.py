@@ -551,6 +551,33 @@ class CreateHealthMonitorOnVThunder(VThunderBaseTask):
                 raise e
 
 
+class DeleteHealthMonitorOnVThunder(VThunderBaseTask):
+    """Task to remove health monitor configurations from vthunder device"""
+
+    @axapi_client_decorator
+    def execute(self, lb_count_thunder_partition, vthunder):
+        name = a10constants.OCTAVIA_HEALTH_MANAGER_CONTROLLER
+        health_check = a10constants.OCTAVIA_HEALTH_MONITOR
+        if not vthunder or lb_count_thunder_partition:
+            return
+
+        try:
+            self.axapi_client.slb.server.delete(name)
+            LOG.debug("Server deleted successfully.")
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+            LOG.exception("Failed to delete health monitor server: %s", str(e))
+            raise e
+
+        try:
+            self.axapi_client.slb.hm.delete(health_check)
+            LOG.debug("Successfully deleted health monitor for vThunder %s", vthunder.id)
+        except acos_errors.NotFound:
+            LOG.debug("health monitor slb server does not exist on vThunder %s", vthunder.id)
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+            LOG.exception("Failed to delete health monitor: %s", str(e))
+            raise e
+
+
 class CheckVRRPStatus(VThunderBaseTask):
     """Task to check VRRP status"""
 

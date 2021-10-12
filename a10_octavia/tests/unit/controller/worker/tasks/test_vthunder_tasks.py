@@ -1092,3 +1092,27 @@ class TestVThunderTasks(base.BaseTaskTestCase):
 
         flexpool_task.execute(vthunder, amphora)
         self.client_mock.system.action.set_hostname.assert_called_with(expected_host)
+
+    def test_DeleteHealthMonitorOnVThunder_success(self):
+        mock_task = task.DeleteHealthMonitorOnVThunder()
+        mock_task.axapi_client = self.client_mock
+        thunder = copy.deepcopy(VTHUNDER)
+        mock_lb_count_thunder_partition = 0
+        mock_task.execute(mock_lb_count_thunder_partition, thunder)
+        self.client_mock.slb.server.delete.assert_called_with(
+            a10constants.MOCK_OCTAVIA_HEALTH_MANAGER_CONTROLLER)
+        self.client_mock.slb.hm.delete.assert_called_with(
+            a10constants.MOCK_OCTAVIA_HEALTH_MONITOR)
+
+    def test_DeleteHealthMonitorOnVThunder_no_vthunder(self):
+        mock_task = task.DeleteHealthMonitorOnVThunder()
+        mock_lb_count_thunder_partition = 0
+        delete_hm = mock_task.execute(mock_lb_count_thunder_partition, None)
+        self.assertEqual(None, delete_hm)
+
+    def test_DeleteHealthMonitorOnVThunder_active_lb(self):
+        mock_task = task.DeleteHealthMonitorOnVThunder()
+        mock_lb_count_thunder_partition = 2
+        thunder = copy.deepcopy(VTHUNDER)
+        delete_hm = mock_task.execute(mock_lb_count_thunder_partition, thunder)
+        self.assertEqual(None, delete_hm)
