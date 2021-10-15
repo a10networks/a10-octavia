@@ -774,6 +774,9 @@ class VThunderFlows(object):
         failover_flow.add(a10_database_tasks.SetVThunderToStandby(
             name=sf_name + '-' + a10constants.SET_VTHUNDER_TO_STANDBY,
             requires=a10constants.VTHUNDER_LIST))
+        failover_flow.add(a10_database_tasks.LoadBalancerListToErrorOnRevertTask(
+            name=sf_name + '-' + a10constants.MARK_LB_LIST_ERROR_ON_REVERT,
+            requires=a10constants.LOADBALANCERS_LIST))
         failover_flow.add(a10_database_tasks.MarkLoadBalancersPendingUpdateInDB(
             name=sf_name + '-' + a10constants.MARK_LB_PENIND_UPDATE_IN_DB,
             requires=a10constants.LOADBALANCERS_LIST))
