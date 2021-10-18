@@ -26,6 +26,7 @@ from taskflow.types import failure
 
 from octavia.common import constants
 from octavia.common import exceptions as octavia_exceptions
+from octavia.controller.worker import task_utils as task_utilities
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 from octavia.statistics import stats_base
@@ -56,6 +57,7 @@ class BaseDatabaseTask(task.Task):
         self.flavor_profile_repo = repo.FlavorProfileRepository()
         self.nat_pool_repo = a10_repo.NatPoolRepository()
         self.vrrp_set_repo = a10_repo.VrrpSetRepository()
+        self.task_utils = task_utilities.TaskUtils()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
 
@@ -1353,3 +1355,14 @@ class CountLBThunderPartition(BaseDatabaseTask):
         return self.vthunder_repo.get_lb_count_vthunder_partition(db_apis.get_session(),
                                                                   vthunder.ip_address,
                                                                   vthunder.partition_name)
+
+
+class LoadBalancerListToErrorOnRevertTask(BaseDatabaseTask):
+    """Task to set Loadbalancers to ERROR on revert"""
+
+    def execute(self, loadbalancers_list):
+        pass
+
+    def revert(self, loadbalancers_list, *args, **kwargs):
+        for lb in loadbalancers_list:
+            self.task_utils.mark_loadbalancer_prov_status_error(lb.id)

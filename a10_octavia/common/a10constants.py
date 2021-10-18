@@ -236,6 +236,7 @@ PLUG_VIP_NETWORK_ON_SPARE = 'plusg-vip-network-on-spare'
 POST_SPARE_PLUG_NETWORK = 'post-failover-plug-network'
 GET_VCS_DEVICE_ID = 'get-vcs-device-id'
 POST_FAILOVER_DB_UPDATE = 'post-failover-db-update'
+MARK_LB_LIST_ERROR_ON_REVERT = 'mark-lb-list-error-on-revert'
 
 # ======================
 # Non-Taskflow Constants
