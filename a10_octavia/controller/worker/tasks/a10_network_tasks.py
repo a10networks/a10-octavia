@@ -31,6 +31,7 @@ from octavia.network import data_models as n_data_models
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
+from a10_octavia.common import exceptions
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils as a10_task_utils
@@ -69,11 +70,15 @@ class CalculateAmphoraDelta(BaseNetworkTask):
         member_networks = []
         for loadbalancer in loadbalancers_list:
             for pool in loadbalancer.pools:
-                member_networks = [
-                    self.network_driver.get_subnet(member.subnet_id).network_id
-                    for member in pool.members
-                    if member.subnet_id and member in member_list
-                ]
+                for member in pool.members:
+                    if member.subnet_id:
+                        member_networks = [
+                            self.network_driver.get_subnet(member.subnet_id).network_id]
+                    else:
+                        LOG.warning("Subnet id argument was not specified during "
+                                    "issuance of create command/API call for member %s. "
+                                    "Skipping interface attachment", member.id)
+
                 desired_network_ids.update(member_networks)
 
         loadbalancer_networks = [
@@ -716,16 +721,17 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
 
     def _add_vrid_to_list(self, vrid_list, subnet, owner):
         vrid_value = CONF.a10_global.vrid
-        filtered_vrid_list = list(filter(lambda x: x.subnet_id == subnet.id, vrid_list))
-        if not filtered_vrid_list:
-            vrid_list.append(
-                data_models.VRID(
+        subnet_ids = set([s.id for s in subnet]) if isinstance(subnet, list) else [subnet.id]
+        for subnet_id in subnet_ids:
+            filtered_vrid_list = list(filter(lambda x: x.subnet_id == subnet_id, vrid_list))
+            if not filtered_vrid_list:
+                vrid_list.append(data_models.VRID(
                     id=uuidutils.generate_uuid(),
                     vrid=vrid_value,
                     owner=owner,
                     vrid_port_id=None,
                     vrid_floating_ip=None,
-                    subnet_id=subnet.id))
+                    subnet_id=subnet_id))
 
     def _remove_device_vrid_fip(self, partition_name, vrid_value):
         try:
@@ -788,6 +794,9 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         :return: return the update list of VRID object, If empty the need to remove all VRID
         objects from DB else need update existing ones.
         """
+        updated_vrid_list = []
+        if not subnet:
+            return updated_vrid_list
         vrid_value = CONF.a10_global.vrid
         prev_vrid_value = vrid_list[0].vrid if vrid_list else None
         updated_vrid_list = copy.copy(vrid_list)
@@ -843,8 +852,14 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 if new_ip != vrid.vrid_floating_ip:
                     vrid = self._replace_vrid_port(vrid, vrid_subnet, lb_resource, new_ip)
                     update_vrid_flag = True
-            if vrid_subnet.id == subnet.id or vrid.vrid_floating_ip in existing_fips:
-                vrid_floating_ips.append(vrid.vrid_floating_ip)
+
+            if isinstance(subnet, list):
+                subnet_ids = set([s.id for s in subnet])
+                if vrid_subnet.id in subnet_ids or vrid.vrid_floating_ip in existing_fips:
+                    vrid_floating_ips.append(vrid.vrid_floating_ip)
+            else:
+                if vrid_subnet.id == subnet.id or vrid.vrid_floating_ip in existing_fips:
+                    vrid_floating_ips.append(vrid.vrid_floating_ip)
 
         if (prev_vrid_value is not None) and (prev_vrid_value != vrid_value):
             self._remove_device_vrid_fip(vthunder.partition_name, prev_vrid_value)
@@ -889,6 +904,8 @@ class DeleteVRIDPort(BaseNetworkTask):
     def execute(self, vthunder, vrid_list, subnet,
                 use_device_flavor, lb_count_subnet, member_count,
                 lb_count_thunder, member_count_thunder, lb_resource):
+        if not subnet:
+            return None, False
         vrid = None
         vrid_floating_ip_list = []
         existing_fips = []
@@ -1020,8 +1037,21 @@ class GetLBResourceSubnet(BaseNetworkTask):
             # Special case for load balancers as their vips have the subnet
             # info
             subnet = self.network_driver.get_subnet(lb_resource.vip.subnet_id)
-        else:
+        elif lb_resource.subnet_id:
             subnet = self.network_driver.get_subnet(lb_resource.subnet_id)
+        else:
+            return
+        return subnet
+
+
+class GetAllResourceSubnet(BaseNetworkTask):
+    "Provides subnet ID for LB resources"
+
+    def execute(self, members):
+        subnet = []
+        for member in members:
+            if member.subnet_id:
+                subnet.append(self.network_driver.get_subnet(member.subnet_id))
         return subnet
 
 
@@ -1168,3 +1198,15 @@ class PlugVipNetworkOnSpare(BaseNetworkTask):
                 self.network_driver.unplug_network(spare_vthunder.compute_id, net)
             except base.NetworkNotFound:
                 pass
+
+
+class ValidateSubnet(BaseNetworkTask):
+
+    def execute(self, member):
+        if member.subnet_id:
+            member_subnet = self.network_driver.get_subnet(member.subnet_id)
+            subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(member_subnet.cidr)
+            if not a10_utils.check_ip_in_subnet_range(
+                    member.ip_address, subnet_ip, subnet_mask):
+                raise exceptions.IPAddressNotInSubnetRangeError(
+                    member.ip_address, member_subnet.cidr)
