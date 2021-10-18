@@ -86,14 +86,14 @@ class TestPersistTasks(BaseTaskTestCase):
         mock_session_persist.axapi_client = self.client_mock
         self.pool.session_persistence = APP_COOKIE_SESS_PERS_WITH_NO_TYPE
         mock_session_persist.execute(VTHUNDER, self.pool)
-        self.client_mock.slb.template.cookie_persistence.delete.assert_not_called()
+        self.client_mock.slb.template.cookie_persistence.delete.assert_called_with(POOL.id)
         self.client_mock.slb.template.cookie_persistence.create.assert_not_called()
 
     def test_handle_session_persistence_with_source_ip_with_no_sess_pers(self):
         mock_session_persist = persist_tasks.HandleSessionPersistenceDelta()
         mock_session_persist.axapi_client = self.client_mock
         mock_session_persist.execute(VTHUNDER, self.pool)
-        self.client_mock.slb.template.src_ip_persistence.delete.assert_not_called()
+        self.client_mock.slb.template.src_ip_persistence.delete.assert_called_with(POOL.id)
         self.client_mock.slb.template.src_ip_persistence.create.assert_not_called()
 
     def test_revert_handle_session_persistence_with_source_ip(self):
@@ -136,5 +136,5 @@ class TestPersistTasks(BaseTaskTestCase):
         mock_session_persist.axapi_client = self.client_mock
         self.pool.session_persistence = None
         mock_session_persist.execute(VTHUNDER, self.pool)
-        self.client_mock.slb.template.src_ip_persistence.delete.assert_not_called()
+        self.client_mock.slb.template.src_ip_persistence.delete.assert_called_with(POOL.id)
         self.client_mock.slb.template.src_ip_persistence.create.assert_not_called()
