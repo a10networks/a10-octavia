@@ -71,7 +71,7 @@ class CalculateAmphoraDelta(BaseNetworkTask):
         for loadbalancer in loadbalancers_list:
             for pool in loadbalancer.pools:
                 for member in pool.members:
-                    if member.subnet_id:
+                    if member.subnet_id and member in member_list:
                         member_networks = [
                             self.network_driver.get_subnet(member.subnet_id).network_id]
                     else:
@@ -79,7 +79,7 @@ class CalculateAmphoraDelta(BaseNetworkTask):
                                     "issuance of create command/API call for member %s. "
                                     "Skipping interface attachment", member.id)
 
-                desired_network_ids.update(member_networks)
+                    desired_network_ids.update(member_networks)
 
         loadbalancer_networks = [
             self.network_driver.get_subnet(loadbalancer.vip.subnet_id).network_id

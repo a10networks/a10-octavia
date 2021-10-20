@@ -317,30 +317,22 @@ class EnableInterfaceForMembers(VThunderBaseTask):
     @axapi_client_decorator
     def execute(self, added_ports, loadbalancer, vthunder):
         """Enable specific interface of amphora"""
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+        amphora_id = loadbalancer.amphorae[0].id
         try:
-            topology = CONF.a10_controller_worker.loadbalancer_topology
-            amphora_id = loadbalancer.amphorae[0].id
-            compute_id = loadbalancer.amphorae[0].compute_id
-            network_driver = utils.get_network_driver()
-            nics = network_driver.get_plugged_networks(compute_id)
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
-                configured_interface = False
-                attempts = 5
-                while attempts > 0 and configured_interface is False:
-                    try:
-                        target_interface = len(nics)
+                interfaces = self.axapi_client.interface.get_list()
+                for i in range(len(interfaces['interface']['ethernet-list'])):
+                    if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
+                        ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                         if topology == "SINGLE":
-                            self.axapi_client.system.action.setInterface(target_interface - 1)
+                            self.axapi_client.system.action.setInterface(ifnum)
                         else:
                             self.axapi_client.device_context.switch(1, None)
-                            self.axapi_client.system.action.setInterface(target_interface - 1)
+                            self.axapi_client.system.action.setInterface(ifnum)
                             self.axapi_client.device_context.switch(2, None)
-                            self.axapi_client.system.action.setInterface(target_interface - 1)
-                        configured_interface = True
-                        LOG.debug("Configured the new interface required for member.")
-                    except (req_exceptions.ConnectionError, acos_errors.ACOSException,
-                            http_client.BadStatusLine, req_exceptions.ReadTimeout):
-                        attempts = attempts - 1
+                            self.axapi_client.system.action.setInterface(ifnum)
+                            LOG.debug("Configured the new interface required for member.")
             else:
                 LOG.debug("Configuration of new interface is not required for member.")
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
