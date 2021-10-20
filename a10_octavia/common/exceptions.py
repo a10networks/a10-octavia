@@ -284,11 +284,3 @@ class PrimaryDNSMissing(acos_errors.ACOSException):
         msg = ('A secondary DNS with IP {0} was specified without a primary DNS').format(
             secondary_dns)
         super(PrimaryDNSMissing, self).__init__(msg=msg)
-
-
-class IPAddressNotInSubnetRangeError(base.NetworkException):
-    def __init__(self, ip, subnet):
-        msg = ('Invalid IP address specified. ' +
-               'IP {0} out of range ' +
-               'for subnet {1}.').format(ip, subnet)
-        super(IPAddressNotInSubnetRangeError, self).__init__(msg)

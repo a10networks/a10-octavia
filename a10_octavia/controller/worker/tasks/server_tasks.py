@@ -237,7 +237,7 @@ class MemberDeletePool(task.Task):
 class MemberFindNatPool(task.Task):
 
     @axapi_client_decorator
-    def execute(self, vthunder, pool, flavor=None):
+    def execute(self, member, vthunder, pool, flavor=None):
         if flavor is None:
             return
 
