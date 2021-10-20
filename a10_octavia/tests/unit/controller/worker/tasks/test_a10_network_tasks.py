@@ -33,6 +33,7 @@ from a10_octavia.tests.unit import base
 
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
 MEMBER = o_data_models.Member(subnet_id=a10constants.MOCK_SUBNET_ID)
+POOL = o_data_models.Pool()
 VTHUNDER = data_models.VThunder()
 SUBNET = o_net_data_models.Subnet()
 PORT = o_net_data_models.Port()
@@ -613,3 +614,37 @@ class TestNetworkTasks(base.BaseTaskTestCase):
         net_task.network_driver.get_plugged_networks.return_value = nics
         net_list = net_task.execute(vthunder)
         self.assertEqual(net_list, [1, 2])
+
+    @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
+                return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
+    @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
+                return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
+    def test_HandleVRIDFloatingIP_create_floating_ip_for_subnet_list(
+            self, mock_patched_ip, mock_floating_ip):
+        vthunder = copy.deepcopy(VTHUNDER)
+        vthunder.ip_address = '10.0.0.1'
+        subnet = copy.deepcopy(SUBNET_1)
+        subnet.cidr = a10constants.MOCK_SUBNET_CIDR
+        vthunder_config = copy.deepcopy(HW_THUNDER)
+        port = copy.deepcopy(PORT)
+        port.fixed_ips.append(MockIP(a10constants.MOCK_VRID_FLOATING_IP_1))
+        self.client_mock.vrrpa.get.return_value = EXISTING_FIP_SHARED_PARTITION
+        mock_network_task = a10_network_tasks.HandleVRIDFloatingIP()
+        mock_network_task.axapi_client = self.client_mock
+        self.network_driver_mock.get_subnet.return_value = subnet
+        self.network_driver_mock.allocate_vrid_fip.return_value = port
+        self.conf.config(group=a10constants.A10_GLOBAL_OPTS,
+                         vrid=VRID_VALUE)
+        mock_network_task.execute(vthunder, POOL, [], [subnet], vthunder_config)
+        self.network_driver_mock.allocate_vrid_fip.assert_called_with(
+            mock.ANY, None, mock.ANY,
+            fixed_ip=a10constants.MOCK_VRID_FLOATING_IP_1)
+        self.client_mock.vrrpa.update.assert_called_with(
+            VRID_VALUE, floating_ips=[a10constants.MOCK_VRID_FLOATING_IP_1],
+            is_partition=False)
+
+    def test_get_all_resource_subnet(self):
+        mock_network_task = a10_network_tasks.GetAllResourceSubnet()
+        self.network_driver_mock.get_subnet.return_value = SUBNET_1
+        subnet = mock_network_task.execute([MEMBER])
+        self.assertEqual(subnet, [SUBNET_1])
