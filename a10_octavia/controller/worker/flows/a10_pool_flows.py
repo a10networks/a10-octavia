@@ -129,7 +129,8 @@ class PoolFlows(object):
             requires=a10constants.VTHUNDER,
             provides=a10constants.MEMBER_LIST))
         delete_pool_flow.add(a10_network_tasks.CalculateDelta(
-            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
+            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST,
+                      a10constants.MEMBER_LIST),
             provides=constants.DELTAS))
         delete_pool_flow.add(a10_network_tasks.HandleNetworkDeltas(
             requires=constants.DELTAS, provides=constants.ADDED_PORTS))
