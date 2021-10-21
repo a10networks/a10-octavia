@@ -248,7 +248,7 @@ A10_HEALTH_MANAGER_OPTS = [
                help=_('key used to validate vthunder sending'
                       'the message'), secret=True),
     cfg.IntOpt('heartbeat_timeout',
-               default=90,
+               default=180,
                help=_('Interval(in seconds) to wait before failing over a '
                       'vthunder.')),
     cfg.IntOpt('health_check_interval',
