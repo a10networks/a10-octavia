@@ -221,10 +221,11 @@ class AllowLoadbalancerForwardWithAnySource(VThunderBaseTask):
     """Task to add wildcat address in allowed_address_pair to allow any SNAT"""
 
     def execute(self, member, amphora):
-        subnet = self.network_driver.get_subnet(member.subnet_id)
-        if CONF.vthunder.slb_no_snat_support:
-            for amp in amphora:
-                self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
+        if member.subnet_id:
+            subnet = self.network_driver.get_subnet(member.subnet_id)
+            if CONF.vthunder.slb_no_snat_support:
+                for amp in amphora:
+                    self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
 
 
 class UpdateLoadbalancerForwardWithAnySource(VThunderBaseTask):
@@ -316,30 +317,22 @@ class EnableInterfaceForMembers(VThunderBaseTask):
     @axapi_client_decorator
     def execute(self, added_ports, loadbalancer, vthunder):
         """Enable specific interface of amphora"""
+        topology = CONF.a10_controller_worker.loadbalancer_topology
+        amphora_id = loadbalancer.amphorae[0].id
         try:
-            topology = CONF.a10_controller_worker.loadbalancer_topology
-            amphora_id = loadbalancer.amphorae[0].id
-            compute_id = loadbalancer.amphorae[0].compute_id
-            network_driver = utils.get_network_driver()
-            nics = network_driver.get_plugged_networks(compute_id)
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
-                configured_interface = False
-                attempts = 5
-                while attempts > 0 and configured_interface is False:
-                    try:
-                        target_interface = len(nics)
+                interfaces = self.axapi_client.interface.get_list()
+                for i in range(len(interfaces['interface']['ethernet-list'])):
+                    if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
+                        ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                         if topology == "SINGLE":
-                            self.axapi_client.system.action.setInterface(target_interface - 1)
+                            self.axapi_client.system.action.setInterface(ifnum)
                         else:
                             self.axapi_client.device_context.switch(1, None)
-                            self.axapi_client.system.action.setInterface(target_interface - 1)
+                            self.axapi_client.system.action.setInterface(ifnum)
                             self.axapi_client.device_context.switch(2, None)
-                            self.axapi_client.system.action.setInterface(target_interface - 1)
-                        configured_interface = True
-                        LOG.debug("Configured the new interface required for member.")
-                    except (req_exceptions.ConnectionError, acos_errors.ACOSException,
-                            http_client.BadStatusLine, req_exceptions.ReadTimeout):
-                        attempts = attempts - 1
+                            self.axapi_client.system.action.setInterface(ifnum)
+                            LOG.debug("Configured the new interface required for member.")
             else:
                 LOG.debug("Configuration of new interface is not required for member.")
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
@@ -983,42 +976,49 @@ class TagInterfaceForMember(TagInterfaceBaseTask):
 
     @axapi_client_decorator
     def execute(self, member, vthunder):
-        if not member.subnet_id:
-            LOG.warning("Subnet id argument was not specified during "
-                        "issuance of create command/API call for member %s. "
-                        "Skipping TagInterfaceForMember task", member.id)
-            return
-        try:
-            vlan_id = self.get_vlan_id(member.subnet_id, False)
-            self.tag_interfaces(vthunder, vlan_id)
-            LOG.debug("Successfully tagged interface with VLAN id %s for member %s",
-                      str(vlan_id), member.id)
-        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
-            LOG.exception("Failed to tag interface with VLAN id %s for member %s",
-                          str(vlan_id), member.id)
-            raise e
+        member_list = member if isinstance(member, list) else [member]
+        subnet_list = []
+        for member in member_list:
+            if member.subnet_id not in subnet_list:
+                if not member.subnet_id:
+                    LOG.warning("Subnet id argument was not specified during "
+                                "issuance of create command/API call for member %s. "
+                                "Skipping TagInterfaceForMember task", member.id)
+                    continue
+                try:
+                    vlan_id = self.get_vlan_id(member.subnet_id, False)
+                    self.tag_interfaces(vthunder, vlan_id)
+                    subnet_list.append(member.subnet_id)
+                    LOG.debug("Successfully tagged interface with VLAN id %s for member %s",
+                              str(vlan_id), member.id)
+                except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+                    LOG.exception("Failed to tag interface with VLAN id %s for member %s",
+                                  str(vlan_id), member.id)
+                    raise e
 
     @axapi_client_decorator_for_revert
     def revert(self, member, vthunder, *args, **kwargs):
-        if not member.subnet_id:
-            LOG.warning("Subnet id argument was not specified during "
-                        "issuance of create command/API call for member %s. "
-                        "Skipping TagInterfaceForMember task", member.id)
-            return
-        try:
-            if vthunder and vthunder.device_network_map:
-                vlan_id = self.get_vlan_id(member.subnet_id, False)
-                if self.is_vlan_deletable():
-                    LOG.warning("Reverting tag interface for member with VLAN id %s", vlan_id)
-                    master_device_id = vthunder.device_network_map[0].vcs_device_id
-                    for device_obj in vthunder.device_network_map:
-                        self.delete_device_vlan(vlan_id, member.subnet_id, vthunder,
-                                                device_id=device_obj.vcs_device_id,
-                                                master_device_id=master_device_id)
-        except req_exceptions.ConnectionError:
-            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
-        except Exception as e:
-            LOG.exception("Failed to delete VLAN %s due to %s", str(vlan_id), str(e))
+        member_list = member if isinstance(member, list) else [member]
+        for member in member_list:
+            if not member.subnet_id:
+                LOG.warning("Subnet id argument was not specified during "
+                            "issuance of create command/API call for member %s. "
+                            "Skipping TagInterfaceForMember task", member.id)
+                continue
+            try:
+                if vthunder and vthunder.device_network_map:
+                    vlan_id = self.get_vlan_id(member.subnet_id, False)
+                    if self.is_vlan_deletable():
+                        LOG.warning("Reverting tag interface for member with VLAN id %s", vlan_id)
+                        master_device_id = vthunder.device_network_map[0].vcs_device_id
+                        for device_obj in vthunder.device_network_map:
+                            self.delete_device_vlan(vlan_id, member.subnet_id, vthunder,
+                                                    device_id=device_obj.vcs_device_id,
+                                                    master_device_id=master_device_id)
+            except req_exceptions.ConnectionError:
+                LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
+            except Exception as e:
+                LOG.exception("Failed to delete VLAN %s due to %s", str(vlan_id), str(e))
 
 
 class DeleteInterfaceTagIfNotInUseForLB(TagInterfaceBaseTask):

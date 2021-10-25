@@ -129,7 +129,8 @@ class PoolFlows(object):
             requires=a10constants.VTHUNDER,
             provides=a10constants.MEMBER_LIST))
         delete_pool_flow.add(a10_network_tasks.CalculateDelta(
-            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST),
+            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST,
+                      a10constants.MEMBER_LIST),
             provides=constants.DELTAS))
         delete_pool_flow.add(a10_network_tasks.HandleNetworkDeltas(
             requires=constants.DELTAS, provides=constants.ADDED_PORTS))
@@ -176,10 +177,8 @@ class PoolFlows(object):
             delete_member_vthunder_subflow.add(
                 self.member_flow.get_delete_member_vthunder_internal_subflow(member.id, pool))
         if members:
-            pool_members = pool + 'members'
-            store.update({pool_members: members})
             delete_member_vthunder_subflow.add(
-                self.member_flow.get_delete_member_vrid_internal_subflow(pool, pool_members))
+                self.member_flow.get_delete_member_vrid_internal_subflow(pool, members))
         store.update(member_store)
         return delete_member_vthunder_subflow
 
