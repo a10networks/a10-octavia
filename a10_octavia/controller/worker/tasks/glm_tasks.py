@@ -65,7 +65,7 @@ class DNSConfiguration(task.Task):
 
         primary_dns = None
         secondary_dns = None
-        subnet_dns = license_subnet.get('dns_nameservers', [])
+        subnet_dns = license_subnet['subnet'].get('dns_nameservers', [])
         if len(subnet_dns) == 1:
             primary_dns = subnet_dns[0]
         elif len(subnet_dns) >= 2:
