@@ -1157,11 +1157,13 @@ class GetVThunderNetworkList(BaseNetworkTask):
 
             # in case the compute is deleted by some reason
             if not nics:
-                if vthunder.role == constants.ROLE_MASTER:
+                # Since stale vthunder will switch to backup, so peer is current master
+                peer = self.vthunder_repo.get_vthunder_from_lb(
+                    db_apis.get_session(), vthunder.loadbalancer_id)
+
+                # in case role switch failed
+                if peer.compute_id == vthunder.compute_id:
                     peer = self.vthunder_repo.get_backup_vthunder_from_lb(
-                        db_apis.get_session(), vthunder.loadbalancer_id)
-                else:
-                    peer = self.vthunder_repo.get_vthunder_from_lb(
                         db_apis.get_session(), vthunder.loadbalancer_id)
                 nics = self.network_driver.get_plugged_networks(peer.compute_id)
 
