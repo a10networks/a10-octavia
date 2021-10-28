@@ -292,3 +292,9 @@ class IPAddressNotInSubnetRangeError(base.NetworkException):
                'IP {0} out of range ' +
                'for subnet {1}.').format(ip, subnet)
         super(IPAddressNotInSubnetRangeError, self).__init__(msg)
+
+
+class NetworkNotFoundToBootAmphora(base.NetworkException):
+    def __init__(self):
+        msg = ('No any management network is configured for booting the amphora')
+        super(NetworkNotFoundToBootAmphora, self).__init__(msg)
