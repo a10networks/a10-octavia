@@ -30,6 +30,7 @@ from octavia.tests.common import constants as o_test_constants
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
 from a10_octavia.controller.worker.tasks import a10_compute_tasks as task
+from a10_octavia.common import exceptions
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
@@ -61,9 +62,9 @@ class TestA10ComputeTasks(base.BaseTaskTestCase):
     def test_ComputeCreate_execute_no_nets(self, mock_driver):
         compute_task = task.ComputeCreate()
         compute_task.compute = mock.MagicMock()
-        compute_task.execute(AMPHORA.id)
-        args, kwargs = compute_task.compute.build.call_args
-        self.assertEqual(kwargs.get('network_ids'), [])
+        task_function = compute_task.execute
+        expected_error = exceptions.NetworkNotFoundToBootAmphora
+        self.assertRaises(expected_error, task_function, AMPHORA.id)
 
     @mock.patch('stevedore.driver.DriverManager.driver')
     def test_ComputeCreate_execute_mgmt_only(self, mock_driver):
@@ -93,19 +94,23 @@ class TestA10ComputeTasks(base.BaseTaskTestCase):
     def test_ComputeCreate_execute_glm_only(self, mock_driver):
         self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
                          amp_license_network=a10constants.MOCK_NETWORK_ID)
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_boot_network_list=['mock-network-id-2'])
         compute_task = task.ComputeCreate()
         compute_task.compute.build = mock.MagicMock()
         compute_task.execute(AMPHORA.id)
         args, kwargs = compute_task.compute.build.call_args
-        self.assertEqual(kwargs.get('network_ids'), [a10constants.MOCK_NETWORK_ID])
+        self.assertIn('mock-network-1', kwargs.get('network_ids'))
 
     @mock.patch('stevedore.driver.DriverManager.driver')
     def test_ComputeCreate_execute_lb_only(self, mock_driver):
+        self.conf.config(group=a10constants.A10_CONTROLLER_WORKER_CONF_SECTION,
+                         amp_boot_network_list=[a10constants.MOCK_NETWORK_ID])
         compute_task = task.ComputeCreate()
         compute_task.compute.build = mock.MagicMock()
         compute_task.execute(AMPHORA.id, loadbalancer=LB)
         args, kwargs = compute_task.compute.build.call_args
-        self.assertEqual(kwargs.get('network_ids'), [VIP.network_id])
+        self.assertIn('vip-net-1', kwargs['network_ids'])
 
     @mock.patch('stevedore.driver.DriverManager.driver')
     def test_ComputeCreate_execute_mgmt_is_glm(self, mock_driver):
