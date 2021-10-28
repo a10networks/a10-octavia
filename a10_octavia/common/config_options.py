@@ -51,7 +51,7 @@ A10_GLOBAL_OPTS = [
     cfg.StrOpt('default_flavor_id', default=None,
                help=_('Default flavor ID to apply globally to all users')),
     cfg.BoolOpt('handle_vrid', default=True,
-               help=_('Deletes floating ip when True.')),
+                help=_('Deletes floating ip when True.')),
 ]
 
 A10_VTHUNDER_OPTS = [
