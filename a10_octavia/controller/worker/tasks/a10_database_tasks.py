@@ -473,6 +473,8 @@ class UpdateVRIDForLoadbalancerResource(BaseDatabaseTask):
 class GetLoadbalancersInProjectBySubnet(BaseDatabaseTask):
 
     def execute(self, subnet, partition_project_list):
+        if not subnet:
+            return 0
         if partition_project_list:
             try:
                 return self.loadbalancer_repo.get_lbs_by_subnet(
@@ -763,19 +765,20 @@ class GetFlavorData(BaseDatabaseTask):
 class CheckForL2DSRFlavor(BaseDatabaseTask):
 
     def execute(self, lb_resource):
-        for lb in lb_resource:
-            flavor_id = a10_task_utils.attribute_search(lb, 'flavor_id')
-            if flavor_id:
-                flavor = self.flavor_repo.get(db_apis.get_session(), id=flavor_id)
-                if flavor and flavor.flavor_profile_id:
-                    flavor_profile = self.flavor_profile_repo.get(
-                        db_apis.get_session(),
-                        id=flavor.flavor_profile_id)
-                    flavor_data = json.loads(flavor_profile.flavor_data)
-                    deployment = flavor_data.get('deployment')
-                    if deployment and 'dsr_type' in deployment and \
-                            deployment['dsr_type'] == "l2dsr_transparent":
-                        return True
+        if lb_resource:
+            for lb in lb_resource:
+                flavor_id = a10_task_utils.attribute_search(lb, 'flavor_id')
+                if flavor_id:
+                    flavor = self.flavor_repo.get(db_apis.get_session(), id=flavor_id)
+                    if flavor and flavor.flavor_profile_id:
+                        flavor_profile = self.flavor_profile_repo.get(
+                            db_apis.get_session(),
+                            id=flavor.flavor_profile_id)
+                        flavor_data = json.loads(flavor_profile.flavor_data)
+                        deployment = flavor_data.get('deployment')
+                        if deployment and 'dsr_type' in deployment and \
+                                deployment['dsr_type'] == "l2dsr_transparent":
+                            return True
         return False
 
 

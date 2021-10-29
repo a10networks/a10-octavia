@@ -232,15 +232,16 @@ class UpdateLoadbalancerForwardWithAnySource(VThunderBaseTask):
     """Task to update wildcat address in allowed_address_pair to allow any SNAT"""
 
     def execute(self, subnet, amphora, lb_count_subnet, l2dsr_flavor):
-        if CONF.vthunder.slb_no_snat_support:
-            for amp in amphora:
-                self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
-        else:
-            if not l2dsr_flavor:
-                if (CONF.vthunder.l2dsr_support and lb_count_subnet < 1) or \
-                        not CONF.vthunder.l2dsr_support:
-                    for amp in amphora:
-                        self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
+        if subnet:
+            if CONF.vthunder.slb_no_snat_support:
+                for amp in amphora:
+                    self.network_driver.allow_use_any_source_ip_on_egress(subnet.network_id, amp)
+            else:
+                if not l2dsr_flavor:
+                    if (CONF.vthunder.l2dsr_support and lb_count_subnet < 1) or \
+                            not CONF.vthunder.l2dsr_support:
+                        for amp in amphora:
+                            self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
 
 
 class AmphoraePostMemberNetworkPlug(VThunderBaseTask):
