@@ -296,5 +296,7 @@ class IPAddressNotInSubnetRangeError(base.NetworkException):
 
 class NetworkNotFoundToBootAmphora(base.NetworkException):
     def __init__(self):
-        msg = ('No any management network is configured for booting the amphora')
+        msg = ('No vThunder-Amphora management network has been specified in the config.'
+               ' Set `amp_mgmt_net` or add a network to `amp_boot_network_list`' 
+               ' under the [a10_controller_worker] group.')
         super(NetworkNotFoundToBootAmphora, self).__init__(msg)
