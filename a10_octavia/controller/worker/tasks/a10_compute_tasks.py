@@ -22,6 +22,8 @@ from octavia.common import constants
 from octavia.common import exceptions
 from octavia.controller.worker.v1.tasks.compute_tasks import BaseComputeTask
 
+from a10_octavia.common import exceptions as a10_exception
+
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
@@ -37,6 +39,8 @@ class ComputeCreate(BaseComputeTask):
         boot_net_list = CONF.a10_controller_worker.amp_boot_network_list
         mgmt_net = CONF.a10_controller_worker.amp_mgmt_network
         mgmt_net = boot_net_list[0] if boot_net_list and not mgmt_net else mgmt_net
+        if not mgmt_net:
+            raise a10_exception.NetworkNotFoundToBootAmphora()
 
         network_ids = set(boot_net_list) if boot_net_list else set()
         if CONF.glm_license.amp_license_network:
@@ -50,8 +54,7 @@ class ComputeCreate(BaseComputeTask):
             network_ids.remove(mgmt_net)
 
         network_ids = list(network_ids)
-        if mgmt_net:
-            network_ids.insert(0, mgmt_net)
+        network_ids.insert(0, mgmt_net)
 
         LOG.debug("Compute create execute for amphora with id %s", amphora_id)
         key_name = CONF.a10_controller_worker.amp_ssh_key_name
