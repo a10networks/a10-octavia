@@ -187,7 +187,8 @@ class LoadBalancerFlows(object):
         post_create_lb_flow.add(database_tasks.UpdateLoadbalancerInDB(
             requires=[constants.LOADBALANCER, constants.UPDATE_DICT]))
 
-        post_create_lb_flow.add(self.handle_vrid_for_loadbalancer_subflow())
+        if CONF.a10_global.handle_vrid:
+            post_create_lb_flow.add(self.handle_vrid_for_loadbalancer_subflow())
 
         if mark_active:
             post_create_lb_flow.add(database_tasks.MarkLBActiveInDB(
@@ -304,7 +305,8 @@ class LoadBalancerFlows(object):
             a10_database_tasks.CountLoadbalancersInProjectBySubnet(
                 requires=[constants.SUBNET, a10constants.PARTITION_PROJECT_LIST],
                 provides=a10constants.LB_COUNT_SUBNET))
-        delete_LB_flow.add(self.get_delete_lb_vrid_subflow(deleteCompute))
+        if CONF.a10_global.handle_vrid:
+            delete_LB_flow.add(self.get_delete_lb_vrid_subflow(deleteCompute))
         delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
             requires=[constants.LOADBALANCER, a10constants.LB_COUNT_SUBNET]))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
@@ -496,7 +498,8 @@ class LoadBalancerFlows(object):
         # update_LB_flow.add(amphora_driver_tasks.ListenersUpdate(
         #    requires=[constants.LOADBALANCER, constants.LISTENERS]))
         # post_create_lb_flow.add(handle_vrid_for_loadbalancer_subflow())
-        update_LB_flow.add(self.handle_vrid_for_loadbalancer_subflow())
+        if CONF.a10_global.handle_vrid:
+            update_LB_flow.add(self.handle_vrid_for_loadbalancer_subflow())
         update_LB_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER_ID,
             provides=constants.AMPHORA))
@@ -566,7 +569,8 @@ class LoadBalancerFlows(object):
             provides=a10constants.VTHUNDER))
         update_LB_flow.add(network_tasks.ApplyQos(
             requires=(constants.LOADBALANCER, constants.UPDATE_DICT)))
-        update_LB_flow.add(self.handle_vrid_for_loadbalancer_subflow())
+        if CONF.a10_global.handle_vrid:
+            update_LB_flow.add(self.handle_vrid_for_loadbalancer_subflow())
 
         update_LB_flow.add(virtual_server_tasks.UpdateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
@@ -695,7 +699,8 @@ class LoadBalancerFlows(object):
             a10_database_tasks.CountLoadbalancersOnThunderBySubnet(
                 requires=[a10constants.VTHUNDER, constants.SUBNET, a10constants.USE_DEVICE_FLAVOR],
                 provides=a10constants.LB_COUNT_THUNDER))
-        delete_LB_flow.add(self.get_delete_rack_lb_vrid_subflow())
+        if CONF.a10_global.handle_vrid:
+            delete_LB_flow.add(self.get_delete_rack_lb_vrid_subflow())
         delete_LB_flow.add(a10_network_tasks.DeallocateVIP(
             requires=[constants.LOADBALANCER, a10constants.LB_COUNT_SUBNET]))
         delete_LB_flow.add(virtual_server_tasks.DeleteVirtualServerTask(
@@ -771,7 +776,8 @@ class LoadBalancerFlows(object):
             post_create_lb_flow.add(vthunder_tasks.TagInterfaceForLB(
                 requires=[constants.LOADBALANCER,
                           a10constants.VTHUNDER]))
-        post_create_lb_flow.add(self.handle_vrid_for_loadbalancer_subflow())
+        if CONF.a10_global.handle_vrid:
+            post_create_lb_flow.add(self.handle_vrid_for_loadbalancer_subflow())
         if mark_active:
             post_create_lb_flow.add(database_tasks.MarkLBActiveInDB(
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
