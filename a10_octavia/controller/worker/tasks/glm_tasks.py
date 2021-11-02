@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from sys import _xoptions
 from acos_client import errors as acos_errors
 
 from requests import exceptions as req_exceptions
@@ -160,6 +161,7 @@ class ActivateFlexpoolLicense(task.Task):
         amp_mgmt_net = CONF.a10_controller_worker.amp_mgmt_network
         amp_boot_nets = CONF.a10_controller_worker.amp_boot_network_list
         config_payload = self._build_configuration(flavor)
+        burst = config_payload.pop('burst')
         use_mgmt_port = False
 
         if not config_payload["token"]:
@@ -198,16 +200,29 @@ class ActivateFlexpoolLicense(task.Task):
                 **config_payload
             )
             self.axapi_client.glm.send.create(license_request=1)
+            if burst:
+                # Must have the license on the device before enabling burst
+                self.axapi_client.glm.update(burst=burst)
+        except acos_errors.LicenseOptionNotAllowed as e:
+            error_msg = "A specified configuration option is incompatible with license type provided."
+            if burst:
+                error_msg += ("This error can occur when the license request has "
+                              "failed due to connection issue. Please check your "
+                              "configured GLM network and dns settings")
+            LOG.error(error_msg)
+            raise e
         except acos_errors.ACOSException as e:
             LOG.error("Could not activate license for amphora %s", amphora.id)
             raise e
 
     @axapi_client_decorator_for_revert
-    def revert(self, vthunder, flavor=None, *args, **kwargs):
+    def revert(self, vthunder, amphora, flavor=None, *args, **kwargs):
         try:
             self.axapi_client.delete.glm_license.post()
         except req_exceptions.ConnectionError:
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
+        except acos_errors.ACOSException as e:
+            LOG.exception("Could not delete license for amphora %s due to: \n%s", amphora.id, e)
 
 
 class RevokeFlexpoolLicense(task.Task):
@@ -217,7 +232,10 @@ class RevokeFlexpoolLicense(task.Task):
         if not vthunder:
             LOG.warning("No vthunder therefore license revocation cannot occur.")
             return None
-        self.axapi_client.delete.glm_license.post()
+        try:
+            self.axapi_client.delete.glm_license.post()
+        except acos_errors.ACOSException as e:
+            LOG.exception("Could not delete license for vthunder %s due to: \n%s", vthunder.id, e)
 
 
 class ConfigureForwardProxyServer(task.Task):
@@ -256,3 +274,7 @@ class ConfigureForwardProxyServer(task.Task):
             self.axapi_client.glm.proxy_server.delete()
         except req_exceptions.ConnectionError:
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
+        except acos_errors.ACOSException as e:
+            LOG.exception(
+                "Could not delete forward proxy for vthunder %s due to: \n%s",
+                vthunder.id, e)
