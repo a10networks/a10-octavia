@@ -404,10 +404,11 @@ class TestGLMTasks(base.BaseTaskTestCase):
         flexpool_task.execute(vthunder, amphora)
         self.client_mock.system.action.setInterface.assert_called_with(2)
 
-    def test_ActiveFlexpoolLicense_execute_fail_LicenseOptionNotAllowed(self):
+    def test_ActivateFlexpoolLicense_execute_enable_burst(self):
         self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
                          amp_license_network=DNS_NETWORK.id,
-                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN)
+                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN,
+                         burst=True)
         vthunder = copy.deepcopy(VTHUNDER)
         amphora = copy.deepcopy(AMPHORA)
         interfaces = {
@@ -415,29 +416,21 @@ class TestGLMTasks(base.BaseTaskTestCase):
                 'ethernet-list': []
             }
         }
+        expected_call = self._template_glm_call()
 
         flexpool_task = task.ActivateFlexpoolLicense()
         flexpool_task.axapi_client = self.client_mock
         flexpool_task.axapi_client.interface.get_list.return_value = interfaces
-        flexpool_task.axapi_client.glm.create.side_effect = acos_errors.LicenseOptionNotAllowed()
 
-        flexpool_task.axapi_client = self.client_mock
-        task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
-        log_message = ("A specified configuration option is "
-                       "incompatible with license type provided.")
-        expected_log = ["ERROR:{}:{}".format(task_path, log_message)]
-        with self.assertLogs(task_path, level='ERROR') as cm:
-            try:
-                flexpool_task.execute(vthunder, amphora)
-            except Exception:
-                pass
-            self.assertEqual(expected_log, cm.output)
+        flexpool_task.execute(vthunder, amphora)
+        args, kwargs = self.client_mock.glm.create.call_args
+        self.assertEqual(kwargs, expected_call)
+        flexpool_task.axapi_client.glm.update.assert_called_with(burst=True)
 
     def test_ActiveFlexpoolLicense_execute_fail_LicenseOptionNotAllowed_burst(self):
         self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
                          amp_license_network=DNS_NETWORK.id,
-                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN,
-                         burst=True)
+                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN)
         vthunder = copy.deepcopy(VTHUNDER)
         amphora = copy.deepcopy(AMPHORA)
         interfaces = {

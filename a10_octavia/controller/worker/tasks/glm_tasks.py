@@ -205,11 +205,10 @@ class ActivateFlexpoolLicense(task.Task):
                 self.axapi_client.glm.update(burst=burst)
         except acos_errors.LicenseOptionNotAllowed as e:
             error_msg = ("A specified configuration option is "
-                         "incompatible with license type provided.")
-            if burst:
-                error_msg += (" This error can occur when the license request has "
-                              "failed due to connection issue. Please check your "
-                              "configured GLM network and dns settings.")
+                         "incompatible with license type provided. "
+                         "This error can occur when the license request has "
+                         "failed due to connection issue. Please check your "
+                         "configured GLM network and dns settings.")
             LOG.error(error_msg)
             raise e
         except acos_errors.ACOSException as e:
