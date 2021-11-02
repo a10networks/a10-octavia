@@ -27,6 +27,8 @@ from octavia.common import data_models as o_data_models
 from octavia.network import data_models as n_data_models
 from octavia.tests.common import constants as t_constants
 
+from acos_client import errors as acos_errors
+
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models as a10_data_models
 from a10_octavia.common import exceptions as a10_ex
@@ -96,7 +98,8 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = {'subnet': dns_subnet}
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -110,7 +113,8 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = {'subnet': dns_subnet}
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -126,7 +130,8 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = {'subnet': dns_subnet}
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -143,7 +148,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
         dns_subnet['dns_nameservers'] = [PRIMARY_DNS, SECONDARY_DNS]
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = dns_subnet
+        network_driver_mock.show_subnet_detailed.return_value = {'subnet': dns_subnet}
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -160,7 +165,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
         dns_subnet['dns_nameservers'] = [PRIMARY_DNS, SECONDARY_DNS, '3.3.3.3']
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = dns_subnet
+        network_driver_mock.show_subnet_detailed.return_value = {'subnet': dns_subnet}
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -183,7 +188,8 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = {'subnet': dns_subnet}
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -200,7 +206,8 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = {'subnet': dns_subnet}
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -218,7 +225,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
         dns_subnet['dns_nameservers'] = ['8.8.8.8', '8.8.4.4']
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = dns_subnet
+        network_driver_mock.show_subnet_detailed.return_value = {'subnet': dns_subnet}
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -234,7 +241,8 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = {'subnet': dns_subnet}
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -253,7 +261,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
         dns_subnet['dns_nameservers'] = ['8.8.8.8', '8.8.4.4']
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = dns_subnet
+        network_driver_mock.show_subnet_detailed.return_value = {'subnet': dns_subnet}
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -269,7 +277,8 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = {'subnet': dns_subnet}
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -283,7 +292,8 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = {'subnet': dns_subnet}
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -298,7 +308,8 @@ class TestGLMTasks(base.BaseTaskTestCase):
         vthunder = copy.deepcopy(VTHUNDER)
         dns_net = copy.deepcopy(DNS_NETWORK)
         network_driver_mock.get_network.return_value = dns_net
-        network_driver_mock.show_subnet_detailed.return_value = copy.deepcopy(DNS_SUBNET).to_dict()
+        dns_subnet = copy.deepcopy(DNS_SUBNET).to_dict()
+        network_driver_mock.show_subnet_detailed.return_value = {'subnet': dns_subnet}
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
@@ -318,7 +329,6 @@ class TestGLMTasks(base.BaseTaskTestCase):
     def _template_glm_call(self):
         expected_call = {
             'token': a10constants.MOCK_FLEXPOOL_TOKEN,
-            'burst': False,
             'enable_requests': True,
             'interval': None,
             'port': 443,
@@ -393,6 +403,68 @@ class TestGLMTasks(base.BaseTaskTestCase):
 
         flexpool_task.execute(vthunder, amphora)
         self.client_mock.system.action.setInterface.assert_called_with(2)
+
+    def test_ActiveFlexpoolLicense_execute_fail_LicenseOptionNotAllowed(self):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN)
+        vthunder = copy.deepcopy(VTHUNDER)
+        amphora = copy.deepcopy(AMPHORA)
+        interfaces = {
+            'interface': {
+                'ethernet-list': []
+            }
+        }
+
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+        flexpool_task.axapi_client.interface.get_list.return_value = interfaces
+        flexpool_task.axapi_client.glm.create.side_effect = acos_errors.LicenseOptionNotAllowed()
+
+        flexpool_task.axapi_client = self.client_mock
+        task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
+        log_message = ("A specified configuration option is "
+                       "incompatible with license type provided.")
+        expected_log = ["ERROR:{}:{}".format(task_path, log_message)]
+        with self.assertLogs(task_path, level='ERROR') as cm:
+            try:
+                flexpool_task.execute(vthunder, amphora)
+            except Exception:
+                pass
+            self.assertEqual(expected_log, cm.output)
+
+    def test_ActiveFlexpoolLicense_execute_fail_LicenseOptionNotAllowed_burst(self):
+        self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,
+                         amp_license_network=DNS_NETWORK.id,
+                         flexpool_token=a10constants.MOCK_FLEXPOOL_TOKEN,
+                         burst=True)
+        vthunder = copy.deepcopy(VTHUNDER)
+        amphora = copy.deepcopy(AMPHORA)
+        interfaces = {
+            'interface': {
+                'ethernet-list': []
+            }
+        }
+
+        flexpool_task = task.ActivateFlexpoolLicense()
+        flexpool_task.axapi_client = self.client_mock
+        flexpool_task.axapi_client.interface.get_list.return_value = interfaces
+        flexpool_task.axapi_client.glm.create.side_effect = acos_errors.LicenseOptionNotAllowed()
+
+        flexpool_task.axapi_client = self.client_mock
+        task_path = "a10_octavia.controller.worker.tasks.glm_tasks"
+        log_message = ("A specified configuration option is "
+                       "incompatible with license type provided. "
+                       "This error can occur when the license request has "
+                       "failed due to connection issue. Please check your "
+                       "configured GLM network and dns settings.")
+        expected_log = ["ERROR:{}:{}".format(task_path, log_message)]
+        with self.assertLogs(task_path, level='ERROR') as cm:
+            try:
+                flexpool_task.execute(vthunder, amphora)
+            except Exception:
+                pass
+            self.assertEqual(expected_log, cm.output)
 
     def test_ActivateFlexpoolLicense_revert_deactivate_license(self):
         vthunder = copy.deepcopy(VTHUNDER)

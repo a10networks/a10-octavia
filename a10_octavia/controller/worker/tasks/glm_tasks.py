@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sys import _xoptions
+
 from acos_client import errors as acos_errors
 
 from requests import exceptions as req_exceptions
@@ -204,11 +204,12 @@ class ActivateFlexpoolLicense(task.Task):
                 # Must have the license on the device before enabling burst
                 self.axapi_client.glm.update(burst=burst)
         except acos_errors.LicenseOptionNotAllowed as e:
-            error_msg = "A specified configuration option is incompatible with license type provided."
+            error_msg = ("A specified configuration option is "
+                         "incompatible with license type provided.")
             if burst:
-                error_msg += ("This error can occur when the license request has "
+                error_msg += (" This error can occur when the license request has "
                               "failed due to connection issue. Please check your "
-                              "configured GLM network and dns settings")
+                              "configured GLM network and dns settings.")
             LOG.error(error_msg)
             raise e
         except acos_errors.ACOSException as e:
@@ -221,7 +222,7 @@ class ActivateFlexpoolLicense(task.Task):
             self.axapi_client.delete.glm_license.post()
         except req_exceptions.ConnectionError:
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
-        except acos_errors.ACOSException as e:
+        except Exception as e:
             LOG.exception("Could not delete license for amphora %s due to: \n%s", amphora.id, e)
 
 
@@ -234,7 +235,7 @@ class RevokeFlexpoolLicense(task.Task):
             return None
         try:
             self.axapi_client.delete.glm_license.post()
-        except acos_errors.ACOSException as e:
+        except Exception as e:
             LOG.exception("Could not delete license for vthunder %s due to: \n%s", vthunder.id, e)
 
 
@@ -274,7 +275,7 @@ class ConfigureForwardProxyServer(task.Task):
             self.axapi_client.glm.proxy_server.delete()
         except req_exceptions.ConnectionError:
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
-        except acos_errors.ACOSException as e:
+        except Exception as e:
             LOG.exception(
                 "Could not delete forward proxy for vthunder %s due to: \n%s",
                 vthunder.id, e)
