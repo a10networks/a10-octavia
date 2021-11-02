@@ -31,6 +31,9 @@ from a10_octavia.controller.worker.tasks import service_group_tasks
 from a10_octavia.controller.worker.tasks import virtual_port_tasks
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 
+from oslo_config import cfg
+CONF = cfg.CONF
+
 
 class PoolFlows(object):
 
@@ -176,7 +179,7 @@ class PoolFlows(object):
             member_store[member.id] = member
             delete_member_vthunder_subflow.add(
                 self.member_flow.get_delete_member_vthunder_internal_subflow(member.id, pool))
-        if members:
+        if members and CONF.a10_global.handle_vrid:
             delete_member_vthunder_subflow.add(
                 self.member_flow.get_delete_member_vrid_internal_subflow(pool, members))
         store.update(member_store)

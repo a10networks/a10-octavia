@@ -50,6 +50,8 @@ A10_GLOBAL_OPTS = [
                 help=_('Use shared for template')),
     cfg.StrOpt('default_flavor_id', default=None,
                help=_('Default flavor ID to apply globally to all users')),
+    cfg.BoolOpt('handle_vrid', default=True,
+                help=_('Deletes floating ip when True.')),
 ]
 
 A10_GLM_LICENSE_OPTS = [

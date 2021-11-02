@@ -110,7 +110,8 @@ class MemberFlows(object):
                     constants.ADDED_PORTS,
                     constants.LOADBALANCER,
                     a10constants.VTHUNDER]))
-        create_member_flow.add(self.handle_vrid_for_member_subflow())
+        if CONF.a10_global.handle_vrid:
+            create_member_flow.add(self.handle_vrid_for_member_subflow())
         create_member_flow.add(a10_database_tasks.CountMembersWithIP(
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP
         ))
@@ -239,7 +240,8 @@ class MemberFlows(object):
                     constants.POOL,
                     a10constants.MEMBER_COUNT_IP,
                     a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL)))
-        delete_member_flow.add(self.get_delete_member_vrid_subflow())
+        if CONF.a10_global.handle_vrid:
+            delete_member_flow.add(self.get_delete_member_vrid_subflow())
         delete_member_flow.add(database_tasks.DeleteMemberInDB(
             requires=constants.MEMBER))
         delete_member_flow.add(database_tasks.DecrementMemberQuota(
@@ -334,7 +336,8 @@ class MemberFlows(object):
                         constants.MEMBER,
                         a10constants.VTHUNDER]))
         # Handle VRID setting
-        delete_member_flow.add(self.get_delete_member_vrid_subflow())
+        if CONF.a10_global.handle_vrid:
+            delete_member_flow.add(self.get_delete_member_vrid_subflow())
         delete_member_flow.add(database_tasks.DeleteMemberInDB(
             requires=constants.MEMBER))
         delete_member_flow.add(database_tasks.DecrementMemberQuota(
@@ -576,7 +579,8 @@ class MemberFlows(object):
                 name=a10constants.GET_MASTER_VTHUNDER,
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
-        update_member_flow.add(self.handle_vrid_for_member_subflow())
+        if CONF.a10_global.handle_vrid:
+            update_member_flow.add(self.handle_vrid_for_member_subflow())
         update_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER_ID,
             provides=constants.AMPHORA))
@@ -652,7 +656,8 @@ class MemberFlows(object):
             provides=(a10constants.VTHUNDER_CONFIG, a10constants.USE_DEVICE_FLAVOR)))
 
         # Handle VRID settings
-        update_member_flow.add(self.handle_vrid_for_member_subflow())
+        if CONF.a10_global.handle_vrid:
+            update_member_flow.add(self.handle_vrid_for_member_subflow())
         update_member_flow.add(server_tasks.MemberUpdate(
             requires=(constants.MEMBER, a10constants.VTHUNDER,
                       constants.POOL, constants.FLAVOR,
@@ -708,7 +713,8 @@ class MemberFlows(object):
                       a10constants.DEVICE_CONFIG_DICT),
             rebind={constants.FLAVOR_DATA: constants.FLAVOR},
             provides=(a10constants.VTHUNDER_CONFIG, a10constants.USE_DEVICE_FLAVOR)))
-        create_member_flow.add(self.handle_vrid_for_member_subflow())
+        if CONF.a10_global.handle_vrid:
+            create_member_flow.add(self.handle_vrid_for_member_subflow())
         if CONF.a10_global.network_type == 'vlan':
             create_member_flow.add(vthunder_tasks.TagInterfaceForMember(
                 requires=[constants.MEMBER,
@@ -842,8 +848,9 @@ class MemberFlows(object):
                 inject={constants.MEMBER: m},
                 name='{flow}-{id}'.format(
                     id=m.id, flow=constants.DECREMENT_MEMBER_QUOTA_FLOW)))
-        batch_update_members_flow.add(
-            self.get_delete_member_vrid_internal_subflow(constants.POOL, old_members))
+        if CONF.a10_global.handle_vrid:
+            batch_update_members_flow.add(
+                self.get_delete_member_vrid_internal_subflow(constants.POOL, old_members))
 
         # for creation of members
         batch_update_members_flow.add(lifecycle_tasks.MembersToErrorOnRevertTask(
@@ -903,8 +910,9 @@ class MemberFlows(object):
         existing_members = [m[0] for m in updated_members]
         pool_members = new_members + existing_members
         if pool_members:
-            batch_update_members_flow.add(
-                self.get_handle_member_vrid_internal_subflow(pool_members))
+            if CONF.a10_global.handle_vrid:
+                batch_update_members_flow.add(
+                    self.get_handle_member_vrid_internal_subflow(pool_members))
             if CONF.a10_global.network_type == 'vlan':
                 batch_update_members_flow.add(vthunder_tasks.TagInterfaceForMember(
                     name='update_tagged_interface_for_members',
@@ -1002,8 +1010,9 @@ class MemberFlows(object):
             batch_update_members_flow.add(database_tasks.DecrementMemberQuota(
                 name='decrement-member-quota' + m.id,
                 inject={constants.MEMBER: m}))
-        batch_update_members_flow.add(
-            self.get_delete_member_vrid_internal_subflow(constants.POOL, old_members))
+        if CONF.a10_global.handle_vrid:
+            batch_update_members_flow.add(
+                self.get_delete_member_vrid_internal_subflow(constants.POOL, old_members))
 
         # for creation of members
         batch_update_members_flow.add(lifecycle_tasks.MembersToErrorOnRevertTask(
@@ -1136,9 +1145,10 @@ class MemberFlows(object):
                     a10constants.VTHUNDER]))
         existing_members = [m[0] for m in updated_members]
         pool_members = new_members + existing_members
-        if pool_members:
-            batch_update_members_flow.add(
-                self.get_handle_member_vrid_internal_subflow(pool_members))
+        if CONF.a10_global.handle_vrid:
+            if pool_members:
+                batch_update_members_flow.add(
+                    self.get_handle_member_vrid_internal_subflow(pool_members))
         for m in new_members:
             batch_update_members_flow.add(self.get_batch_update_member_snat_pool_subflow(m))
 
