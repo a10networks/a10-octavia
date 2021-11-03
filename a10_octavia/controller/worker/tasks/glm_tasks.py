@@ -73,8 +73,7 @@ class DNSConfiguration(task.Task):
         if CONF.glm_license.secondary_dns:
             secondary_dns = CONF.glm_license.secondary_dns
 
-        use_network_dns = flavor and flavor.get('use-network-dns')
-
+        use_network_dns = flavor and flavor.get('glm') and flavor.get('glm').get('use-network-dns')
         if not primary_dns or use_network_dns:
             subnet_dns = license_subnet['subnet'].get('dns_nameservers', [])
             if len(subnet_dns) == 1:
