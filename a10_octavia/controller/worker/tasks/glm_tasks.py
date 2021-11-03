@@ -66,30 +66,35 @@ class DNSConfiguration(task.Task):
 
         primary_dns = None
         secondary_dns = None
-        subnet_dns = license_subnet['subnet'].get('dns_nameservers', [])
-        if len(subnet_dns) == 1:
-            primary_dns = subnet_dns[0]
-        elif len(subnet_dns) >= 2:
-            primary_dns = subnet_dns[0]
-            secondary_dns = subnet_dns[1]
-            if len(subnet_dns) > 2:
-                LOG.warning("More than one DNS nameserver detected on subnet %s. "
-                            "Using %s as primary and %s as secondary.",
-                            license_subnet_id, primary_dns, secondary_dns)
-
-        if flavor and flavor.get('use-network-dns'):
-            if not primary_dns and not secondary_dns:
-                LOG.warning("The flavor option `use_network_dns` was defined "
-                            "but no nameservers were found on the network. "
-                            "Nameservers will not be configure on the "
-                            "vThunder-Amphora %s", vthunder.id)
-            return primary_dns, secondary_dns
 
         if CONF.glm_license.primary_dns:
             primary_dns = CONF.glm_license.primary_dns
 
         if CONF.glm_license.secondary_dns:
             secondary_dns = CONF.glm_license.secondary_dns
+
+        use_network_dns = flavor and flavor.get('use-network-dns')
+
+        if not primary_dns or use_network_dns:
+            subnet_dns = license_subnet['subnet'].get('dns_nameservers', [])
+            if len(subnet_dns) == 1:
+                primary_dns = subnet_dns[0]
+            elif len(subnet_dns) >= 2:
+                primary_dns = subnet_dns[0]
+                secondary_dns = subnet_dns[1]
+                if len(subnet_dns) > 2:
+                    LOG.warning("More than one DNS nameserver detected on subnet %s. "
+                                "Using %s as primary and %s as secondary.",
+                                license_subnet_id, primary_dns, secondary_dns)
+
+
+            if use_network_dns:
+                if not primary_dns and not secondary_dns:
+                    LOG.warning("The flavor option `use_network_dns` was defined "
+                                "but no nameservers were found on the network. "
+                                "Nameservers will not be configure on the "
+                                "vThunder-Amphora %s", vthunder.id)
+                return primary_dns, secondary_dns
 
         if flavor:
             dns_flavor = flavor.get('dns')
