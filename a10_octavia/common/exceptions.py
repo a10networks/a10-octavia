@@ -300,3 +300,8 @@ class NetworkNotFoundToBootAmphora(base.NetworkException):
                ' Set `amp_mgmt_net` or add a network to `amp_boot_network_list`' 
                ' under the [a10_controller_worker] group.')
         super(NetworkNotFoundToBootAmphora, self).__init__(msg)
+
+
+class DuplicateMembersInBatchUpdate(base.NetworkException):
+    def __init__(self, msg):
+        super(DuplicateMembersInBatchUpdate, self).__init__(msg)
