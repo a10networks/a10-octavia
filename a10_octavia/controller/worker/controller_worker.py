@@ -14,6 +14,7 @@
 
 import json
 from sqlalchemy.orm import exc as db_exceptions
+from sqlalchemy.sql.expression import update
 import tenacity
 import time
 import urllib3
@@ -30,6 +31,7 @@ from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 
 from a10_octavia.common import a10constants
+from a10_octavia.common import exceptions as a10_ex
 from a10_octavia.common import utils
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_l7policy_flows
@@ -661,6 +663,59 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         finally:
             self._set_vthunder_available(member.project_id, True, ctx_flags, load_balancer)
 
+    def _validate_ids(self, old_member_ids, new_member_ids, updated_member_ids):
+
+        set_o_ids = set(old_member_ids)
+        set_n_ids = set(new_member_ids)
+        set_u_ids = set(updated_member_ids)
+
+        if len(set_o_ids) != len(old_member_ids):
+            msg = "Duplicate member ids found in member database."
+            raise a10_ex.DuplicateMembersInBatchUpdate(msg)
+        
+        if len(set_n_ids) != len(new_member_ids):
+            msg = ("Duplicates of a new member definition (ip + port) "
+                   "were found in member batch update payload.")
+            raise a10_ex.DuplicateMembersInBatchUpdate(msg)
+
+        if len(set_u_ids) != len(updated_member_ids):
+            msg = ("Duplicates of a member definition (ip + port) "
+                   "were found in member batch update payload.")
+            raise a10_ex.DuplicateMembersInBatchUpdate(msg)
+
+        # This validation step is for sanity reasons only. It should
+        # never happen in practice due to how the API member controller
+        # pre-processes the data.
+        inter_ids = set.intersection(set_o_ids, set_n_ids, set_u_ids)
+        if inter_ids:
+            msg = ("Duplicate member ids were found in member database table "
+                   "and the batch update payload.")
+            raise a10_ex.DuplicateMembersInBatchUpdate(msg)
+
+    def _rollback_members(self, old_member_ids, new_member_ids, updated_member_ids):
+        set_o_ids = set(old_member_ids)
+        set_u_ids = set(updated_member_ids)
+
+        current_member_ids = set_o_ids.union(set_u_ids)
+
+        for mid in current_member_ids:
+            # Rollback status to prevent pending state lock
+            self._member_repo.update(db_apis.get_session(), mid, provisioning_status=constants.ACTIVE)
+            LOG.info("Members slated for batch update have been rolled back and set to ACTIVE state.")
+        new_members = [self._member_repo.get(db_apis.get_session(), id=mid)
+                       for mid in new_member_ids]
+        for mem in new_members:
+            self._member_repo.delete(db_apis.get_session(), mem.id)
+            current_member_ids.add(mem.id)
+            LOG.info("Members slated for creation under batch update have been deleted due to rollback.")
+        modified_members = [self._member_repo.get(db_apis.get_session(), id=mid)
+                            for mid in current_member_ids]
+        for mem in modified_members:
+            if mem.pool_id != None:
+                self._pool_repo.update(db_apis.get_session(), mem.pool_id, provisioning_status=constants.ACTIVE)
+            if mem.pool.load_balancer_id != None:
+                self._lb_repo.update(db_apis.get_session(), mem.pool.load_balancer_id, provisioning_status=constants.ACTIVE)
+
     @tenacity.retry(
         retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
         wait=tenacity.wait_incrementing(
@@ -668,6 +723,15 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def batch_update_members(self, old_member_ids, new_member_ids,
                              updated_members):
+
+        updated_member_ids = [m.get('id') for m in updated_members]
+
+        try:
+            self._validate_ids(old_member_ids, new_member_ids, updated_member_ids)
+        except a10_ex.DuplicateMembersInBatchUpdate as e:
+            self._rollback_members(old_member_ids, new_member_ids, updated_member_ids)
+            LOG.error(str(e))
+            return None
 
         new_members = [self._member_repo.get(db_apis.get_session(), id=mid)
                        for mid in new_member_ids]
@@ -682,6 +746,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         updated_members = [
             (self._member_repo.get(db_apis.get_session(), id=m.get('id')), m)
             for m in updated_members]
+
         if old_members:
             pool = old_members[0].pool
         elif new_members:
