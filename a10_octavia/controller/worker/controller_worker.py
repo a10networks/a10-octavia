@@ -13,9 +13,7 @@
 #    under the License.
 
 import json
-from logging import error
 from sqlalchemy.orm import exc as db_exceptions
-from sqlalchemy.sql.expression import update
 import tenacity
 import time
 import urllib3
@@ -664,7 +662,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         finally:
             self._set_vthunder_available(member.project_id, True, ctx_flags, load_balancer)
 
-    def _is_batch_valid(self, old_member_ids, new_member_ids, updated_member_ids, member_collision_map):
+    def _is_batch_valid(self, old_member_ids, new_member_ids,
+                        updated_member_ids, member_collision_map):
         valid = True
         for mem_id, member_col in member_collision_map.items():
             member, mem_cnt = member_col
@@ -688,7 +687,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         current_member_ids = set_o_ids.union(set_u_ids)
 
         current_members = [self._member_repo.get(db_apis.get_session(), id=mid)
-                            for mid in current_member_ids]
+                           for mid in current_member_ids]
 
         for mem in current_members:
             # Rollback status to prevent pending state lock
@@ -709,10 +708,10 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         modified_members = current_members + new_members
         for mem in modified_members:
-            if mem.pool_id != None:
+            if mem.pool_id is not None:
                 self._pool_repo.update(db_apis.get_session(), mem.pool_id,
                                        provisioning_status=constants.ACTIVE)
-            if mem.pool.load_balancer_id != None:
+            if mem.pool.load_balancer_id is not None:
                 self._lb_repo.update(db_apis.get_session(),
                                      mem.pool.load_balancer_id,
                                      provisioning_status=constants.ACTIVE)
@@ -733,7 +732,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         new_members = [self._member_repo.get(db_apis.get_session(), id=mid)
                        for mid in new_member_ids]
 
-
         modified_members = old_members + updated_member_models + new_members
         member_collision_map = {}
         for mem in modified_members:
@@ -742,14 +740,14 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 member_collision_map[mem_id][1] += 1
             else:
                 member_collision_map[mem_id] = [mem, 1]
-        
+
         if not self._is_batch_valid(old_member_ids, new_member_ids,
-            updated_member_ids, member_collision_map):
-            
+                                    updated_member_ids, member_collision_map):
             self._rollback_members(old_member_ids, new_member_ids, updated_member_ids)
             LOG.warning("Due to a failed batch update caused by duplicate member definitions, "
-                        "the members defined in the update are now out-of-sync with the ACOS device. "
-                        "Please update or delete the affected members.")
+                        "the members defined in the update are now out-of-sync with the "
+                        "ACOS device. Please issue a corrected update or "
+                        "delete the affected members.")
             raise a10_ex.DuplicateMembersInBatchUpdate
 
         # The API may not have commited all of the new member records yet.
