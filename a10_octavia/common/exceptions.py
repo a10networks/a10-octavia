@@ -303,5 +303,7 @@ class NetworkNotFoundToBootAmphora(base.NetworkException):
 
 
 class DuplicateMembersInBatchUpdate(base.NetworkException):
-    def __init__(self, msg):
+    def __init__(self):
+        msg = ('Duplicate member definition have been found during the batch update. '
+               'Please check WARNING log messages for more details.')
         super(DuplicateMembersInBatchUpdate, self).__init__(msg)
