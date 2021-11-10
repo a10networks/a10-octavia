@@ -680,7 +680,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 valid = False
         return valid
 
-    def _rollback_members(self, old_member_ids, new_member_ids, updated_member_ids):
+    def _rollback_members(self, old_member_ids, new_member_ids,
+                          updated_member_ids, load_balancer, pool):
         set_o_ids = set(old_member_ids)
         set_u_ids = set(updated_member_ids)
 
@@ -706,15 +707,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                      "slated for creation under batch update "
                      "has been deleted.".format(mem.id, mem.ip_address, mem.protocol_port))
 
-        modified_members = current_members + new_members
-        for mem in modified_members:
-            if mem.pool_id is not None:
-                self._pool_repo.update(db_apis.get_session(), mem.pool_id,
-                                       provisioning_status=constants.ACTIVE)
-            if mem.pool.load_balancer_id is not None:
-                self._lb_repo.update(db_apis.get_session(),
-                                     mem.pool.load_balancer_id,
-                                     provisioning_status=constants.ACTIVE)
+        if pool is not None:
+            self._pool_repo.update(db_apis.get_session(), pool.id,
+                                   provisioning_status=constants.ACTIVE)
+        if load_balancer is not None:
+            self._lb_repo.update(db_apis.get_session(),
+                                 load_balancer.id,
+                                 provisioning_status=constants.ACTIVE)
 
     @tenacity.retry(
         retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
@@ -732,6 +731,15 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         new_members = [self._member_repo.get(db_apis.get_session(), id=mid)
                        for mid in new_member_ids]
 
+        if old_members:
+            pool = old_members[0].pool
+        elif new_members:
+            pool = new_members[0].pool
+        else:
+            pool = updated_member_models[0].pool
+        listeners = pool.listeners
+        load_balancer = pool.load_balancer
+
         modified_members = old_members + updated_member_models + new_members
         member_collision_map = {}
         for mem in modified_members:
@@ -743,7 +751,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         if not self._is_batch_valid(old_member_ids, new_member_ids,
                                     updated_member_ids, member_collision_map):
-            self._rollback_members(old_member_ids, new_member_ids, updated_member_ids)
+            self._rollback_members(old_member_ids, new_member_ids,
+                                   updated_member_ids, load_balancer, pool)
             LOG.warning("Due to a failed batch update caused by duplicate member definitions, "
                         "the members defined in the update are now out-of-sync with the "
                         "ACOS device. Please issue a corrected update or "
@@ -760,15 +769,6 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         updated_members = []
         for i in range(len(updated_members_req)):
             updated_members.append((updated_member_models[i], updated_members_req[i]))
-
-        if old_members:
-            pool = old_members[0].pool
-        elif new_members:
-            pool = new_members[0].pool
-        else:
-            pool = updated_members[0][0].pool
-        listeners = pool.listeners
-        load_balancer = pool.load_balancer
 
         ctx_flags = [False]
         try:
