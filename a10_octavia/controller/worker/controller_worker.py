@@ -681,7 +681,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         return valid
 
     def _rollback_members(self, old_member_ids, new_member_ids,
-                          updated_member_ids, load_balancer, pool):
+                          updated_member_ids, load_balancer,
+                          listeners, pool):
         set_o_ids = set(old_member_ids)
         set_u_ids = set(updated_member_ids)
 
@@ -700,16 +701,22 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
         new_members = [self._member_repo.get(db_apis.get_session(), id=mid)
                        for mid in new_member_ids]
+
         for mem in new_members:
-            self._member_repo.delete(db_apis.get_session(), mem.id)
             current_member_ids.add(mem.id)
             LOG.info("Member with id {} and ip {} and port {} "
                      "slated for creation under batch update "
                      "has been deleted.".format(mem.id, mem.ip_address, mem.protocol_port))
+        self._member_repo.delete_members(db_apis.get_session(), new_member_ids)
 
         if pool is not None:
             self._pool_repo.update(db_apis.get_session(), pool.id,
                                    provisioning_status=constants.ACTIVE)
+        if listeners is not None:
+            for listener in listeners:
+                self._listener_repo.update(db_apis.get_session(),
+                                           listener.id,
+                                           provisioning_status=constants.ACTIVE)
         if load_balancer is not None:
             self._lb_repo.update(db_apis.get_session(),
                                  load_balancer.id,
@@ -752,7 +759,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         if not self._is_batch_valid(old_member_ids, new_member_ids,
                                     updated_member_ids, member_collision_map):
             self._rollback_members(old_member_ids, new_member_ids,
-                                   updated_member_ids, load_balancer, pool)
+                                   updated_member_ids, load_balancer,
+                                   listeners, pool)
             LOG.warning("Due to a failed batch update caused by duplicate member definitions, "
                         "the members defined in the update are now out-of-sync with the "
                         "ACOS device. Please issue a corrected update or "
