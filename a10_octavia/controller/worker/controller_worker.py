@@ -685,6 +685,7 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                           listeners, pool):
         set_o_ids = set(old_member_ids)
         set_u_ids = set(updated_member_ids)
+        set_n_ids = set(new_member_ids)
 
         current_member_ids = set_o_ids.union(set_u_ids)
 
@@ -700,14 +701,14 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                          mem.id, mem.ip_address, mem.protocol_port))
 
         new_members = [self._member_repo.get(db_apis.get_session(), id=mid)
-                       for mid in new_member_ids]
+                       for mid in set_n_ids]
 
         for mem in new_members:
             current_member_ids.add(mem.id)
             LOG.info("Member with id {} and ip {} and port {} "
                      "slated for creation under batch update "
                      "has been deleted.".format(mem.id, mem.ip_address, mem.protocol_port))
-        self._member_repo.delete_members(db_apis.get_session(), new_member_ids)
+        self._member_repo.delete_members(db_apis.get_session(), set_n_ids)
 
         if pool is not None:
             self._pool_repo.update(db_apis.get_session(), pool.id,
