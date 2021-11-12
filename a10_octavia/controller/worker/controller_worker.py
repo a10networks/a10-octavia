@@ -30,6 +30,7 @@ from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 
 from a10_octavia.common import a10constants
+from a10_octavia.common import exceptions as a10_ex
 from a10_octavia.common import utils
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_l7policy_flows
@@ -661,35 +662,122 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
         finally:
             self._set_vthunder_available(member.project_id, True, ctx_flags, load_balancer)
 
+    def _is_batch_valid(self, old_member_ids, new_member_ids,
+                        updated_member_ids, member_collision_map):
+        valid = True
+        for mem_id, member_col in member_collision_map.items():
+            member, mem_cnt = member_col
+            mem_ip = member.ip_address
+            mem_port = member.protocol_port
+            if mem_cnt > 1:
+                if mem_id in old_member_ids:
+                    error_msg = ("Duplicate members with id {} and IP {} and port {} "
+                                 "found in member database.".format(mem_id, mem_ip, mem_port))
+                if mem_id in new_member_ids or mem_id in updated_member_ids:
+                    error_msg = ("Duplicate members with id {} and IP {} and port {} "
+                                 "found in batch update request.".format(mem_id, mem_ip, mem_port))
+                LOG.warning(error_msg)
+                valid = False
+        return valid
+
+    def _rollback_members(self, old_member_ids, new_member_ids,
+                          updated_member_ids, load_balancer,
+                          listeners, pool):
+        set_o_ids = set(old_member_ids)
+        set_u_ids = set(updated_member_ids)
+        set_n_ids = set(new_member_ids)
+
+        current_member_ids = set_o_ids.union(set_u_ids)
+
+        current_members = [self._member_repo.get(db_apis.get_session(), id=mid)
+                           for mid in current_member_ids]
+
+        for mem in current_members:
+            # Rollback status to prevent pending state lock
+            self._member_repo.update(db_apis.get_session(), mem.id,
+                                     provisioning_status=constants.ACTIVE)
+            LOG.info("Member with id {} and ip {} and port {} slated for "
+                     "batch update have been set to ACTIVE state.".format(
+                         mem.id, mem.ip_address, mem.protocol_port))
+
+        new_members = [self._member_repo.get(db_apis.get_session(), id=mid)
+                       for mid in set_n_ids]
+
+        for mem in new_members:
+            current_member_ids.add(mem.id)
+            LOG.info("Member with id {} and ip {} and port {} "
+                     "slated for creation under batch update "
+                     "has been deleted.".format(mem.id, mem.ip_address, mem.protocol_port))
+        self._member_repo.delete_members(db_apis.get_session(), set_n_ids)
+
+        if pool is not None:
+            self._pool_repo.update(db_apis.get_session(), pool.id,
+                                   provisioning_status=constants.ACTIVE)
+        if listeners is not None:
+            for listener in listeners:
+                self._listener_repo.update(db_apis.get_session(),
+                                           listener.id,
+                                           provisioning_status=constants.ACTIVE)
+        if load_balancer is not None:
+            self._lb_repo.update(db_apis.get_session(),
+                                 load_balancer.id,
+                                 provisioning_status=constants.ACTIVE)
+
     @tenacity.retry(
         retry=tenacity.retry_if_exception_type(db_exceptions.NoResultFound),
         wait=tenacity.wait_incrementing(
             RETRY_INITIAL_DELAY, RETRY_BACKOFF, RETRY_MAX),
         stop=tenacity.stop_after_attempt(RETRY_ATTEMPTS))
     def batch_update_members(self, old_member_ids, new_member_ids,
-                             updated_members):
+                             updated_members_req):
 
+        updated_member_ids = [m.get('id') for m in updated_members_req]
+        updated_member_models = [self._member_repo.get(db_apis.get_session(), id=mid)
+                                 for mid in updated_member_ids]
+        old_members = [self._member_repo.get(db_apis.get_session(), id=mid)
+                       for mid in old_member_ids]
         new_members = [self._member_repo.get(db_apis.get_session(), id=mid)
                        for mid in new_member_ids]
+
+        if old_members:
+            pool = old_members[0].pool
+        elif new_members:
+            pool = new_members[0].pool
+        else:
+            pool = updated_member_models[0].pool
+        listeners = pool.listeners
+        load_balancer = pool.load_balancer
+
+        modified_members = old_members + updated_member_models + new_members
+        member_collision_map = {}
+        for mem in modified_members:
+            mem_id = mem[0] if type(mem) == tuple else mem.id
+            if member_collision_map.get(mem_id):
+                member_collision_map[mem_id][1] += 1
+            else:
+                member_collision_map[mem_id] = [mem, 1]
+
+        if not self._is_batch_valid(old_member_ids, new_member_ids,
+                                    updated_member_ids, member_collision_map):
+            self._rollback_members(old_member_ids, new_member_ids,
+                                   updated_member_ids, load_balancer,
+                                   listeners, pool)
+            LOG.warning("Due to a failed batch update caused by duplicate member definitions, "
+                        "the members defined in the update are now out-of-sync with the "
+                        "ACOS device. Please issue a corrected update or "
+                        "delete the affected members.")
+            raise a10_ex.DuplicateMembersInBatchUpdate
+
         # The API may not have commited all of the new member records yet.
         # Make sure we retry looking them up.
         if None in new_members or len(new_members) != len(new_member_ids):
             LOG.warning('Failed to fetch one of the new members from DB. '
                         'Retrying for up to 60 seconds.')
             raise db_exceptions.NoResultFound
-        old_members = [self._member_repo.get(db_apis.get_session(), id=mid)
-                       for mid in old_member_ids]
-        updated_members = [
-            (self._member_repo.get(db_apis.get_session(), id=m.get('id')), m)
-            for m in updated_members]
-        if old_members:
-            pool = old_members[0].pool
-        elif new_members:
-            pool = new_members[0].pool
-        else:
-            pool = updated_members[0][0].pool
-        listeners = pool.listeners
-        load_balancer = pool.load_balancer
+
+        updated_members = []
+        for i in range(len(updated_members_req)):
+            updated_members.append((updated_member_models[i], updated_members_req[i]))
 
         ctx_flags = [False]
         try:

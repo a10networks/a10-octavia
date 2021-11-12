@@ -86,7 +86,6 @@ class DNSConfiguration(task.Task):
                                 "Using %s as primary and %s as secondary.",
                                 license_subnet_id, primary_dns, secondary_dns)
 
-
             if use_network_dns:
                 if not primary_dns and not secondary_dns:
                     LOG.warning("The flavor option `use_network_dns` was defined "
