@@ -118,6 +118,7 @@ class DeleteL7Policy(task.Task):
         c_pers, s_pers = utils.get_sess_pers_templates(
             listener.default_pool)
         kargs = {}
+        snat_pool = None
         if not (listener.protocol).islower():
             listener.protocol = openstack_mappings.virtual_port_protocol(
                 self.axapi_client, listener.protocol)
@@ -125,6 +126,8 @@ class DeleteL7Policy(task.Task):
             get_listener = self.axapi_client.slb.virtual_server.vport.get(
                 listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port)
+            if get_listener and 'port' in get_listener and 'pool' in get_listener['port']:
+                snat_pool = get_listener['port']['pool']
             LOG.debug("Successfully fetched listener %s for l7policy %s", listener.id, l7policy.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to get listener %s for l7policy: %s", listener.id, l7policy.id)
@@ -143,7 +146,8 @@ class DeleteL7Policy(task.Task):
                 listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id,
-                s_pers, c_pers, 1, **kargs)
+                s_pers, c_pers, 1,
+                source_nat_pool=snat_pool, **kargs)
             LOG.debug(
                 "Successfully dissociated l7policy %s from listener %s",
                 l7policy.id,
