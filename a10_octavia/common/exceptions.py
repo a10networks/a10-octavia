@@ -261,3 +261,10 @@ class IPAddressNotInSubnetRangeError(base.NetworkException):
                'IP {0} out of range ' +
                'for subnet {1}.').format(ip, subnet)
         super(IPAddressNotInSubnetRangeError, self).__init__(msg)
+
+
+class DuplicateMembersInBatchUpdate(base.NetworkException):
+    def __init__(self):
+        msg = ('Duplicate member definition have been found during the batch update. '
+               'Please check WARNING log messages for more details.')
+        super(DuplicateMembersInBatchUpdate, self).__init__(msg)
