@@ -36,7 +36,7 @@ class L7PolicyParent(object):
         size = len(script.encode('utf-8'))
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
-        kargs = {}
+        kwargs = {}
         listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
                                                                      listener.protocol)
         try:
@@ -61,14 +61,14 @@ class L7PolicyParent(object):
             aflex_scripts.append({"aflex": filename})
         else:
             aflex_scripts = [{"aflex": filename}]
-        kargs["aflex_scripts"] = aflex_scripts
+        kwargs["aflex_scripts"] = aflex_scripts
 
         try:
             self.axapi_client.slb.virtual_server.vport.update(
                 listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id, s_pers,
-                c_pers, 1, **kargs)
+                c_pers, 1, **kwargs)
             LOG.debug(
                 "Successfully associated l7policy %s to listener %s",
                 l7policy.id,
@@ -117,7 +117,7 @@ class DeleteL7Policy(task.Task):
         listener = l7policy.listener
         c_pers, s_pers = utils.get_sess_pers_templates(
             listener.default_pool)
-        kargs = {}
+        kwargs = {}
         snat_pool = None
         if not (listener.protocol).islower():
             listener.protocol = openstack_mappings.virtual_port_protocol(
@@ -139,7 +139,7 @@ class DeleteL7Policy(task.Task):
             for aflex in aflex_scripts:
                 if aflex['aflex'] != l7policy.id:
                     new_aflex_scripts.append(aflex)
-        kargs["aflex_scripts"] = new_aflex_scripts
+        kwargs["aflex_scripts"] = new_aflex_scripts
 
         try:
             self.axapi_client.slb.virtual_server.vport.replace(
@@ -147,7 +147,7 @@ class DeleteL7Policy(task.Task):
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id,
                 s_pers, c_pers, 1,
-                source_nat_pool=snat_pool, **kargs)
+                source_nat_pool=snat_pool, **kwargs)
             LOG.debug(
                 "Successfully dissociated l7policy %s from listener %s",
                 l7policy.id,
