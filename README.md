@@ -27,9 +27,9 @@ this provider driver uses a "Thunder per Tenant" architecture. Therefore, each t
 
 ## Project Resources
 
-Installation and usage information is available at https://documentation.a10networks.com/Install/Software/A10_ACOS_Install/pdf/Thunder_openstack_octavia_install_guide.pdf
+Installation and usage information is available at https://documentation.a10networks.com/Install/Software/A10_ACOS_Install/pdf/A10_OCTAVIA_INSTALL.pdf
 
-Release notes are available at https://documentation.a10networks.com/Install/Software/A10_ACOS_Install/pdf/Thunder_openstack_octavia_RN.pdf
+Release notes are available at https://documentation.a10networks.com/Install/Software/A10_ACOS_Install/pdf/A10_OCTAVIA_RN.pdf
 
 ## Issues and Inquiries
 For all issues, please send an email to support@a10networks.com 
