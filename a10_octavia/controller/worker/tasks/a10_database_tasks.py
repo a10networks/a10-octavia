@@ -1099,3 +1099,43 @@ class CountMembersOnThunderBySubnet(BaseDatabaseTask):
                               subnet.id, str(e))
                 raise e
         return 0
+
+
+class CountBatchMembersWithIPPortProtocol(BaseDatabaseTask):
+    def execute(self, members, pool):
+        try:
+            mem_count_ip_dict = {}
+            mem_count_ip_port_protocol_dict = {}
+            for member in members:
+                cnt_ip = self.member_repo.get_member_count_by_ip_address(
+                    db_apis.get_session(), member.ip_address, member.project_id)
+                mem_count_ip_dict[member.ip_address] = cnt_ip
+
+                cnt_port_protocol = self.member_repo.get_member_count_by_ip_address_port_protocol(
+                    db_apis.get_session(), member.ip_address, member.project_id,
+                    member.protocol_port, pool.protocol)
+                mem_count_ip_port_protocol_dict[member.ip_address] = cnt_port_protocol
+            return mem_count_ip_dict, mem_count_ip_port_protocol_dict
+        except Exception as e:
+            LOG.exception(
+                "Failed to get count of members with given IP for a pool: %s",
+                str(e))
+            raise e
+
+
+class GetNatPoolEntryForBatchMembers(BaseDatabaseTask):
+
+    def execute(self, members, nat_flavor=None):
+        nat_pool_dict = {}
+        if nat_flavor and 'pool_name' in nat_flavor:
+            try:
+                for member in members:
+                    nat_pool = self.nat_pool_repo.get(
+                        db_apis.get_session(), name=nat_flavor['pool_name'],
+                        subnet_id=member.subnet_id)
+                    nat_pool_dict[member.subnet_id] = nat_pool
+                return nat_pool_dict
+            except Exception as e:
+                LOG.exception("Failed to fetch NAT pool %s entry from database: %s",
+                              nat_flavor['pool_name'], str(e))
+                raise e
