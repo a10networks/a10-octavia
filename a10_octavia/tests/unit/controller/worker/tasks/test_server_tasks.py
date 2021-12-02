@@ -174,9 +174,10 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
     def test_MemberCreate_revert_created_member(self):
         mock_member = task.MemberCreate()
         member_port_count_ip = 1
+        mem_cnt_ip_dict = {}
         mock_member.axapi_client = self.client_mock
         mock_member.revert(MEMBER, VTHUNDER, POOL,
-                           member_port_count_ip)
+                           member_port_count_ip, mem_cnt_ip_dict)
         self.client_mock.slb.server.delete.assert_called_with(
             SERVER_NAME)
 
@@ -199,7 +200,8 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         mock_member = task.MemberCreate()
         mock_member.axapi_client = self.client_mock
         member_port_count_ip = 4
-        mock_member.revert(MEMBER, VTHUNDER, POOL, member_port_count_ip)
+        mem_cnt_ip_dict = {}
+        mock_member.revert(MEMBER, VTHUNDER, POOL, member_port_count_ip, mem_cnt_ip_dict)
         self.client_mock.slb.server.delete.assert_not_called()
 
     @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')

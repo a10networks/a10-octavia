@@ -803,8 +803,12 @@ class MemberFlows(object):
         """Create a flow to batch update members
         :returns: The flow for batch updating members
         """
+        existing_members = [m[0] for m in updated_members]
+        pool_members = new_members + existing_members
         batch_update_members_flow = linear_flow.Flow(
             constants.BATCH_UPDATE_MEMBERS_FLOW)
+        batch_update_members_flow.add(a10_network_tasks.ValidateSubnet(
+            inject={constants.MEMBER: pool_members}))
         batch_update_members_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -827,6 +831,26 @@ class MemberFlows(object):
         batch_update_members_flow.add(server_tasks.MemberFindNatPool(
             requires=[a10constants.VTHUNDER, constants.POOL, constants.FLAVOR],
             provides=a10constants.NAT_FLAVOR))
+        members = old_members + new_members
+        batch_update_members_flow.add(a10_database_tasks.CountBatchMembersWithIPPortProtocol(
+            inject={a10constants.MEMBERS: members},
+            requires=constants.POOL,
+            provides=(a10constants.MEMBER_COUNT_IP_DICT,
+                      a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL_DICT)))
+        batch_update_members_flow.add(a10_database_tasks.GetNatPoolEntryForBatchMembers(
+            inject={a10constants.MEMBERS: members},
+            requires=[a10constants.NAT_FLAVOR],
+            provides=a10constants.NAT_POOL_DICT))
+        if new_members:
+            batch_update_members_flow.add(
+                a10_network_tasks.ReserveSubnetAddressForBatchMembersAndUpdateNatPoolDB(
+                    inject={a10constants.MEMBERS: new_members},
+                    requires=[a10constants.NAT_FLAVOR, a10constants.NAT_POOL_DICT]))
+        if old_members:
+            batch_update_members_flow.add(
+                a10_network_tasks.DeleteSubnetAddressAndNatPoolForBatchMembers(
+                    inject={a10constants.MEMBERS: old_members},
+                    requires=[a10constants.NAT_FLAVOR, a10constants.NAT_POOL_DICT]))
 
         # Delete old members
         batch_update_members_flow.add(
@@ -842,38 +866,16 @@ class MemberFlows(object):
                 inject={constants.OBJECT: m},
                 name='{flow}-{id}'.format(
                     id=m.id, flow=constants.DELETE_MODEL_OBJECT_FLOW)))
-            batch_update_members_flow.add(a10_database_tasks.CountMembersWithIP(
-                name='count-member-with-ip-' + m.id,
-                inject={constants.MEMBER: m},
-                provides=a10constants.MEMBER_COUNT_IP))
-            batch_update_members_flow.add(a10_database_tasks.CountMembersWithIPPortProtocol(
-                name='count-member-with-IP-port-protocol-' + m.id,
-                inject={constants.MEMBER: m},
-                requires=constants.POOL,
-                provides=a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL))
-            batch_update_members_flow.add(a10_network_tasks.GetLBResourceSubnet(
-                name='{flow}-{id}'.format(
-                    id=m.id, flow=a10constants.GET_LB_RESOURCE_SUBNET),
-                inject={a10constants.LB_RESOURCE: m},
-                provides=constants.SUBNET))
-            batch_update_members_flow.add(a10_database_tasks.GetNatPoolEntry(
-                name='get-nat-pool-entry-' + m.id,
-                inject={constants.MEMBER: m},
-                requires=[a10constants.NAT_FLAVOR],
-                provides=a10constants.NAT_POOL))
-            batch_update_members_flow.add(a10_network_tasks.ReleaseSubnetAddressForMember(
-                name='release-subnet-address-for-member-' + m.id,
-                inject={constants.MEMBER: m},
-                requires=[a10constants.NAT_FLAVOR, a10constants.NAT_POOL]))
-            batch_update_members_flow.add(a10_database_tasks.DeleteNatPoolEntry(
-                name='delete-nat-pool-entry-' + m.id,
-                requires=a10constants.NAT_POOL))
             batch_update_members_flow.add(server_tasks.MemberDelete(
                 name='member-delete-' + m.id,
                 inject={constants.MEMBER: m},
                 requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                           a10constants.MEMBER_COUNT_IP,
-                          a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL)))
+                          a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL,
+                          a10constants.MEMBER_COUNT_IP_DICT,
+                          a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL_DICT),
+                provides=(a10constants.MEMBER_COUNT_IP_DICT,
+                          a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL_DICT)))
             if CONF.a10_global.network_type == 'vlan':
                 batch_update_members_flow.add(
                     vthunder_tasks.DeleteInterfaceTagIfNotInUseForMember(
@@ -903,19 +905,12 @@ class MemberFlows(object):
             batch_update_members_flow.add(database_tasks.MarkMemberPendingCreateInDB(
                 name='mark-member-pending-create-in-db-' + m.id,
                 inject={constants.MEMBER: m}))
-            batch_update_members_flow.add(a10_network_tasks.ValidateSubnet(
-                name='validate-subnet' + m.id,
-                inject={constants.MEMBER: m}))
-            batch_update_members_flow.add(a10_database_tasks.CountMembersWithIP(
-                name='count-member-with-ip-' + m.id,
-                inject={constants.MEMBER: m},
-                provides=a10constants.MEMBER_COUNT_IP))
-            batch_update_members_flow.add(self.get_batch_update_member_snat_pool_subflow(m))
             batch_update_members_flow.add(server_tasks.MemberCreate(
                 name='member-create-' + m.id,
                 inject={constants.MEMBER: m},
                 requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
-                          a10constants.MEMBER_COUNT_IP, constants.FLAVOR)))
+                          a10constants.MEMBER_COUNT_IP, constants.FLAVOR,
+                          a10constants.MEMBER_COUNT_IP_DICT)))
             batch_update_members_flow.add(database_tasks.MarkMemberActiveInDB(
                 inject={constants.MEMBER: m},
                 name='{flow}-{id}'.format(
@@ -933,9 +928,6 @@ class MemberFlows(object):
             batch_update_members_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
                 inject={constants.MEMBER: m},
                 name='mark-member-pending-update-in-db-' + m.id))
-            batch_update_members_flow.add(a10_network_tasks.ValidateSubnet(
-                name='validate-subnet' + m.id,
-                inject={constants.MEMBER: m}))
             batch_update_members_flow.add(server_tasks.MemberUpdate(
                 name='member-update-' + m.id,
                 inject={constants.MEMBER: m},
@@ -949,8 +941,6 @@ class MemberFlows(object):
                 name='{flow}-{id}'.format(
                     id=m.id, flow=constants.MARK_MEMBER_ACTIVE_INDB)))
 
-        existing_members = [m[0] for m in updated_members]
-        pool_members = new_members + existing_members
         if pool_members:
             if CONF.a10_global.handle_vrid:
                 batch_update_members_flow.add(

@@ -799,7 +799,9 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                         vthunder_conf, device_dict),
                     store={constants.LISTENERS: listeners,
                            constants.LOADBALANCER: load_balancer,
-                           constants.POOL: pool})
+                           constants.POOL: pool,
+                           a10constants.MEMBER_COUNT_IP: 0,
+                           a10constants.MEMBER_COUNT_IP_PORT_PROTOCOL: 0})
             else:
                 topology = CONF.a10_controller_worker.loadbalancer_topology
                 busy = self._vthunder_busy_check(load_balancer.project_id, True,

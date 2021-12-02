@@ -25,6 +25,7 @@ from taskflow.types import failure
 
 from octavia.common import constants
 from octavia.controller.worker import task_utils
+from octavia.db import api as db_apis
 from octavia.network import base
 from octavia.network import data_models as n_data_models
 
@@ -34,6 +35,7 @@ from a10_octavia.common import exceptions
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks import utils as a10_task_utils
+from a10_octavia.db import repositories as a10_repo
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
@@ -46,6 +48,7 @@ class BaseNetworkTask(task.Task):
         super(BaseNetworkTask, self).__init__(**kwargs)
         self._network_driver = None
         self.task_utils = task_utils.TaskUtils()
+        self.nat_pool_repo = a10_repo.NatPoolRepository()
 
     @property
     def network_driver(self):
@@ -1119,10 +1122,125 @@ class GetPoolsOnThunder(BaseNetworkTask):
 class ValidateSubnet(BaseNetworkTask):
 
     def execute(self, member):
-        if member.subnet_id:
-            member_subnet = self.network_driver.get_subnet(member.subnet_id)
-            subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(member_subnet.cidr)
-            if not a10_utils.check_ip_in_subnet_range(
-                    member.ip_address, subnet_ip, subnet_mask):
-                raise exceptions.IPAddressNotInSubnetRangeError(
-                    member.ip_address, member_subnet.cidr)
+        member_list = member if isinstance(member, list) else [member]
+        for member in member_list:
+            if member.subnet_id:
+                member_subnet = self.network_driver.get_subnet(member.subnet_id)
+                subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(member_subnet.cidr)
+                if not a10_utils.check_ip_in_subnet_range(
+                        member.ip_address, subnet_ip, subnet_mask):
+                    raise exceptions.IPAddressNotInSubnetRangeError(
+                        member.ip_address, member_subnet.cidr)
+
+
+class DeleteSubnetAddressAndNatPoolForBatchMembers(BaseNetworkTask):
+
+    def execute(self, members, nat_pool_dict, nat_flavor=None):
+        for member in members:
+            nat_pool = nat_pool_dict[member.subnet_id] if nat_pool_dict else None
+
+            if nat_flavor is None or nat_pool is None:
+                return
+
+            if nat_pool.member_ref_count == 1:
+                try:
+                    self.network_driver.delete_port(nat_pool.port_id)
+                    if not CONF.vthunder.slb_no_snat_support:
+                        addr_list = a10_utils.get_natpool_addr_list(nat_flavor)
+                        amphorae = a10_task_utils.attribute_search(member, 'amphorae')
+                        if amphorae is not None:
+                            self.network_driver.release_subnet_addresses(
+                                member.subnet_id, addr_list, amphorae)
+                except Exception as e:
+                    LOG.exception("Failed to release addresses in NAT pool %s from subnet %s",
+                                  nat_flavor['pool_name'], member.subnet_id)
+                    raise e
+
+            if nat_pool.member_ref_count > 1:
+                try:
+                    ref = nat_pool.member_ref_count - 1
+                    self.nat_pool_repo.update(
+                        db_apis.get_session(), nat_pool.id, member_ref_count=ref)
+                    nat_pool = self.nat_pool_repo.get(db_apis.get_session(),
+                                                      name=nat_flavor['pool_name'],
+                                                      subnet_id=member.subnet_id)
+                    nat_pool_dict.update({member.subnet_id: nat_pool})
+                except Exception as e:
+                    LOG.exception("Failed to update NAT pool entry %s to database: %s",
+                                  nat_pool.id, str(e))
+                    raise e
+            else:
+                try:
+                    self.nat_pool_repo.delete(db_apis.get_session(), id=nat_pool.id)
+                    LOG.info("Successfully deleted nat pool entry in database.")
+                except Exception as e:
+                    LOG.exception("Failed to delete NAT pool entry %s to database: %s",
+                                  nat_pool.id, str(e))
+                    raise e
+
+
+class ReserveSubnetAddressForBatchMembersAndUpdateNatPoolDB(BaseNetworkTask):
+
+    def execute(self, members, nat_pool_dict, nat_flavor=None):
+        if nat_flavor is None:
+            return
+
+        for member in members:
+            nat_pool = nat_pool_dict[member.subnet_id] if nat_pool_dict else None
+            if nat_pool is None:
+                try:
+                    addr_list = a10_utils.get_natpool_addr_list(nat_flavor)
+                    if not CONF.vthunder.slb_no_snat_support:
+                        amphorae = a10_task_utils.attribute_search(member, 'amphorae')
+                    else:
+                        amphorae = None
+                    port = self.network_driver.reserve_subnet_addresses(
+                        member.subnet_id, addr_list, amphorae)
+                    LOG.debug("Successfully allocated addresses for nat pool %s on port %s",
+                              nat_flavor['pool_name'], port.id)
+                    if port is None:
+                        # NAT pool addresses are not in member subnet. a10-octavia allows it
+                        # but not able to reerve ip for it. So, no database entry is needed.
+                        continue
+                    try:
+                        id = uuidutils.generate_uuid()
+                        pool_name = nat_flavor.get('pool_name')
+                        subnet_id = member.subnet_id
+                        start_address = nat_flavor.get('start_address')
+                        end_address = nat_flavor.get('end_address')
+                        port_id = port.id
+                        self.nat_pool_repo.create(
+                            db_apis.get_session(), id=id, name=pool_name, subnet_id=subnet_id,
+                            start_address=start_address, end_address=end_address,
+                            member_ref_count=1, port_id=port_id)
+                        nat_pool = self.nat_pool_repo.get(db_apis.get_session(),
+                                                          name=nat_flavor['pool_name'],
+                                                          subnet_id=member.subnet_id)
+                        nat_pool_dict.update({member.subnet_id: nat_pool})
+                        LOG.info("Successfully created nat pool entry in database.")
+                    except Exception as e:
+                        LOG.exception("Failed to create subnet %s NAT pool %s entry "
+                                      "to database: %s", subnet_id, pool_name, str(e))
+                        raise e
+                except neutron_exceptions.InvalidIpForSubnetClient as e:
+                    # The NAT pool addresses is not in member subnet, a10-octavia will allow it but
+                    # will not able to reserve address for it. (since we don't know the subnet)
+                    LOG.exception("Failed to reserve addresses in NAT pool %s from subnet %s: %s",
+                                  nat_flavor['pool_name'], member.subnet_id, str(e))
+                except Exception as e:
+                    LOG.exception("Failed to reserve addresses in NAT pool %s from subnet %s",
+                                  nat_flavor['pool_name'], member.subnet_id)
+                    raise e
+            else:
+                try:
+                    ref = nat_pool.member_ref_count + 1
+                    self.nat_pool_repo.update(
+                        db_apis.get_session(), nat_pool.id, member_ref_count=ref)
+                    nat_pool = self.nat_pool_repo.get(db_apis.get_session(),
+                                                      name=nat_flavor['pool_name'],
+                                                      subnet_id=member.subnet_id)
+                    nat_pool_dict.update({member.subnet_id: nat_pool})
+                except Exception as e:
+                    LOG.exception("Failed to update NAT pool entry %s to database: %s",
+                                  nat_pool.id, str(e))
+                    raise e

@@ -55,7 +55,8 @@ class MemberCreate(task.Task):
     """Task to create a member and associate to pool"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool, member_count_ip, flavor=None):
+    def execute(self, member, vthunder, pool, member_count_ip, flavor=None,
+                mem_count_ip_dict={}):
         server_args = utils.meta(member, 'server', {})
         server_args = utils.dash_to_underscore(server_args)
         server_args['conn_limit'] = CONF.server.conn_limit
@@ -98,6 +99,7 @@ class MemberCreate(task.Task):
                                                     server_templates=server_temp,
                                                     **server_args)
                 LOG.debug("Successfully created member: %s", member.id)
+
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to create member: %s", member.id)
             raise e
@@ -113,7 +115,9 @@ class MemberCreate(task.Task):
             raise e
 
     @axapi_client_decorator_for_revert
-    def revert(self, member, vthunder, pool, member_count_ip, *args, **kwargs):
+    def revert(self, member, vthunder, pool, member_count_ip, mem_count_ip_dict, *args, **kwargs):
+        if mem_count_ip_dict and member.ip_address in mem_count_ip_dict:
+            member_count_ip = mem_count_ip_dict[member.ip_address]
         if member_count_ip > 1:
             return
         server_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
@@ -132,7 +136,8 @@ class MemberDelete(task.Task):
     """Task to delete member"""
 
     @axapi_client_decorator
-    def execute(self, member, vthunder, pool, member_count_ip, member_count_ip_port_protocol):
+    def execute(self, member, vthunder, pool, member_count_ip, member_count_ip_port_protocol,
+                mem_count_ip_dict={}, mem_count_ip_port_protocol_dict={}):
         try:
             server_name = _get_server_name(self.axapi_client, member)
             self.axapi_client.slb.service_group.member.delete(
@@ -147,16 +152,36 @@ class MemberDelete(task.Task):
             raise e
 
         try:
+            if mem_count_ip_dict and member.ip_address in mem_count_ip_dict:
+                mem_cnt_ip = mem_count_ip_dict[member.ip_address]
+                member_count_ip = mem_cnt_ip
+
+            if (mem_count_ip_port_protocol_dict and
+                    member.ip_address in mem_count_ip_port_protocol_dict):
+                mem_cnt_ip_port_proto = mem_count_ip_port_protocol_dict[member.ip_address]
+                member_count_ip_port_protocol = mem_cnt_ip_port_proto
+
             if member_count_ip <= 1:
                 self.axapi_client.slb.server.delete(server_name)
+
+                if mem_count_ip_dict and mem_count_ip_port_protocol_dict:
+                    mem_count_ip_dict[member.ip_address] = mem_cnt_ip - 1
+                    mem_count_ip_port_protocol_dict[member.ip_address] = mem_cnt_ip_port_proto - 1
+
                 LOG.debug("Successfully deleted member %s from pool %s", member.id, pool.id)
             elif member_count_ip_port_protocol <= 1:
                 protocol = openstack_mappings.service_group_protocol(
                     self.axapi_client, pool.protocol)
                 self.axapi_client.slb.server.port.delete(server_name, member.protocol_port,
                                                          protocol)
+
+                if mem_count_ip_port_protocol_dict:
+                    mem_count_ip_port_protocol_dict[member.ip_address] = mem_cnt_ip_port_proto - 1
+
                 LOG.debug("Successfully deleted port for member %s from pool %s",
                           member.id, pool.id)
+
+            return mem_count_ip_dict, mem_count_ip_port_protocol_dict
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to delete member/port: %s", member.id)
             raise e
