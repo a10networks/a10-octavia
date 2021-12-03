@@ -118,8 +118,8 @@ class PoolFlows(object):
         delete_pool_flow.add(persist_tasks.DeleteSessionPersistence(
             requires=[a10constants.VTHUNDER, constants.POOL]))
         # Delete pool children
-        delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon))
         delete_pool_flow.add(self._get_delete_member_vthunder_subflow(members, store))
+        delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon))
         delete_pool_flow.add(service_group_tasks.PoolDelete(
             requires=[constants.POOL, a10constants.VTHUNDER]))
         delete_pool_flow.add(database_tasks.DeletePoolInDB(
@@ -276,8 +276,8 @@ class PoolFlows(object):
             requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
             provides=a10constants.POOLS))
         # Delete pool children
-        delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon, True))
         delete_pool_flow.add(self._get_delete_member_vthunder_subflow(members, store, pool_name))
+        delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon, True))
         delete_pool_flow.add(service_group_tasks.PoolDelete(
             name='pool_delete_' + pool_name,
             requires=[constants.POOL, a10constants.VTHUNDER],
@@ -335,8 +335,8 @@ class PoolFlows(object):
             provides=a10constants.POOLS))
 
         # Delete pool children
-        delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon))
         delete_pool_flow.add(self._get_delete_member_vthunder_subflow(members, store))
+        delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon))
         delete_pool_flow.add(service_group_tasks.PoolDelete(
             requires=[constants.POOL, a10constants.VTHUNDER]))
         delete_pool_flow.add(database_tasks.DeletePoolInDB(
