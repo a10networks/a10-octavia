@@ -75,31 +75,24 @@ class CreateAndAssociateHealthMonitor(task.Task):
                           "A health monitor of type {} is not supported "
                           "by A10 provider").format(health_mon.id, health_mon.type))
 
+        override_port = CONF.health_monitor.use_override_port
+        port = None
+        if override_port:
+            port = listeners[0].protocol_port
+
         try:
             post_data = CONF.health_monitor.post_data
             self.axapi_client.slb.hm.create(health_mon.id,
                                             health_mon.type,
                                             health_mon.delay, health_mon.timeout,
                                             health_mon.rise_threshold, method=method,
-                                            port=listeners[0].protocol_port, url=url,
+                                            port=port, url=url,
                                             expect_code=expect_code, post_data=post_data,
                                             **args)
             LOG.debug("Successfully created health monitor: %s", health_mon.id)
 
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to create health monitor: %s", health_mon.id)
-            raise e
-
-        try:
-            self.axapi_client.slb.service_group.update(health_mon.pool_id,
-                                                       hm_name=health_mon.id,
-                                                       health_check_disable=0)
-            LOG.debug("Successfully associated health monitor %s to pool %s",
-                      health_mon.id, health_mon.pool_id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception(
-                "Failed to associate health monitor %s to pool %s",
-                health_mon.id, health_mon.pool_id)
             raise e
 
     @axapi_client_decorator_for_revert
