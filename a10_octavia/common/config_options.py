@@ -85,9 +85,6 @@ A10_SLB_OPTS = [
 A10_HEALTH_MONITOR_OPTS = [
     cfg.StrOpt('post_data',
                help=_('HTTP Content for "--http-method POST" case.')),
-    cfg.BoolOpt('use_override_port',
-                default=True,
-                help=_('Allow port overriding'))
 ]
 
 A10_LISTENER_OPTS = [
