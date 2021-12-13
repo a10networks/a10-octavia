@@ -84,10 +84,15 @@ class MemberCreate(task.Task):
         else:
             status = True
 
+        health_check = None
+        if pool.health_monitor:
+            health_check = pool.health_monitor.id
+
         try:
             try:
                 server_name = _get_server_name(self.axapi_client, member)
                 self.axapi_client.slb.server.update(server_name, member.ip_address, status=status,
+                                                    health_check=health_check,
                                                     server_templates=server_temp,
                                                     **server_args)
                 LOG.debug("Successfully created member: %s", member.id)
@@ -95,6 +100,7 @@ class MemberCreate(task.Task):
                 server_name = '{}_{}'.format(member.project_id[:5],
                                              member.ip_address.replace('.', '_'))
                 self.axapi_client.slb.server.create(server_name, member.ip_address, status=status,
+                                                    health_check=health_check,
                                                     server_templates=server_temp,
                                                     **server_args)
                 LOG.debug("Successfully created member: %s", member.id)
@@ -192,10 +198,15 @@ class MemberUpdate(task.Task):
         else:
             status = True
 
+        health_check = None
+        if pool.health_monitor:
+            health_check = pool.health_monitor.id
+
         try:
             server_name = _get_server_name(self.axapi_client, member)
             port_list = self.axapi_client.slb.server.get(server_name)['server'].get('port-list')
             self.axapi_client.slb.server.replace(server_name, member.ip_address, status=status,
+                                                 health_check=health_check,
                                                  server_templates=server_temp,
                                                  port_list=port_list,
                                                  **server_args)

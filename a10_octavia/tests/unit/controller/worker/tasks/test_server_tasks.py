@@ -36,8 +36,12 @@ from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
 VTHUNDER = data_models.VThunder()
+HM = o_data_models.HealthMonitor(id=a10constants.MOCK_HM_ID, type='TCP',
+                                 delay=7, timeout=3,
+                                 rise_threshold=8, http_method='GET')
 POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID,
-                          protocol=a10constants.MOCK_SERVICE_GROUP_PROTOCOL)
+                          protocol=a10constants.MOCK_SERVICE_GROUP_PROTOCOL,
+                          health_monitor=HM)
 MEMBER = o_data_models.Member(
     id=a10constants.MOCK_MEMBER_ID, protocol_port=t_constants.MOCK_PORT_ID,
     project_id=t_constants.MOCK_PROJECT_ID, ip_address=t_constants.MOCK_IP_ADDRESS,
@@ -111,7 +115,8 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **expect_key_args)
+            server_templates=mock.ANY, health_check='mock-hm-cd61-49ed-8508-f22a12d770c5',
+            **expect_key_args)
 
     @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
     def test_MemberCreate_execute_create_with_regex_overwrite_flavor(self, mock_server_name):
@@ -132,7 +137,8 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, member_obj.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **expect_key_args)
+            server_templates=mock.ANY, health_check='mock-hm-cd61-49ed-8508-f22a12d770c5',
+            **expect_key_args)
 
     @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
     def test_MemberCreate_execute_create_with_regex_flavor(self, mock_server_name):
@@ -153,7 +159,8 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, member_obj.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **expect_key_args)
+            server_templates=mock.ANY, health_check='mock-hm-cd61-49ed-8508-f22a12d770c5',
+            **expect_key_args)
 
     @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
     def test_MemberCreate_execute_create_flavor_override_config(self, mock_server_name):
@@ -169,7 +176,8 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **expect_key_args)
+            server_templates=mock.ANY, health_check='mock-hm-cd61-49ed-8508-f22a12d770c5',
+            **expect_key_args)
 
     def test_MemberCreate_revert_created_member(self):
         mock_member = task.MemberCreate()
@@ -191,7 +199,8 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **KEY_ARGS)
+            server_templates=mock.ANY, health_check='mock-hm-cd61-49ed-8508-f22a12d770c5',
+            **KEY_ARGS)
         self.client_mock.slb.service_group.member.create.assert_called_with(
             POOL.id, SERVER_NAME, MEMBER.protocol_port)
 
@@ -213,7 +222,8 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         self.client_mock.slb.server.create.assert_not_called()
         self.client_mock.slb.server.update.assert_called_with(
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **KEY_ARGS)
+            server_templates=mock.ANY, health_check='mock-hm-cd61-49ed-8508-f22a12d770c5',
+            **KEY_ARGS)
         self.client_mock.slb.service_group.member.create.assert_called_with(
             POOL.id, SERVER_NAME, MEMBER.protocol_port)
 
