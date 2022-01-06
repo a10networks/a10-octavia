@@ -48,9 +48,10 @@ class MemberFlows(object):
 
         create_member_flow.add(database_tasks.MarkMemberPendingCreateInDB(
             requires=constants.MEMBER))
-        create_member_flow.add(a10_network_tasks.ValidateSubnet(
-            name='validate-subnet',
-            requires=constants.MEMBER))
+        if CONF.a10_global.validate_subnet:
+            create_member_flow.add(a10_network_tasks.ValidateSubnet(
+                name='validate-subnet',
+                requires=constants.MEMBER))
         create_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -612,9 +613,10 @@ class MemberFlows(object):
 
         update_member_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
             requires=constants.MEMBER))
-        update_member_flow.add(a10_network_tasks.ValidateSubnet(
-            name='validate-subnet',
-            requires=constants.MEMBER))
+        if CONF.a10_global.validate_subnet:
+            update_member_flow.add(a10_network_tasks.ValidateSubnet(
+                name='validate-subnet',
+                requires=constants.MEMBER))
         update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -676,9 +678,10 @@ class MemberFlows(object):
                       constants.POOL]))
         update_member_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
             requires=constants.MEMBER))
-        update_member_flow.add(a10_network_tasks.ValidateSubnet(
-            name='validate-subnet',
-            requires=constants.MEMBER))
+        if CONF.a10_global.validate_subnet:
+            update_member_flow.add(a10_network_tasks.ValidateSubnet(
+                name='validate-subnet',
+                requires=constants.MEMBER))
         update_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -736,9 +739,10 @@ class MemberFlows(object):
                       constants.POOL]))
         create_member_flow.add(database_tasks.MarkMemberPendingCreateInDB(
             requires=constants.MEMBER))
-        create_member_flow.add(a10_network_tasks.ValidateSubnet(
-            name='validate-subnet',
-            requires=constants.MEMBER))
+        if CONF.a10_global.validate_subnet:
+            create_member_flow.add(a10_network_tasks.ValidateSubnet(
+                name='validate-subnet',
+                requires=constants.MEMBER))
         create_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -903,9 +907,10 @@ class MemberFlows(object):
             batch_update_members_flow.add(database_tasks.MarkMemberPendingCreateInDB(
                 name='mark-member-pending-create-in-db-' + m.id,
                 inject={constants.MEMBER: m}))
-            batch_update_members_flow.add(a10_network_tasks.ValidateSubnet(
-                name='validate-subnet' + m.id,
-                inject={constants.MEMBER: m}))
+            if CONF.a10_global.validate_subnet:
+                batch_update_members_flow.add(a10_network_tasks.ValidateSubnet(
+                    name='validate-subnet' + m.id,
+                    inject={constants.MEMBER: m}))
             batch_update_members_flow.add(a10_database_tasks.CountMembersWithIP(
                 name='count-member-with-ip-' + m.id,
                 inject={constants.MEMBER: m},
@@ -933,9 +938,10 @@ class MemberFlows(object):
             batch_update_members_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
                 inject={constants.MEMBER: m},
                 name='mark-member-pending-update-in-db-' + m.id))
-            batch_update_members_flow.add(a10_network_tasks.ValidateSubnet(
-                name='validate-subnet' + m.id,
-                inject={constants.MEMBER: m}))
+            if CONF.a10_global.validate_subnet:
+                batch_update_members_flow.add(a10_network_tasks.ValidateSubnet(
+                    name='validate-subnet' + m.id,
+                    inject={constants.MEMBER: m}))
             batch_update_members_flow.add(server_tasks.MemberUpdate(
                 name='member-update-' + m.id,
                 inject={constants.MEMBER: m},
@@ -1085,9 +1091,10 @@ class MemberFlows(object):
             batch_update_members_flow.add(database_tasks.MarkMemberPendingCreateInDB(
                 name='mark-member-pending-create-in-DB' + m.id,
                 inject={constants.MEMBER: m}))
-            batch_update_members_flow.add(a10_network_tasks.ValidateSubnet(
-                name='validate-subnet' + m.id,
-                inject={constants.MEMBER: m}))
+            if CONF.a10_global.validate_subnet:
+                batch_update_members_flow.add(a10_network_tasks.ValidateSubnet(
+                    name='validate-subnet' + m.id,
+                    inject={constants.MEMBER: m}))
             batch_update_members_flow.add(a10_database_tasks.CountMembersWithIP(
                 name='count-members-with-ip' + m.id,
                 inject={constants.MEMBER: m},
@@ -1117,9 +1124,10 @@ class MemberFlows(object):
             batch_update_members_flow.add(database_tasks.MarkMemberPendingUpdateInDB(
                 inject={constants.MEMBER: m},
                 name='mark-member-pending-update-in-db-' + m.id))
-            batch_update_members_flow.add(a10_network_tasks.ValidateSubnet(
-                name='validate-subnet' + m.id,
-                inject={constants.MEMBER: m}))
+            if CONF.a10_global.validate_subnet:
+                batch_update_members_flow.add(a10_network_tasks.ValidateSubnet(
+                    name='validate-subnet' + m.id,
+                    inject={constants.MEMBER: m}))
             batch_update_members_flow.add(a10_network_tasks.GetLBResourceSubnet(
                 name='{flow}-{id}'.format(
                     id=m.id, flow=a10constants.GET_LB_RESOURCE_SUBNET),
