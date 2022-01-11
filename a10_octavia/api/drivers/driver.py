@@ -19,6 +19,7 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 
 from octavia.common import constants
+from octavia.common import rpc
 from octavia.db import api as db_apis
 from octavia.db import repositories
 from octavia_lib.api.drivers import exceptions
@@ -35,14 +36,11 @@ LOG = logging.getLogger(__name__)
 class A10ProviderDriver(driver_base.ProviderDriver):
     def __init__(self):
         super(A10ProviderDriver, self).__init__()
-        self._args = {}
-        self.transport = messaging.get_rpc_transport(cfg.CONF)
-        self._args['fanout'] = False
-        self._args['namespace'] = constants.RPC_NAMESPACE_CONTROLLER_AGENT
-        self._args['topic'] = "a10_octavia"
-        self._args['version'] = '1.0'
-        self.target = messaging.Target(**self._args)
-        self.client = messaging.RPCClient(self.transport, target=self.target)
+        self.target = messaging.Target(
+            namespace=constants.RPC_NAMESPACE_CONTROLLER_AGENT,
+            topic='a10_octavia', version='1.0', fanout=False
+        )
+        self.client = rpc.get_client(self.target)
         self.repositories = repositories.Repositories()
 
     # Load Balancer

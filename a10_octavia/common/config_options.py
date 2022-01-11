@@ -55,6 +55,8 @@ A10_GLOBAL_OPTS = [
     cfg.BoolOpt('validate_subnet', default=True,
                help=_('Allow for members and VIPs to exist in the same '
                       ' subnet (for use with kube cloud provider)')),
+    cfg.BoolOpt('nlbaas_member_names', default=False,
+                help=_('Use neutron lbaas member names in a10 config.')),
 ]
 
 A10_VTHUNDER_OPTS = [
