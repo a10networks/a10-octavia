@@ -97,8 +97,14 @@ class MemberCreate(task.Task):
                                                     **server_args)
                 LOG.debug("Successfully created member: %s", member.id)
             except acos_errors.NotFound:
-                server_name = '{}_{}'.format(member.project_id[:5],
-                                             member.ip_address.replace('.', '_'))
+                if CONF.a10_global.nlbaas_member_names:
+                    server_name = '_{}_{}_neutron'.format(
+                        member.project_id[:5],
+                        member.ip_address.replace('.', '_'))
+                else:
+                    server_name = '{}_{}'.format(
+                        member.project_id[:5],
+                        member.ip_address.replace('.', '_'))                
                 self.axapi_client.slb.server.create(server_name, member.ip_address, status=status,
                                                     health_check=health_check,
                                                     server_templates=server_temp,

@@ -52,6 +52,8 @@ A10_GLOBAL_OPTS = [
                help=_('Default flavor ID to apply globally to all users')),
     cfg.BoolOpt('handle_vrid', default=True,
                 help=_('Deletes floating ip when True.')),
+    cfg.BoolOpt('nlbaas_member_names', default=False,
+                help=_('Use neutron lbaas member names in a10 config.')),
 ]
 
 A10_VTHUNDER_OPTS = [
