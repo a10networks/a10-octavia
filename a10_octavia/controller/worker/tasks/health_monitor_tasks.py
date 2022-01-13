@@ -90,18 +90,6 @@ class CreateAndAssociateHealthMonitor(task.Task):
             LOG.exception("Failed to create health monitor: %s", health_mon.id)
             raise e
 
-        try:
-            self.axapi_client.slb.service_group.update(health_mon.pool_id,
-                                                       hm_name=health_mon.id,
-                                                       health_check_disable=0)
-            LOG.debug("Successfully associated health monitor %s to pool %s",
-                      health_mon.id, health_mon.pool_id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception(
-                "Failed to associate health monitor %s to pool %s",
-                health_mon.id, health_mon.pool_id)
-            raise e
-
     @axapi_client_decorator_for_revert
     def revert(self, listeners, health_mon, vthunder, *args, **kwargs):
         try:
