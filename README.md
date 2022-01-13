@@ -23,6 +23,7 @@ this provider driver uses a "Thunder per Tenant" architecture. Therefore, each t
 | v1.1           | v2.6.1        | 5.2.1, 4.1.4-GR1-P5 |
 | v1.2           | v2.7.0        | 5.2.1-p1            |
 | v1.3 ~ v1.3.2  | v2.8.0        | 5.2.1-p1            |
+| v1.3.3         | v2.8.1        | 5.2.1-p1            |
 ```
 
 ## Project Resources
