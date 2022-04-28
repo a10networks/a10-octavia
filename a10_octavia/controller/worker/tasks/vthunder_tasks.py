@@ -783,6 +783,8 @@ class TagInterfaceBaseTask(VThunderBaseTask):
 
     def get_subnet_and_mask(self, subnet_id):
         self._subnet = self.network_driver.get_subnet(subnet_id)
+        if self._subnet.ip_version != 4:
+            raise exceptions.IpVersionNotSupport(self._subnet.ip_version)
         subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(self._subnet.cidr)
         self._subnet_ip = subnet_ip
         self._subnet_mask = subnet_mask
@@ -901,7 +903,11 @@ class TagInterfaceBaseTask(VThunderBaseTask):
             vlan_subnet_id_dict = {}
             for network in network_list:
                 vlan_id = network.provider_segmentation_id
-                vlan_subnet_id_dict[str(vlan_id)] = network.subnets[0]
+                for subnet_id in network.subnets:
+                    subnet = self.network_driver.get_subnet(subnet_id)
+                    if subnet.ip_version == 4:
+                        vlan_subnet_id_dict[str(vlan_id)] = subnet_id
+                        break
             master_device_id = vthunder.device_network_map[0].vcs_device_id
             for device_obj in vthunder.device_network_map:
                 try:
