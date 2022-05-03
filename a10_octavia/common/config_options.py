@@ -141,6 +141,9 @@ A10_SLB_OPTS = [
 A10_HEALTH_MONITOR_OPTS = [
     cfg.StrOpt('post_data',
                help=_('HTTP Content for "--http-method POST" case.')),
+    cfg.BoolOpt('use_override_port', default=True,
+                help=_('True causes the monitor to check members on the '
+                       'listener port.')),
 ]
 
 A10_LISTENER_OPTS = [

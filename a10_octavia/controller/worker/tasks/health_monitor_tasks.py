@@ -75,13 +75,18 @@ class CreateAndAssociateHealthMonitor(task.Task):
                           "A health monitor of type {} is not supported "
                           "by A10 provider").format(health_mon.id, health_mon.type))
 
+
+        port = None
+        if CONF.health_monitor.use_override_port:
+            if listeners:
+                port = listeners[0].protocol_port
         try:
             post_data = CONF.health_monitor.post_data
             self.axapi_client.slb.hm.create(health_mon.id,
                                             health_mon.type,
                                             health_mon.delay, health_mon.timeout,
                                             health_mon.rise_threshold, method=method,
-                                            port=listeners[0].protocol_port, url=url,
+                                            port=port, url=url,
                                             expect_code=expect_code, post_data=post_data,
                                             **args)
             LOG.debug("Successfully created health monitor: %s", health_mon.id)
