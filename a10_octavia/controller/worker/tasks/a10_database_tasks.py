@@ -1230,6 +1230,8 @@ class CountLoadbalancersOnThunderBySubnet(BaseDatabaseTask):
 class CountMembersOnThunderBySubnet(BaseDatabaseTask):
 
     def execute(self, subnet, use_device_flavor, members):
+        if not subnet:
+            return 0
         if use_device_flavor:
             try:
                 count = 0
