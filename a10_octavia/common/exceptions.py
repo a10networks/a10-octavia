@@ -307,3 +307,9 @@ class DuplicateMembersInBatchUpdate(base.NetworkException):
         msg = ('Duplicate member definition have been found during the batch update. '
                'Please check WARNING log messages for more details.')
         super(DuplicateMembersInBatchUpdate, self).__init__(msg)
+
+
+class IpVersionNotSupport(base.NetworkException):
+    def __init__(self, version):
+        msg = ('Unsupported IP Version {0}').format(version)
+        super(IpVersionNotSupport, self).__init__(msg)
