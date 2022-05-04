@@ -158,7 +158,6 @@ class UpdateHealthMonitor(task.Task):
             expect_code = health_mon.expected_codes
         args = utils.meta(health_mon, 'hm', {})
         args = utils.dash_to_underscore(args)
-
         # overwrite options from flavor
         if flavor:
             flavors = flavor.get('health_monitor')
@@ -169,6 +168,11 @@ class UpdateHealthMonitor(task.Task):
                 flavors.update(parsed_exprs)
                 args.update({'monitor': flavors})
 
+        port = None
+        if CONF.health_monitor.use_override_port:
+            if listeners:
+                port = listeners[0].protocol_port
+                
         try:
             hm_name = _get_hm_name(self.axapi_client, health_mon)
             post_data = CONF.health_monitor.post_data
@@ -177,7 +181,7 @@ class UpdateHealthMonitor(task.Task):
                 openstack_mappings.hm_type(self.axapi_client, health_mon.type),
                 health_mon.delay, health_mon.timeout, health_mon.rise_threshold,
                 method=method, url=url, expect_code=expect_code, post_data=post_data,
-                port=listeners[0].protocol_port, **args)
+                port=port, **args)
             LOG.debug("Successfully updated health monitor: %s", health_mon.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update health monitor: %s", health_mon.id)
