@@ -20,6 +20,7 @@ from requests.exceptions import ConnectionError
 from taskflow import task
 
 from octavia.common import exceptions
+from octavia.controller.worker.v1.tasks import lifecycle_tasks
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
@@ -76,12 +77,18 @@ class CreateAndAssociateHealthMonitor(task.Task):
                           "by A10 provider").format(health_mon.id, health_mon.type))
 
         try:
+            hm_port = 0
+            if listeners is not None:
+                hm_port = listeners[0].protocol_port
+            elif len(health_mon.pool.members) > 0:
+                hm_port = health_mon.pool.members[0].protocol_port
+
             post_data = CONF.health_monitor.post_data
             self.axapi_client.slb.hm.create(health_mon.id,
                                             health_mon.type,
                                             health_mon.delay, health_mon.timeout,
                                             health_mon.rise_threshold, method=method,
-                                            port=listeners[0].protocol_port, url=url,
+                                            port=hm_port, url=url,
                                             expect_code=expect_code, post_data=post_data,
                                             **args)
             LOG.debug("Successfully created health monitor: %s", health_mon.id)
@@ -170,3 +177,13 @@ class UpdateHealthMonitor(task.Task):
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update health monitor: %s", health_mon.id)
             raise e
+
+
+class HealthMonitorToErrorOnRevertTask(lifecycle_tasks.BaseLifecycleTask):
+    """Task to update Health Monitor"""
+
+    def execute(self, health_mon):
+        pass
+
+    def revert(self, health_mon, *args, **kwargs):
+        self.task_utils.mark_health_mon_prov_status_error(health_mon.pool_id)

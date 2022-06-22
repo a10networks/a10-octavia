@@ -70,20 +70,25 @@ class ListenerFlows(object):
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 
-    def handle_ssl_cert_flow(self, flow_type='create', listener_name=constants.LISTENER):
+    def handle_ssl_cert_flow(self, flow_type='create', listener=None):
         if flow_type == 'create':
-            configure_ssl = self.get_ssl_certificate_create_flow()
+            configure_ssl = self.get_ssl_certificate_create_flow(listener)
         elif flow_type == 'update':
-            configure_ssl = self.get_ssl_certificate_update_flow()
+            configure_ssl = self.get_ssl_certificate_update_flow(listener)
         else:
-            configure_ssl = self.get_ssl_certificate_delete_flow(listener_name)
+            configure_ssl = self.get_ssl_certificate_delete_flow(listener)
 
         configure_ssl_flow = graph_flow.Flow(
             a10constants.LISTENER_TYPE_DECIDER_FLOW)
-        check_ssl = cert_tasks.CheckListenerType(
-            name='check_listener_type_' + listener_name,
-            requires=constants.LISTENER,
-            rebind={constants.LISTENER: listener_name})
+
+        if listener is not None:
+            check_ssl = cert_tasks.CheckListenerType(
+                name='check_listener_type_' + listener.id,
+                requires=constants.LISTENER,
+                inject={constants.LISTENER: listener})
+        else:
+            check_ssl = cert_tasks.CheckListenerType(
+                requires=constants.LISTENER)
         configure_ssl_flow.add(check_ssl, configure_ssl)
         configure_ssl_flow.link(check_ssl, configure_ssl,
                                 decider=self._check_ssl_data, decider_depth='flow')
@@ -125,14 +130,14 @@ class ListenerFlows(object):
             requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
-    def get_cascade_delete_listener_internal_flow(self, listener_name, compute_flag):
+    def get_cascade_delete_listener_internal_flow(self, listener, listener_name, compute_flag):
         """Create a flow to delete a listener
            (will skip deletion on the amp and marking LB active)
         :returns: The flow for deleting a listener
         """
         delete_listener_flow = linear_flow.Flow(constants.DELETE_LISTENER_FLOW)
         delete_listener_flow.add(self.handle_ssl_cert_flow(
-            flow_type='delete', listener_name=listener_name))
+            flow_type='delete', listener=listener))
         if compute_flag:
             delete_listener_flow.add(network_tasks.UpdateVIPForDelete(
                 name='delete_update_vip_' + listener_name,
@@ -144,7 +149,7 @@ class ListenerFlows(object):
         delete_listener_flow.add(database_tasks.DecrementListenerQuota(
             name='decrement_listener_quota_' + listener_name,
             requires=constants.LISTENER,
-            rebind={constants.LISTENER: listener_name}))
+            rebind={constants.LISTENER: listener}))
         return delete_listener_flow
 
     def get_delete_rack_listener_flow(self):
@@ -235,50 +240,133 @@ class ListenerFlows(object):
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 
-    def get_ssl_certificate_create_flow(self):
-        create_ssl_cert_flow = linear_flow.Flow(
-            a10constants.CREATE_SSL_CERT_FLOW)
-        create_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
+    def get_rack_fully_populated_create_listener_flow(self, topology, listener):
+        """Create a flow to create listener for fully populated loadbalancer creation"""
+
+        sf_name = constants.CREATE_LISTENER_FLOW + '_' + listener.id
+        create_listener_flow = linear_flow.Flow(sf_name)
+        create_listener_flow.add(lifecycle_tasks.ListenerToErrorOnRevertTask(
+            name=sf_name + 'error_on_revert',
+            requires=[constants.LISTENER],
+            inject={constants.LISTENER: listener}))
+
+        """
+         pools and default_pool already created in get_create_rack_vthunder_load_balancer_flow().
+         if not unmark this block
+        if listener.default_pool:
+            pool = repo.PoolRepository().get(db_apis.get_session(), id=listener.default_pool)
+            if pool:
+                create_listener_flow.add(a10_pool_flows.get_fully_populated_create_pool_flow(
+                    topology, pool))
+        """
+
+        create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            name=sf_name + 'get_vthunder_by_LB',
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        create_listener_flow.add(self.handle_ssl_cert_flow(flow_type='create', listener=listener))
+        create_listener_flow.add(a10_database_tasks.GetFlavorData(
+            name=sf_name + 'get_flavor',
+            rebind={a10constants.LB_RESOURCE: constants.LISTENER},
+            inject={constants.LISTENER: listener},
+            provides=constants.FLAVOR_DATA))
+        create_listener_flow.add(nat_pool_tasks.NatPoolCreate(
+            name=sf_name + 'natpool_create',
+            requires=(constants.LOADBALANCER,
+                      a10constants.VTHUNDER, constants.FLAVOR_DATA)))
+        create_listener_flow.add(virtual_port_tasks.ListenerCreate(
+            name=sf_name + 'listener_create',
+            requires=[constants.LOADBALANCER, constants.LISTENER,
+                      a10constants.VTHUNDER, constants.FLAVOR_DATA],
+            inject={constants.LISTENER: listener}))
+        create_listener_flow.add(a10_database_tasks.MarkLBAndListenerActiveInDB(
+            name=sf_name + 'mark_listener_active',
             requires=[constants.LOADBALANCER, constants.LISTENER],
-            provides=a10constants.CERT_DATA))
+            inject={constants.LISTENER: listener}))
+        return create_listener_flow
+
+    def get_ssl_certificate_create_flow(self, listener=None):
+        suffix = 'listener'
+        if listener is not None:
+            suffix = 'listener_' + listener.id
+
+        create_ssl_cert_flow = linear_flow.Flow(
+            a10constants.CREATE_SSL_CERT_FLOW + suffix)
+        if listener is not None:
+            create_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
+                name='get_ssl_cert_data_' + suffix,
+                requires=[constants.LOADBALANCER, constants.LISTENER],
+                inject={constants.LISTENER: listener},
+                provides=a10constants.CERT_DATA))
+        else:
+            create_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
+                requires=[constants.LOADBALANCER, constants.LISTENER],
+                provides=a10constants.CERT_DATA))
         create_ssl_cert_flow.add(cert_tasks.SSLCertCreate(
+            name='ssl_cert_create_' + suffix,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         create_ssl_cert_flow.add(cert_tasks.SSLKeyCreate(
+            name='ssl_key_create_' + suffix,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         create_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateCreate(
+            name='client_ssl_template_create_' + suffix,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         return create_ssl_cert_flow
 
-    def get_ssl_certificate_delete_flow(self, listener):
+    def get_ssl_certificate_delete_flow(self, listener=None):
+        suffix = 'listener'
+        if listener is not None:
+            suffix = 'listener_' + listener.id
+
         delete_ssl_cert_flow = linear_flow.Flow(
             a10constants.DELETE_SSL_CERT_FLOW)
-        delete_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
-            name='get_ssl_cert_data_' + listener,
-            requires=[constants.LOADBALANCER, constants.LISTENER],
-            rebind={constants.LISTENER: listener},
-            provides=a10constants.CERT_DATA))
+        if listener is not None:
+            delete_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
+                name='get_ssl_cert_data_' + suffix,
+                requires=[constants.LOADBALANCER, constants.LISTENER],
+                inject={constants.LISTENER: listener},
+                provides=a10constants.CERT_DATA))
+        else:
+            delete_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
+                name='get_ssl_cert_data_' + suffix,
+                requires=[constants.LOADBALANCER, constants.LISTENER],
+                provides=a10constants.CERT_DATA))
         delete_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateDelete(
-            name='client_ssl_template_delete_' + listener,
+            name='client_ssl_template_delete_' + suffix,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         delete_ssl_cert_flow.add(cert_tasks.SSLCertDelete(
-            name='ssl_cert_delete_' + listener,
+            name='ssl_cert_delete_' + suffix,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         delete_ssl_cert_flow.add(cert_tasks.SSLKeyDelete(
-            name='ssl_key_delete_' + listener,
+            name='ssl_key_delete_' + suffix,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         return delete_ssl_cert_flow
 
-    def get_ssl_certificate_update_flow(self):
+    def get_ssl_certificate_update_flow(self, listener=None):
+        suffix = 'listener'
+        if listener is not None:
+            suffix = 'listener_' + listener.id
+
         update_ssl_cert_flow = linear_flow.Flow(
-            a10constants.DELETE_SSL_CERT_FLOW)
-        update_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
-            requires=[constants.LOADBALANCER, constants.LISTENER],
-            provides=a10constants.CERT_DATA))
+            a10constants.DELETE_SSL_CERT_FLOW + suffix)
+        if listener is not None:
+            update_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
+                name='get_ssl_cert_data_' + suffix,
+                requires=[constants.LOADBALANCER, constants.LISTENER],
+                inject={constants.LISTENER: listener},
+                provides=a10constants.CERT_DATA))
+        else:
+            update_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
+                requires=[constants.LOADBALANCER, constants.LISTENER],
+                provides=a10constants.CERT_DATA))
         update_ssl_cert_flow.add(cert_tasks.SSLCertUpdate(
+            name='ssl_cert_update_' + suffix,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         update_ssl_cert_flow.add(cert_tasks.SSLKeyUpdate(
+            name='ssl_key_update_' + suffix,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         update_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateUpdate(
+            name='client_ssl_template_update_' + suffix,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
         return update_ssl_cert_flow
 

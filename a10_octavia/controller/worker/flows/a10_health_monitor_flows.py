@@ -73,6 +73,42 @@ class HealthMonitorFlows(object):
             requires=(a10constants.VTHUNDER)))
         return create_hm_flow
 
+    def get_fully_populated_create_health_monitor_flow(self, topology, hm):
+        """Create health monitor flow for fully populated loadbalancer creation
+
+        :returns: The flow for creating a health monitor
+        """
+        sf_name = constants.CREATE_HEALTH_MONITOR_FLOW + '_' + hm.id
+        create_hm_flow = linear_flow.Flow(sf_name)
+        create_hm_flow.add(health_monitor_tasks.HealthMonitorToErrorOnRevertTask(
+            name=sf_name + '_error_on_revert',
+            requires=constants.HEALTH_MON,
+            inject={constants.HEALTH_MON: hm}))
+
+        create_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            name=sf_name + '_get_vthunder_by_LB',
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            create_hm_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=sf_name + '_' + a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
+        create_hm_flow.add(a10_database_tasks.GetFlavorData(
+            name=sf_name + '_get_flavor',
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR))
+        create_hm_flow.add(health_monitor_tasks.CreateAndAssociateHealthMonitor(
+            name=sf_name + '_create_and_associate_hm',
+            requires=[constants.LISTENERS, constants.HEALTH_MON, a10constants.VTHUNDER,
+                      constants.FLAVOR],
+            inject={constants.HEALTH_MON: hm, constants.LISTENERS: None}))
+        create_hm_flow.add(database_tasks.MarkHealthMonitorActiveInDB(
+            name=sf_name + '_mark_hm_active',
+            requires=constants.HEALTH_MON,
+            inject={constants.HEALTH_MON: hm}))
+        return create_hm_flow
+
     def get_delete_health_monitor_flow(self, topology):
         """Create a flow to delete a health monitor
 
