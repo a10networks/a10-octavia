@@ -19,6 +19,7 @@ from taskflow import task
 
 from octavia.common import constants
 from octavia.common import exceptions
+from octavia.controller.worker.v1.tasks import lifecycle_tasks
 
 import acos_client.errors as acos_errors
 
@@ -149,3 +150,13 @@ class PoolUpdate(PoolParent, task.Task):
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update pool: %s", pool.id)
             raise e
+
+
+class PoolToErrorOnRevertTask(lifecycle_tasks.BaseLifecycleTask):
+    """Task to set a pool to ERROR on revert."""
+
+    def execute(self, pool):
+        pass
+
+    def revert(self, pool, *args, **kwargs):
+        self.task_utils.mark_pool_prov_status_error(pool.id)

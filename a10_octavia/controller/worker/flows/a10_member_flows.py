@@ -512,44 +512,93 @@ class MemberFlows(object):
             requires=a10constants.VRID_LIST))
         return delete_member_vrid_subflow
 
-    def handle_vrid_for_member_subflow(self):
-        handle_vrid_for_member_subflow = linear_flow.Flow(
-            a10constants.HANDLE_VRID_MEMBER_SUBFLOW)
-        handle_vrid_for_member_subflow.add(
-            a10_network_tasks.GetLBResourceSubnet(
-                rebind={
-                    a10constants.LB_RESOURCE: constants.MEMBER},
-                provides=constants.SUBNET))
-        handle_vrid_for_member_subflow.add(
-            a10_database_tasks.GetChildProjectsOfParentPartition(
-                rebind={a10constants.LB_RESOURCE: constants.MEMBER},
-                provides=a10constants.PARTITION_PROJECT_LIST
-            ))
-        handle_vrid_for_member_subflow.add(
-            a10_database_tasks.GetVRIDForLoadbalancerResource(
-                requires=[
-                    a10constants.PARTITION_PROJECT_LIST,
-                    a10constants.VTHUNDER,
-                    constants.LOADBALANCER],
-                provides=a10constants.VRID_LIST))
-        handle_vrid_for_member_subflow.add(
-            a10_network_tasks.HandleVRIDFloatingIP(
-                requires=[
-                    a10constants.VTHUNDER,
-                    a10constants.VRID_LIST,
-                    constants.SUBNET,
-                    a10constants.VTHUNDER_CONFIG,
-                    a10constants.USE_DEVICE_FLAVOR],
-                rebind={
-                    a10constants.LB_RESOURCE: constants.MEMBER},
-                provides=a10constants.VRID_LIST))
-        handle_vrid_for_member_subflow.add(
-            a10_database_tasks.UpdateVRIDForLoadbalancerResource(
-                requires=[
-                    a10constants.VRID_LIST,
-                    a10constants.VTHUNDER],
-                rebind={
-                    a10constants.LB_RESOURCE: constants.MEMBER}))
+    def handle_vrid_for_member_subflow(self, member=None):
+        sf_name = a10constants.HANDLE_VRID_MEMBER_SUBFLOW
+        if member:
+            sf_name = sf_name + '_' + member.id
+        handle_vrid_for_member_subflow = linear_flow.Flow(sf_name)
+
+        if member:
+            handle_vrid_for_member_subflow.add(
+                a10_network_tasks.GetLBResourceSubnet(
+                    name=sf_name + '_get_LB',
+                    rebind={
+                        a10constants.LB_RESOURCE: constants.MEMBER},
+                    inject={constants.MEMBER: member},
+                    provides=constants.SUBNET))
+            handle_vrid_for_member_subflow.add(
+                a10_database_tasks.GetChildProjectsOfParentPartition(
+                    name=sf_name + '_get_child_project',
+                    rebind={a10constants.LB_RESOURCE: constants.MEMBER},
+                    inject={constants.MEMBER: member},
+                    provides=a10constants.PARTITION_PROJECT_LIST
+                ))
+            handle_vrid_for_member_subflow.add(
+                a10_database_tasks.GetVRIDForLoadbalancerResource(
+                    name=sf_name + '_get_vrid_for LB',
+                    requires=[
+                        a10constants.PARTITION_PROJECT_LIST,
+                        a10constants.VTHUNDER,
+                        constants.LOADBALANCER],
+                    provides=a10constants.VRID_LIST))
+            handle_vrid_for_member_subflow.add(
+                a10_network_tasks.HandleVRIDFloatingIP(
+                    name=sf_name + '_handle_vird_floating_ip',
+                    requires=[
+                        a10constants.VTHUNDER,
+                        a10constants.VRID_LIST,
+                        constants.SUBNET,
+                        a10constants.VTHUNDER_CONFIG,
+                        a10constants.USE_DEVICE_FLAVOR],
+                    rebind={
+                        a10constants.LB_RESOURCE: constants.MEMBER},
+                    inject={constants.MEMBER: member},
+                    provides=a10constants.VRID_LIST))
+            handle_vrid_for_member_subflow.add(
+                a10_database_tasks.UpdateVRIDForLoadbalancerResource(
+                    name=sf_name + '_update_vrid_for_LB',
+                    requires=[
+                        a10constants.VRID_LIST,
+                        a10constants.VTHUNDER],
+                    rebind={
+                        a10constants.LB_RESOURCE: constants.MEMBER},
+                    inject={constants.MEMBER: member}))
+        else:
+            handle_vrid_for_member_subflow.add(
+                a10_network_tasks.GetLBResourceSubnet(
+                    rebind={
+                        a10constants.LB_RESOURCE: constants.MEMBER},
+                    provides=constants.SUBNET))
+            handle_vrid_for_member_subflow.add(
+                a10_database_tasks.GetChildProjectsOfParentPartition(
+                    rebind={a10constants.LB_RESOURCE: constants.MEMBER},
+                    provides=a10constants.PARTITION_PROJECT_LIST
+                ))
+            handle_vrid_for_member_subflow.add(
+                a10_database_tasks.GetVRIDForLoadbalancerResource(
+                    requires=[
+                        a10constants.PARTITION_PROJECT_LIST,
+                        a10constants.VTHUNDER,
+                        constants.LOADBALANCER],
+                    provides=a10constants.VRID_LIST))
+            handle_vrid_for_member_subflow.add(
+                a10_network_tasks.HandleVRIDFloatingIP(
+                    requires=[
+                        a10constants.VTHUNDER,
+                        a10constants.VRID_LIST,
+                        constants.SUBNET,
+                        a10constants.VTHUNDER_CONFIG,
+                        a10constants.USE_DEVICE_FLAVOR],
+                    rebind={
+                        a10constants.LB_RESOURCE: constants.MEMBER},
+                    provides=a10constants.VRID_LIST))
+            handle_vrid_for_member_subflow.add(
+                a10_database_tasks.UpdateVRIDForLoadbalancerResource(
+                    requires=[
+                        a10constants.VRID_LIST,
+                        a10constants.VTHUNDER],
+                    rebind={
+                        a10constants.LB_RESOURCE: constants.MEMBER}))
 
         return handle_vrid_for_member_subflow
 
@@ -743,21 +792,101 @@ class MemberFlows(object):
             requires=a10constants.VTHUNDER))
         return create_member_flow
 
-    def get_create_member_snat_pool_subflow(self):
-        create_member_snat_subflow = linear_flow.Flow(
-            a10constants.CREATE_MEMBER_SNAT_POOL_SUBFLOW)
+    def get_fully_populated_create_member_flow(self, vthunder_conf, device_dict, member):
+        """Create fully populated loadbalancer member flow"""
+
+        sf_name = constants.CREATE_MEMBER_FLOW + '_' + member.id
+        create_member_flow = linear_flow.Flow(sf_name)
+        create_member_flow.add(server_tasks.MemberToErrorOnRevertTask(
+            name=sf_name + '_error_on_revert',
+            requires=constants.MEMBER,
+            inject={constants.MEMBER: member}))
+        if CONF.a10_global.validate_subnet:
+            create_member_flow.add(a10_network_tasks.ValidateSubnet(
+                name=sf_name + '_validate-subnet',
+                requires=constants.MEMBER,
+                inject={constants.MEMBER: member}))
+        create_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            name=sf_name + '_get_vthunder_by_LB',
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        create_member_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
+            name=sf_name + '_set_dev_map',
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.VTHUNDER))
+        create_member_flow.add(a10_database_tasks.GetFlavorData(
+            name=sf_name + '_get_flavor',
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.FLAVOR))
+        create_member_flow.add(vthunder_tasks.GetVthunderConfByFlavor(
+            name=sf_name + '_get_vthunder_by_flavor',
+            inject={a10constants.VTHUNDER_CONFIG: vthunder_conf,
+                    a10constants.DEVICE_CONFIG_DICT: device_dict},
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG,
+                      a10constants.DEVICE_CONFIG_DICT),
+            rebind={constants.FLAVOR_DATA: constants.FLAVOR},
+            provides=(a10constants.VTHUNDER_CONFIG, a10constants.USE_DEVICE_FLAVOR)))
+        if CONF.a10_global.handle_vrid:
+            create_member_flow.add(self.handle_vrid_for_member_subflow(member=member))
+        if CONF.a10_global.network_type == 'vlan':
+            create_member_flow.add(vthunder_tasks.TagInterfaceForMember(
+                name=sf_name + '_tag_interface',
+                requires=[constants.MEMBER,
+                          a10constants.VTHUNDER],
+                inject={constants.MEMBER: member}))
+        create_member_flow.add(a10_database_tasks.CountMembersWithIP(
+            name=sf_name + '_count_member_with_ip',
+            requires=constants.MEMBER,
+            inject={constants.MEMBER: member},
+            provides=a10constants.MEMBER_COUNT_IP))
+        create_member_flow.add(self.get_create_member_snat_pool_subflow(member=member))
+        create_member_flow.add(server_tasks.MemberCreate(
+            name=sf_name + '_member_create',
+            requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
+                      a10constants.MEMBER_COUNT_IP, constants.FLAVOR),
+            inject={constants.MEMBER: member}))
+        create_member_flow.add(database_tasks.MarkMemberActiveInDB(
+            name=sf_name + '_mark_member_active',
+            requires=constants.MEMBER,
+            inject={constants.MEMBER: member}))
+        return create_member_flow
+
+    def get_create_member_snat_pool_subflow(self, member=None):
+        sf_name = a10constants.CREATE_MEMBER_SNAT_POOL_SUBFLOW
+        if member:
+            sf_name = sf_name + '_' + member.id
+        create_member_snat_subflow = linear_flow.Flow(sf_name)
         create_member_snat_subflow.add(server_tasks.MemberFindNatPool(
+            name=sf_name + '_member_find_natpool',
             requires=[a10constants.VTHUNDER, constants.POOL,
                       constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
-        create_member_snat_subflow.add(a10_database_tasks.GetNatPoolEntry(
-            requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
-            provides=a10constants.NAT_POOL))
-        create_member_snat_subflow.add(a10_network_tasks.ReserveSubnetAddressForMember(
-            requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL],
-            provides=a10constants.SUBNET_PORT))
-        create_member_snat_subflow.add(a10_database_tasks.UpdateNatPoolDB(
-            requires=[constants.MEMBER, a10constants.NAT_FLAVOR,
-                      a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
+
+        if member:
+            create_member_snat_subflow.add(a10_database_tasks.GetNatPoolEntry(
+                name=sf_name + '_get_nat_pool',
+                requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
+                inject={constants.MEMBER: member},
+                provides=a10constants.NAT_POOL))
+            create_member_snat_subflow.add(a10_network_tasks.ReserveSubnetAddressForMember(
+                name=sf_name + '_reserve_member_addr',
+                requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL],
+                inject={constants.MEMBER: member},
+                provides=a10constants.SUBNET_PORT))
+            create_member_snat_subflow.add(a10_database_tasks.UpdateNatPoolDB(
+                name=sf_name + '_update_nat_pool_db',
+                requires=[constants.MEMBER, a10constants.NAT_FLAVOR,
+                          a10constants.NAT_POOL, a10constants.SUBNET_PORT],
+                inject={constants.MEMBER: member}))
+        else:
+            create_member_snat_subflow.add(a10_database_tasks.GetNatPoolEntry(
+                requires=[constants.MEMBER, a10constants.NAT_FLAVOR],
+                provides=a10constants.NAT_POOL))
+            create_member_snat_subflow.add(a10_network_tasks.ReserveSubnetAddressForMember(
+                requires=[constants.MEMBER, a10constants.NAT_FLAVOR, a10constants.NAT_POOL],
+                provides=a10constants.SUBNET_PORT))
+            create_member_snat_subflow.add(a10_database_tasks.UpdateNatPoolDB(
+                requires=[constants.MEMBER, a10constants.NAT_FLAVOR,
+                          a10constants.NAT_POOL, a10constants.SUBNET_PORT]))
         return create_member_snat_subflow
 
     def get_rack_vthunder_batch_update_members_flow(self, old_members, new_members,

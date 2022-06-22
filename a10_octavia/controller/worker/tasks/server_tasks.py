@@ -19,6 +19,8 @@ from taskflow import task
 
 import acos_client.errors as acos_errors
 
+from octavia.controller.worker.v1.tasks import lifecycle_tasks
+
 from a10_octavia.common import openstack_mappings
 from a10_octavia.common import utils as a10_utils
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
@@ -99,7 +101,7 @@ class MemberCreate(task.Task):
                 else:
                     server_name = '{}_{}'.format(
                         member.project_id[:5],
-                        member.ip_address.replace('.', '_'))                
+                        member.ip_address.replace('.', '_'))
                 self.axapi_client.slb.server.create(server_name, member.ip_address, status=status,
                                                     server_templates=server_temp,
                                                     **server_args)
@@ -261,3 +263,13 @@ class MemberFindNatPool(task.Task):
                     for flavor in (pools_flavor or []):
                         if vport['port']['pool'] == flavor['pool_name']:
                             return flavor
+
+
+class MemberToErrorOnRevertTask(lifecycle_tasks.BaseLifecycleTask):
+    """Task to set a member to ERROR on revert."""
+
+    def execute(self, member):
+        pass
+
+    def revert(self, member, *args, **kwargs):
+        self.task_utils.mark_member_prov_status_error(member.id)
