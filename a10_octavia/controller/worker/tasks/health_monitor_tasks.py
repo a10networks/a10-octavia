@@ -115,17 +115,6 @@ class DeleteHealthMonitor(task.Task):
     @axapi_client_decorator
     def execute(self, health_mon, vthunder):
         try:
-            self.axapi_client.slb.service_group.update(health_mon.pool_id,
-                                                       hm_delete=True)
-            LOG.debug("Successfully dissociated health monitor %s from pool %s",
-                      health_mon.id, health_mon.pool_id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception(
-                "Failed to dissociate health monitor %s from pool %s",
-                health_mon.pool_id, health_mon.id)
-            raise e
-
-        try:
             hm_name = _get_hm_name(self.axapi_client, health_mon)
             self.axapi_client.slb.hm.delete(hm_name)
             LOG.debug("Successfully deleted health monitor: %s", health_mon.id)
