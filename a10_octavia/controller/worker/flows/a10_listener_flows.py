@@ -22,6 +22,7 @@ from octavia.controller.worker.v1.tasks import lifecycle_tasks
 from octavia.controller.worker.v1.tasks import network_tasks
 
 from a10_octavia.common import a10constants
+from a10_octavia.controller.worker.flows import a10_l7policy_flows
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.controller.worker.tasks import cert_tasks
@@ -31,6 +32,9 @@ from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 
 class ListenerFlows(object):
+
+    def __init__(self):
+        self._l7policy_flows = a10_l7policy_flows.L7PolicyFlows()
 
     def get_create_listener_flow(self, topology):
         """Flow to create a listener"""
@@ -149,7 +153,7 @@ class ListenerFlows(object):
         delete_listener_flow.add(database_tasks.DecrementListenerQuota(
             name='decrement_listener_quota_' + listener_name,
             requires=constants.LISTENER,
-            rebind={constants.LISTENER: listener}))
+            rebind={constants.LISTENER: listener_name}))
         return delete_listener_flow
 
     def get_delete_rack_listener_flow(self):
@@ -240,7 +244,8 @@ class ListenerFlows(object):
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 
-    def get_rack_fully_populated_create_listener_flow(self, topology, listener):
+    def get_rack_fully_populated_create_listener_flow(self, vthunder_conf, device_dict,
+                                                      topology, listener):
         """Create a flow to create listener for fully populated loadbalancer creation"""
 
         sf_name = constants.CREATE_LISTENER_FLOW + '_' + listener.id
@@ -249,16 +254,6 @@ class ListenerFlows(object):
             name=sf_name + 'error_on_revert',
             requires=[constants.LISTENER],
             inject={constants.LISTENER: listener}))
-
-        """
-         pools and default_pool already created in get_create_rack_vthunder_load_balancer_flow().
-         if not unmark this block
-        if listener.default_pool:
-            pool = repo.PoolRepository().get(db_apis.get_session(), id=listener.default_pool)
-            if pool:
-                create_listener_flow.add(a10_pool_flows.get_fully_populated_create_pool_flow(
-                    topology, pool))
-        """
 
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=sf_name + 'get_vthunder_by_LB',
@@ -279,6 +274,12 @@ class ListenerFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA],
             inject={constants.LISTENER: listener}))
+
+        for l7policy in listener.l7policies:
+            create_listener_flow.add(
+                self._l7policy_flows.get_fully_populated_create_l7policy_flow(
+                    vthunder_conf, device_dict, topology, listener, l7policy))
+
         create_listener_flow.add(a10_database_tasks.MarkLBAndListenerActiveInDB(
             name=sf_name + 'mark_listener_active',
             requires=[constants.LOADBALANCER, constants.LISTENER],

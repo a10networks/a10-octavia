@@ -276,7 +276,7 @@ class PoolFlows(object):
 
         return update_pool_flow
 
-    def _get_sess_pers_subflow(self, pool_task, prefix=None):
+    def _get_sess_pers_subflow(self, pool_task, prefix=""):
         get_pool_create_with_sess_pers = graph_flow.Flow(a10constants.HANDLE_SESS_PERS)
         sess_pers = persist_tasks.HandleSessionPersistenceDelta(
             name=prefix + 'hanlde_session_persist_dela',

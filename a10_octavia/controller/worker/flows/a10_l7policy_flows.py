@@ -20,12 +20,16 @@ from octavia.controller.worker.v1.tasks import lifecycle_tasks
 from octavia.controller.worker.v1.tasks import model_tasks
 
 from a10_octavia.common import a10constants
+from a10_octavia.controller.worker.flows import a10_l7rule_flows
 from a10_octavia.controller.worker.tasks import a10_database_tasks
 from a10_octavia.controller.worker.tasks import l7policy_tasks
 from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 
 class L7PolicyFlows(object):
+
+    def __init__(self):
+        self._l7rule_flows = a10_l7rule_flows.L7RuleFlows()
 
     def get_create_l7policy_flow(self, topology):
         """Create a flow to create an L7 policy
@@ -60,6 +64,42 @@ class L7PolicyFlows(object):
             requires=a10constants.VTHUNDER))
         create_l7policy_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
+        return create_l7policy_flow
+
+    def get_fully_populated_create_l7policy_flow(self, vthunder_conf, device_dict, topology,
+                                                 listener, l7policy):
+        """Create fully populated loadbalancer l7 policy"""
+
+        listeners = [listener]
+        sf_name = constants.CREATE_L7POLICY_FLOW + '_' + l7policy.id
+        create_l7policy_flow = linear_flow.Flow(sf_name)
+        create_l7policy_flow.add(l7policy_tasks.L7PolicyToErrorOnRevertTask(
+            name=sf_name + '_error_on_revert',
+            requires=constants.L7POLICY,
+            inject={constants.L7POLICY: l7policy}))
+
+        create_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            name=sf_name + '_get_vthunder_by_LB',
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            create_l7policy_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=sf_name + '_' + a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
+        create_l7policy_flow.add(l7policy_tasks.CreateL7Policy(
+            name=sf_name + '_create_l7policy',
+            requires=[constants.L7POLICY, constants.LISTENERS, a10constants.VTHUNDER],
+            inject={constants.L7POLICY: l7policy, constants.LISTENERS: listeners}))
+
+        for l7rule in l7policy.l7rules:
+            create_l7policy_flow.add(self._l7rule_flows.get_fully_populated_create_l7rule_flow(
+                topology, listeners, l7rule))
+
+        create_l7policy_flow.add(database_tasks.MarkL7PolicyActiveInDB(
+            name=sf_name + '_set_l7policy_active_in_db',
+            requires=constants.L7POLICY,
+            inject={constants.L7POLICY: l7policy}))
         return create_l7policy_flow
 
     def get_delete_l7policy_flow(self, topology):

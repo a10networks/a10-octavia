@@ -652,7 +652,7 @@ class LoadBalancerFlows(object):
             for listener in listeners:
                 lb_create_flow.add(
                     self._listener_flows.get_rack_fully_populated_create_listener_flow(
-                        topology, listener))
+                        vthunder_conf, device_dict, topology, listener))
 
             lb_create_flow.add(database_tasks.MarkLBActiveInDB(
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
@@ -769,30 +769,6 @@ class LoadBalancerFlows(object):
                 name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
         return (delete_LB_flow, store)
-
-    """
-    def _create_listeners_flow(self, topology, listeners=None):
-        sf_name = a10constants.FULLY_POPULATED_LISTENER_CREATE
-        flows = []
-        flows.append(
-            database_tasks.ReloadLoadBalancer(
-                name=sf_name + '-' + constants.RELOAD_LB_AFTER_AMP_ASSOC,
-                requires=constants.LOADBALANCER_ID,
-                provides=constants.LOADBALANCER))
-
-        for listener in listeners:
-            flows.append(self._listener_flows.get_rack_fully_populated_create_listener_flow(
-                topology, listener))
-
-        flows.append(
-            database_tasks.MarkLBActiveInDB(
-                name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
-                mark_subobjects=True,
-                requires=constants.LOADBALANCER
-            )
-        )
-        return flows
-    """
 
     def get_post_lb_rack_vthunder_association_flow(self, prefix, topology,
                                                    mark_active=True):
