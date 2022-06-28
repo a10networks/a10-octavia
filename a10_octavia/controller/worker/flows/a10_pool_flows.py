@@ -85,7 +85,8 @@ class PoolFlows(object):
 
         return create_pool_flow
 
-    def get_fully_populated_create_pool_flow(self, vthunder_conf, device_dict, topology, pool):
+    def get_fully_populated_create_pool_flow(self, topology, pool, vthunder_conf=None,
+                                             device_dict=None, vthunder_flow=False):
         """Create pool for fully populated creation"""
 
         sf_name = constants.CREATE_POOL_FLOW + '_' + pool.id
@@ -125,8 +126,12 @@ class PoolFlows(object):
             inject={constants.POOL: pool}))
 
         for member in pool.members:
-            create_pool_flow.add(self.member_flow.get_fully_populated_create_member_flow(
-                vthunder_conf, device_dict, member))
+            if vthunder_flow:
+                create_pool_flow.add(
+                    self.member_flow.get_vthunder_fully_populated_create_member_flow(topology, member))
+            else:
+                create_pool_flow.add(self.member_flow.get_rack_fully_populated_create_member_flow(
+                    vthunder_conf, device_dict, member))
 
         return create_pool_flow
 

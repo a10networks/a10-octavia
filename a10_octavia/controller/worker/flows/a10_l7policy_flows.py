@@ -66,8 +66,7 @@ class L7PolicyFlows(object):
             requires=a10constants.VTHUNDER))
         return create_l7policy_flow
 
-    def get_fully_populated_create_l7policy_flow(self, vthunder_conf, device_dict, topology,
-                                                 listener, l7policy):
+    def get_fully_populated_create_l7policy_flow(self, topology, listener, l7policy):
         """Create fully populated loadbalancer l7 policy"""
 
         listeners = [listener]

@@ -38,7 +38,7 @@ AMPHORA = o_data_models.Amphora(id=a10constants.MOCK_AMPHORA_ID)
 VTHUNDER = data_models.VThunder(compute_id=a10constants.MOCK_COMPUTE_ID)
 VIP = o_data_models.Vip(ip_address="1.1.1.1", network_id=o_test_constants.MOCK_VIP_NET_ID)
 LB = o_data_models.LoadBalancer(
-    id=a10constants.MOCK_LOAD_BALANCER_ID, vip=VIP)
+    id=a10constants.MOCK_LOAD_BALANCER_ID, vip=VIP, pools=[])
 
 
 class TestA10ComputeTasks(base.BaseTaskTestCase):

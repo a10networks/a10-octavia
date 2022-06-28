@@ -67,7 +67,7 @@ class LoadBalancerFlows(object):
         self.loadbalancer_repo = a10repo.LoadBalancerRepository()
 
     def get_create_load_balancer_flow(self, load_balancer_id, topology, project_id,
-                                      listeners=None):
+                                      listeners=None, pools=None):
         """Flow to create a load balancer"""
 
         f_name = constants.CREATE_LOADBALANCER_FLOW
@@ -120,6 +120,24 @@ class LoadBalancerFlows(object):
         lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
                       constants.FLAVOR_DATA)))
+
+        if pools:
+            for pool in pools:
+                lb_create_flow.add(self._pool_flows.get_fully_populated_create_pool_flow(
+                    topology, pool, vthunder_flow=True))
+
+        if listeners:
+            sf_name = a10constants.FULLY_POPULATED_LISTENER_CREATE
+            for listener in listeners:
+                lb_create_flow.add(
+                    self._listener_flows.get_vthunder_fully_populated_create_listener_flow(
+                        topology, listener))
+
+            lb_create_flow.add(database_tasks.MarkLBActiveInDB(
+                name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,
+                mark_subobjects=True,
+                requires=constants.LOADBALANCER))
+
         lb_create_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         lb_create_flow.add(a10_database_tasks.SetThunderUpdatedAt(
@@ -645,14 +663,14 @@ class LoadBalancerFlows(object):
         if pools:
             for pool in pools:
                 lb_create_flow.add(self._pool_flows.get_fully_populated_create_pool_flow(
-                    vthunder_conf, device_dict, topology, pool))
+                    topology, pool, vthunder_conf=vthunder_conf, device_dict=device_dict))
 
         if listeners:
             sf_name = a10constants.FULLY_POPULATED_LISTENER_CREATE
             for listener in listeners:
                 lb_create_flow.add(
                     self._listener_flows.get_rack_fully_populated_create_listener_flow(
-                        vthunder_conf, device_dict, topology, listener))
+                        topology, listener))
 
             lb_create_flow.add(database_tasks.MarkLBActiveInDB(
                 name=sf_name + '-' + constants.MARK_LB_ACTIVE_INDB,

@@ -74,6 +74,55 @@ class ListenerFlows(object):
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 
+    def get_vthunder_fully_populated_create_listener_flow(self, topology, listener):
+        """Flow to create fully populated loadbalancer listeners"""
+
+        sf_name = constants.CREATE_LISTENER_FLOW + '_' + listener.id
+        create_listener_flow = linear_flow.Flow(sf_name)
+        create_listener_flow.add(lifecycle_tasks.ListenerToErrorOnRevertTask(
+            name=sf_name + 'error_on_revert',
+            requires=[constants.LISTENER],
+            inject={constants.LISTENER: listener}))
+        create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            name=sf_name + 'get_vthunder_by_LB',
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            create_listener_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=sf_name + a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
+        create_listener_flow.add(self.handle_ssl_cert_flow(flow_type='create', listener=listener))
+        create_listener_flow.add(a10_database_tasks.GetFlavorData(
+            name=sf_name + '_get_flavor',
+            rebind={a10constants.LB_RESOURCE: constants.LISTENER},
+            inject={constants.LISTENER: listener},
+            provides=constants.FLAVOR_DATA))
+        create_listener_flow.add(nat_pool_tasks.NatPoolCreate(
+            name=sf_name + '_natpool_create',
+            requires=(constants.LOADBALANCER,
+                      a10constants.VTHUNDER, constants.FLAVOR_DATA)))
+        create_listener_flow.add(virtual_port_tasks.ListenerCreate(
+            name=sf_name + '_listener_create',
+            requires=[constants.LOADBALANCER, constants.LISTENER,
+                      a10constants.VTHUNDER, constants.FLAVOR_DATA],
+            inject={constants.LISTENER: listener}))
+        create_listener_flow.add(a10_network_tasks.UpdateVIP(
+            name=sf_name + '_update_vip',
+            requires=constants.LOADBALANCER))
+
+        for l7policy in listener.l7policies:
+            create_listener_flow.add(
+                self._l7policy_flows.get_fully_populated_create_l7policy_flow(
+                    topology, listener, l7policy))
+
+        create_listener_flow.add(a10_database_tasks.
+                                 MarkLBAndListenerActiveInDB(
+                                     requires=[constants.LOADBALANCER,
+                                               constants.LISTENER],
+                                     inject={constants.LISTENER: listener}))
+        return create_listener_flow
+
     def handle_ssl_cert_flow(self, flow_type='create', listener=None):
         if flow_type == 'create':
             configure_ssl = self.get_ssl_certificate_create_flow(listener)
@@ -244,33 +293,32 @@ class ListenerFlows(object):
             requires=a10constants.VTHUNDER))
         return create_listener_flow
 
-    def get_rack_fully_populated_create_listener_flow(self, vthunder_conf, device_dict,
-                                                      topology, listener):
+    def get_rack_fully_populated_create_listener_flow(self, topology, listener):
         """Create a flow to create listener for fully populated loadbalancer creation"""
 
         sf_name = constants.CREATE_LISTENER_FLOW + '_' + listener.id
         create_listener_flow = linear_flow.Flow(sf_name)
         create_listener_flow.add(lifecycle_tasks.ListenerToErrorOnRevertTask(
-            name=sf_name + 'error_on_revert',
+            name=sf_name + '_error_on_revert',
             requires=[constants.LISTENER],
             inject={constants.LISTENER: listener}))
 
         create_listener_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-            name=sf_name + 'get_vthunder_by_LB',
+            name=sf_name + '_get_vthunder_by_LB',
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         create_listener_flow.add(self.handle_ssl_cert_flow(flow_type='create', listener=listener))
         create_listener_flow.add(a10_database_tasks.GetFlavorData(
-            name=sf_name + 'get_flavor',
+            name=sf_name + '_get_flavor',
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
             inject={constants.LISTENER: listener},
             provides=constants.FLAVOR_DATA))
         create_listener_flow.add(nat_pool_tasks.NatPoolCreate(
-            name=sf_name + 'natpool_create',
+            name=sf_name + '_natpool_create',
             requires=(constants.LOADBALANCER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
-            name=sf_name + 'listener_create',
+            name=sf_name + '_listener_create',
             requires=[constants.LOADBALANCER, constants.LISTENER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA],
             inject={constants.LISTENER: listener}))
@@ -278,10 +326,10 @@ class ListenerFlows(object):
         for l7policy in listener.l7policies:
             create_listener_flow.add(
                 self._l7policy_flows.get_fully_populated_create_l7policy_flow(
-                    vthunder_conf, device_dict, topology, listener, l7policy))
+                    topology, listener, l7policy))
 
         create_listener_flow.add(a10_database_tasks.MarkLBAndListenerActiveInDB(
-            name=sf_name + 'mark_listener_active',
+            name=sf_name + '_mark_listener_active',
             requires=[constants.LOADBALANCER, constants.LISTENER],
             inject={constants.LISTENER: listener}))
         return create_listener_flow
