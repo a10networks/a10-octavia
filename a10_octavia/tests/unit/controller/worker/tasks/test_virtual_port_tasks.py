@@ -412,7 +412,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
             listener.protocol_port,
             listener.default_pool_id,
             c_pers_name=None,
-            s_pers_name=a10constants.MOCK_POOL_ID
+            s_pers_name=a10constants.MOCK_POOL_ID,
+            tcp_proxy_name=None
         )
 
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
@@ -434,7 +435,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
             listener.protocol_port,
             listener.default_pool_id,
             c_pers_name=None,
-            s_pers_name=None
+            s_pers_name=None,
+            tcp_proxy_name=None
         )
 
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
@@ -456,7 +458,8 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
             listener.protocol_port,
             listener.default_pool_id,
             c_pers_name=a10constants.MOCK_POOL_ID,
-            s_pers_name=None
+            s_pers_name=None,
+            tcp_proxy_name=None
         )
 
     def test_set_http_virtual_port_conn_limit_with_cli(self):

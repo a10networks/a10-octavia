@@ -58,7 +58,9 @@ def service_group_protocol(c, os_protocol):
         'HTTPS': z.TCP,
         'TERMINATED_HTTPS': z.TCP,
         'TCP': z.TCP,
-        'UDP': z.UDP
+        'UDP': z.UDP,
+        'PROXY': z.TCP,
+        'PROXYV2': z.TCP
     }
     return protocols[os_protocol]
 

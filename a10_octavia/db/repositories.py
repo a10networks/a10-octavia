@@ -24,6 +24,7 @@ from sqlalchemy import and_
 from octavia.common import constants as consts
 from octavia.db import models as base_models
 from octavia.db import repositories as repo
+from octavia_lib.common import constants as lib_consts
 
 from a10_octavia.db import models
 
@@ -535,6 +536,30 @@ class VRIDRepository(BaseRepository):
             vrid_obj_list.append(data.to_data_model())
 
         return vrid_obj_list
+
+
+class PoolRepository(repo.PoolRepository):
+
+    def get_aflex_proxy_count(self, session, project_id):
+        count = session.query(self.model_class).join(base_models.Listener).filter(
+            and_(self.model_class.project_id == project_id,
+                 base_models.Listener.protocol == consts.PROTOCOL_TCP,
+                 self.model_class.provisioning_status != consts.PENDING_DELETE,
+                 self.model_class.protocol == consts.PROTOCOL_PROXY))
+
+    def get_proxy_pool_count(self, session, project_id):
+        count = session.query(self.model_class).filter(
+            and_(self.model_class.project_id == project_id,
+                 self.model_class.provisioning_status != consts.PENDING_DELETE,
+                 self.model_class.protocol == consts.PROTOCOL_PROXY)).count()
+        return count
+
+    def get_proxyv2_pool_count(self, session, project_id):
+        count = session.query(self.model_class).filter(
+            and_(self.model_class.project_id == project_id,
+                 self.model_class.provisioning_status != consts.PENDING_DELETE,
+                 self.model_class.protocol == lib_consts.PROTOCOL_PROXYV2)).count()
+        return count
 
 
 class MemberRepository(repo.MemberRepository):

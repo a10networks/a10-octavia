@@ -62,7 +62,7 @@ class ComputeCreate(BaseComputeTask):
             network_ids.add(loadbalancer.vip.network_id)
             for pool in loadbalancer.pools:
                 for member in pool.members:
-                    if member.subnet_id != None:
+                    if member.subnet_id is not None:
                         network_id = self.network_driver.get_subnet(member.subnet_id).network_id
                         network_ids.add(network_id)
 

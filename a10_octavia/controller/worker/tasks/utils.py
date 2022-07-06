@@ -18,6 +18,10 @@ import re
 
 from oslo_config import cfg
 
+from octavia.common import constants
+from octavia_lib.common import constants as lib_consts
+
+from a10_octavia.common import a10constants
 from a10_octavia.common.data_models import Certificate
 
 
@@ -49,6 +53,36 @@ def get_sess_pers_templates(pool):
         elif sp['type'] == 'SOURCE_IP':
             s_pers = pool.id
     return c_pers, s_pers
+
+
+def is_proxy_protocol_pool(pool):
+    if pool.protocol == constants.PROTOCOL_PROXY or (
+            pool.protocol == lib_consts.PROTOCOL_PROXYV2):
+        return True
+    return False
+
+
+def proxy_protocol_use_aflex(listener, pool):
+    if pool.protocol == constants.PROTOCOL_PROXY:
+        if listener is not None and (listener.protocol == constants.PROTOCOL_TCP or
+                                     listener.protocol == 'tcp'):
+            use_aflex_proxy = CONF.service_group.use_aflex_proxy
+            if use_aflex_proxy and use_aflex_proxy is True:
+                return True
+    return False
+
+
+def get_tcp_proxy_template(listener, pool):
+    tcp_proxy = None
+    if pool is None:
+        return tcp_proxy
+    if pool.provisioning_status != constants.PENDING_DELETE and (
+            is_proxy_protocol_pool(pool) is True):
+        if proxy_protocol_use_aflex(listener, pool) is False:
+            tcp_proxy = a10constants.PROXY_PROTOCPL_TEMPLATE_NAME
+            if pool.protocol != constants.PROTOCOL_PROXY:
+                tcp_proxy = a10constants.PROXY_PROTOCPL_V2_TEMPLATE_NAME
+    return tcp_proxy
 
 
 def meta(lbaas_obj, key, default):

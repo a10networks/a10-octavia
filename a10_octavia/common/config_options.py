@@ -195,6 +195,10 @@ A10_SERVICE_GROUP_OPTS = [
                default=None,
                help=_('Provide an existing Service Group Policy template name on VThunder '
                       'to associate with service group')),
+    cfg.BoolOpt('use_aflex_proxy',
+                default=None,
+                help=_('When PROXY protocol is specify for Pool on TCP Listener, use aFlex '
+                       'script instead of tcp-proxy for PROXY PROTOCOL support')),
 ]
 
 A10_SERVER_OPTS = [

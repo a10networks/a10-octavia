@@ -119,6 +119,15 @@ BACKUP_AMPHORA_STATUS = "backup_amphora_status"
 # ACOS versions
 ACOS_5_2_1_P2 = "5.2.1-P2"
 
+# Proxy Protocol Object name
+PROXY_POOL_COUNT = 'proxy_pool_count'
+PROXY_PROTOCPL_TEMPLATE_NAME = 'octavia_proxy_protocol_v1'
+PROXY_PROTOCPL_V2_TEMPLATE_NAME = 'octavia_proxy_protocol_v2'
+PROXY_PROTOCPL_AFLEX_NAME = 'octavia_aflex_proxy_protocol_v1'
+PROXY_PROTOCPL_V1 = "v1"
+PROXY_PROTOCPL_V2 = "v2"
+
+
 # ============================
 # Taskflow flow and task names
 # ============================

@@ -72,6 +72,7 @@ class ListenersParent(object):
             raise exceptions.SNATConfigurationError()
         config_data['autosnat'] = autosnat
 
+        tcp_proxy = utils.get_tcp_proxy_template(listener, listener.default_pool)
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         device_templates = self.axapi_client.slb.template.templates.get()
         vport_templates = {}
@@ -164,6 +165,7 @@ class ListenersParent(object):
                    listener.default_pool_id,
                    s_pers_name=s_pers, c_pers_name=c_pers,
                    virtual_port_templates=vport_templates,
+                   tcp_proxy_name=tcp_proxy,
                    **config_data)
 
         listener.protocol = listener.protocol.upper()
@@ -220,6 +222,7 @@ class ListenerUpdateForPool(ListenersParent, task.Task):
     def execute(self, loadbalancer, listener, vthunder):
         try:
             if listener:
+                tcp_proxy = utils.get_tcp_proxy_template(listener, listener.default_pool)
                 c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
                 listener.protocol = openstack_mappings.virtual_port_protocol(
                     self.axapi_client, listener.protocol).lower()
@@ -229,7 +232,8 @@ class ListenerUpdateForPool(ListenersParent, task.Task):
                     listener.protocol,
                     listener.protocol_port,
                     listener.default_pool_id,
-                    s_pers_name=s_pers, c_pers_name=c_pers)
+                    s_pers_name=s_pers, c_pers_name=c_pers,
+                    tcp_proxy_name=tcp_proxy)
                 LOG.debug("Successfully updated listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update listener: %s", listener.id)
