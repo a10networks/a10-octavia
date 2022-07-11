@@ -53,7 +53,7 @@ class BaseDatabaseTask(task.Task):
         self.member_repo = a10_repo.MemberRepository()
         self.loadbalancer_repo = a10_repo.LoadBalancerRepository()
         self.vip_repo = repo.VipRepository()
-        self.listener_repo = repo.ListenerRepository()
+        self.listener_repo = a10_repo.ListenerRepository()
         self.flavor_repo = repo.FlavorRepository()
         self.flavor_profile_repo = repo.FlavorProfileRepository()
         self.nat_pool_repo = a10_repo.NatPoolRepository()
@@ -1377,6 +1377,15 @@ class LoadBalancerListToErrorOnRevertTask(BaseDatabaseTask):
     def revert(self, loadbalancers_list, *args, **kwargs):
         for lb in loadbalancers_list:
             self.task_utils.mark_loadbalancer_prov_status_error(lb.id)
+
+
+class GetPoolListener(BaseDatabaseTask):
+    """Task to get listener that use the pool as default_pool"""
+
+    def execute(self, pool):
+        if not pool:
+            return None
+        return self.listener_repo.get_listener_by_default_pool(db_apis.get_session(), pool.id)
 
 
 class GetProxyProtocolPoolCount(BaseDatabaseTask):

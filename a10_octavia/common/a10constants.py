@@ -116,6 +116,9 @@ L2DSR_FLAVOR = "l2dsr_flavor"
 MASTER_AMPHORA_STATUS = "master_amphora_status"
 BACKUP_AMPHORA_STATUS = "backup_amphora_status"
 
+FLOW_TYPE = 'flow_type'
+FLOW_TYPE_DELETE = 'delete'
+
 # ACOS versions
 ACOS_5_2_1_P2 = "5.2.1-P2"
 

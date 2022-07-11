@@ -521,6 +521,17 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
         return model.to_data_model()
 
 
+class ListenerRepository(repo.ListenerRepository):
+    
+    def get_listener_by_default_pool(self, session, pool_id):
+        model = query = session.query(self.model_class).filter(
+            self.model_class.default_pool_id == pool_id).first()
+
+        if not model:
+            return None
+        return model.to_data_model()
+
+
 class VRIDRepository(BaseRepository):
     model_class = models.VRID
 
@@ -545,7 +556,8 @@ class PoolRepository(repo.PoolRepository):
             and_(self.model_class.project_id == project_id,
                  base_models.Listener.protocol == consts.PROTOCOL_TCP,
                  self.model_class.provisioning_status != consts.PENDING_DELETE,
-                 self.model_class.protocol == consts.PROTOCOL_PROXY))
+                 self.model_class.protocol == consts.PROTOCOL_PROXY)).count()
+        return count
 
     def get_proxy_pool_count(self, session, project_id):
         count = session.query(self.model_class).filter(

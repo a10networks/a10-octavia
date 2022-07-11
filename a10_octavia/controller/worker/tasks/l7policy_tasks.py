@@ -38,6 +38,7 @@ class L7PolicyParent(object):
         size = len(script.encode('utf-8'))
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
+        tcp_proxy, aflex = utils.get_tcp_proxy_template(listener, listener.default_pool)
         kargs = {}
         listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
                                                                      listener.protocol)
@@ -70,7 +71,7 @@ class L7PolicyParent(object):
                 listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id, s_pers,
-                c_pers, 1, **kargs)
+                c_pers, 1, tcp_proxy_name=tcp_proxy, **kargs)
             LOG.debug(
                 "Successfully associated l7policy %s to listener %s",
                 l7policy.id,
@@ -119,6 +120,7 @@ class DeleteL7Policy(task.Task):
         listener = l7policy.listener
         c_pers, s_pers = utils.get_sess_pers_templates(
             listener.default_pool)
+        tcp_proxy, aflex = utils.get_tcp_proxy_template(listener, listener.default_pool)
         kargs = {}
         snat_pool = None
         if not (listener.protocol).islower():
@@ -149,7 +151,8 @@ class DeleteL7Policy(task.Task):
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id,
                 s_pers, c_pers, 1,
-                source_nat_pool=snat_pool, **kargs)
+                source_nat_pool=snat_pool,
+                tcp_proxy_name=tcp_proxy, **kargs)
             LOG.debug(
                 "Successfully dissociated l7policy %s from listener %s",
                 l7policy.id,

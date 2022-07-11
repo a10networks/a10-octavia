@@ -33,7 +33,6 @@ LOG = logging.getLogger(__name__)
 
 
 class PoolParent(object):
-
     def set(self, set_method, pool, vthunder, flavor=None, **kwargs):
         pool_args = {'service_group': utils.meta(pool, 'service_group', {})}
 
@@ -97,9 +96,23 @@ class PoolParent(object):
         return name, version
 
     def set_proxy(self, pool, listener, **kwargs):
+        proxy_aflex = """ when CLIENT_ACCEPTED {
+        set sip [IP::remote_addr]
+        set sport [TCP::remote_port]
+        set dip [IP::local_addr]
+        set dport [TCP::local_port]
+        set proxyheader "PROXY TCP4 $sip $dip $sport $dport\\r\\n"
+}
+
+when SERVER_CONNECTED {
+        TCP::respond $proxyheader
+}"""
+
         if utils.proxy_protocol_use_aflex(listener, pool):
-            # TODO(ytsai) create aFlex for proxy protocol v1
-            return
+            size = len(proxy_aflex.encode('utf-8'))
+            self.axapi_client.slb.aflex_policy.create(
+                file=a10constants.PROXY_PROTOCPL_AFLEX_NAME,
+                script=proxy_aflex, size=size, action="import")
         else:
             name, version = self.get_proxy_name(pool)
             if self.axapi_client.slb.tcp_proxy.exists(name):
@@ -108,12 +121,11 @@ class PoolParent(object):
             self.axapi_client.slb.tcp_proxy.create(name, version)
 
     def delete_proxy(self, pool, listener, proxy_pool_count):
-        if proxy_pool_count > 0:
+        if proxy_pool_count is None or proxy_pool_count > 0:
             return
 
         if utils.proxy_protocol_use_aflex(listener, pool):
-            # TODO(ytsai) create aFlex for proxy protocol v1
-            return
+            self.axapi_client.slb.aflex_policy.delete(a10constants.PROXY_PROTOCPL_AFLEX_NAME)
         else:
             name, version = self.get_proxy_name(pool)
             self.axapi_client.slb.tcp_proxy.delete(name)
