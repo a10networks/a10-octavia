@@ -92,7 +92,7 @@ class PoolFlows(object):
         sf_name = constants.CREATE_POOL_FLOW + '_' + pool.id
         create_pool_flow = linear_flow.Flow(sf_name)
         create_pool_flow.add(service_group_tasks.PoolToErrorOnRevertTask(
-            name=sf_name + '_error_on_revert',
+            name=sf_name + a10constants.FULLY_POPULATED_ERROR_ON_REVERT,
             requires=constants.POOL,
             inject={constants.POOL: pool}))
 
@@ -101,7 +101,7 @@ class PoolFlows(object):
                 topology, pool.health_monitor))
 
         create_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-            name=sf_name + '_get_vthunder_by_LB',
+            name=sf_name + a10constants.GET_VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
@@ -110,23 +110,23 @@ class PoolFlows(object):
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
         create_pool_flow.add(a10_database_tasks.GetFlavorData(
-            name=sf_name + '_get_flavor',
+            name=sf_name + a10constants.FULLY_POPULATED_GET_FLAVOR,
             inject={constants.POOL: pool},
             rebind={a10constants.LB_RESOURCE: constants.POOL},
             provides=constants.FLAVOR))
         create_pool_flow.add(a10_database_tasks.GetPoolListener(
-            name=sf_name + '_get_pool_listener',
+            name=sf_name + a10constants.FULLY_POPULATED_GET_POOL_LISTENER,
             requires=constants.POOL,
             inject={constants.POOL: pool},
             provides=constants.LISTENER))
         create_pool = service_group_tasks.PoolCreate(
-            name=sf_name + '_pool_create',
+            name=sf_name + a10constants.FULLY_POPULATED_CREATE_POOL,
             requires=[constants.POOL, a10constants.VTHUNDER, constants.FLAVOR, constants.LISTENER],
             inject={constants.POOL: pool},
             provides=constants.POOL)
         create_pool_flow.add(*self._get_sess_pers_subflow(create_pool, sf_name))
         create_pool_flow.add(database_tasks.MarkPoolActiveInDB(
-            name=sf_name + '_mark_pool_active',
+            name=sf_name + a10constants.FULLY_POPULATED_MARK_POOL_ACTIVE,
             requires=constants.POOL,
             inject={constants.POOL: pool}))
 
