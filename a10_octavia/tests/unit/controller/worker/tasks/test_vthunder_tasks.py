@@ -259,6 +259,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_network.return_value = NETWORK_11
         mock_task._network_driver.list_networks = mock.Mock()
         mock_task._network_driver.list_networks.return_value = [NETWORK_11]
+        mock_task._network_driver.get_subnet = mock.Mock()
+        subnet = SUBNET
+        subnet.ip_version = 4
+        mock_task._network_driver.get_subnet.return_value = subnet
         mock_task.execute(lb, mock_thunder)
         self.client_mock.vlan.create.assert_called_with(VLAN_ID,
                                                         tagged_eths=[
@@ -290,6 +294,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_network.return_value = NETWORK_12
         mock_task._network_driver.list_networks = mock.Mock()
         mock_task._network_driver.list_networks.return_value = [NETWORK_12]
+        mock_task._network_driver.get_subnet = mock.Mock()
+        subnet = SUBNET
+        subnet.ip_version = 4
+        mock_task._network_driver.get_subnet.return_value = subnet
         mock_task.execute(lb, mock_thunder)
         self.client_mock.vlan.create.assert_called_with(VE_IP_VLAN_ID,
                                                         tagged_eths=[
@@ -320,6 +328,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_network.return_value = NETWORK_12
         mock_task._network_driver.list_networks = mock.Mock()
         mock_task._network_driver.list_networks.return_value = [NETWORK_12]
+        mock_task._network_driver.get_subnet = mock.Mock()
+        subnet = SUBNET
+        subnet.ip_version = 4
+        mock_task._network_driver.get_subnet.return_value = subnet
         mock_task.execute(lb, mock_thunder)
         self.client_mock.vlan.create.assert_called_with(VE_IP_VLAN_ID,
                                                         tagged_trunks=[
@@ -379,6 +391,10 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_task._network_driver.get_network.return_value = NETWORK_11
         mock_task._network_driver.list_networks = mock.Mock()
         mock_task._network_driver.list_networks.return_value = [NETWORK_11]
+        mock_task._network_driver.get_subnet = mock.Mock()
+        subnet = SUBNET
+        subnet.ip_version = 4
+        mock_task._network_driver.get_subnet.return_value = subnet
         mock_task.execute(member, mock_thunder)
         self.client_mock.vlan.create.assert_called_with(VLAN_ID,
                                                         tagged_eths=[

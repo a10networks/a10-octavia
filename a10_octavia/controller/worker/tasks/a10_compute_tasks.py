@@ -23,6 +23,7 @@ from octavia.common import exceptions
 from octavia.controller.worker.v1.tasks.compute_tasks import BaseComputeTask
 
 from a10_octavia.common import exceptions as a10_exception
+from a10_octavia.common import utils as a10_utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -30,6 +31,16 @@ LOG = logging.getLogger(__name__)
 
 class ComputeCreate(BaseComputeTask):
     """Create the compute instance for a new amphora."""
+
+    def __init__(self, **kwargs):
+        super(ComputeCreate, self).__init__(**kwargs)
+        self._network_driver = None
+
+    @property
+    def network_driver(self):
+        if self._network_driver is None:
+            self._network_driver = a10_utils.get_network_driver()
+        return self._network_driver
 
     def execute(self, amphora_id, loadbalancer=None,
                 build_type_priority=constants.LB_CREATE_NORMAL_PRIORITY,
@@ -49,6 +60,11 @@ class ComputeCreate(BaseComputeTask):
             network_ids = network_ids.union(set(network_list))
         if loadbalancer:
             network_ids.add(loadbalancer.vip.network_id)
+            for pool in loadbalancer.pools:
+                for member in pool.members:
+                    if member.subnet_id != None:
+                        network_id = self.network_driver.get_subnet(member.subnet_id).network_id
+                        network_ids.add(network_id)
 
         if mgmt_net in network_ids:
             network_ids.remove(mgmt_net)

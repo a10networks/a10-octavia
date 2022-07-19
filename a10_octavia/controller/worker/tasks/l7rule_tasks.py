@@ -17,6 +17,8 @@ from oslo_log import log as logging
 from requests import exceptions
 from taskflow import task
 
+from octavia.controller.worker.v1.tasks import lifecycle_tasks
+
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
@@ -152,3 +154,13 @@ class DeleteL7Rule(task.Task):
                 l7rule.id,
                 listener.id)
             raise e
+
+
+class L7RuleToErrorOnRevertTask(lifecycle_tasks.BaseLifecycleTask):
+    """Task to set a l7rule to ERROR on revert."""
+
+    def execute(self, l7rule):
+        pass
+
+    def revert(self, l7rule, *args, **kwargs):
+        self.task_utils.mark_l7rule_prov_status_error(l7rule.id)

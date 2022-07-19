@@ -17,6 +17,8 @@ from oslo_log import log as logging
 from requests import exceptions
 from taskflow import task
 
+from octavia.controller.worker.v1.tasks import lifecycle_tasks
+
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
@@ -165,3 +167,13 @@ class DeleteL7Policy(task.Task):
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to delete l7policy: %s", l7policy.id)
             raise e
+
+
+class L7PolicyToErrorOnRevertTask(lifecycle_tasks.BaseLifecycleTask):
+    """Task to set a l7policy to ERROR on revert."""
+
+    def execute(self, l7policy):
+        pass
+
+    def revert(self, l7policy, *args, **kwargs):
+        self.task_utils.mark_l7policy_prov_status_error(l7policy.id)

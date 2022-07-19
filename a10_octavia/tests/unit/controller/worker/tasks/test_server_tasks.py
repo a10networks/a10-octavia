@@ -111,7 +111,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **expect_key_args)
+            health_check=mock.ANY, server_templates=mock.ANY, **expect_key_args)
 
     @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
     def test_MemberCreate_execute_create_with_regex_overwrite_flavor(self, mock_server_name):
@@ -132,7 +132,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, member_obj.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **expect_key_args)
+            health_check=mock.ANY, server_templates=mock.ANY, **expect_key_args)
 
     @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
     def test_MemberCreate_execute_create_with_regex_flavor(self, mock_server_name):
@@ -153,7 +153,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, member_obj.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **expect_key_args)
+            health_check=mock.ANY, server_templates=mock.ANY, **expect_key_args)
 
     @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
     def test_MemberCreate_execute_create_flavor_override_config(self, mock_server_name):
@@ -169,7 +169,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **expect_key_args)
+            health_check=mock.ANY, server_templates=mock.ANY, **expect_key_args)
 
     def test_MemberCreate_revert_created_member(self):
         mock_member = task.MemberCreate()
@@ -191,7 +191,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **KEY_ARGS)
+            health_check=mock.ANY, server_templates=mock.ANY, **KEY_ARGS)
         self.client_mock.slb.service_group.member.create.assert_called_with(
             POOL.id, SERVER_NAME, MEMBER.protocol_port)
 
@@ -213,7 +213,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         self.client_mock.slb.server.create.assert_not_called()
         self.client_mock.slb.server.update.assert_called_with(
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **KEY_ARGS)
+            health_check=mock.ANY, server_templates=mock.ANY, **KEY_ARGS)
         self.client_mock.slb.service_group.member.create.assert_called_with(
             POOL.id, SERVER_NAME, MEMBER.protocol_port)
 

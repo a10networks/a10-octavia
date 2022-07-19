@@ -85,6 +85,56 @@ class PoolFlows(object):
 
         return create_pool_flow
 
+    def get_fully_populated_create_pool_flow(self, topology, pool, vthunder_conf=None,
+                                             device_dict=None, vthunder_flow=False):
+        """Create pool for fully populated creation"""
+
+        sf_name = constants.CREATE_POOL_FLOW + '_' + pool.id
+        create_pool_flow = linear_flow.Flow(sf_name)
+        create_pool_flow.add(service_group_tasks.PoolToErrorOnRevertTask(
+            name=sf_name + '_error_on_revert',
+            requires=constants.POOL,
+            inject={constants.POOL: pool}))
+
+        if pool.health_monitor:
+            create_pool_flow.add(self.hm_flow.get_fully_populated_create_health_monitor_flow(
+                topology, pool.health_monitor))
+
+        create_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
+            name=sf_name + '_get_vthunder_by_LB',
+            requires=constants.LOADBALANCER,
+            provides=a10constants.VTHUNDER))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            create_pool_flow.add(vthunder_tasks.GetMasterVThunder(
+                name=sf_name + '_' + a10constants.GET_MASTER_VTHUNDER,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
+        create_pool_flow.add(a10_database_tasks.GetFlavorData(
+            name=sf_name + '_get_flavor',
+            inject={constants.POOL: pool},
+            rebind={a10constants.LB_RESOURCE: constants.POOL},
+            provides=constants.FLAVOR))
+        create_pool = service_group_tasks.PoolCreate(
+            name=sf_name + '_pool_create',
+            requires=[constants.POOL, a10constants.VTHUNDER, constants.FLAVOR],
+            inject={constants.POOL: pool},
+            provides=constants.POOL)
+        create_pool_flow.add(*self._get_sess_pers_subflow(create_pool, sf_name))
+        create_pool_flow.add(database_tasks.MarkPoolActiveInDB(
+            name=sf_name + '_mark_pool_active',
+            requires=constants.POOL,
+            inject={constants.POOL: pool}))
+
+        for member in pool.members:
+            if vthunder_flow:
+                create_pool_flow.add(
+                    self.member_flow.get_vthunder_fully_populated_create_member_flow(topology, member))
+            else:
+                create_pool_flow.add(self.member_flow.get_rack_fully_populated_create_member_flow(
+                    vthunder_conf, device_dict, member))
+
+        return create_pool_flow
+
     def get_delete_pool_flow(self, members, health_mon, store, topology):
         """Create a flow to delete a pool
 
@@ -231,9 +281,10 @@ class PoolFlows(object):
 
         return update_pool_flow
 
-    def _get_sess_pers_subflow(self, pool_task):
+    def _get_sess_pers_subflow(self, pool_task, prefix=""):
         get_pool_create_with_sess_pers = graph_flow.Flow(a10constants.HANDLE_SESS_PERS)
         sess_pers = persist_tasks.HandleSessionPersistenceDelta(
+            name=prefix + 'hanlde_session_persist_dela',
             requires=[a10constants.VTHUNDER, constants.POOL])
         get_pool_create_with_sess_pers.add(pool_task, sess_pers)
         get_pool_create_with_sess_pers.link(pool_task, sess_pers,

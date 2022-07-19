@@ -238,6 +238,8 @@ GET_VCS_DEVICE_ID = 'get-vcs-device-id'
 POST_FAILOVER_DB_UPDATE = 'post-failover-db-update'
 MARK_LB_LIST_ERROR_ON_REVERT = 'mark-lb-list-error-on-revert'
 
+FULLY_POPULATED_LISTENER_CREATE = 'fully-populated-listener-create'
+
 # ======================
 # Non-Taskflow Constants
 # ======================
