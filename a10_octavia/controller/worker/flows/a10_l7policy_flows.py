@@ -73,12 +73,12 @@ class L7PolicyFlows(object):
         sf_name = constants.CREATE_L7POLICY_FLOW + '_' + l7policy.id
         create_l7policy_flow = linear_flow.Flow(sf_name)
         create_l7policy_flow.add(l7policy_tasks.L7PolicyToErrorOnRevertTask(
-            name=sf_name + '_error_on_revert',
+            name=sf_name + a10constants.FULLY_POPULATED_ERROR_ON_REVERT,
             requires=constants.L7POLICY,
             inject={constants.L7POLICY: l7policy}))
 
         create_l7policy_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-            name=sf_name + '_get_vthunder_by_LB',
+            name=sf_name + '-' + a10constants.GET_VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
@@ -87,7 +87,7 @@ class L7PolicyFlows(object):
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
         create_l7policy_flow.add(l7policy_tasks.CreateL7Policy(
-            name=sf_name + '_create_l7policy',
+            name=sf_name + a10constants.FULLY_POPULATED_CREATE_L7POLICY,
             requires=[constants.L7POLICY, constants.LISTENERS, a10constants.VTHUNDER],
             inject={constants.L7POLICY: l7policy, constants.LISTENERS: listeners}))
 
@@ -96,7 +96,7 @@ class L7PolicyFlows(object):
                 topology, listeners, l7rule))
 
         create_l7policy_flow.add(database_tasks.MarkL7PolicyActiveInDB(
-            name=sf_name + '_set_l7policy_active_in_db',
+            name=sf_name + a10constants.FULLY_POPULATED_MARK_L7POLICY_ACTIVE,
             requires=constants.L7POLICY,
             inject={constants.L7POLICY: l7policy}))
         return create_l7policy_flow

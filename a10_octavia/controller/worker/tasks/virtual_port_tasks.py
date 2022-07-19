@@ -72,6 +72,19 @@ class ListenersParent(object):
             raise exceptions.SNATConfigurationError()
         config_data['autosnat'] = autosnat
 
+        tcp_proxy, aflex = utils.get_tcp_proxy_template(listener, listener.default_pool)
+        aflex_scripts = None
+        if aflex is not None:
+            try:
+                curr_vport = self.axapi_client.slb.virtual_server.vport.get(
+                    listener.load_balancer_id, listener.id,
+                    listener.protocol, listener.protocol_port)
+                exclude = a10constants.PROXY_PROTOCPL_AFLEX_NAME
+                aflex_scripts = utils.get_proxy_aflex_list(curr_vport, aflex, exclude)
+                config_data["aflex_scripts"] = aflex_scripts
+            except acos_errors.NotFound:
+                aflex_scripts = utils.get_proxy_aflex_list(None, aflex, None)
+                config_data["aflex_scripts"] = aflex_scripts
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
         device_templates = self.axapi_client.slb.template.templates.get()
         vport_templates = {}
@@ -164,6 +177,7 @@ class ListenersParent(object):
                    listener.default_pool_id,
                    s_pers_name=s_pers, c_pers_name=c_pers,
                    virtual_port_templates=vport_templates,
+                   tcp_proxy_name=tcp_proxy,
                    **config_data)
 
         listener.protocol = listener.protocol.upper()
@@ -217,19 +231,38 @@ class ListenerUpdateForPool(ListenersParent, task.Task):
     """Task to update listener while pool delete"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder):
+    def execute(self, loadbalancer, listener, vthunder, flow_type=None):
         try:
             if listener:
-                c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
+                kargs = {}
+                pool = listener.default_pool
+                pool_id = listener.default_pool_id
+                if flow_type is not None and flow_type == "delete":
+                    pool = None
+                    pool_id = None
+                tcp_proxy, aflex = utils.get_tcp_proxy_template(listener, pool)
+                c_pers, s_pers = utils.get_sess_pers_templates(pool)
                 listener.protocol = openstack_mappings.virtual_port_protocol(
                     self.axapi_client, listener.protocol).lower()
+
+                if aflex is not None:
+                    curr_vport = self.axapi_client.slb.virtual_server.vport.get(
+                        listener.load_balancer_id, listener.id,
+                        listener.protocol, listener.protocol_port)
+                    exclude = a10constants.PROXY_PROTOCPL_AFLEX_NAME
+                    aflex_scripts = utils.get_proxy_aflex_list(curr_vport, aflex, exclude)
+                    kargs["aflex_scripts"] = aflex_scripts
+
                 self.axapi_client.slb.virtual_server.vport.update(
                     loadbalancer.id,
                     listener.id,
                     listener.protocol,
                     listener.protocol_port,
-                    listener.default_pool_id,
-                    s_pers_name=s_pers, c_pers_name=c_pers)
+                    pool_id,
+                    s_pers_name=s_pers, c_pers_name=c_pers,
+                    tcp_proxy_name=tcp_proxy,
+                    aflex_scripts_clear=True,
+                    **kargs)
                 LOG.debug("Successfully updated listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update listener: %s", listener.id)

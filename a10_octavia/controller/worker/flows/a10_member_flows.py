@@ -146,82 +146,24 @@ class MemberFlows(object):
         sf_name = constants.CREATE_MEMBER_FLOW + '_' + member.id
         create_member_flow = linear_flow.Flow(sf_name)
         create_member_flow.add(server_tasks.MemberToErrorOnRevertTask(
-            name=sf_name + '_error_on_revert',
+            name=sf_name + a10constants.FULLY_POPULATED_ERROR_ON_REVERT,
             requires=constants.MEMBER,
             inject={constants.MEMBER: member}))
 
         if CONF.a10_global.validate_subnet:
             create_member_flow.add(a10_network_tasks.ValidateSubnet(
-                name=sf_name + '_validate_subnet',
+                name=sf_name + a10constants.FULLY_POPULATED_VALID_SUBNET,
                 requires=constants.MEMBER,
                 inject={constants.MEMBER: member}))
         create_member_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-            name=sf_name + '_get_vthunder_by_LB',
+            name=sf_name + a10constants.GET_VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
 
-        """
-        create_member_flow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
-            requires=a10constants.VTHUNDER,
-            provides=a10constants.LOADBALANCERS_LIST))
-        create_member_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
-            requires=constants.LOADBALANCER_ID,
-            provides=constants.AMPHORA))
-        create_member_flow.add(a10_database_tasks.GetMemberListByProjectID(
-            requires=a10constants.VTHUNDER,
-            provides=a10constants.MEMBER_LIST))
-        create_member_flow.add(a10_network_tasks.CalculateDelta(
-            requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST,
-                      a10constants.MEMBER_LIST),
-            provides=constants.DELTAS))
-        create_member_flow.add(a10_network_tasks.HandleNetworkDeltas(
-            requires=constants.DELTAS, provides=constants.ADDED_PORTS))
-        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
-            create_member_flow.add(vthunder_tasks.VCSSyncWait(
-                name="vcs_sync_wait_before_probe_device",
-                requires=a10constants.VTHUNDER))
-            create_member_flow.add(vthunder_tasks.GetMasterVThunder(
-                name=a10constants.GET_VTHUNDER_MASTER,
-                requires=a10constants.VTHUNDER,
-                provides=a10constants.VTHUNDER))
-        # managing interface additions here
-        create_member_flow.add(
-            vthunder_tasks.AmphoraePostMemberNetworkPlug(
-                requires=(
-                    constants.LOADBALANCER,
-                    constants.ADDED_PORTS,
-                    a10constants.VTHUNDER)))
-        create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-            name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
-            requires=(a10constants.VTHUNDER, constants.AMPHORA)))
-        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
-            create_member_flow.add(
-                a10_database_tasks.GetBackupVThunderByLoadBalancer(
-                    name="get_backup_vThunder",
-                    requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
-                    provides=a10constants.BACKUP_VTHUNDER))
-            create_member_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
-                name="backup_compute_conn_wait_before_probe_device",
-                requires=constants.AMPHORA,
-                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-            create_member_flow.add(vthunder_tasks.VCSSyncWait(
-                name="backup-plug-wait-vcs-ready",
-                requires=a10constants.VTHUNDER))
-            create_member_flow.add(vthunder_tasks.GetMasterVThunder(
-                name=a10constants.GET_MASTER_VTHUNDER,
-                requires=a10constants.VTHUNDER,
-                provides=a10constants.VTHUNDER))a
-        create_member_flow.add(
-            vthunder_tasks.EnableInterfaceForMembers(
-                requires=[
-                    constants.ADDED_PORTS,
-                    constants.LOADBALANCER,
-                    a10constants.VTHUNDER]))
-        """
         if CONF.a10_global.handle_vrid:
             create_member_flow.add(self.handle_vrid_for_member_subflow(member=member))
         create_member_flow.add(a10_database_tasks.CountMembersWithIP(
-            name=sf_name + '_count_member_with_ip',
+            name=sf_name + a10constants.MEMBER_COUNT_IP,
             requires=constants.MEMBER, provides=a10constants.MEMBER_COUNT_IP,
             inject={constants.MEMBER: member}
         ))
@@ -230,17 +172,17 @@ class MemberFlows(object):
             requires=(constants.MEMBER, constants.AMPHORA),
             inject={constants.MEMBER: member}))
         create_member_flow.add(a10_database_tasks.GetFlavorData(
-            name=sf_name + '_get_flavor',
+            name=sf_name + a10constants.FULLY_POPULATED_GET_FLAVOR,
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.FLAVOR))
         create_member_flow.add(self.get_create_member_snat_pool_subflow(member=member))
         create_member_flow.add(server_tasks.MemberCreate(
-            name=sf_name + '_member_create',
+            name=sf_name + a10constants.FULLY_POPULATED_CREATE_MEMBER,
             requires=(constants.MEMBER, a10constants.VTHUNDER, constants.POOL,
                       a10constants.MEMBER_COUNT_IP, constants.FLAVOR),
             inject={constants.MEMBER: member}))
         create_member_flow.add(database_tasks.MarkMemberActiveInDB(
-            name=sf_name + '_mark_member_active',
+            name=sf_name + a10constants.FULLY_POPULATED_MARK_MEMBER_ACTIVE,
             requires=constants.MEMBER,
             inject={constants.MEMBER: member}))
         return create_member_flow
