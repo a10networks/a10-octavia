@@ -116,11 +116,11 @@ class ListenerFlows(object):
                 self._l7policy_flows.get_fully_populated_create_l7policy_flow(
                     topology, listener, l7policy))
 
-        create_listener_flow.add(a10_database_tasks.
-                                 MarkLBAndListenerActiveInDB(
-                                     requires=[constants.LOADBALANCER,
-                                               constants.LISTENER],
-                                     inject={constants.LISTENER: listener}))
+        create_listener_flow.add(a10_database_tasks.MarkLBAndListenerActiveInDB(
+             name=sf_name + '_mark_listener_active',
+             requires=[constants.LOADBALANCER,
+                       constants.LISTENER],
+             inject={constants.LISTENER: listener}))
         return create_listener_flow
 
     def handle_ssl_cert_flow(self, flow_type='create', listener=None):
