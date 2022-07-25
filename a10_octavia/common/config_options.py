@@ -140,6 +140,7 @@ A10_SLB_OPTS = [
 
 A10_HEALTH_MONITOR_OPTS = [
     cfg.StrOpt('post_data',
+               default="0123456789",
                help=_('HTTP Content for "--http-method POST" case.')),
 ]
 
