@@ -183,7 +183,7 @@ class ListenerFlows(object):
             requires=a10constants.VTHUNDER))
         return delete_listener_flow
 
-    def get_cascade_delete_listener_internal_flow(self, listener, listener_name, compute_flag):
+    def get_cascade_delete_listener_internal_flow(self, listener, listener_name):
         """Create a flow to delete a listener
            (will skip deletion on the amp and marking LB active)
         :returns: The flow for deleting a listener
@@ -191,10 +191,6 @@ class ListenerFlows(object):
         delete_listener_flow = linear_flow.Flow(constants.DELETE_LISTENER_FLOW)
         delete_listener_flow.add(self.handle_ssl_cert_flow(
             flow_type='delete', listener=listener))
-        if compute_flag:
-            delete_listener_flow.add(network_tasks.UpdateVIPForDelete(
-                name='delete_update_vip_' + listener_name,
-                requires=constants.LOADBALANCER))
         delete_listener_flow.add(database_tasks.DeleteListenerInDB(
             name='delete_listener_in_db_' + listener_name,
             requires=constants.LISTENER,

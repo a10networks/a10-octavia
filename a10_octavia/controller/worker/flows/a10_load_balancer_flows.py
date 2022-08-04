@@ -991,12 +991,18 @@ class LoadBalancerFlows(object):
 
         # loop for loadbalancer's listener deletion
         listeners_delete_flow = unordered_flow.Flow('listener_delete_flow')
-        compute_flag = lb.amphorae
         for listener in lb.listeners:
             listener_name = 'listener_' + listener.id
             store[listener_name] = listener
             listeners_delete_flow.add(
                 self._listener_flows.get_cascade_delete_listener_internal_flow(
-                    listener, listener_name, compute_flag))
+                    listener, listener_name))
+
         pools_listeners_delete_flow.add(listeners_delete_flow)
+        # move UpdateVIPForDelete() out from unordered_flow loop, call it multiple time at the
+        # same time will add/del same rules at the same time and causing error from neutron.
+        if lb.amphorae:
+            pools_listeners_delete_flow.add(network_tasks.UpdateVIPForDelete(
+                requires=constants.LOADBALANCER))
+
         return (pools_listeners_delete_flow, store)
