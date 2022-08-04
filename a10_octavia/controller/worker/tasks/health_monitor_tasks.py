@@ -97,18 +97,19 @@ class CreateAndAssociateHealthMonitor(task.Task):
             LOG.exception("Failed to create health monitor: %s", health_mon.id)
             raise e
 
-        for member in health_mon.pool.members:
-            try:
-                server_name = utils.get_member_server_name(self.axapi_client, member)
-                self.axapi_client.slb.server.update(server_name, member.ip_address,
-                                                    health_check=health_mon.id)
-                LOG.debug("Successfully associated health monitor %s to member %s",
-                          health_mon.id, member.id)
-            except (acos_errors.ACOSException, ConnectionError) as e:
-                LOG.exception(
-                    "Failed to associate health monitor %s to member %s",
-                    health_mon.id, member.id)
-                raise e
+        if health_mon.pool is not None and health_mon.pool.members is not None:
+            for member in health_mon.pool.members:
+                try:
+                    server_name = utils.get_member_server_name(self.axapi_client, member)
+                    self.axapi_client.slb.server.update(server_name, member.ip_address,
+                                                        health_check=health_mon.id)
+                    LOG.debug("Successfully associated health monitor %s to member %s",
+                              health_mon.id, member.id)
+                except (acos_errors.ACOSException, ConnectionError) as e:
+                    LOG.exception(
+                        "Failed to associate health monitor %s to member %s",
+                        health_mon.id, member.id)
+                    raise e
 
     @axapi_client_decorator_for_revert
     def revert(self, listeners, health_mon, vthunder, *args, **kwargs):
