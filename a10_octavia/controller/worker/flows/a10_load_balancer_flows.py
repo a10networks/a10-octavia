@@ -1002,6 +1002,9 @@ class LoadBalancerFlows(object):
         # move UpdateVIPForDelete() out from unordered_flow loop, call it multiple time at the
         # same time will add/del same rules at the same time and causing error from neutron.
         if lb.amphorae:
+            pools_listeners_delete_flow.add(a10_database_tasks.GetLatestLoadBalancer(
+                requires=constants.LOADBALANCER,
+                provides=constants.LOADBALANCER))
             pools_listeners_delete_flow.add(network_tasks.UpdateVIPForDelete(
                 requires=constants.LOADBALANCER))
 
