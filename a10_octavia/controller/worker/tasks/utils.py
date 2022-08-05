@@ -183,7 +183,7 @@ def attribute_search(lb_resource, attr_name):
     return None
 
 
-def get_member_server_name(axapi_client, member, rasie_not_found=True):
+def get_member_server_name(axapi_client, member, raise_not_found=True):
     default_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
     server_name = default_name
     try:
@@ -202,14 +202,14 @@ def get_member_server_name(axapi_client, member, rasie_not_found=True):
                 try:
                     server_name = axapi_client.slb.server.get(server_name)
                 except (acos_errors.NotFound) as e:
-                    if rasie_not_found:
+                    if raise_not_found:
                         raise e
                     return default_name
         else:
             try:
                 server_name = axapi_client.slb.server.get('_{}_{}'.format(server_name, 'neutron'))
             except (acos_errors.NotFound) as e:
-                if rasie_not_found:
+                if raise_not_found:
                     raise e
                 return default_name
     return server_name['server']['name']

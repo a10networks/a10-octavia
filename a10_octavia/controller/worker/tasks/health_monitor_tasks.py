@@ -101,7 +101,7 @@ class CreateAndAssociateHealthMonitor(task.Task):
             for member in health_mon.pool.members:
                 try:
                     server_name = utils.get_member_server_name(self.axapi_client, member,
-                                                               rasie_not_found=False)
+                                                               raise_not_found=False)
                     if self.axapi_client.slb.server.exists(server_name):
                         self.axapi_client.slb.server.update(server_name, member.ip_address,
                                                             health_check=health_mon.id)
