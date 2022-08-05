@@ -1065,6 +1065,17 @@ class GetLoadBalancerListForDeletion(BaseDatabaseTask):
                           'due to: {}'.format(str(e)))
 
 
+class GetLatestLoadBalancer(BaseDatabaseTask):
+
+    def execute(self, loadbalancer):
+        try:
+            lb = self.loadbalancer_repo.get(db_apis.get_session(), id=loadbalancer.id)
+            return lb
+        except Exception as e:
+            LOG.exception("Failed to get latest loadbalancer: %s", str(e))
+            return loadbalancer
+
+
 class CheckExistingVthunderTopology(BaseDatabaseTask):
     """This task only meant to use with vthunder flow[amphora]"""
 

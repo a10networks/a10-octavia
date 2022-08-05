@@ -532,7 +532,10 @@ class UpdateVIPForDelete(BaseNetworkTask):
         LOG.debug("Updating VIP for listener delete on load_balancer %s.",
                   loadbalancer.id)
 
-        self.network_driver.update_vip(loadbalancer, for_delete=True)
+        try:
+            self.network_driver.update_vip(loadbalancer, for_delete=True)
+        except Exception as e:
+            LOG.error("Failed to update vip error: %s", str(e))
 
 
 class GetAmphoraNetworkConfigs(BaseNetworkTask):
