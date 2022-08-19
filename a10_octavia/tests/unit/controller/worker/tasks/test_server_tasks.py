@@ -73,7 +73,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         member_task.CONF = self.conf
         return member_task
 
-    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
     def test_MemberCreate_execute_create_with_server_template(self, mock_server_name):
         mock_server_name.side_effect = acos_errors.NotFound()
         member_port_count_ip = 1
@@ -83,7 +83,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         self.assertIn('template-server', kwargs['server_templates'])
         self.assertEqual(kwargs['server_templates']['template-server'], 'my_server_template')
 
-    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
     def test_MemberCreate_execute_create_with_shared_template_log_warning(self, mock_server_name):
         mock_server_name.side_effect = acos_errors.NotFound()
         member_port_count_ip = 1
@@ -98,7 +98,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
             member_task.execute(MEMBER, VTHUNDER, POOL, member_port_count_ip)
             self.assertEqual(expected_log, cm.output)
 
-    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
     def test_MemberCreate_execute_create_with_flavor(self, mock_server_name):
         mock_server_name.side_effect = acos_errors.NotFound()
         mock_create_member = task.MemberCreate()
@@ -111,9 +111,9 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **expect_key_args)
+            health_check=mock.ANY, server_templates=mock.ANY, **expect_key_args)
 
-    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
     def test_MemberCreate_execute_create_with_regex_overwrite_flavor(self, mock_server_name):
         mock_server_name.side_effect = acos_errors.NotFound()
         mock_create_member = task.MemberCreate()
@@ -132,9 +132,9 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, member_obj.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **expect_key_args)
+            health_check=mock.ANY, server_templates=mock.ANY, **expect_key_args)
 
-    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
     def test_MemberCreate_execute_create_with_regex_flavor(self, mock_server_name):
         mock_server_name.side_effect = acos_errors.NotFound()
         mock_create_member = task.MemberCreate()
@@ -153,9 +153,9 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, member_obj.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **expect_key_args)
+            health_check=mock.ANY, server_templates=mock.ANY, **expect_key_args)
 
-    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
     def test_MemberCreate_execute_create_flavor_override_config(self, mock_server_name):
         mock_server_name.side_effect = acos_errors.NotFound()
         self.conf.config(group=a10constants.SERVER_CONF_SECTION, conn_resume=300)
@@ -169,7 +169,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **expect_key_args)
+            health_check=mock.ANY, server_templates=mock.ANY, **expect_key_args)
 
     def test_MemberCreate_revert_created_member(self):
         mock_member = task.MemberCreate()
@@ -180,7 +180,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         self.client_mock.slb.server.delete.assert_called_with(
             SERVER_NAME)
 
-    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
     def test_create_member_task(self, mock_server_name):
         mock_server_name.side_effect = acos_errors.NotFound()
         mock_create_member = task.MemberCreate()
@@ -191,7 +191,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip)
         self.client_mock.slb.server.create.assert_called_with(
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **KEY_ARGS)
+            health_check=mock.ANY, server_templates=mock.ANY, **KEY_ARGS)
         self.client_mock.slb.service_group.member.create.assert_called_with(
             POOL.id, SERVER_NAME, MEMBER.protocol_port)
 
@@ -202,7 +202,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         mock_member.revert(MEMBER, VTHUNDER, POOL, member_port_count_ip)
         self.client_mock.slb.server.delete.assert_not_called()
 
-    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
     def test_create_member_task_multi_port(self, mock_server_name):
         mock_server_name.return_value = SERVER_NAME
         mock_create_member = task.MemberCreate()
@@ -213,11 +213,11 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         self.client_mock.slb.server.create.assert_not_called()
         self.client_mock.slb.server.update.assert_called_with(
             SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
-            server_templates=mock.ANY, **KEY_ARGS)
+            health_check=mock.ANY, server_templates=mock.ANY, **KEY_ARGS)
         self.client_mock.slb.service_group.member.create.assert_called_with(
             POOL.id, SERVER_NAME, MEMBER.protocol_port)
 
-    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
     def test_delete_member_task_single_no_port(self, mock_server_name):
         mock_server_name.return_value = SERVER_NAME
         mock_delete_member = task.MemberDelete()
@@ -227,7 +227,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
             POOL.id, SERVER_NAME, MEMBER.protocol_port)
         self.client_mock.slb.server.delete.assert_called_with(SERVER_NAME)
 
-    @mock.patch('a10_octavia.controller.worker.tasks.server_tasks._get_server_name')
+    @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
     def test_delete_member_task_multi_port(self, mock_server_name):
         mock_server_name.return_value = SERVER_NAME
         member_port_count_ip = 2
@@ -250,7 +250,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
             }
         }
         self.client_mock.slb.server.get.return_value = server_name
-        server_name = task._get_server_name(self.client_mock, MEMBER)
+        server_name = utils.get_member_server_name(self.client_mock, MEMBER)
         self.assertEqual(SERVER_NAME, server_name)
 
     def test_get_server_name_backwards_compat(self):
@@ -260,13 +260,13 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
             }
         }
         self.client_mock.slb.server.get.return_value = server_name
-        server_name = task._get_server_name(self.client_mock, MEMBER)
+        server_name = utils.get_member_server_name(self.client_mock, MEMBER)
         self.assertEqual('_{}_neutron'.format(SERVER_NAME), server_name)
 
     def test_get_server_name_raise_notfound(self):
         self.client_mock.slb.server.get.side_effect = acos_errors.NotFound
 
         expected_error = acos_errors.NotFound
-        module_func = task._get_server_name
+        module_func = utils.get_member_server_name
         func_args = [self.client_mock, MEMBER]
         self.assertRaises(expected_error, module_func, *func_args)

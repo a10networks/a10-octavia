@@ -30,6 +30,7 @@ from octavia.controller.worker import task_utils as task_utilities
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 from octavia.statistics import stats_base
+from octavia_lib.common import constants as lib_consts
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
@@ -52,11 +53,12 @@ class BaseDatabaseTask(task.Task):
         self.member_repo = a10_repo.MemberRepository()
         self.loadbalancer_repo = a10_repo.LoadBalancerRepository()
         self.vip_repo = repo.VipRepository()
-        self.listener_repo = repo.ListenerRepository()
+        self.listener_repo = a10_repo.ListenerRepository()
         self.flavor_repo = repo.FlavorRepository()
         self.flavor_profile_repo = repo.FlavorProfileRepository()
         self.nat_pool_repo = a10_repo.NatPoolRepository()
         self.vrrp_set_repo = a10_repo.VrrpSetRepository()
+        self.pool_repo = a10_repo.PoolRepository()
         self.task_utils = task_utilities.TaskUtils()
         super(BaseDatabaseTask, self).__init__(**kwargs)
 
@@ -1063,6 +1065,17 @@ class GetLoadBalancerListForDeletion(BaseDatabaseTask):
                           'due to: {}'.format(str(e)))
 
 
+class GetLatestLoadBalancer(BaseDatabaseTask):
+
+    def execute(self, loadbalancer):
+        try:
+            lb = self.loadbalancer_repo.get(db_apis.get_session(), id=loadbalancer.id)
+            return lb
+        except Exception as e:
+            LOG.exception("Failed to get latest loadbalancer: %s", str(e))
+            return loadbalancer
+
+
 class CheckExistingVthunderTopology(BaseDatabaseTask):
     """This task only meant to use with vthunder flow[amphora]"""
 
@@ -1375,3 +1388,41 @@ class LoadBalancerListToErrorOnRevertTask(BaseDatabaseTask):
     def revert(self, loadbalancers_list, *args, **kwargs):
         for lb in loadbalancers_list:
             self.task_utils.mark_loadbalancer_prov_status_error(lb.id)
+
+
+class GetPoolListener(BaseDatabaseTask):
+    """Task to get listener that use the pool as default_pool"""
+
+    def execute(self, pool):
+        if not pool:
+            return None
+        return self.listener_repo.get_listener_by_default_pool(db_apis.get_session(), pool.id)
+
+
+class GetProxyProtocolPoolCount(BaseDatabaseTask):
+    """Task to get the number of pools that using tcp-proxy or proxy aflex"""
+
+    def execute(self, listener, pool):
+        if pool.protocol == constants.PROTOCOL_PROXY:
+            use_aflex_proxy_count = 0
+            if a10_task_utils.proxy_protocol_use_aflex(listener, pool) is True:
+                use_aflex_proxy_count = self.pool_repo.get_aflex_proxy_count(
+                    db_apis.get_session(), pool.project_id)
+                LOG.info("Proxy Protocol with aFlex Pools: %d", use_aflex_proxy_count)
+                return use_aflex_proxy_count
+
+            proxy_pool_count = self.pool_repo.get_proxy_pool_count(
+                db_apis.get_session(), pool.project_id)
+            use_aflex_proxy = CONF.service_group.use_aflex_proxy
+            if use_aflex_proxy and use_aflex_proxy is True:
+                use_aflex_proxy_count = self.pool_repo.get_aflex_proxy_count(
+                    db_apis.get_session(), pool.project_id)
+            proxy_pool_count = proxy_pool_count - use_aflex_proxy_count
+            LOG.info("Proxy Protocol Pools: %d", proxy_pool_count)
+            return proxy_pool_count
+        elif pool.protocol == lib_consts.PROTOCOL_PROXYV2:
+            proxy_pool_count = self.pool_repo.get_proxyv2_pool_count(
+                db_apis.get_session(), pool.project_id)
+            LOG.info("Proxy Protocol V2 Pools: %d", proxy_pool_count)
+            return proxy_pool_count
+        return 0

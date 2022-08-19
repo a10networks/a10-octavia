@@ -424,12 +424,13 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                 device_dict = CONF.hardware_thunder.devices
                 create_lb_flow = self._lb_flows.get_create_rack_vthunder_load_balancer_flow(
                     vthunder_conf=vthunder_conf, device_dict=device_dict,
-                    topology=topology, listeners=lb.listeners)
+                    topology=topology, listeners=lb.listeners, pools=lb.pools)
                 create_lb_tf = self.taskflow_load(create_lb_flow, store=store)
             else:
                 busy = self._vthunder_busy_check(lb.project_id, True, ctx_flags, lb, store)
                 create_lb_flow = self._lb_flows.get_create_load_balancer_flow(
-                    load_balancer_id, topology, lb.project_id, listeners=lb.listeners)
+                    load_balancer_id, topology, lb.project_id, listeners=lb.listeners,
+                    pools=lb.pools)
                 store.update([
                     (a10constants.COMPUTE_BUSY, busy),
                     (a10constants.VTHUNDER_CONFIG, None),

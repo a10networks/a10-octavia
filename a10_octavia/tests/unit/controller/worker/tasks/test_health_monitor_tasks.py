@@ -62,6 +62,8 @@ FLAVOR_WITH_REGEX_ARGS = {
     }
 }
 
+DEF_POST_DATA = '0123456789'
+
 
 class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
 
@@ -86,7 +88,7 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           mock_hm.delay, mock_hm.timeout,
                                                           mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
-                                                          expect_code=None, post_data=None,
+                                                          expect_code=None, post_data=DEF_POST_DATA,
                                                           **ARGS)
         self.conf.config(group=a10constants.HEALTH_MONITOR_SECTION,
                          post_data='abc=1')
@@ -121,7 +123,8 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           self.client_mock.slb.hm.TCP,
                                                           mock_hm.delay, mock_hm.timeout,
                                                           mock_hm.rise_threshold, method=None,
-                                                          port=mock.ANY, url=None, post_data=None,
+                                                          port=mock.ANY, url=None,
+                                                          post_data=DEF_POST_DATA,
                                                           expect_code=None, **FLAVOR_ARGS)
 
     def test_health_monitor_create_with_flavor_and_config(self):
@@ -185,7 +188,8 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           mock_hm.delay, mock_hm.timeout,
                                                           mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
-                                                          expect_code=None, post_data=None,
+                                                          expect_code=None,
+                                                          post_data=DEF_POST_DATA,
                                                           **FLAVOR_WITH_REGEX_ARGS)
 
     def test_health_monitor_create_with_regex_overwrite_flavor_task(self):
@@ -224,7 +228,7 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           mock_hm.delay, mock_hm.timeout,
                                                           mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
-                                                          expect_code=None, post_data=None,
+                                                          expect_code=None, post_data=DEF_POST_DATA,
                                                           **FLAVOR_WITH_REGEX_ARGS)
 
     def test_get_hm_name(self):
@@ -268,7 +272,7 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           mock_hm.delay, mock_hm.timeout,
                                                           mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
-                                                          expect_code=None, post_data=None,
+                                                          expect_code=None, post_data=DEF_POST_DATA,
                                                           **ARGS)
         self.conf.config(group=a10constants.HEALTH_MONITOR_SECTION,
                          post_data='abc=1')
@@ -334,7 +338,8 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           self.client_mock.slb.hm.TCP,
                                                           mock_hm.delay, mock_hm.timeout,
                                                           mock_hm.rise_threshold, method=None,
-                                                          port=mock.ANY, url=None, post_data=None,
+                                                          port=mock.ANY, url=None,
+                                                          post_data=DEF_POST_DATA,
                                                           expect_code=None, **FLAVOR_ARGS)
 
     @mock.patch('a10_octavia.controller.worker.tasks.health_monitor_tasks._get_hm_name')
@@ -375,7 +380,7 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           mock_hm.delay, mock_hm.timeout,
                                                           mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
-                                                          expect_code=None, post_data=None,
+                                                          expect_code=None, post_data=DEF_POST_DATA,
                                                           **FLAVOR_WITH_REGEX_ARGS)
 
     @mock.patch('a10_octavia.controller.worker.tasks.health_monitor_tasks._get_hm_name')
@@ -417,7 +422,7 @@ class TestHandlerHealthMonitorTasks(BaseTaskTestCase):
                                                           mock_hm.delay, mock_hm.timeout,
                                                           mock_hm.rise_threshold, method=None,
                                                           port=mock.ANY, url=None,
-                                                          expect_code=None, post_data=None,
+                                                          expect_code=None, post_data=DEF_POST_DATA,
                                                           **FLAVOR_WITH_REGEX_ARGS)
 
     @mock.patch('a10_octavia.controller.worker.tasks.health_monitor_tasks._get_hm_name')

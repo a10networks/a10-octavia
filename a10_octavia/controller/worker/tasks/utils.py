@@ -18,7 +18,14 @@ import re
 
 from oslo_config import cfg
 
+import acos_client.errors as acos_errors
+
+from octavia.common import constants
+from octavia_lib.common import constants as lib_consts
+
+from a10_octavia.common import a10constants
 from a10_octavia.common.data_models import Certificate
+from a10_octavia.common import utils as a10_utils
 
 
 CONF = cfg.CONF
@@ -49,6 +56,51 @@ def get_sess_pers_templates(pool):
         elif sp['type'] == 'SOURCE_IP':
             s_pers = pool.id
     return c_pers, s_pers
+
+
+def is_proxy_protocol_pool(pool):
+    if pool.protocol == constants.PROTOCOL_PROXY or (
+            pool.protocol == lib_consts.PROTOCOL_PROXYV2):
+        return True
+    return False
+
+
+def proxy_protocol_use_aflex(listener, pool):
+    if pool.protocol == constants.PROTOCOL_PROXY:
+        if listener is not None and (listener.protocol == constants.PROTOCOL_TCP or
+                                     listener.protocol == 'tcp'):
+            use_aflex_proxy = CONF.service_group.use_aflex_proxy
+            if use_aflex_proxy and use_aflex_proxy is True:
+                return True
+    return False
+
+
+def get_tcp_proxy_template(listener, pool):
+    tcp_proxy = None
+    aflex = None
+    if pool is None:
+        return tcp_proxy, aflex
+    if pool.provisioning_status != constants.PENDING_DELETE and (
+            is_proxy_protocol_pool(pool) is True):
+        if proxy_protocol_use_aflex(listener, pool) is True:
+            aflex = a10constants.PROXY_PROTOCPL_AFLEX_NAME
+        else:
+            tcp_proxy = a10constants.PROXY_PROTOCPL_TEMPLATE_NAME
+            if pool.protocol != constants.PROTOCOL_PROXY:
+                tcp_proxy = a10constants.PROXY_PROTOCPL_V2_TEMPLATE_NAME
+    return tcp_proxy, aflex
+
+
+def get_proxy_aflex_list(curr, proxy_aflex, exclude_aflex):
+    new_aflex_scripts = []
+    if curr is not None and 'aflex-scripts' in curr['port']:
+        aflexs = curr['port']['aflex-scripts']
+        for aflex in aflexs:
+            if exclude_aflex is None or aflex['aflex'] != exclude_aflex:
+                new_aflex_scripts.append(aflex)
+    if proxy_aflex is not None:
+        new_aflex_scripts.append({"aflex": proxy_aflex})
+    return new_aflex_scripts
 
 
 def meta(lbaas_obj, key, default):
@@ -129,3 +181,35 @@ def attribute_search(lb_resource, attr_name):
     elif hasattr(lb_resource, 'load_balancer'):
         return attribute_search(lb_resource.load_balancer, attr_name)
     return None
+
+
+def get_member_server_name(axapi_client, member, raise_not_found=True):
+    default_name = '{}_{}'.format(member.project_id[:5], member.ip_address.replace('.', '_'))
+    server_name = default_name
+    try:
+        server_name = axapi_client.slb.server.get(server_name)
+    except (acos_errors.NotFound):
+        # Backwards compatability with a10-neutron-lbaas
+        if CONF.a10_global.use_parent_partition:
+            try:
+                parent_project_id = a10_utils.get_parent_project(member.project_id)
+                server_name = '_{}_{}_neutron'.format(parent_project_id[:5],
+                                                      member.ip_address.replace('.', '_'))
+                server_name = axapi_client.slb.server.get(server_name)
+            except (acos_errors.NotFound):
+                server_name = '_{}_{}_neutron'.format(member.project_id[:5],
+                                                      member.ip_address.replace('.', '_'))
+                try:
+                    server_name = axapi_client.slb.server.get(server_name)
+                except (acos_errors.NotFound) as e:
+                    if raise_not_found:
+                        raise e
+                    return default_name
+        else:
+            try:
+                server_name = axapi_client.slb.server.get('_{}_{}'.format(server_name, 'neutron'))
+            except (acos_errors.NotFound) as e:
+                if raise_not_found:
+                    raise e
+                return default_name
+    return server_name['server']['name']

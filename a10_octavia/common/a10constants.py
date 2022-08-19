@@ -116,8 +116,20 @@ L2DSR_FLAVOR = "l2dsr_flavor"
 MASTER_AMPHORA_STATUS = "master_amphora_status"
 BACKUP_AMPHORA_STATUS = "backup_amphora_status"
 
+FLOW_TYPE = 'flow_type'
+FLOW_TYPE_DELETE = 'delete'
+
 # ACOS versions
 ACOS_5_2_1_P2 = "5.2.1-P2"
+
+# Proxy Protocol Object name
+PROXY_POOL_COUNT = 'proxy_pool_count'
+PROXY_PROTOCPL_TEMPLATE_NAME = 'octavia_proxy_protocol_v1'
+PROXY_PROTOCPL_V2_TEMPLATE_NAME = 'octavia_proxy_protocol_v2'
+PROXY_PROTOCPL_AFLEX_NAME = 'octavia_aflex_proxy_protocol_v1'
+PROXY_PROTOCPL_V1 = "v1"
+PROXY_PROTOCPL_V2 = "v2"
+
 
 # ============================
 # Taskflow flow and task names
@@ -211,6 +223,7 @@ HANDLE_VRID_MEMBER_SUBFLOW = 'handle-vrid-member-subflow'
 SPARE_VTHUNDER_CREATE = 'spare-vthunder-create'
 ACTIVATE_GLM_LICENSE_SUBFLOW = 'activate-glm-license-subflow'
 CONFIGURE_DNS_NAMESERVERS = 'configure-dns-nameservers'
+
 ACTIVATE_FLEXPOOL_LICENSE = 'activate-flexpool-license'
 CONFIGURE_PROXY_SERVER = 'configure-proxy-server'
 SET_VTHUNDER_HOSTNAME = 'set-vthunder-hostname'
@@ -237,6 +250,25 @@ POST_SPARE_PLUG_NETWORK = 'post-failover-plug-network'
 GET_VCS_DEVICE_ID = 'get-vcs-device-id'
 POST_FAILOVER_DB_UPDATE = 'post-failover-db-update'
 MARK_LB_LIST_ERROR_ON_REVERT = 'mark-lb-list-error-on-revert'
+
+FULLY_POPULATED_LISTENER_CREATE = 'fully-populated-listener-create'
+FULLY_POPULATED_ERROR_ON_REVERT = '-error-on-revert'
+FULLY_POPULATED_GET_FLAVOR = '-get-flavor'
+FULLY_POPULATED_NAT_CREATE = '-natpool-create'
+FULLY_POPULATED_CREATE_LISTENER = '-create-listener'
+FULLY_POPULATED_MARK_LISTENER_ACTIVE = '-mark-listener-active'
+FULLY_POPULATED_GET_POOL_LISTENER = '-get-pool-listener'
+FULLY_POPULATED_CREATE_POOL = '-create-pool'
+FULLY_POPULATED_MARK_POOL_ACTIVE = '-mark-pool-active'
+FULLY_POPULATED_VALID_SUBNET = '-validate-subnet'
+FULLY_POPULATED_CREATE_MEMBER = '-create-member'
+FULLY_POPULATED_MARK_MEMBER_ACTIVE = '-mark-member-active'
+FULLY_POPULATED_CREATE_HM = '-create-hm'
+FULLY_POPULATED_MARK_HM_ACTIVE = '-mark-hm-active'
+FULLY_POPULATED_CREATE_L7POLICY = '-create-l7policy'
+FULLY_POPULATED_MARK_L7POLICY_ACTIVE = '-mark-l7policy-active'
+FULLY_POPULATED_CREATE_L7RULE = '-create-l7rule'
+FULLY_POPULATED_MARK_L7RULE_ACTIVE = '-mark-l7rule-active'
 
 # ======================
 # Non-Taskflow Constants

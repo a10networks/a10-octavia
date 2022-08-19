@@ -20,6 +20,7 @@ from requests.exceptions import ConnectionError
 from taskflow import task
 
 from octavia.common import exceptions
+from octavia.controller.worker.v1.tasks import lifecycle_tasks
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import openstack_mappings
@@ -76,12 +77,18 @@ class CreateAndAssociateHealthMonitor(task.Task):
                           "by A10 provider").format(health_mon.id, health_mon.type))
 
         try:
+            hm_port = 0
+            if listeners is not None:
+                hm_port = listeners[0].protocol_port
+            elif len(health_mon.pool.members) > 0:
+                hm_port = health_mon.pool.members[0].protocol_port
+
             post_data = CONF.health_monitor.post_data
             self.axapi_client.slb.hm.create(health_mon.id,
                                             health_mon.type,
                                             health_mon.delay, health_mon.timeout,
                                             health_mon.rise_threshold, method=method,
-                                            port=listeners[0].protocol_port, url=url,
+                                            port=hm_port, url=url,
                                             expect_code=expect_code, post_data=post_data,
                                             **args)
             LOG.debug("Successfully created health monitor: %s", health_mon.id)
@@ -89,6 +96,22 @@ class CreateAndAssociateHealthMonitor(task.Task):
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to create health monitor: %s", health_mon.id)
             raise e
+
+        if health_mon.pool is not None and health_mon.pool.members is not None:
+            for member in health_mon.pool.members:
+                try:
+                    server_name = utils.get_member_server_name(self.axapi_client, member,
+                                                               raise_not_found=False)
+                    if self.axapi_client.slb.server.exists(server_name):
+                        self.axapi_client.slb.server.update(server_name, member.ip_address,
+                                                            health_check=health_mon.id)
+                        LOG.debug("Successfully associated health monitor %s to member %s",
+                                  health_mon.id, member.id)
+                except (acos_errors.ACOSException, ConnectionError) as e:
+                    LOG.exception(
+                        "Failed to associate health monitor %s to member %s",
+                        health_mon.id, member.id)
+                    raise e
 
     @axapi_client_decorator_for_revert
     def revert(self, listeners, health_mon, vthunder, *args, **kwargs):
@@ -107,17 +130,6 @@ class DeleteHealthMonitor(task.Task):
 
     @axapi_client_decorator
     def execute(self, health_mon, vthunder):
-        try:
-            self.axapi_client.slb.service_group.update(health_mon.pool_id,
-                                                       hm_delete=True)
-            LOG.debug("Successfully dissociated health monitor %s from pool %s",
-                      health_mon.id, health_mon.pool_id)
-        except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception(
-                "Failed to dissociate health monitor %s from pool %s",
-                health_mon.pool_id, health_mon.id)
-            raise e
-
         try:
             hm_name = _get_hm_name(self.axapi_client, health_mon)
             self.axapi_client.slb.hm.delete(hm_name)
@@ -170,3 +182,13 @@ class UpdateHealthMonitor(task.Task):
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update health monitor: %s", health_mon.id)
             raise e
+
+
+class HealthMonitorToErrorOnRevertTask(lifecycle_tasks.BaseLifecycleTask):
+    """Task to update Health Monitor"""
+
+    def execute(self, health_mon):
+        pass
+
+    def revert(self, health_mon, *args, **kwargs):
+        self.task_utils.mark_health_mon_prov_status_error(health_mon.pool_id)

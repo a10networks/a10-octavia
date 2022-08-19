@@ -17,6 +17,8 @@ from oslo_log import log as logging
 from requests import exceptions
 from taskflow import task
 
+from octavia.controller.worker.v1.tasks import lifecycle_tasks
+
 from a10_octavia.common import openstack_mappings
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.policy import PolicyUtil
@@ -36,6 +38,7 @@ class L7RuleParent(object):
         size = len(script.encode('utf-8'))
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
+        tcp_proxy, aflex = utils.get_tcp_proxy_template(listener, listener.default_pool)
         kargs = {}
         listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
                                                                      listener.protocol)
@@ -68,7 +71,7 @@ class L7RuleParent(object):
                 listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port,
                 listener.default_pool_id, s_pers,
-                c_pers, 1, **kargs)
+                c_pers, 1, tcp_proxy_name=tcp_proxy, **kargs)
             LOG.debug("Successfully associated l7rule %s to listener %s", l7rule.id, listener.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to associate l7rule %s to listener %s", l7rule.id, listener.id)
@@ -113,6 +116,7 @@ class DeleteL7Rule(task.Task):
         size = len(script.encode('utf-8'))
         listener = listeners[0]
         c_pers, s_pers = utils.get_sess_pers_templates(listener.default_pool)
+        tcp_proxy, aflex = utils.get_tcp_proxy_template(listener, listener.default_pool)
         kargs = {}
         listener.protocol = openstack_mappings.virtual_port_protocol(self.axapi_client,
                                                                      listener.protocol)
@@ -144,7 +148,7 @@ class DeleteL7Rule(task.Task):
             self.axapi_client.slb.virtual_server.vport.update(
                 listener.load_balancer_id, listener.id,
                 listener.protocol, listener.protocol_port, listener.default_pool_id,
-                s_pers, c_pers, 1, **kargs)
+                s_pers, c_pers, 1, tcp_proxy_name=tcp_proxy, **kargs)
             LOG.debug("Successfully dissociated l7rule %s from listener %s", l7rule.id, listener.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception(
@@ -152,3 +156,13 @@ class DeleteL7Rule(task.Task):
                 l7rule.id,
                 listener.id)
             raise e
+
+
+class L7RuleToErrorOnRevertTask(lifecycle_tasks.BaseLifecycleTask):
+    """Task to set a l7rule to ERROR on revert."""
+
+    def execute(self, l7rule):
+        pass
+
+    def revert(self, l7rule, *args, **kwargs):
+        self.task_utils.mark_l7rule_prov_status_error(l7rule.id)

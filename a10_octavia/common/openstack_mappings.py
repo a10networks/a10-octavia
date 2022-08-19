@@ -31,6 +31,7 @@ def service_group_lb_method(c, os_method):
         'ROUND_ROBIN': z.ROUND_ROBIN,
         'LEAST_CONNECTIONS': z.LEAST_CONNECTION,
         'SOURCE_IP': z.SOURCE_IP_HASH_ONLY,
+        'SOURCE_IP_PORT': z.SOURCE_IP_HASH,
         'WEIGHTED_ROUND_ROBIN': z.WEIGHTED_ROUND_ROBIN,
         'WEIGHTED_LEAST_CONNECTION': z.WEIGHTED_LEAST_CONNECTION,
         'LEAST_CONNECTION_ON_SERVICE_PORT':
@@ -57,7 +58,9 @@ def service_group_protocol(c, os_protocol):
         'HTTPS': z.TCP,
         'TERMINATED_HTTPS': z.TCP,
         'TCP': z.TCP,
-        'UDP': z.UDP
+        'UDP': z.UDP,
+        'PROXY': z.TCP,
+        'PROXYV2': z.TCP
     }
     return protocols[os_protocol]
 
