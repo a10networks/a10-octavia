@@ -171,6 +171,12 @@ class SSLCertUpdate(task.Task):
                                                        size=len(cert_data.cert_content),
                                                        action=action,
                                                        certificate_type=certificate_type)
+            else:
+                self.axapi_client.file.ssl_cert.create(file=cert_data.cert_filename,
+                                                       cert=cert_data.cert_content,
+                                                       size=len(cert_data.cert_content),
+                                                       action="import",
+                                                       certificate_type=certificate_type)
                 LOG.debug("Successfully updated SSL certificate: %s", cert_data.cert_filename)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update SSL certificate: %s", cert_data.cert_filename)
@@ -188,6 +194,11 @@ class SSLKeyUpdate(task.Task):
                                                       cert=cert_data.key_content,
                                                       size=len(cert_data.key_content),
                                                       action=action)
+            else:
+                self.axapi_client.file.ssl_key.create(file=cert_data.key_filename,
+                                                      cert=cert_data.key_content,
+                                                      size=len(cert_data.key_content),
+                                                      action="import")
                 LOG.debug("Successfully updated SSL key: %s", cert_data.key_filename)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update SSL key: %s", cert_data.key_filename)
@@ -201,10 +212,21 @@ class ClientSSLTemplateUpdate(task.Task):
     def execute(self, cert_data, vthunder):
         try:
             if self.axapi_client.slb.template.client_ssl.exists(name=cert_data.template_name):
+                old = self.axapi_client.slb.template.client_ssl.get(name=cert_data.template_name)
                 self.axapi_client.slb.template.client_ssl.update(name=cert_data.template_name,
                                                                  cert=cert_data.cert_filename,
                                                                  key=cert_data.key_filename,
                                                                  passphrase=cert_data.key_pass)
+
+                try:
+                    if 'cert' in old['client-ssl'].keys() and 'key' in old['client-ssl'].keys():
+                        self.axapi_client.file.ssl_cert.delete(private_key=old['client-ssl']['key'],
+                                                               cert_name=old['client-ssl']['cert'])
+                        self.axapi_client.file.ssl_key.delete(private_key=old['client-ssl']['key'])
+                except Exception as e:
+                    LOG.warning("Clean up old cert/key files failed. error:%s", str(e))
+                    # clean up with best effort, don't raise here
+
                 LOG.debug("Successfully updated SSL template: %s", cert_data.template_name)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update SSL template: %s", cert_data.template_name)
