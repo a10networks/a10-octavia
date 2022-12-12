@@ -393,7 +393,7 @@ class ListenerFlows(object):
             suffix = 'listener_' + listener.id
 
         update_ssl_cert_flow = linear_flow.Flow(
-            a10constants.DELETE_SSL_CERT_FLOW + suffix)
+            a10constants.UPDATE_SSL_CERT_FLOW + suffix)
         if listener is not None:
             update_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
                 name='get_ssl_cert_data_' + suffix,
