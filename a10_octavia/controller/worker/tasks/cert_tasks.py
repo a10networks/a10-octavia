@@ -220,9 +220,13 @@ class ClientSSLTemplateUpdate(task.Task):
 
                 try:
                     if 'cert' in old['client-ssl'].keys() and 'key' in old['client-ssl'].keys():
-                        self.axapi_client.file.ssl_cert.delete(private_key=old['client-ssl']['key'],
-                                                               cert_name=old['client-ssl']['cert'])
-                        self.axapi_client.file.ssl_key.delete(private_key=old['client-ssl']['key'])
+                        if old['client-ssl']['cert'] != cert_data.cert_filename:
+                            self.axapi_client.file.ssl_cert.delete(
+                                private_key=old['client-ssl']['key'],
+                                cert_name=old['client-ssl']['cert'])
+                        if old['client-ssl']['key'] != cert_data.key_filename:
+                            self.axapi_client.file.ssl_key.delete(
+                                private_key=old['client-ssl']['key'])
                 except Exception as e:
                     LOG.warning("Clean up old cert/key files failed. error:%s", str(e))
                     # clean up with best effort, don't raise here
