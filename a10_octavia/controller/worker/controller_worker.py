@@ -365,6 +365,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
                         constants.PENDING_UPDATE)
             listener = e.last_attempt.result()
 
+        LOG.warning('listener update ssl: %s !!!!!!!!!!!!!!!', listener.tls_certificate_id)
+
         load_balancer = listener.load_balancer
 
         topology = CONF.a10_controller_worker.loadbalancer_topology
