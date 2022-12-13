@@ -358,7 +358,8 @@ A10_CONTROLLER_WORKER_OPTS = [
                help=_('Retry Backoff for Database Entry')),
     cfg.IntOpt('retry_max',
                default=5,
-               help=_('Maximum Retries for Database Entry'))
+               help=_('Maximum Retries for Database Entry')),
+    cfg.BoolOpt('event_notifications', default=True)
 ]
 
 A10_HOUSE_KEEPING_OPTS = [

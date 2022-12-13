@@ -143,12 +143,12 @@ class LoadBalancerFlows(object):
             requires=a10constants.VTHUNDER))
         lb_create_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
-        lb_create_flow.add(
-            notification_tasks.SendCreateNotification(
-                requires=constants.LOADBALANCER
+        if CONF.controller_worker.event_notifications:
+            lb_create_flow.add(
+                notification_tasks.SendCreateNotification(
+                    requires=constants.LOADBALANCER
+                )
             )
-        )
-
         return lb_create_flow
 
     def _create_single_topology(self):
@@ -385,8 +385,9 @@ class LoadBalancerFlows(object):
             delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
                 name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-        delete_LB_flow.add(notification_tasks.SendDeleteNotification(
-            requires=constants.LOADBALANCER))
+        if CONF.controller_worker.event_notifications:
+            delete_LB_flow.add(notification_tasks.SendDeleteNotification(
+                requires=constants.LOADBALANCER))
         return (delete_LB_flow, store)
 
     def get_new_lb_networking_subflow(self, topology, vthunder):
@@ -559,11 +560,12 @@ class LoadBalancerFlows(object):
             inject={"status": constants.ACTIVE}))
         update_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
-        update_LB_flow.add(
-            notification_tasks.SendUpdateNotification(
-                requires=constants.LOADBALANCER
+        if CONF.controller_worker.event_notifications:
+            update_LB_flow.add(
+                notification_tasks.SendUpdateNotification(
+                    requires=constants.LOADBALANCER
+                )
             )
-        )
         return update_LB_flow
 
     def get_update_rack_load_balancer_flow(self, vthunder_conf, device_dict, topology):
@@ -622,11 +624,12 @@ class LoadBalancerFlows(object):
             inject={"status": constants.ACTIVE}))
         update_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
-        update_LB_flow.add(
-            notification_tasks.SendUpdateNotification(
-                requires=constants.LOADBALANCER
+        if CONF.controller_worker.event_notifications:
+            update_LB_flow.add(
+                notification_tasks.SendUpdateNotification(
+                    requires=constants.LOADBALANCER
+                )
             )
-        )
         return update_LB_flow
 
     def get_create_rack_vthunder_load_balancer_flow(
@@ -699,12 +702,12 @@ class LoadBalancerFlows(object):
             requires=a10constants.VTHUNDER))
         lb_create_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
-        lb_create_flow.add(
-            notification_tasks.SendCreateNotification(
-                requires=constants.LOADBALANCER
+        if CONF.controller_worker.event_notifications:
+            lb_create_flow.add(
+                notification_tasks.SendCreateNotification(
+                    requires=constants.LOADBALANCER
+                )
             )
-        )
-
         return lb_create_flow
 
     def get_delete_rack_vthunder_load_balancer_flow(self, lb, cascade, vthunder_conf, device_dict):
@@ -810,8 +813,9 @@ class LoadBalancerFlows(object):
             delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
                 name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-        delete_LB_flow.add(notification_tasks.SendDeleteNotification(
-            requires=constants.LOADBALANCER))
+        if CONF.controller_worker.event_notifications:
+            delete_LB_flow.add(notification_tasks.SendDeleteNotification(
+                requires=constants.LOADBALANCER))
         return (delete_LB_flow, store)
 
     def get_post_lb_rack_vthunder_association_flow(self, prefix, topology,
