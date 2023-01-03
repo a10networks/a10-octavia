@@ -108,6 +108,9 @@ class A10ProviderDriver(driver_base.ProviderDriver):
             listener_dict['client_crl_container_id'] = listener_dict.pop(
                 'client_crl_container_ref')
         listener_dict.pop('client_crl_container_data', None)
+        if 'default_tls_container_ref' in listener_dict:
+            listener_dict['tls_certificate_id'] = listener_dict.pop('default_tls_container_ref')
+        listener_dict.pop('default_tls_container_data', None)
 
         payload = {constants.LISTENER_ID: listener_id,
                    constants.LISTENER_UPDATES: listener_dict}
