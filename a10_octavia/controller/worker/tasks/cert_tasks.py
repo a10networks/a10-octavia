@@ -51,7 +51,7 @@ class GetSSLCertData(task.Task):
             cert_data = utils.get_cert_data(barbican_client, listener)
             if not cert_data.template_name:
                 client_ssl=self.axapi_client.slb.template.client_ssl.get(name=listener.id)
-                if client_ssl['client-ssl'].get('cert') or client_ssl['client-ssl'].get('key'):
+                if client_ssl['client-ssl'].get('cert') and client_ssl['client-ssl'].get('key'):
                     cert_data.cert_filename=client_ssl['client-ssl'].get('cert')
                     cert_data.key_filename=client_ssl['client-ssl'].get('key')
                     cert_data.template_name=listener.id
