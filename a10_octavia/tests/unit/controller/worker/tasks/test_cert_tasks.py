@@ -60,7 +60,7 @@ class TestCertHandlerTasks(BaseTaskTestCase):
     @mock.patch('a10_octavia.controller.worker.tasks.utils.get_cert_data', return_value=CERT_DATA)
     def test_GetSSLCertData_success(self, barbican_class, cert_data):
         mock_ssl_cert = cert_tasks.GetSSLCertData()
-        out = mock_ssl_cert.execute(LB, LISTENER)
+        out = mock_ssl_cert.execute(LB, LISTENER, VTHUNDER)
         self.assertEqual(out, CERT_DATA)
 
     @patch.object(BarbicanACLAuth, 'get_barbican_client')

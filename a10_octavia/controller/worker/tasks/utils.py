@@ -44,9 +44,8 @@ def get_cert_data(barbican_client, listener):
                                     key_content=cert_container.private_key.payload,
                                     key_pass=cert_container.private_key_passphrase,
                                     template_name=listener.id)
-            return cert_data
     LOG.info("Secret container not found %s", cert_ref)
-    return None
+    return cert_data
 
 
 def get_sess_pers_templates(pool):
