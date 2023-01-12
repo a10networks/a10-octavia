@@ -35,13 +35,16 @@ LOG = logging.getLogger(__name__)
 def get_cert_data(barbican_client, listener):
     cert_data = Certificate()
     cert_ref = listener.tls_certificate_id
-    cert_container = barbican_client.containers.get(container_ref=cert_ref)
-    cert_data = Certificate(cert_filename=cert_container.certificate.name,
-                            key_filename=cert_container.private_key.name,
-                            cert_content=cert_container.certificate.payload,
-                            key_content=cert_container.private_key.payload,
-                            key_pass=cert_container.private_key_passphrase,
-                            template_name=listener.id)
+    cert_containers = barbican_client.containers.list()
+    for cert_container in cert_containers:
+        if cert_container.container_ref == cert_ref:
+            cert_data = Certificate(cert_filename=cert_container.certificate.name,
+                                    key_filename=cert_container.private_key.name,
+                                    cert_content=cert_container.certificate.payload,
+                                    key_content=cert_container.private_key.payload,
+                                    key_pass=cert_container.private_key_passphrase,
+                                    template_name=listener.id)
+    LOG.info("Secret container not found %s", cert_ref)
     return cert_data
 
 

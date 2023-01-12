@@ -340,12 +340,12 @@ class ListenerFlows(object):
         if listener is not None:
             create_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
                 name='get_ssl_cert_data_' + suffix,
-                requires=[constants.LOADBALANCER, constants.LISTENER],
+                requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER],
                 inject={constants.LISTENER: listener},
                 provides=a10constants.CERT_DATA))
         else:
             create_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
-                requires=[constants.LOADBALANCER, constants.LISTENER],
+                requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER],
                 provides=a10constants.CERT_DATA))
         create_ssl_cert_flow.add(cert_tasks.SSLCertCreate(
             name='ssl_cert_create_' + suffix,
@@ -368,17 +368,23 @@ class ListenerFlows(object):
         if listener is not None:
             delete_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
                 name='get_ssl_cert_data_' + suffix,
-                requires=[constants.LOADBALANCER, constants.LISTENER],
+                requires=[constants.LOADBALANCER, constants.LISTENER,
+                          a10constants.VTHUNDER],
                 inject={constants.LISTENER: listener},
                 provides=a10constants.CERT_DATA))
+            delete_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateDelete(
+                name='client_ssl_template_delete_' + suffix,
+                requires=[a10constants.VTHUNDER, constants.LISTENER],
+                inject={constants.LISTENER: listener}))
         else:
             delete_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
                 name='get_ssl_cert_data_' + suffix,
-                requires=[constants.LOADBALANCER, constants.LISTENER],
+                requires=[constants.LOADBALANCER, constants.LISTENER,
+                          a10constants.VTHUNDER],
                 provides=a10constants.CERT_DATA))
-        delete_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateDelete(
-            name='client_ssl_template_delete_' + suffix,
-            requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
+            delete_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateDelete(
+                name='client_ssl_template_delete_' + suffix,
+                requires=[a10constants.VTHUNDER, constants.LISTENER]))
         delete_ssl_cert_flow.add(cert_tasks.SSLCertDelete(
             name='ssl_cert_delete_' + suffix,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
@@ -397,12 +403,14 @@ class ListenerFlows(object):
         if listener is not None:
             update_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
                 name='get_ssl_cert_data_' + suffix,
-                requires=[constants.LOADBALANCER, constants.LISTENER],
+                requires=[constants.LOADBALANCER, constants.LISTENER, constants.UPDATE_DICT,
+                          a10constants.VTHUNDER],
                 inject={constants.LISTENER: listener},
                 provides=a10constants.CERT_DATA))
         else:
             update_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
-                requires=[constants.LOADBALANCER, constants.LISTENER],
+                requires=[constants.LOADBALANCER, constants.LISTENER, constants.UPDATE_DICT,
+                          a10constants.VTHUNDER],
                 provides=a10constants.CERT_DATA))
         update_ssl_cert_flow.add(cert_tasks.SSLCertUpdate(
             name='ssl_cert_update_' + suffix,

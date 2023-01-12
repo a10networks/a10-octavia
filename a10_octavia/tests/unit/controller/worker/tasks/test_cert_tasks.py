@@ -60,7 +60,7 @@ class TestCertHandlerTasks(BaseTaskTestCase):
     @mock.patch('a10_octavia.controller.worker.tasks.utils.get_cert_data', return_value=CERT_DATA)
     def test_GetSSLCertData_success(self, barbican_class, cert_data):
         mock_ssl_cert = cert_tasks.GetSSLCertData()
-        out = mock_ssl_cert.execute(LB, LISTENER)
+        out = mock_ssl_cert.execute(LB, LISTENER, VTHUNDER)
         self.assertEqual(out, CERT_DATA)
 
     @patch.object(BarbicanACLAuth, 'get_barbican_client')
@@ -188,9 +188,9 @@ class TestCertHandlerTasks(BaseTaskTestCase):
         mock_client_ssl_template.axapi_client = self.client_mock
         mock_client_ssl_template.execute(CERT_DATA, VTHUNDER)
         self.client_mock.slb.template.client_ssl.exists.assert_called_with(
-            name=a10_test_constants.MOCK_LISTENER_ID)
+            name=a10_test_constants.MOCK_TEMPLATE_NAME)
         self.client_mock.slb.template.client_ssl.update.assert_called_with(
-            name=a10_test_constants.MOCK_LISTENER_ID,
+            name=a10_test_constants.MOCK_TEMPLATE_NAME,
             cert=a10_test_constants.MOCK_CERT_FILENAME,
             key=a10_test_constants.MOCK_KEY_FILENAME,
             passphrase=a10_test_constants.MOCK_KEY_PASS)
@@ -202,7 +202,7 @@ class TestCertHandlerTasks(BaseTaskTestCase):
         self.client_mock.slb.template.client_ssl.exists.return_value = False
         mock_client_ssl_template.execute(CERT_DATA, VTHUNDER)
         self.client_mock.slb.template.client_ssl.create.assert_called_with(
-            name=a10_test_constants.MOCK_LISTENER_ID,
+            name=a10_test_constants.MOCK_TEMPLATE_NAME,
             cert=a10_test_constants.MOCK_CERT_FILENAME,
             key=a10_test_constants.MOCK_KEY_FILENAME,
             passphrase=a10_test_constants.MOCK_KEY_PASS)
@@ -213,16 +213,16 @@ class TestCertHandlerTasks(BaseTaskTestCase):
         mock_client_ssl_template.axapi_client = self.client_mock
         mock_client_ssl_template.revert(CERT_DATA, VTHUNDER)
         self.client_mock.slb.template.client_ssl.delete.assert_called_with(
-            name=a10_test_constants.MOCK_LISTENER_ID)
+            name=a10_test_constants.MOCK_TEMPLATE_NAME)
 
     def test_client_ssl_template_update(self):
         mock_client_ssl_template = cert_tasks.ClientSSLTemplateUpdate()
         mock_client_ssl_template.axapi_client = self.client_mock
         mock_client_ssl_template.execute(CERT_DATA, VTHUNDER)
         self.client_mock.slb.template.client_ssl.exists.assert_called_with(
-            name=a10_test_constants.MOCK_LISTENER_ID)
+            name=a10_test_constants.MOCK_TEMPLATE_NAME)
         self.client_mock.slb.template.client_ssl.update.assert_called_with(
-            name=a10_test_constants.MOCK_LISTENER_ID,
+            name=a10_test_constants.MOCK_TEMPLATE_NAME,
             cert=a10_test_constants.MOCK_CERT_FILENAME,
             key=a10_test_constants.MOCK_KEY_FILENAME,
             passphrase=a10_test_constants.MOCK_KEY_PASS)
@@ -230,6 +230,6 @@ class TestCertHandlerTasks(BaseTaskTestCase):
     def test_client_ssl_template_delete(self):
         mock_client_ssl_template = cert_tasks.ClientSSLTemplateDelete()
         mock_client_ssl_template.axapi_client = self.client_mock
-        mock_client_ssl_template.execute(CERT_DATA, VTHUNDER)
+        mock_client_ssl_template.execute(VTHUNDER, LISTENER)
         self.client_mock.slb.template.client_ssl.delete.assert_called_with(
             name=a10_test_constants.MOCK_LISTENER_ID)
