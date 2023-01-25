@@ -1502,3 +1502,51 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             flavor_data = json.loads(flavor_profile.flavor_data)
             return flavor_data
         return None
+
+    def delete_load_balancer_with_housekeeping(self, load_balancer_id, ctx_map, ctx_lock, cascade=True):
+        """Function to delete load balancer for A10 provider using Housekeeper thread"""
+        self.ctx_map = ctx_map
+        self.ctx_lock = ctx_lock
+        lb = self._lb_repo.get(db_apis.get_session(),
+                               id=load_balancer_id)
+        vthunder = self._vthunder_repo.get_vthunder_from_lb(db_apis.get_session(),
+                                                            load_balancer_id)
+        deleteCompute = False
+        ctx_flags = [False]
+        busy = self._vthunder_busy_check(lb.project_id, True, ctx_flags, lb)
+        try:
+            if vthunder:
+                deleteCompute = self._vthunder_repo.get_delete_compute_flag(db_apis.get_session(),
+                                                                            vthunder.compute_id)
+
+            if self._is_rack_flow(lb.project_id, loadbalancer=lb):
+                vthunder_conf = CONF.hardware_thunder.devices.get(lb.project_id, None)
+                device_dict = CONF.hardware_thunder.devices
+                (flow, store) = self._lb_flows.get_delete_rack_vthunder_load_balancer_flow(
+                    lb, cascade,
+                    vthunder_conf=vthunder_conf, device_dict=device_dict)
+                store.update({constants.LOADBALANCER: lb,
+                              a10constants.COMPUTE_BUSY: busy,
+                              constants.VIP: lb.vip,
+                              constants.SERVER_GROUP_ID: lb.server_group_id})
+            else:
+                (flow, store) = self._lb_flows.get_delete_load_balancer_flow(
+                    lb, deleteCompute, cascade)
+                store.update({constants.LOADBALANCER: lb,
+                              a10constants.COMPUTE_BUSY: busy,
+                              constants.VIP: lb.vip,
+                              constants.SERVER_GROUP_ID: lb.server_group_id,
+                              constants.LOADBALANCER_ID: lb.id,
+                              a10constants.MASTER_AMPHORA_STATUS: True,
+                              a10constants.VTHUNDER_CONFIG: None,
+                              a10constants.USE_DEVICE_FLAVOR: False,
+                              a10constants.LB_COUNT_THUNDER: None,
+                              a10constants.MEMBER_COUNT_THUNDER: None})
+
+            delete_lb_tf = self.taskflow_load(flow, store=store)
+
+            with tf_logging.DynamicLoggingListener(delete_lb_tf,
+                                                   log=LOG):
+                delete_lb_tf.run()
+        finally:
+            self._set_vthunder_available(lb.project_id, True, ctx_flags, lb)
