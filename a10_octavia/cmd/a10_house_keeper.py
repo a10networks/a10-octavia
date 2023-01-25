@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 from datetime import datetime
 import signal
 import sys
@@ -27,6 +26,7 @@ from a10_octavia.cmd import service
 from a10_octavia.controller.housekeeping import house_keeping
 from octavia import version
 
+
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 
@@ -34,6 +34,7 @@ spare_amp_thread_event = threading.Event()
 db_cleanup_thread_event = threading.Event()
 write_memory_thread_event = threading.Event()
 stats_cleanup_thread_event = threading.Event()
+pending_resource_cleanup_thread_event = threading.Event()
 
 
 def spare_amphora_check():
@@ -112,6 +113,28 @@ def stats_cleanup():
         stats_cleanup_thread_event.wait(interval)
 
 
+def pending_resource_cleanup():
+    """Perform cleanup of pending resources."""
+    LOG.info("Initiating the cleanup of pending resources..")
+    if CONF.a10_house_keeping.pending_resource_cleanup == 'enable':
+        interval = CONF.a10_house_keeping.resource_cleanup_interval
+        LOG.info("Pending resource cleanup interval is set to %d sec", interval)
+
+        pending_resource_cleanup = house_keeping.PendingResourceCleanup()
+        while not pending_resource_cleanup_thread_event.is_set():
+            LOG.info("Initiating cleanup activity for all pending resources")
+            timestamp = datetime.utcnow()
+            LOG.debug("Starting pending resource cleanup thread at %s", str(timestamp))
+            try:
+                pending_resource_cleanup.cleanup_slb_resources()
+            except Exception as e:
+                LOG.exception('Pending resource cleanup caught the following exception and '
+                              ' is restarting: {}'.format(e))
+            write_memory_thread_event.wait(interval)
+    else:
+        LOG.warning("Pending resource cleanup flag is disabled...")
+
+
 def _mutate_config(*args, **kwargs):
     LOG.info("Housekeeping recieved HUP signal, mutating config.")
     CONF.mutate_config_files()
@@ -145,6 +168,11 @@ def main():
     stats_cleanup_thread.daemon = True
     stats_cleanup_thread.start()
 
+    # Thread to perform pending resource cleanup
+    pending_resource_cleanup_thread = threading.Thread(target=pending_resource_cleanup)
+    pending_resource_cleanup_thread.daemon = True
+    pending_resource_cleanup_thread.start()
+
     signal.signal(signal.SIGHUP, _mutate_config)
 
     # Try-Exception block should be at the end to gracefully exit threads
@@ -157,8 +185,10 @@ def main():
         db_cleanup_thread_event.set()
         write_memory_thread_event.set()
         stats_cleanup_thread_event.set()
+        pending_resource_cleanup_thread_event.set()
         spare_amp_thread.join()
         db_cleanup_thread.join()
         write_memory_thread.join()
         stats_cleanup_thread.join()
+        pending_resource_cleanup_thread.join()
         LOG.info("House-Keeping process terminated")

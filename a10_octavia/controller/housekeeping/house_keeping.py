@@ -15,10 +15,12 @@
 
 from concurrent import futures
 import datetime
+import multiprocessing
 
 from oslo_config import cfg
 from oslo_log import log as logging
 
+from octavia.common import constants
 from octavia.db import api as db_api
 from octavia.db import repositories as repo
 
@@ -27,6 +29,9 @@ from a10_octavia.db import repositories as a10repo
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
+mp_mgr = multiprocessing.Manager()
+hk_ctx_map = mp_mgr.dict()
+hk_ctx_lock = mp_mgr.Lock()
 
 
 class SpareAmphora(object):
@@ -161,3 +166,38 @@ class WriteMemory(object):
         else:
             LOG.warning("No thunders found that are recently updated."
                         " Not performing write memory...")
+
+
+class PendingResourceCleanup(object):
+
+    def __init__(self):
+        self.loadbalancer_repo = a10repo.LoadBalancerRepository()
+        self.vthunder_repo = a10repo.VThunderRepository()
+        self.listener_repo = repo.ListenerRepository()
+        self.pool_repo = repo.PoolRepository()
+        self.member_repo = repo.MemberRepository()
+        self.cw = cw.A10ControllerWorker()
+        self.svc_up_time = datetime.datetime.utcnow()
+
+    def cleanup_slb_resources(self):
+        cleanup_interval = CONF.a10_house_keeping.resource_cleanup_interval
+        pending_lbs = self.loadbalancer_repo.get_pending_lbs_to_be_deleted(db_api.get_session(),
+                                                                           cleanup_interval)
+        for pending_lb in pending_lbs:
+            try:
+                self.loadbalancer_repo.update(db_api.get_session(),
+                                              pending_lb.id,
+                                              provisioning_status=constants.ERROR)
+                vthunder = self.vthunder_repo.get_vthunder_from_lb(
+                    db_api.get_session(), pending_lb.id)
+                self.vthunder_repo.update(
+                    db_api.get_session(),
+                    vthunder.id,
+                    status=constants.ACTIVE)
+            except Exception as e:
+                LOG.exception("Failed to update load balancer %(lb) "
+                              "provisioning status to ERROR due to: "
+                              "%(except)s", {'lb': pending_lb.id, 'except': e})
+                raise e
+            lb = self.loadbalancer_repo.get(db_api.get_session(), id=pending_lb.id)
+            self.cw.delete_load_balancer_with_housekeeping(lb.id, hk_ctx_map, hk_ctx_lock, True)
