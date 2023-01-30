@@ -523,7 +523,7 @@ class LoadBalancerRepository(repo.LoadBalancerRepository):
     def get_pending_lbs_to_be_deleted(self, session, cleanup_interval):
         lb_list = []
         time_interval = datetime.datetime.utcnow() - datetime.timedelta(
-                seconds=CONF.a10_house_keeping.resource_cleanup_interval)
+                seconds=cleanup_interval)
         query = session.query(self.model_class).filter(
                 self.model_class.created_at < time_interval).filter(
                 and_(or_(self.model_class.updated_at == None,

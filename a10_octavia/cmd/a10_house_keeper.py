@@ -130,7 +130,7 @@ def pending_resource_cleanup():
             except Exception as e:
                 LOG.exception('Pending resource cleanup caught the following exception and '
                               ' is restarting: {}'.format(e))
-            write_memory_thread_event.wait(interval)
+            pending_resource_cleanup_thread_event.wait(interval)
     else:
         LOG.warning("Pending resource cleanup flag is disabled...")
 
