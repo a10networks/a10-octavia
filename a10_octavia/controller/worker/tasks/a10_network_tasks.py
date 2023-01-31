@@ -514,7 +514,12 @@ class DeallocateVIP(BaseNetworkTask):
     def execute(self, loadbalancer, lb_count_subnet):
         """Deallocate a VIP."""
         LOG.debug("Deallocating a VIP %s", loadbalancer.vip.ip_address)
-        self.network_driver.deallocate_vip(loadbalancer, lb_count_subnet)
+        try:
+            self.network_driver.deallocate_vip(loadbalancer, lb_count_subnet)
+        except Exception as e:
+            LOG.error("Failed to deallocate VIP.  Resources may still "
+                      "be in use from vip: %(vip)s due to error: %(except)s",
+                      {'vip': loadbalancer.vip.ip_address, 'except': e})
 
 
 class UpdateVIP(BaseNetworkTask):
