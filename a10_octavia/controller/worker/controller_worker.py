@@ -1503,7 +1503,8 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             return flavor_data
         return None
 
-    def delete_load_balancer_with_housekeeping(self, load_balancer_id, ctx_map, ctx_lock, cascade=True):
+    def delete_load_balancer_with_housekeeping(self, load_balancer_id, ctx_map, ctx_lock,
+                                               cascade=True):
         """Function to delete load balancer for A10 provider using Housekeeper thread"""
         self.ctx_map = ctx_map
         self.ctx_lock = ctx_lock
