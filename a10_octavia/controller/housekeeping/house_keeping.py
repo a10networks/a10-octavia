@@ -190,10 +190,11 @@ class PendingResourceCleanup(object):
                                               provisioning_status=constants.ERROR)
                 vthunder = self.vthunder_repo.get_vthunder_from_lb(
                     db_api.get_session(), pending_lb.id)
-                self.vthunder_repo.update(
-                    db_api.get_session(),
-                    vthunder.id,
-                    status=constants.ACTIVE)
+                if vthunder is not None:
+                    self.vthunder_repo.update(
+                        db_api.get_session(),
+                        vthunder.id,
+                        status=constants.ACTIVE)
             except Exception as e:
                 LOG.exception("Failed to update load balancer %(lb) "
                               "provisioning status to ERROR due to: "
