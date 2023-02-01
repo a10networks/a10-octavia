@@ -83,9 +83,10 @@ class NatPoolCreate(task.Task):
     @axapi_client_decorator_for_revert
     def revert(self, loadbalancer, vthunder, flavor_data=None, *args, **kwargs):
         if flavor_data:
-            natpool_flavor_list = flavor_data.get('nat_pool_list')
-            natpool_flavor = flavor_data.get('nat_pool')
             try:
+                natpool_flavor_list = flavor_data.get('nat_pool_list')
+                natpool_flavor = flavor_data.get('nat_pool')
+
                 if len(self._added_pool_list) > 0:
                     if natpool_flavor_list:
                         for nat_pool in natpool_flavor_list:

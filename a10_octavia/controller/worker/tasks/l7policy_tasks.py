@@ -181,4 +181,7 @@ class L7PolicyToErrorOnRevertTask(lifecycle_tasks.BaseLifecycleTask):
         pass
 
     def revert(self, l7policy, *args, **kwargs):
-        self.task_utils.mark_l7policy_prov_status_error(l7policy.id)
+        try:
+            self.task_utils.mark_l7policy_prov_status_error(l7policy.id)
+        except Exception as e:
+            LOG.exception("Failed to change status due to: %s", e)

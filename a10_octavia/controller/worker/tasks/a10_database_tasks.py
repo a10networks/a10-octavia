@@ -1155,8 +1155,11 @@ class GetSpareComputeForProject(BaseDatabaseTask):
 
     def revert(self, compute_id=None, *args, **kwargs):
         if self.spare is not None:
-            self.vthunder_repo.set_spare_vthunder_status(
-                db_apis.get_session(), self.spare.id, "READY")
+            try:
+                self.vthunder_repo.set_spare_vthunder_status(
+                    db_apis.get_session(), self.spare.id, "READY")
+            except Exception as e:
+                LOG.exception("Failed to set spare vthunder status to READY: %s", e)
 
 
 class TryGetSpareCompute(BaseDatabaseTask):
@@ -1387,7 +1390,10 @@ class LoadBalancerListToErrorOnRevertTask(BaseDatabaseTask):
 
     def revert(self, loadbalancers_list, *args, **kwargs):
         for lb in loadbalancers_list:
-            self.task_utils.mark_loadbalancer_prov_status_error(lb.id)
+            try:
+                self.task_utils.mark_loadbalancer_prov_status_error(lb.id)
+            except Exception as e:
+                LOG.exception("Failed to change LB status to error: %s", e)
 
 
 class GetPoolListener(BaseDatabaseTask):

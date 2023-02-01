@@ -662,14 +662,17 @@ class ApplyQos(BaseNetworkTask):
     def revert(self, result, loadbalancer, amps_data=None, update_dict=None,
                *args, **kwargs):
         """Handle a failure to apply QoS to VIP"""
-        request_qos_id = loadbalancer.vip.qos_policy_id
-        orig_lb = self.task_utils.get_current_loadbalancer_from_db(
-            loadbalancer.id)
-        orig_qos_id = orig_lb.vip.qos_policy_id
-        if request_qos_id != orig_qos_id:
-            self._apply_qos_on_vrrp_ports(loadbalancer, amps_data, orig_qos_id,
-                                          is_revert=True,
-                                          request_qos_id=request_qos_id)
+        try:
+            request_qos_id = loadbalancer.vip.qos_policy_id
+            orig_lb = self.task_utils.get_current_loadbalancer_from_db(
+                loadbalancer.id)
+            orig_qos_id = orig_lb.vip.qos_policy_id
+            if request_qos_id != orig_qos_id:
+                self._apply_qos_on_vrrp_ports(loadbalancer, amps_data, orig_qos_id,
+                                              is_revert=True,
+                                              request_qos_id=request_qos_id)
+        except Exception:
+            LOG.exception("Error for Apply qos policy on the vrrp ports")
         return
 
 
