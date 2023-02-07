@@ -20,7 +20,6 @@ import multiprocessing
 from oslo_config import cfg
 from oslo_log import log as logging
 
-from octavia.common import constants
 from octavia.db import api as db_api
 from octavia.db import repositories as repo
 
@@ -184,21 +183,4 @@ class PendingResourceCleanup(object):
         pending_lbs = self.loadbalancer_repo.get_pending_lbs_to_be_deleted(db_api.get_session(),
                                                                            cleanup_interval)
         for pending_lb in pending_lbs:
-            try:
-                self.loadbalancer_repo.update(db_api.get_session(),
-                                              pending_lb.id,
-                                              provisioning_status=constants.ERROR)
-                vthunder = self.vthunder_repo.get_vthunder_from_lb(
-                    db_api.get_session(), pending_lb.id)
-                if vthunder is not None:
-                    self.vthunder_repo.update(
-                        db_api.get_session(),
-                        vthunder.id,
-                        status=constants.ACTIVE)
-            except Exception as e:
-                LOG.exception("Failed to update load balancer %(lb) "
-                              "provisioning status to ERROR due to: "
-                              "%(except)s", {'lb': pending_lb.id, 'except': e})
-                raise e
-            lb = self.loadbalancer_repo.get(db_api.get_session(), id=pending_lb.id)
-            self.cw.delete_load_balancer_with_housekeeping(lb.id, hk_ctx_map, hk_ctx_lock, True)
+            self.cw.delete_load_balancer_with_housekeeping(pending_lb, True)
