@@ -1505,22 +1505,21 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
 
     def delete_load_balancer_with_housekeeping(self, pending_lb, cascade=True):
         """Function to delete load balancer for A10 provider using Housekeeper thread"""
-        vthunder = self._vthunder_repo.get_vthunder_from_lb(
-            db_apis.get_session(), pending_lb.id)
-        if vthunder and vthunder.compute_id is not None:
-            return
         if pending_lb.project_id in CONF.hardware_thunder.devices:
             try:
-                self._lb_repo.update(db_apis.get_session(),
-                                     pending_lb.id,
-                                     provisioning_status=constants.ERROR)
                 vthunder = self._vthunder_repo.get_vthunder_from_lb(
                     db_apis.get_session(), pending_lb.id)
                 if vthunder is not None:
-                    self._vthunder_repo.update(
-                        db_apis.get_session(),
-                        vthunder.id,
-                        status=constants.ACTIVE)
+                    if vthunder.compute_id is not None:
+                        return
+                    else:
+                        self._vthunder_repo.update(
+                            db_apis.get_session(),
+                            vthunder.id,
+                            status=constants.ACTIVE)
+                self._lb_repo.update(db_apis.get_session(),
+                                     pending_lb.id,
+                                     provisioning_status=constants.ERROR)
             except Exception as e:
                 LOG.exception("Failed to update load balancer %(lb) "
                               "provisioning status to ERROR due to: "
