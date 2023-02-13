@@ -165,8 +165,10 @@ class DeleteL7Policy(task.Task):
             raise e
 
         try:
-            self.axapi_client.slb.aflex_policy.delete(l7policy.id)
-            LOG.debug("Successfully deleted l7policy: %s", l7policy.id)
+            l7policy_exists = self.axapi_client.slb.aflex_policy.exists(l7policy.id)
+            if l7policy_exists:
+                self.axapi_client.slb.aflex_policy.delete(l7policy.id)
+                LOG.debug("Successfully deleted l7policy: %s", l7policy.id)
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
             LOG.exception("Failed to delete l7policy: %s", l7policy.id)
             raise e
@@ -179,4 +181,7 @@ class L7PolicyToErrorOnRevertTask(lifecycle_tasks.BaseLifecycleTask):
         pass
 
     def revert(self, l7policy, *args, **kwargs):
-        self.task_utils.mark_l7policy_prov_status_error(l7policy.id)
+        try:
+            self.task_utils.mark_l7policy_prov_status_error(l7policy.id)
+        except Exception as e:
+            LOG.exception("Failed to change status due to: %s", e)

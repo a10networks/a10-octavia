@@ -398,7 +398,14 @@ A10_HOUSE_KEEPING_OPTS = [
     cfg.StrOpt('use_periodic_write_memory',
                choices=['enable', 'disable'],
                default='disable',
-               help=_('Enable to use periodic write memory on all thunders'))
+               help=_('Enable to use periodic write memory on all thunders')),
+    cfg.StrOpt('pending_resource_cleanup',
+               choices=['enable', 'disable'],
+               default='disable',
+               help=_('Disable pending resource cleanup')),
+    cfg.IntOpt('resource_cleanup_interval',
+               default=3600,
+               help=_('Pending resource cleanup interval in seconds'))
 ]
 
 A10_NOVA_OPTS = [

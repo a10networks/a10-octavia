@@ -165,4 +165,7 @@ class L7RuleToErrorOnRevertTask(lifecycle_tasks.BaseLifecycleTask):
         pass
 
     def revert(self, l7rule, *args, **kwargs):
-        self.task_utils.mark_l7rule_prov_status_error(l7rule.id)
+        try:
+            self.task_utils.mark_l7rule_prov_status_error(l7rule.id)
+        except Exception as e:
+            LOG.exception("Failed to change status due to: %s", e)

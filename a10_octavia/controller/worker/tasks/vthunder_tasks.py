@@ -177,11 +177,15 @@ class AllowL2DSR(VThunderBaseTask):
             return
 
         if flavor_data:
-            deployment = flavor_data.get('deployment')
-            if deployment and 'dsr_type' in deployment:
-                if deployment['dsr_type'] == "l2dsr_transparent":
-                    for amp in amphora:
-                        self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
+            try:
+                deployment = flavor_data.get('deployment')
+                if deployment and 'dsr_type' in deployment:
+                    if deployment['dsr_type'] == "l2dsr_transparent":
+                        for amp in amphora:
+                            self.network_driver.remove_any_source_ip_on_egress(
+                                subnet.network_id, amp)
+            except Exception as e:
+                LOG.exception("Failed to revert AllowL2DSR due to: %s", e)
 
 
 class DeleteL2DSR(VThunderBaseTask):
