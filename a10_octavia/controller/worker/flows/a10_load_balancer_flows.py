@@ -396,6 +396,10 @@ class LoadBalancerFlows(object):
             name=a10constants.GET_VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        new_LB_net_subflow.add(a10_network_tasks.GetLBResourceSubnet(
+            name="get-subnet",
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
         if vthunder:
             new_LB_net_subflow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
                 requires=a10constants.VTHUNDER,
@@ -448,7 +452,7 @@ class LoadBalancerFlows(object):
             new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
                 name=a10constants.ENABLE_VTHUNDER_INTERFACE,
                 requires=(a10constants.VTHUNDER, constants.LOADBALANCER,
-                          constants.ADDED_PORTS)))
+                          constants.ADDED_PORTS, constants.SUBNET)))
         else:
             new_LB_net_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
                 name=a10constants.VTHUNDER_CONNECTIVITY_WAIT,
@@ -456,7 +460,8 @@ class LoadBalancerFlows(object):
         new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
             name=a10constants.ENABLE_MASTER_VTHUNDER_INTERFACE,
             inject={constants.ADDED_PORTS: {}},
-            requires=(a10constants.VTHUNDER, constants.LOADBALANCER, constants.ADDED_PORTS)))
+            requires=(a10constants.VTHUNDER, constants.LOADBALANCER, constants.ADDED_PORTS,
+                      constants.SUBNET)))
         new_LB_net_subflow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name=a10constants.MARK_VTHUNDER_MASTER_ACTIVE_IN_DB,
             requires=a10constants.VTHUNDER,
@@ -471,7 +476,7 @@ class LoadBalancerFlows(object):
                 name=a10constants.ENABLE_BACKUP_VTHUNDER_INTERFACE,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                 inject={constants.ADDED_PORTS: {}},
-                requires=(constants.LOADBALANCER, constants.ADDED_PORTS)))
+                requires=(constants.LOADBALANCER, constants.ADDED_PORTS, constants.SUBNET)))
             new_LB_net_subflow.add(a10_database_tasks.MarkVThunderStatusInDB(
                 name=a10constants.MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},

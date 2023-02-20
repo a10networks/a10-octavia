@@ -797,6 +797,12 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         :return: return the update list of VRID object, If empty the need to remove all VRID
         objects from DB else need update existing ones.
         """
+        if subnet.ip_version == 6:
+            IP_address = 'ipv6-address'
+            IP_address_cfg = 'ipv6-address-cfg'
+        else:
+            IP_address = 'ip-address'
+            IP_address_cfg = 'ip-address-cfg'
         updated_vrid_list = []
         if not subnet:
             return updated_vrid_list
@@ -838,20 +844,21 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                         existing_fips.append(
                             vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
                 else:
-                    for i in range(len(vrid_fip['ip-address-cfg'])):
-                        existing_fips.append(vrid_fip['ip-address-cfg'][i]['ip-address'])
+                    for i in range(len(vrid_fip[IP_address_cfg])):
+                        existing_fips.append(vrid_fip[IP_address_cfg][i][IP_address])
             vrid_subnet = self.network_driver.get_subnet(vrid.subnet_id)
             vrid.vrid = vrid_value
             if conf_floating_ip.lower() == 'dhcp':
                 subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(
-                    vrid_subnet.cidr)
-                if not a10_utils.check_ip_in_subnet_range(
-                        vrid.vrid_floating_ip, subnet_ip, subnet_mask):
+                    vrid_subnet.cidr, vrid_subnet.ip_version)
+                if not a10_utils.check_ip_in_subnet_range(vrid.vrid_floating_ip, subnet_ip,
+                                                          subnet_mask, vrid_subnet.ip_version,
+                                                          vrid_subnet.cidr):
                     vrid = self._replace_vrid_port(vrid, vrid_subnet, lb_resource)
                     update_vrid_flag = True
             else:
                 new_ip = a10_utils.get_patched_ip_address(
-                    conf_floating_ip, vrid_subnet.cidr)
+                    conf_floating_ip, vrid_subnet.cidr, vrid_subnet.ip_version)
                 if new_ip != vrid.vrid_floating_ip:
                     vrid = self._replace_vrid_port(vrid, vrid_subnet, lb_resource, new_ip)
                     update_vrid_flag = True
@@ -907,6 +914,12 @@ class DeleteVRIDPort(BaseNetworkTask):
     def execute(self, vthunder, vrid_list, subnet,
                 use_device_flavor, lb_count_subnet, member_count,
                 lb_count_thunder, member_count_thunder, lb_resource):
+        if subnet.ip_version == 6:
+            IP_address = 'ipv6-address'
+            IP_address_cfg = 'ipv6-address-cfg'
+        else:
+            IP_address = 'ip-address'
+            IP_address_cfg = 'ip-address-cfg'
         if not subnet:
             return None, False
         vrid = None
@@ -931,8 +944,8 @@ class DeleteVRIDPort(BaseNetworkTask):
                             existing_fips.append(
                                 vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
                     else:
-                        for i in range(len(vrid_fip['ip-address-cfg'])):
-                            existing_fips.append(vrid_fip['ip-address-cfg'][i]['ip-address'])
+                        for i in range(len(vrid_fip[IP_address_cfg])):
+                            existing_fips.append(vrid_fip[IP_address_cfg][i][IP_address])
                 if vr.subnet_id == subnet.id:
                     vrid = vr
                 elif vr.vrid_floating_ip in existing_fips:
@@ -1210,8 +1223,10 @@ class ValidateSubnet(BaseNetworkTask):
     def execute(self, member):
         if member.subnet_id:
             member_subnet = self.network_driver.get_subnet(member.subnet_id)
-            subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(member_subnet.cidr)
+            subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(member_subnet.cidr,
+                                                                      member_subnet.ip_version)
             if not a10_utils.check_ip_in_subnet_range(
-                    member.ip_address, subnet_ip, subnet_mask):
+                    member.ip_address, subnet_ip, subnet_mask, member_subnet.ip_version,
+                    member_subnet.cidr):
                 raise exceptions.IPAddressNotInSubnetRangeError(
                     member.ip_address, member_subnet.cidr)

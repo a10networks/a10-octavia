@@ -32,7 +32,6 @@ from a10_octavia.common import config_types
 
 LOG = logging.getLogger(__name__)
 
-
 A10_GLOBAL_OPTS = [
     cfg.BoolOpt('use_parent_partition', default=False,
                 help=_('Use parent project partition on Thunder device '
@@ -57,6 +56,10 @@ A10_GLOBAL_OPTS = [
                        ' subnet (for use with kube cloud provider)')),
     cfg.BoolOpt('nlbaas_member_names', default=False,
                 help=_('Use neutron lbaas member names in a10 config.')),
+    cfg.ListOpt('ipv6_sub_list',
+                default='',
+                help=_('List of subnet and ip pair to attach to the vThunder ethernet interfaces'))
+
 ]
 
 A10_GLM_LICENSE_OPTS = [
