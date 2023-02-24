@@ -17,6 +17,7 @@
 
 """
 import acos_client
+import ipaddress
 import json
 import netaddr
 import socket
@@ -45,6 +46,15 @@ def validate_ipv4(address):
     if not netaddr.valid_ipv4(address, netaddr.core.INET_PTON):
         raise cfg.ConfigFileValueError(
             'Invalid IPAddress value given in configuration: {0}'.format(address))
+
+
+def validate_ipv6(IP: str):
+    try:
+        ipaddress.ip_address(IP)
+        LOG.debug("Valid IP address")
+    except ValueError:
+        raise cfg.ConfigFileValueError(
+            'Invalid IPAddress value given in configuration: {0}'.format(IP))
 
 
 def validate_partial_ipv4(address):
@@ -165,20 +175,29 @@ def get_axapi_client(vthunder):
     return axapi_client
 
 
-def get_net_info_from_cidr(cidr):
-    subnet_ip, mask = cidr.split('/')
-    avail_hosts = (1 << 32 - int(mask))
-    netmask = socket.inet_ntoa(struct.pack('>I', (1 << 32) - avail_hosts))
-    return subnet_ip, netmask
+def get_net_info_from_cidr(cidr, ip_version):
+    if ip_version == 4:
+        subnet_ip, mask = cidr.split('/')
+        avail_hosts = (1 << 32 - int(mask))
+        netmask = socket.inet_ntoa(struct.pack('>I', (1 << 32) - avail_hosts))
+        return subnet_ip, netmask
+    else:
+        ipv6_ip, ipv6_mask = ipaddress.IPv6Interface(cidr).with_netmask.split('/')
+        return ipv6_ip, ipv6_mask
 
 
-def check_ip_in_subnet_range(ip, subnet, netmask):
-    if ip is None or subnet is None or netmask is None:
-        return False
-    int_ip = struct.unpack('>L', socket.inet_aton(ip))[0]
-    int_subnet = struct.unpack('>L', socket.inet_aton(subnet))[0]
-    int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
-    return int_ip & int_netmask == int_subnet
+def check_ip_in_subnet_range(ip, subnet, netmask, ip_version, subnet_cidr):
+    if ip_version == 4:
+        if ip is None or subnet is None or netmask is None:
+            return False
+        int_ip = struct.unpack('>L', socket.inet_aton(ip))[0]
+        int_subnet = struct.unpack('>L', socket.inet_aton(subnet))[0]
+        int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
+        return int_ip & int_netmask == int_subnet
+    else:
+        if ip is None or subnet_cidr is None:
+            return False
+        return ipaddress.IPv6Address(ip) in ipaddress.IPv6Network(subnet_cidr)
 
 
 def merge_host_and_network_ip(cidr, host_ip):
@@ -201,8 +220,22 @@ def get_network_driver():
     return network_driver
 
 
-def get_patched_ip_address(ip, cidr):
-    net_ip, netmask = get_net_info_from_cidr(cidr)
+def get_patched_ip_address(ip, cidr, ip_version):
+    net_ip, netmask = get_net_info_from_cidr(cidr, ip_version)
+    octets = ip.lstrip(':').split(':')
+    if len(octets) == 8:
+        validate_ipv6(ip)
+        if check_ip_in_subnet_range(ip, net_ip, netmask, ip_version, cidr):
+            return ip
+        else:
+            raise exceptions.VRIDIPNotInSubentRangeError(ip, cidr)
+    else:
+        new_ip = str(ipaddress.IPv6Address(net_ip)) + str(ip)
+        if check_ip_in_subnet_range(new_ip, net_ip, netmask, ip_version, cidr):
+            return new_ip
+        else:
+            raise exceptions.VRIDIPNotInSubentRangeError(new_ip, cidr)
+
     octets = ip.lstrip('.').split('.')
 
     if len(octets) == 4:

@@ -17,6 +17,7 @@ import acos_client
 from acos_client import errors as acos_errors
 
 import datetime
+import json
 try:
     import http.client as http_client
 except ImportError:
@@ -177,15 +178,11 @@ class AllowL2DSR(VThunderBaseTask):
             return
 
         if flavor_data:
-            try:
-                deployment = flavor_data.get('deployment')
-                if deployment and 'dsr_type' in deployment:
-                    if deployment['dsr_type'] == "l2dsr_transparent":
-                        for amp in amphora:
-                            self.network_driver.remove_any_source_ip_on_egress(
-                                subnet.network_id, amp)
-            except Exception as e:
-                LOG.exception("Failed to revert AllowL2DSR due to: %s", e)
+            deployment = flavor_data.get('deployment')
+            if deployment and 'dsr_type' in deployment:
+                if deployment['dsr_type'] == "l2dsr_transparent":
+                    for amp in amphora:
+                        self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
 
 
 class DeleteL2DSR(VThunderBaseTask):
@@ -281,7 +278,8 @@ class EnableInterface(VThunderBaseTask):
     """Task to configure vThunder ports"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, loadbalancer, added_ports, ifnum_master=None, ifnum_backup=None):
+    def execute(self, vthunder, loadbalancer, added_ports, subnet, ifnum_master=None,
+                ifnum_backup=None):
         topology = CONF.a10_controller_worker.loadbalancer_topology
         amphora_id = loadbalancer.amphorae[0].id
         compute_id = loadbalancer.amphorae[0].compute_id
@@ -294,24 +292,40 @@ class EnableInterface(VThunderBaseTask):
         if not lb_exists_flag:
             added_ports[amphora_id] = []
             added_ports[amphora_id].append(nics[1])
+        address_list = CONF.a10_global.ipv6_sub_list
+        address_list[0] = address_list[0].strip("[")
+        address_list[len(address_list) - 1] = address_list[len(address_list) - 1].strip("]")
 
+        final_address_list = []
+        for sub in address_list:
+            sub = json.loads(sub)
+            for key in sub:
+                if key == subnet.id:
+                    final_address_list.append({'ipv6-addr': sub[key]})
         try:
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 interfaces = self.axapi_client.interface.get_list()
                 if (not lb_exists_flag and topology == "ACTIVE_STANDBY") or topology == "SINGLE":
                     for i in range(len(interfaces['interface']['ethernet-list'])):
-                        if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
+                        ipv6_address = interfaces['interface']['ethernet-list'][i].get('ipv6')
+                        interface_action = interfaces['interface']['ethernet-list'][i]['action']
+                        if interface_action == "disable" and not ipv6_address:
                             ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
-                            self.axapi_client.system.action.setInterface(ifnum)
+                            self.axapi_client.system.action.setInterface(ifnum, final_address_list,
+                                                                         subnet.ip_version)
                     LOG.debug("Configured the ethernet interface for vThunder: %s", vthunder.id)
                 else:
                     for i in range(len(interfaces['interface']['ethernet-list'])):
-                        if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
+                        ipv6_address = interfaces['interface']['ethernet-list'][i].get('ipv6')
+                        interface_action = interfaces['interface']['ethernet-list'][i]['action']
+                        if interface_action == "disable" and not ipv6_address:
                             ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                             self.axapi_client.device_context.switch(1, None)
-                            self.axapi_client.system.action.setInterface(ifnum)
+                            self.axapi_client.system.action.setInterface(ifnum, final_address_list,
+                                                                         subnet.ip_version)
                             self.axapi_client.device_context.switch(2, None)
-                            self.axapi_client.system.action.setInterface(ifnum)
+                            self.axapi_client.system.action.setInterface(ifnum, final_address_list,
+                                                                         subnet.ip_version)
         except(acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure ethernet interface vThunder: %s", str(e))
             raise e
