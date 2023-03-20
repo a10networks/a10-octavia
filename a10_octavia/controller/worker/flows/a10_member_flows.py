@@ -105,12 +105,38 @@ class MemberFlows(object):
                 name=a10constants.GET_MASTER_VTHUNDER,
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
+        create_member_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            name=a10constants.GET_LB_RESOURCE_SUBNET,
+            rebind={a10constants.LB_RESOURCE: constants.MEMBER},
+            provides=constants.SUBNET))
+        create_member_flow.add(vthunder_tasks.GetValidIPv6Address(
+            name=a10constants.GET_IPV6_ADDRESS,
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                      constants.SUBNET, a10constants.LOADBALANCERS_LIST),
+            provides=a10constants.IPV6_ADDRESS_LIST))
         create_member_flow.add(
             vthunder_tasks.EnableInterfaceForMembers(
                 requires=[
                     constants.ADDED_PORTS,
                     constants.LOADBALANCER,
-                    a10constants.VTHUNDER]))
+                    a10constants.VTHUNDER,
+                    constants.SUBNET,
+                    a10constants.IPV6_ADDRESS_LIST]))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            create_member_flow.add(vthunder_tasks.GetValidIPv6Address(
+                name=a10constants.GET_IPV6_ADDRESS_FOR_BACKUP,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                          constants.SUBNET, a10constants.LOADBALANCERS_LIST),
+                provides=a10constants.IPV6_ADDRESS_LIST))
+            create_member_flow.add(
+                vthunder_tasks.EnableInterfaceForMembers(
+                    requires=[
+                        constants.ADDED_PORTS,
+                        constants.LOADBALANCER,
+                        a10constants.VTHUNDER,
+                        constants.SUBNET,
+                        a10constants.IPV6_ADDRESS_LIST]))
         if CONF.a10_global.handle_vrid:
             create_member_flow.add(self.handle_vrid_for_member_subflow())
         create_member_flow.add(a10_database_tasks.CountMembersWithIP(
@@ -229,6 +255,10 @@ class MemberFlows(object):
         delete_member_flow.add(a10_database_tasks.GetMemberListByProjectID(
             requires=a10constants.VTHUNDER,
             provides=a10constants.MEMBER_LIST))
+        delete_member_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            name=a10constants.GET_LB_RESOURCE_SUBNET,
+            rebind={a10constants.LB_RESOURCE: constants.MEMBER},
+            provides=constants.SUBNET))
         delete_member_flow.add(a10_network_tasks.CalculateDelta(
             requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST,
                       a10constants.MEMBER_LIST),
@@ -270,6 +300,34 @@ class MemberFlows(object):
                 name=a10constants.GET_VTHUNDER_MASTER,
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
+        delete_member_flow.add(vthunder_tasks.GetValidIPv6Address(
+            name=a10constants.GET_IPV6_ADDRESS,
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                      constants.SUBNET, a10constants.LOADBALANCERS_LIST),
+            provides=a10constants.IPV6_ADDRESS_LIST))
+        delete_member_flow.add(
+            vthunder_tasks.EnableInterfaceForMembers(
+                requires=[
+                    constants.ADDED_PORTS,
+                    constants.LOADBALANCER,
+                    a10constants.VTHUNDER,
+                    constants.SUBNET,
+                    a10constants.IPV6_ADDRESS_LIST]))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            delete_member_flow.add(vthunder_tasks.GetValidIPv6Address(
+                name=a10constants.GET_IPV6_ADDRESS_FOR_BACKUP,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                          constants.SUBNET, a10constants.LOADBALANCERS_LIST),
+                provides=a10constants.IPV6_ADDRESS_LIST))
+            delete_member_flow.add(
+                vthunder_tasks.EnableInterfaceForMembers(
+                    requires=[
+                        constants.ADDED_PORTS,
+                        constants.LOADBALANCER,
+                        a10constants.VTHUNDER,
+                        constants.SUBNET,
+                        a10constants.IPV6_ADDRESS_LIST]))
         delete_member_flow.add(server_tasks.MemberFindNatPool(
             requires=[a10constants.VTHUNDER, constants.POOL,
                       constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
@@ -1321,12 +1379,34 @@ class MemberFlows(object):
                 name=a10constants.GET_MASTER_VTHUNDER,
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
+        batch_update_members_flow.add(vthunder_tasks.GetValidIPv6Address(
+            name=a10constants.GET_IPV6_ADDRESS,
+            requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                      constants.SUBNET, a10constants.LOADBALANCERS_LIST),
+            provides=a10constants.IPV6_ADDRESS_LIST))
         batch_update_members_flow.add(
             vthunder_tasks.EnableInterfaceForMembers(
                 requires=[
                     constants.ADDED_PORTS,
                     constants.LOADBALANCER,
-                    a10constants.VTHUNDER]))
+                    a10constants.VTHUNDER,
+                    constants.SUBNET,
+                    a10constants.IPV6_ADDRESS_LIST]))
+        if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
+            batch_update_members_flow.add(vthunder_tasks.GetValidIPv6Address(
+                name=a10constants.GET_IPV6_ADDRESS_FOR_BACKUP,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+                          constants.SUBNET, a10constants.LOADBALANCERS_LIST),
+                provides=a10constants.IPV6_ADDRESS_LIST))
+            batch_update_members_flow.add(
+                vthunder_tasks.EnableInterfaceForMembers(
+                    requires=[
+                        constants.ADDED_PORTS,
+                        constants.LOADBALANCER,
+                        a10constants.VTHUNDER,
+                        constants.SUBNET,
+                        a10constants.IPV6_ADDRESS_LIST]))
         existing_members = [m[0] for m in updated_members]
         pool_members = new_members + existing_members
         if CONF.a10_global.handle_vrid:

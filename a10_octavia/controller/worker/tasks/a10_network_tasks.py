@@ -800,9 +800,13 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         if subnet.ip_version == 6:
             IP_address = 'ipv6-address'
             IP_address_cfg = 'ipv6-address-cfg'
+            IP_address_part_cfg = 'ipv6-address-part-cfg'
+            IP_address_part = 'ipv6-address-partition'
         else:
             IP_address = 'ip-address'
             IP_address_cfg = 'ip-address-cfg'
+            IP_address_part_cfg = 'ip-address-part-cfg'
+            IP_address_part = 'ip-address-partition'
         updated_vrid_list = []
         if not subnet:
             return updated_vrid_list
@@ -840,9 +844,9 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
                 vrid_fip = vrid_summary['vrid']['floating-ip']
                 if vthunder.partition_name != 'shared':
-                    for i in range(len(vrid_fip['ip-address-part-cfg'])):
+                    for i in range(len(vrid_fip[IP_address_part_cfg])):
                         existing_fips.append(
-                            vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
+                            vrid_fip[IP_address_part_cfg][i][IP_address_part])
                 else:
                     for i in range(len(vrid_fip[IP_address_cfg])):
                         existing_fips.append(vrid_fip[IP_address_cfg][i][IP_address])
@@ -862,7 +866,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 if new_ip != vrid.vrid_floating_ip:
                     vrid = self._replace_vrid_port(vrid, vrid_subnet, lb_resource, new_ip)
                     update_vrid_flag = True
-
             if isinstance(subnet, list):
                 subnet_ids = set([s.id for s in subnet])
                 if vrid_subnet.id in subnet_ids or vrid.vrid_floating_ip in existing_fips:
@@ -917,9 +920,13 @@ class DeleteVRIDPort(BaseNetworkTask):
         if subnet.ip_version == 6:
             IP_address = 'ipv6-address'
             IP_address_cfg = 'ipv6-address-cfg'
+            IP_address_part_cfg = 'ipv6-address-part-cfg'
+            IP_address_part = 'ipv6-address-partition'
         else:
             IP_address = 'ip-address'
             IP_address_cfg = 'ip-address-cfg'
+            IP_address_part_cfg = 'ip-address-part-cfg'
+            IP_address_part = 'ip-address-partition'
         if not subnet:
             return None, False
         vrid = None
@@ -940,9 +947,9 @@ class DeleteVRIDPort(BaseNetworkTask):
                 if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
                     vrid_fip = vrid_summary['vrid']['floating-ip']
                     if vthunder.partition_name != 'shared':
-                        for i in range(len(vrid_fip['ip-address-part-cfg'])):
+                        for i in range(len(vrid_fip[IP_address_part_cfg])):
                             existing_fips.append(
-                                vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
+                                vrid_fip[IP_address_part_cfg][i][IP_address_part])
                     else:
                         for i in range(len(vrid_fip[IP_address_cfg])):
                             existing_fips.append(vrid_fip[IP_address_cfg][i][IP_address])
@@ -987,6 +994,14 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
                         vrid_summary = {}
                         LOG.exception("Failed to get existing VRID summary due to: %s", str(e))
 
+                    subnet = self.network_driver.get_subnet(vrid.subnet_id)
+                    if subnet.ip_version == 6:
+                        IP_address = 'ipv6-address'
+                        IP_address_cfg = 'ipv6-address-cfg'
+                    else:
+                        IP_address = 'ip-address'
+                        IP_address_cfg = 'ip-address-cfg'
+
                     if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
                         vrid_fip = vrid_summary['vrid']['floating-ip']
                         if vthunder.partition_name != 'shared':
@@ -994,8 +1009,8 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
                                 existing_fips.append(
                                     vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
                         else:
-                            for i in range(len(vrid_fip['ip-address-cfg'])):
-                                existing_fips.append(vrid_fip['ip-address-cfg'][i]['ip-address'])
+                            for i in range(len(vrid_fip[IP_address_cfg])):
+                                existing_fips.append(vrid_fip[IP_address_cfg][i][IP_address])
 
                     subnet_matched = list(filter(lambda x: x == vrid.subnet_id,
                                           subnet_list))

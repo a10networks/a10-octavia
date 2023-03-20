@@ -222,56 +222,57 @@ def get_network_driver():
 
 def get_patched_ip_address(ip, cidr, ip_version):
     net_ip, netmask = get_net_info_from_cidr(cidr, ip_version)
-    octets = ip.lstrip(':').split(':')
-    if len(octets) == 8:
-        validate_ipv6(ip)
-        if check_ip_in_subnet_range(ip, net_ip, netmask, ip_version, cidr):
-            return ip
+    if ip_version == 6:
+        octets = ip.lstrip(':').split(':')
+        if len(octets) == 8:
+            validate_ipv6(ip)
+            if check_ip_in_subnet_range(ip, net_ip, netmask, ip_version, cidr):
+                return ip
+            else:
+                raise exceptions.VRIDIPNotInSubentRangeError(ip, cidr)
         else:
-            raise exceptions.VRIDIPNotInSubentRangeError(ip, cidr)
+            new_ip = str(ipaddress.IPv6Address(net_ip)) + str(ip)
+            if check_ip_in_subnet_range(new_ip, net_ip, netmask, ip_version, cidr):
+                return new_ip
+            else:
+                raise exceptions.VRIDIPNotInSubentRangeError(new_ip, cidr)
     else:
-        new_ip = str(ipaddress.IPv6Address(net_ip)) + str(ip)
-        if check_ip_in_subnet_range(new_ip, net_ip, netmask, ip_version, cidr):
-            return new_ip
-        else:
-            raise exceptions.VRIDIPNotInSubentRangeError(new_ip, cidr)
+        octets = ip.lstrip('.').split('.')
 
-    octets = ip.lstrip('.').split('.')
+        if len(octets) == 4:
+            validate_ipv4(ip)
+            if check_ip_in_subnet_range(ip, net_ip, netmask):
+                return ip
+            else:
+                raise exceptions.VRIDIPNotInSubentRangeError(ip, cidr)
 
-    if len(octets) == 4:
-        validate_ipv4(ip)
-        if check_ip_in_subnet_range(ip, net_ip, netmask):
-            return ip
-        else:
-            raise exceptions.VRIDIPNotInSubentRangeError(ip, cidr)
+        for i in range(4 - len(octets)):
+            octets.insert(0, '0')
+        host_ip = '.'.join(octets)
 
-    for i in range(4 - len(octets)):
-        octets.insert(0, '0')
-    host_ip = '.'.join(octets)
+        try:
+            int_host_ip = struct.unpack('>L', socket.inet_aton(host_ip))[0]
+        except socket.error:
+            raise exceptions.VRIDIPNotInSubentRangeError(host_ip, cidr)
 
-    try:
-        int_host_ip = struct.unpack('>L', socket.inet_aton(host_ip))[0]
-    except socket.error:
-        raise exceptions.VRIDIPNotInSubentRangeError(host_ip, cidr)
+        int_net_ip = struct.unpack('>L', socket.inet_aton(net_ip))[0]
+        int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
 
-    int_net_ip = struct.unpack('>L', socket.inet_aton(net_ip))[0]
-    int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
+        # Create a set of test bits to find partial netmask octet
+        # ie 1.1.1.1 & 255.255.254.0 -> 1.1.0.0
+        test_bits = (1 << 24 | 1 << 16 | 1 << 8 | 1)
+        test_bits = (int_netmask & test_bits)
 
-    # Create a set of test bits to find partial netmask octet
-    # ie 1.1.1.1 & 255.255.254.0 -> 1.1.0.0
-    test_bits = (1 << 24 | 1 << 16 | 1 << 8 | 1)
-    test_bits = (int_netmask & test_bits)
+        # Then shift 8 bits (1 -> 256) and subtract by 1 in each octet to get 255
+        test_bits = (test_bits << 8) - test_bits
 
-    # Then shift 8 bits (1 -> 256) and subtract by 1 in each octet to get 255
-    test_bits = (test_bits << 8) - test_bits
+        # Use truncated mask to fill in any missing octets of partial IP
+        canidate_ip = (test_bits & int_net_ip) | int_host_ip
 
-    # Use truncated mask to fill in any missing octets of partial IP
-    canidate_ip = (test_bits & int_net_ip) | int_host_ip
+        if (canidate_ip & int_netmask) != (int_net_ip & int_netmask):
+            raise exceptions.VRIDIPNotInSubentRangeError(host_ip, cidr)
 
-    if (canidate_ip & int_netmask) != (int_net_ip & int_netmask):
-        raise exceptions.VRIDIPNotInSubentRangeError(host_ip, cidr)
-
-    return socket.inet_ntoa(struct.pack('>L', canidate_ip))
+        return socket.inet_ntoa(struct.pack('>L', canidate_ip))
 
 
 def get_vrid_floating_ip_for_project(project_id):
@@ -374,3 +375,55 @@ def get_loadbalancer_flavor(loadbalancer):
                                                      id=flavor.flavor_profile_id)
             flavor_data = json.loads(flavor_profile.flavor_data)
             return flavor_data
+
+def get_ipv6_address_from_conf(address_list, subnet_id):
+    final_address_list = []
+    for address in address_list:
+        address = json.loads(address)
+        for key in address:
+            if key == subnet_id:
+                final_address_list.append({'ipv6-addr': address[key]})
+                return final_address_list
+
+def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list):
+    final_address_list = []
+    network_driver = get_network_driver()
+    amp_boot_networks = CONF.a10_controller_worker.amp_boot_network_list
+    for nic in nics:
+        if nic.network_id in amp_boot_networks:
+            port_mac_address = network_driver.get_port(nic.port_id).mac_address.replace(":", "")
+            acos_mac_address = ifnum_oper['ethernet']['oper']['mac'].replace(".", "")
+            if port_mac_address == acos_mac_address:
+                final_address_list = get_ipv6_address_from_conf(address_list, nic.network_id)
+                if len(final_address_list) > 0:
+                    break
+
+        if nic.network_id == subnet.network_id and not loadbalancers_list:
+            port_mac_address = network_driver.get_port(nic.port_id).mac_address.replace(":", "")
+            acos_mac_address = ifnum_oper['ethernet']['oper']['mac'].replace(".", "")
+            if port_mac_address == acos_mac_address:
+                final_address_list = get_ipv6_address_from_conf(address_list, subnet.id)
+                if len(final_address_list) > 0:
+                    break
+
+        if loadbalancers_list:
+            for lb in loadbalancers_list:
+                if lb.vip.network_id== nic.network_id:
+                    port_mac_address = network_driver.get_port(nic.port_id).mac_address.replace(":", "")
+                    acos_mac_address = ifnum_oper['ethernet']['oper']['mac'].replace(".", "")
+                    if port_mac_address == acos_mac_address:
+                        final_address_list = get_ipv6_address_from_conf(address_list, lb.vip.subnet_id)
+                        if len(final_address_list) > 0:
+                            break
+                for pool in lb.pools:
+                    for member in pool.members:
+                        member_subnet = network_driver.get_subnet(member.subnet_id)
+                        if member_subnet.network_id == nic.network_id:
+                            port_mac_address = network_driver.get_port(nic.port_id).mac_address.replace(":", "")
+                            acos_mac_address = ifnum_oper['ethernet']['oper']['mac'].replace(".", "")
+                            if port_mac_address == acos_mac_address:
+                                final_address_list = get_ipv6_address_from_conf(address_list, member.subnet_id)
+                                if len(final_address_list) > 0:
+                                    break
+
+    return final_address_list
