@@ -495,7 +495,7 @@ class LoadBalancerFlows(object):
                               constants.SUBNET, a10constants.LOADBALANCERS_LIST),
                     provides=a10constants.IPV6_ADDRESS_LIST))
                 new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
-                    name=a10constants.ENABLE_BACKUP_VTHUNDER_INTERFACE,
+                    name=a10constants.BACKUP_ENABLE_INTERFACE,
                     requires=(a10constants.VTHUNDER, constants.LOADBALANCER,
                               constants.ADDED_PORTS, constants.SUBNET, 
                               a10constants.BACKUP_VTHUNDER, a10constants.IPV6_ADDRESS_LIST)))

@@ -116,6 +116,7 @@ class MemberFlows(object):
             provides=a10constants.IPV6_ADDRESS_LIST))
         create_member_flow.add(
             vthunder_tasks.EnableInterfaceForMembers(
+                name=a10constants.ENABLE_MASTER_VTHUNDER_INTERFACE,
                 requires=[
                     constants.ADDED_PORTS,
                     constants.LOADBALANCER,
@@ -131,11 +132,13 @@ class MemberFlows(object):
                 provides=a10constants.IPV6_ADDRESS_LIST))
             create_member_flow.add(
                 vthunder_tasks.EnableInterfaceForMembers(
+                    name=a10constants.ENABLE_BACKUP_VTHUNDER_INTERFACE,
                     requires=[
                         constants.ADDED_PORTS,
                         constants.LOADBALANCER,
                         a10constants.VTHUNDER,
                         constants.SUBNET,
+                        a10constants.BACKUP_VTHUNDER,
                         a10constants.IPV6_ADDRESS_LIST]))
         if CONF.a10_global.handle_vrid:
             create_member_flow.add(self.handle_vrid_for_member_subflow())
@@ -307,6 +310,7 @@ class MemberFlows(object):
             provides=a10constants.IPV6_ADDRESS_LIST))
         delete_member_flow.add(
             vthunder_tasks.EnableInterfaceForMembers(
+                name=a10constants.ENABLE_MASTER_VTHUNDER_INTERFACE,
                 requires=[
                     constants.ADDED_PORTS,
                     constants.LOADBALANCER,
@@ -322,11 +326,13 @@ class MemberFlows(object):
                 provides=a10constants.IPV6_ADDRESS_LIST))
             delete_member_flow.add(
                 vthunder_tasks.EnableInterfaceForMembers(
+                    name=a10constants.ENABLE_BACKUP_VTHUNDER_INTERFACE,
                     requires=[
                         constants.ADDED_PORTS,
                         constants.LOADBALANCER,
                         a10constants.VTHUNDER,
                         constants.SUBNET,
+                        a10constants.BACKUP_VTHUNDER,
                         a10constants.IPV6_ADDRESS_LIST]))
         delete_member_flow.add(server_tasks.MemberFindNatPool(
             requires=[a10constants.VTHUNDER, constants.POOL,
@@ -1386,6 +1392,7 @@ class MemberFlows(object):
             provides=a10constants.IPV6_ADDRESS_LIST))
         batch_update_members_flow.add(
             vthunder_tasks.EnableInterfaceForMembers(
+                name=a10constants.ENABLE_MASTER_VTHUNDER_INTERFACE,
                 requires=[
                     constants.ADDED_PORTS,
                     constants.LOADBALANCER,
@@ -1401,11 +1408,13 @@ class MemberFlows(object):
                 provides=a10constants.IPV6_ADDRESS_LIST))
             batch_update_members_flow.add(
                 vthunder_tasks.EnableInterfaceForMembers(
+                    name=a10constants.ENABLE_BACKUP_VTHUNDER_INTERFACE,
                     requires=[
                         constants.ADDED_PORTS,
                         constants.LOADBALANCER,
                         a10constants.VTHUNDER,
                         constants.SUBNET,
+                        a10constants.BACKUP_VTHUNDER,
                         a10constants.IPV6_ADDRESS_LIST]))
         existing_members = [m[0] for m in updated_members]
         pool_members = new_members + existing_members

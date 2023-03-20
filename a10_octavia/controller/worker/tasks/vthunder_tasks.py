@@ -299,21 +299,21 @@ class EnableInterface(VThunderBaseTask):
                 if (not lb_exists_flag and topology == "ACTIVE_STANDBY") or topology == "SINGLE":
                     for i in range(len(interfaces['interface']['ethernet-list'])):
                         ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
-                        if not ifnum_address[ifnum]:
-                            LOG.warning("IPv6 Address for ethernet %s not fiund in configurations", ifnum)
-                            continue 
                         if subnet.ip_version == 6:
+                            if not ifnum_address[ifnum]:
+                                LOG.warning("IPv6 Address for ethernet %s not found in configurations", ifnum)
+                                continue
                             self.axapi_client.system.action.setInterface(ifnum, ifnum_address[ifnum], subnet.ip_version)
-                        else:
+                        elif interfaces['interface']['ethernet-list'][i]['action'] == "disable":
                             self.axapi_client.system.action.setInterface(ifnum, None, subnet.ip_version)
                     LOG.debug("Configured the ethernet interface for vThunder: %s", vthunder.id)
                 else:
                     for i in range(len(interfaces['interface']['ethernet-list'])):
                         ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
-                        if not ifnum_address[ifnum]:
-                            LOG.warning("IPv6 Address for ethernet %s not fiund in configurations", ifnum)
-                            return
                         if subnet.ip_version == 6:
+                            if not ifnum_address[ifnum]:
+                                LOG.warning("IPv6 Address for ethernet %s not found in configurations", ifnum)
+                                continue
                             if backup_vthunder:
                                 self.axapi_client.device_context.switch(2, None)
                                 self.axapi_client.system.action.setInterface(ifnum, ifnum_address[ifnum],
@@ -322,7 +322,7 @@ class EnableInterface(VThunderBaseTask):
                                 self.axapi_client.device_context.switch(1, None)
                                 self.axapi_client.system.action.setInterface(ifnum, ifnum_address[ifnum],
                                                                              subnet.ip_version)
-                        else:
+                        elif interfaces['interface']['ethernet-list'][i]['action'] == "disable":
                             self.axapi_client.device_context.switch(1, None)
                             self.axapi_client.system.action.setInterface(ifnum, None,
                                                                          subnet.ip_version)
@@ -377,7 +377,7 @@ class EnableInterfaceForMembers(VThunderBaseTask):
                     ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                     if subnet.ip_version == 6:
                         if not ifnum_address[ifnum]:
-                            LOG.warning("IPv6 Address for ethernet %s not fiund in configurations", ifnum)
+                            LOG.warning("IPv6 Address for ethernet %s not found in configurations", ifnum)
                             continue
                         if topology == "SINGLE":
                             self.axapi_client.system.action.setInterface(ifnum, ifnum_address[ifnum],
@@ -391,7 +391,7 @@ class EnableInterfaceForMembers(VThunderBaseTask):
                                 self.axapi_client.device_context.switch(1, None)
                                 self.axapi_client.system.action.setInterface(ifnum, ifnum_address[ifnum],
                                                                              subnet.ip_version)
-                    else:
+                    elif interfaces['interface']['ethernet-list'][i]['action'] == "disable":
                         if topology == "SINGLE":
                             self.axapi_client.system.action.setInterface(ifnum, None,
                                                                          subnet.ip_version)
