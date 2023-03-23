@@ -232,22 +232,14 @@ def get_network_driver():
 def get_patched_ip_address(ip, cidr, ip_version):
     net_ip, netmask = get_net_info_from_cidr(cidr, ip_version)
     if ip_version == 6:
+        ip = ip.replace('.', "")
         is_valid_ip = validate_partial_ipv6(ip)
-        octets = ip.lstrip(':').split(':')
-        if len(octets) == 8 and not is_valid_ip:
-            validate_ipv6(ip)
-            if check_ip_in_subnet_range(ip, net_ip, netmask, ip_version, cidr):
-                return ip
-            else:
-                raise exceptions.VRIDIPNotInSubentRangeError(ip, cidr)
+        if not is_valid_ip:
+            ip = str(ipaddress.IPv6Address(net_ip)) + str(ip.replace(':', ""))
+        if check_ip_in_subnet_range(ip, net_ip, netmask, ip_version, cidr):
+            return ip
         else:
-            if not is_valid_ip:
-                ip = ip.replace(':', "")
-                ip = str(ipaddress.IPv6Address(net_ip)) + str(ip)
-            if check_ip_in_subnet_range(ip, net_ip, netmask, ip_version, cidr):
-                return ip
-            else:
-                raise exceptions.VRIDIPNotInSubentRangeError(ip, cidr)
+            raise exceptions.VRIDIPNotInSubentRangeError(ip, cidr)
     else:
         octets = ip.lstrip('.').split('.')
 
@@ -403,9 +395,9 @@ def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list)
     final_address_list = []
     network_driver = get_network_driver()
     amp_boot_networks = CONF.a10_controller_worker.amp_boot_network_list
+    acos_mac_address = ifnum_oper['ethernet']['oper']['mac'].replace(".", "")
     for nic in nics:
         port_mac_address = network_driver.get_port(nic.port_id).mac_address.replace(":", "")
-        acos_mac_address = ifnum_oper['ethernet']['oper']['mac'].replace(".", "")
         if port_mac_address == acos_mac_address:
             if nic.network_id in amp_boot_networks:
                 final_address_list = get_ipv6_address_from_conf(address_list, nic.network_id)
@@ -433,3 +425,19 @@ def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list)
                             if len(final_address_list) > 0:
                                 break
     return final_address_list
+
+
+def get_acos_parameter_for_vrid(ip_version, partition):
+    if ip_version == 6 and partition == "shared":
+        IP_address = a10constants.IPV6_ADDRESS
+        IP_address_cfg = a10constants.IPV6_ADDRESS_CFG
+    elif ip_version == 6 and partition != "shared":
+        IP_address = a10constants.IPV6_ADDRESS_PARTITION
+        IP_address_cfg = a10constants.IPV6_ADDRESS_PARTITION_CFG
+    elif ip_version == 4 and partition == "shared":
+        IP_address = a10constants.IP_ADDRESS
+        IP_address_cfg = a10constants.IP_ADDRESS_CFG
+    else:
+        IP_address = a10constants.IP_ADDRESS_PARTITION
+        IP_address_cfg = a10constants.IP_ADDRESS_PARTITION_CFG
+    return IP_address, IP_address_cfg

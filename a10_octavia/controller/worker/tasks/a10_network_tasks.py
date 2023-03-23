@@ -826,16 +826,8 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         self._add_vrid_to_list(updated_vrid_list, subnet, owner)
         for vrid in updated_vrid_list:
             vrid_subnet = self.network_driver.get_subnet(vrid.subnet_id)
-            if vrid_subnet.ip_version == 6:
-                IP_address = 'ipv6-address'
-                IP_address_cfg = 'ipv6-address-cfg'
-                IP_address_part_cfg = 'ipv6-address-part-cfg'
-                IP_address_part = 'ipv6-address-partition'
-            else:
-                IP_address = 'ip-address'
-                IP_address_cfg = 'ip-address-cfg'
-                IP_address_part_cfg = 'ip-address-part-cfg'
-                IP_address_part = 'ip-address-partition'
+            IP_addr, IP_addr_cfg = a10_utils.get_acos_parameter_for_vrid(vrid_subnet.ip_version,
+                                                                         vthunder.partition_name)
             try:
                 vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
             except Exception as e:
@@ -845,12 +837,12 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
                 vrid_fip = vrid_summary['vrid']['floating-ip']
                 if vthunder.partition_name != 'shared':
-                    for i in range(len(vrid_fip[IP_address_part_cfg])):
+                    for i in range(len(vrid_fip[IP_addr_cfg])):
                         existing_fips.append(
-                            vrid_fip[IP_address_part_cfg][i][IP_address_part])
+                            vrid_fip[IP_addr_cfg][i][IP_addr])
                 else:
-                    for i in range(len(vrid_fip[IP_address_cfg])):
-                        existing_fips.append(vrid_fip[IP_address_cfg][i][IP_address])
+                    for i in range(len(vrid_fip[IP_addr_cfg])):
+                        existing_fips.append(vrid_fip[IP_addr_cfg][i][IP_addr])
             vrid.vrid = vrid_value
             if conf_floating_ip.lower() == 'dhcp':
                 subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(
@@ -917,16 +909,6 @@ class DeleteVRIDPort(BaseNetworkTask):
     def execute(self, vthunder, vrid_list, subnet,
                 use_device_flavor, lb_count_subnet, member_count,
                 lb_count_thunder, member_count_thunder, lb_resource):
-        if subnet.ip_version == 6:
-            IP_address = 'ipv6-address'
-            IP_address_cfg = 'ipv6-address-cfg'
-            IP_address_part_cfg = 'ipv6-address-part-cfg'
-            IP_address_part = 'ipv6-address-partition'
-        else:
-            IP_address = 'ip-address'
-            IP_address_cfg = 'ip-address-cfg'
-            IP_address_part_cfg = 'ip-address-part-cfg'
-            IP_address_part = 'ip-address-partition'
         if not subnet:
             return None, False
         vrid = None
@@ -937,7 +919,11 @@ class DeleteVRIDPort(BaseNetworkTask):
         else:
             resource_count = lb_count_subnet + member_count
         if resource_count <= 1 and vthunder:
+            partition = vthunder.partition_name
             for vr in vrid_list:
+                vr_subnet = self.network_driver.get_subnet(vr.subnet_id)
+                IP_addr, IP_addr_cfg = a10_utils.get_acos_parameter_for_vrid(vr_subnet.ip_version,
+                                                                             partition)
                 try:
                     vrid_summary = self.axapi_client.vrrpa.get(vr.vrid)
                 except Exception as e:
@@ -947,12 +933,12 @@ class DeleteVRIDPort(BaseNetworkTask):
                 if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
                     vrid_fip = vrid_summary['vrid']['floating-ip']
                     if vthunder.partition_name != 'shared':
-                        for i in range(len(vrid_fip[IP_address_part_cfg])):
+                        for i in range(len(vrid_fip[IP_addr_cfg])):
                             existing_fips.append(
-                                vrid_fip[IP_address_part_cfg][i][IP_address_part])
+                                vrid_fip[IP_addr_cfg][i][IP_addr])
                     else:
-                        for i in range(len(vrid_fip[IP_address_cfg])):
-                            existing_fips.append(vrid_fip[IP_address_cfg][i][IP_address])
+                        for i in range(len(vrid_fip[IP_addr_cfg])):
+                            existing_fips.append(vrid_fip[IP_addr_cfg][i][IP_addr])
                 if vr.subnet_id == subnet.id:
                     vrid = vr
                 elif vr.vrid_floating_ip in existing_fips:
@@ -987,6 +973,7 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
                 vrids = []
                 vrid_floating_ip_list = []
                 existing_fips = []
+                partition = vthunder.partition_name
                 for vrid in vrid_list:
                     try:
                         vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
@@ -995,22 +982,17 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
                         LOG.exception("Failed to get existing VRID summary due to: %s", str(e))
 
                     subnet = self.network_driver.get_subnet(vrid.subnet_id)
-                    if subnet.ip_version == 6:
-                        IP_address = 'ipv6-address'
-                        IP_address_cfg = 'ipv6-address-cfg'
-                    else:
-                        IP_address = 'ip-address'
-                        IP_address_cfg = 'ip-address-cfg'
-
+                    IP_addr, IP_addr_cfg = a10_utils.get_acos_parameter_for_vrid(subnet.ip_version,
+                                                                                 partition)
                     if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
                         vrid_fip = vrid_summary['vrid']['floating-ip']
                         if vthunder.partition_name != 'shared':
-                            for i in range(len(vrid_fip['ip-address-part-cfg'])):
+                            for i in range(len(vrid_fip[IP_addr_cfg])):
                                 existing_fips.append(
-                                    vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
+                                    vrid_fip[IP_addr_cfg][i][IP_addr])
                         else:
-                            for i in range(len(vrid_fip[IP_address_cfg])):
-                                existing_fips.append(vrid_fip[IP_address_cfg][i][IP_address])
+                            for i in range(len(vrid_fip[IP_addr_cfg])):
+                                existing_fips.append(vrid_fip[IP_addr_cfg][i][IP_addr])
 
                     subnet_matched = list(filter(lambda x: x == vrid.subnet_id,
                                           subnet_list))

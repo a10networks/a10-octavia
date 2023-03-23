@@ -284,3 +284,12 @@ FULLY_POPULATED_MARK_L7RULE_ACTIVE = '-mark-l7rule-active'
 OCTAVIA_OWNER = 'Octavia'
 TOPOLOGY_SPARE = 'SPARE'
 READY = "READY"
+
+IPV6_ADDRESS = 'ipv6-address'
+IPV6_ADDRESS_CFG = 'ipv6-address-cfg'
+IPV6_ADDRESS_PARTITION_CFG = 'ipv6-address-part-cfg'
+IPV6_ADDRESS_PARTITION = 'ipv6-address-partition'
+IP_ADDRESS = 'ip-address'
+IP_ADDRESS_CFG = 'ip-address-cfg'
+IP_ADDRESS_PARTITION_CFG = 'ip-address-part-cfg'
+IP_ADDRESS_PARTITION = 'ip-address-partition'
