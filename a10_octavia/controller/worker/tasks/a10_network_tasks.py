@@ -797,16 +797,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         :return: return the update list of VRID object, If empty the need to remove all VRID
         objects from DB else need update existing ones.
         """
-        if subnet.ip_version == 6:
-            IP_address = 'ipv6-address'
-            IP_address_cfg = 'ipv6-address-cfg'
-            IP_address_part_cfg = 'ipv6-address-part-cfg'
-            IP_address_part = 'ipv6-address-partition'
-        else:
-            IP_address = 'ip-address'
-            IP_address_cfg = 'ip-address-cfg'
-            IP_address_part_cfg = 'ip-address-part-cfg'
-            IP_address_part = 'ip-address-partition'
         updated_vrid_list = []
         if not subnet:
             return updated_vrid_list
@@ -835,6 +825,17 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         owner = vthunder.ip_address + "_" + vthunder.partition_name
         self._add_vrid_to_list(updated_vrid_list, subnet, owner)
         for vrid in updated_vrid_list:
+            vrid_subnet = self.network_driver.get_subnet(vrid.subnet_id)
+            if vrid_subnet.ip_version == 6:
+                IP_address = 'ipv6-address'
+                IP_address_cfg = 'ipv6-address-cfg'
+                IP_address_part_cfg = 'ipv6-address-part-cfg'
+                IP_address_part = 'ipv6-address-partition'
+            else:
+                IP_address = 'ip-address'
+                IP_address_cfg = 'ip-address-cfg'
+                IP_address_part_cfg = 'ip-address-part-cfg'
+                IP_address_part = 'ip-address-partition'
             try:
                 vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
             except Exception as e:
@@ -850,7 +851,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                 else:
                     for i in range(len(vrid_fip[IP_address_cfg])):
                         existing_fips.append(vrid_fip[IP_address_cfg][i][IP_address])
-            vrid_subnet = self.network_driver.get_subnet(vrid.subnet_id)
             vrid.vrid = vrid_value
             if conf_floating_ip.lower() == 'dhcp':
                 subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(

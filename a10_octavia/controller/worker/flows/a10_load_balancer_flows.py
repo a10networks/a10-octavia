@@ -335,7 +335,7 @@ class LoadBalancerFlows(object):
                 delete_LB_flow.add(vthunder_tasks.EnableInterface(
                     name=a10constants.BACKUP_ENABLE_INTERFACE,
                     requires=(a10constants.VTHUNDER, constants.LOADBALANCER,
-                              constants.ADDED_PORTS, constants.SUBNET, a10constants.BACKUP_VTHUNDER, 
+                              constants.ADDED_PORTS, constants.SUBNET, a10constants.BACKUP_VTHUNDER,
                               a10constants.IPV6_ADDRESS_LIST)))
         delete_LB_flow.add(
             a10_database_tasks.GetChildProjectsOfParentPartition(
@@ -425,8 +425,8 @@ class LoadBalancerFlows(object):
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.SUBNET))
         new_LB_net_subflow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
-                requires=a10constants.VTHUNDER,
-                provides=a10constants.LOADBALANCERS_LIST))
+            requires=a10constants.VTHUNDER,
+            provides=a10constants.LOADBALANCERS_LIST))
         if vthunder:
             new_LB_net_subflow.add(a10_database_tasks.GetMemberListByProjectID(
                 requires=a10constants.VTHUNDER,
@@ -497,7 +497,7 @@ class LoadBalancerFlows(object):
                 new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
                     name=a10constants.BACKUP_ENABLE_INTERFACE,
                     requires=(a10constants.VTHUNDER, constants.LOADBALANCER,
-                              constants.ADDED_PORTS, constants.SUBNET, 
+                              constants.ADDED_PORTS, constants.SUBNET,
                               a10constants.BACKUP_VTHUNDER, a10constants.IPV6_ADDRESS_LIST)))
         else:
             new_LB_net_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
