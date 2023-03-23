@@ -951,7 +951,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_driver = mock.MagicMock()
         mock_drivermgr.return_value = mock_driver
         mock_drivermgr.get_plugged_networks.return_value = [NETWORK_11]
-        mock_task.execute(thunder, LB, added_ports)
+        mock_task.execute(thunder, LB, added_ports, SUBNET)
         self.client_mock.system.action.setInterface.assert_not_called()
 
     @mock.patch('stevedore.driver.DriverManager')
@@ -967,7 +967,7 @@ class TestVThunderTasks(base.BaseTaskTestCase):
         mock_driver = mock.MagicMock()
         mock_drivermgr.return_value = mock_driver
         mock_drivermgr.get_plugged_networks.return_value = [NETWORK_11]
-        mock_task.execute(thunder, LB, added_ports)
+        mock_task.execute(thunder, LB, added_ports, SUBNET)
         self.client_mock.system.action.setInterface.assert_not_called()
 
     def test_AmphoraePostNetworkUnplug_amophora_not_available(self):

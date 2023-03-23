@@ -40,7 +40,7 @@ class CheckListenerType(task.Task):
 
 class GetSSLCertData(task.Task):
     """Task to get SSL certificate data from Barbican"""
-     
+
     @axapi_client_decorator
     def execute(self, loadbalancer, listener, vthunder, update_dict={}):
         cert_data = None
@@ -50,13 +50,13 @@ class GetSSLCertData(task.Task):
             barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
             cert_data = utils.get_cert_data(barbican_client, listener)
             if not cert_data.template_name:
-                client_ssl=self.axapi_client.slb.template.client_ssl.get(name=listener.id)
+                client_ssl = self.axapi_client.slb.template.client_ssl.get(name=listener.id)
                 if client_ssl['client-ssl'].get('cert') and client_ssl['client-ssl'].get('key'):
-                    cert_data.cert_filename=client_ssl['client-ssl'].get('cert')
-                    cert_data.key_filename=client_ssl['client-ssl'].get('key')
-                    cert_data.template_name=listener.id
+                    cert_data.cert_filename = client_ssl['client-ssl'].get('cert')
+                    cert_data.key_filename = client_ssl['client-ssl'].get('key')
+                    cert_data.template_name = listener.id
                 else:
-                   cert_data=None
+                    cert_data = None
 
             LOG.debug("Successfully received barbican data for listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
