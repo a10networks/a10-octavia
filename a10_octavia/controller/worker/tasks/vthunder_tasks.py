@@ -17,7 +17,6 @@ import acos_client
 from acos_client import errors as acos_errors
 
 import datetime
-import json
 try:
     import http.client as http_client
 except ImportError:
