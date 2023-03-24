@@ -51,12 +51,21 @@ class GetSSLCertData(task.Task):
             cert_data = utils.get_cert_data(barbican_client, listener)
             if not cert_data.template_name:
                 client_ssl = self.axapi_client.slb.template.client_ssl.get(name=listener.id)
-                if client_ssl['client-ssl'].get('cert') and client_ssl['client-ssl'].get('key'):
-                    cert_data.cert_filename = client_ssl['client-ssl'].get('cert')
-                    cert_data.key_filename = client_ssl['client-ssl'].get('key')
-                    cert_data.template_name = listener.id
+                if utils.acos_version_cmp(vthunder.acos_version, "5.2.1") >= 0:
+                    certificate_list = client_ssl['client-ssl']['certificate-list'][0]
+                    if certificate_list.get('cert') and certificate_list.get('key'):
+                        cert_data.cert_filename = certificate_list.get('cert')
+                        cert_data.key_filename = certificate_list.get('key')
+                        cert_data.template_name = listener.id
+                    else:
+                        cert_data = None
                 else:
-                    cert_data = None
+                    if client_ssl['client-ssl'].get('cert') and client_ssl['client-ssl'].get('key'):
+                        cert_data.cert_filename = client_ssl['client-ssl'].get('cert')
+                        cert_data.key_filename = client_ssl['client-ssl'].get('key')
+                        cert_data.template_name = listener.id
+                    else:
+                        cert_data = None
 
             LOG.debug("Successfully received barbican data for listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
@@ -230,14 +239,22 @@ class ClientSSLTemplateUpdate(task.Task):
                                                                  passphrase=cert_data.key_pass)
 
                 try:
-                    if 'cert' in old['client-ssl'].keys() and 'key' in old['client-ssl'].keys():
-                        if old['client-ssl']['cert'] != cert_data.cert_filename:
-                            self.axapi_client.file.ssl_cert.delete(
-                                private_key=old['client-ssl']['key'],
-                                cert_name=old['client-ssl']['cert'])
-                        if old['client-ssl']['key'] != cert_data.key_filename:
-                            self.axapi_client.file.ssl_key.delete(
-                                private_key=old['client-ssl']['key'])
+                    if utils.acos_version_cmp(vthunder.acos_version, "5.2.1") >= 0:
+                        old_certificate_list = old['client-ssl']['certificate-list'][0]
+                        if 'cert' in old_certificate_list and 'key' in old_certificate_list:
+                            if old_certificate_list['cert'] != cert_data.cert_filename:
+                                self.axapi_client.file.ssl_cert.delete(
+                                    private_key=old_certificate_list['key'],
+                                    cert_name=old_certificate_list['cert'])
+                    else:
+                        if 'cert' in old['client-ssl'].keys() and 'key' in old['client-ssl'].keys():
+                            if old['client-ssl']['cert'] != cert_data.cert_filename:
+                                self.axapi_client.file.ssl_cert.delete(
+                                    private_key=old['client-ssl']['key'],
+                                    cert_name=old['client-ssl']['cert'])
+                            if old['client-ssl']['key'] != cert_data.key_filename:
+                                self.axapi_client.file.ssl_key.delete(
+                                    private_key=old['client-ssl']['key'])
                 except Exception as e:
                     LOG.warning("Clean up old cert/key files failed. error:%s", str(e))
                     # clean up with best effort, don't raise here
