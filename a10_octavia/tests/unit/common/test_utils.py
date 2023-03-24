@@ -243,11 +243,11 @@ class TestUtils(base.BaseTaskTestCase):
         self.assertEqual(utils.get_parent_project(a10constants.MOCK_CHILD_PROJECT_ID), 'default')
 
     def test_get_net_info_from_cidr_valid(self):
-        self.assertEqual(utils.get_net_info_from_cidr('10.10.10.1/32'),
+        self.assertEqual(utils.get_net_info_from_cidr('10.10.10.1/32', 4),
                          ('10.10.10.1', '255.255.255.255'))
-        self.assertEqual(utils.get_net_info_from_cidr('10.10.10.0/24'),
+        self.assertEqual(utils.get_net_info_from_cidr('10.10.10.0/24', 4),
                          ('10.10.10.0', '255.255.255.0'))
-        self.assertEqual(utils.get_net_info_from_cidr('10.10.0.0/16'),
+        self.assertEqual(utils.get_net_info_from_cidr('10.10.0.0/16', 4),
                          ('10.10.0.0', '255.255.0.0'))
 
     def test_get_net_info_from_cidr_invalid(self):
@@ -255,13 +255,14 @@ class TestUtils(base.BaseTaskTestCase):
 
     def test_check_ip_in_subnet_range_valid(self):
         self.assertEqual(utils.check_ip_in_subnet_range('10.10.10.1', '10.10.10.1',
-                                                        '255.255.255.255'), True)
+                                                        '255.255.255.255', 4, '10.10.10.1/33'),
+                         True)
         self.assertEqual(utils.check_ip_in_subnet_range('10.10.10.1', '10.10.11.0',
-                                                        '255.255.255.0'), False)
+                                                        '255.255.255.0', 4, '10.10.10.1/33'), False)
         self.assertEqual(utils.check_ip_in_subnet_range('10.10.10.1', '10.10.0.0',
-                                                        '255.255.0.0'), True)
+                                                        '255.255.0.0', 4, '10.10.10.1/33'), True)
         self.assertEqual(utils.check_ip_in_subnet_range('10.11.10.2', '10.10.0.0',
-                                                        '255.255.0.0'), False)
+                                                        '255.255.0.0', 4, '10.10.10.2/33'), False)
 
     def test_check_ip_in_subnet_range_invalid(self):
         self.assertRaises(Exception, utils.check_ip_in_subnet_range, '1010.10.10.2',
@@ -283,22 +284,22 @@ class TestUtils(base.BaseTaskTestCase):
         self.assertRaises(Exception, utils.merge_host_and_network_ip, '10.10.10.0/42', '99')
 
     def test_get_patched_ip_address(self):
-        self.assertEqual(utils.get_patched_ip_address('45', '10.10.0.0/24'), '10.10.0.45')
-        self.assertEqual(utils.get_patched_ip_address('0.45', '10.10.0.0/24'), '10.10.0.45')
-        self.assertEqual(utils.get_patched_ip_address('0.0.45', '10.10.0.0/24'), '10.10.0.45')
-        self.assertEqual(utils.get_patched_ip_address('.45', '10.10.0.0/24'), '10.10.0.45')
-        self.assertEqual(utils.get_patched_ip_address('11.45', '11.11.11.0/24'), '11.11.11.45')
-        self.assertEqual(utils.get_patched_ip_address('3.45', '11.11.2.0/23'), '11.11.3.45')
-        self.assertEqual(utils.get_patched_ip_address('3.45', '11.11.2.0/22'), '11.11.3.45')
+        self.assertEqual(utils.get_patched_ip_address('45', '10.10.0.0/24', 4), '10.10.0.45')
+        self.assertEqual(utils.get_patched_ip_address('0.45', '10.10.0.0/24', 4), '10.10.0.45')
+        self.assertEqual(utils.get_patched_ip_address('0.0.45', '10.10.0.0/24', 4), '10.10.0.45')
+        self.assertEqual(utils.get_patched_ip_address('.45', '10.10.0.0/24', 4), '10.10.0.45')
+        self.assertEqual(utils.get_patched_ip_address('11.45', '11.11.11.0/24', 4), '11.11.11.45')
+        self.assertEqual(utils.get_patched_ip_address('3.45', '11.11.2.0/23', 4), '11.11.3.45')
+        self.assertEqual(utils.get_patched_ip_address('3.45', '11.11.2.0/22', 4), '11.11.3.45')
 
     def test_get_patched_ip_address_invalid(self):
         vrid_exc = exceptions.VRIDIPNotInSubentRangeError
         cfg_err = cfg.ConfigFileValueError
-        self.assertRaises(vrid_exc, utils.get_patched_ip_address, 'abc.cef', '10.10.0.0/24')
-        self.assertRaises(vrid_exc, utils.get_patched_ip_address, '.0.11.10', '10.10.0.0/24')
-        self.assertRaises(vrid_exc, utils.get_patched_ip_address, '1.0.0.23', '10.10.0.0/24')
-        self.assertRaises(cfg_err, utils.get_patched_ip_address, '10.333.11.10', '10.10.0.0/24')
-        self.assertRaises(cfg_err, utils.get_patched_ip_address, '1e.3d.4f.1o', '10.10.0.0/24')
+        self.assertRaises(vrid_exc, utils.get_patched_ip_address, 'abc.cef', '10.10.0.0/24', 4)
+        self.assertRaises(vrid_exc, utils.get_patched_ip_address, '.0.11.10', '10.10.0.0/24', 4)
+        self.assertRaises(vrid_exc, utils.get_patched_ip_address, '1.0.0.23', '10.10.0.0/24', 4)
+        self.assertRaises(cfg_err, utils.get_patched_ip_address, '10.333.11.10', '10.10.0.0/24', 4)
+        self.assertRaises(cfg_err, utils.get_patched_ip_address, '1e.3d.4f.1o', '10.10.0.0/24', 4)
 
     def test_get_vrid_floating_ip_for_project_with_only_local_config(self):
         vthunder = copy.deepcopy(VTHUNDER_1)
