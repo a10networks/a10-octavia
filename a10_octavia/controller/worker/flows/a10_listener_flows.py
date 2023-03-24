@@ -56,8 +56,11 @@ class ListenerFlows(object):
         create_listener_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
             provides=constants.FLAVOR_DATA))
+        create_listener_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
         create_listener_flow.add(nat_pool_tasks.NatPoolCreate(
-            requires=(constants.LOADBALANCER,
+            requires=(constants.SUBNET, constants.LOADBALANCER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             requires=[constants.LOADBALANCER, constants.LISTENER,
@@ -98,9 +101,12 @@ class ListenerFlows(object):
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
             inject={constants.LISTENER: listener},
             provides=constants.FLAVOR_DATA))
+        create_listener_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
         create_listener_flow.add(nat_pool_tasks.NatPoolCreate(
             name=sf_name + a10constants.FULLY_POPULATED_NAT_CREATE,
-            requires=(constants.LOADBALANCER,
+            requires=(constants.SUBNET, constants.LOADBALANCER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             name=sf_name + a10constants.FULLY_POPULATED_CREATE_LISTENER,
@@ -273,8 +279,11 @@ class ListenerFlows(object):
         create_listener_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
             provides=constants.FLAVOR_DATA))
+        create_listener_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
         create_listener_flow.add(nat_pool_tasks.NatPoolCreate(
-            requires=(constants.LOADBALANCER,
+            requires=(constants.SUBNET, constants.LOADBALANCER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             requires=[constants.LOADBALANCER, constants.LISTENER,
@@ -309,9 +318,12 @@ class ListenerFlows(object):
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
             inject={constants.LISTENER: listener},
             provides=constants.FLAVOR_DATA))
+        create_listener_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
         create_listener_flow.add(nat_pool_tasks.NatPoolCreate(
             name=sf_name + a10constants.FULLY_POPULATED_NAT_CREATE,
-            requires=(constants.LOADBALANCER,
+            requires=(constants.SUBNET, constants.LOADBALANCER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             name=sf_name + a10constants.FULLY_POPULATED_CREATE_LISTENER,

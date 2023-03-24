@@ -61,7 +61,6 @@ A10_GLOBAL_OPTS = [
                 help=_('A list of subnet and IPv6 address pair, which a10-octavia will attach '
                        'the addresses to the vThunder subnet interfaces '
                        'when using vThunder as Amphora'))
-
 ]
 
 A10_GLM_LICENSE_OPTS = [

@@ -115,7 +115,7 @@ class LoadBalancerFlows(object):
             requires=(constants.SUBNET, constants.AMPHORA,
                       a10constants.LB_COUNT_FLAVOR, constants.FLAVOR_DATA)))
         lb_create_flow.add(nat_pool_tasks.NatPoolCreate(
-            requires=(constants.LOADBALANCER,
+            requires=(constants.SUBNET, constants.LOADBALANCER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
@@ -365,7 +365,7 @@ class LoadBalancerFlows(object):
                       a10constants.LB_COUNT_SUBNET,
                       constants.FLAVOR_DATA)))
         delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
-            requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+            requires=(constants.SUBNET, constants.LOADBALANCER, a10constants.VTHUNDER,
                       a10constants.LB_COUNT_FLAVOR, constants.FLAVOR_DATA)))
         if deleteCompute:
             delete_LB_flow.add(glm_tasks.RevokeFlexpoolLicense(
@@ -414,10 +414,6 @@ class LoadBalancerFlows(object):
             provides=constants.AMPHORA))
         new_LB_net_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=a10constants.GET_VTHUNDER_FROM_LB,
-            requires=constants.LOADBALANCER,
-            provides=a10constants.VTHUNDER))
-        new_LB_net_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
-            name=a10constants.GET_VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         new_LB_net_subflow.add(a10_network_tasks.GetLBResourceSubnet(
@@ -716,7 +712,7 @@ class LoadBalancerFlows(object):
             self.get_post_lb_rack_vthunder_association_flow(
                 post_amp_prefix, topology, mark_active=(not listeners)))
         lb_create_flow.add(nat_pool_tasks.NatPoolCreate(
-            requires=(constants.LOADBALANCER,
+            requires=(constants.SUBNET, constants.LOADBALANCER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         lb_create_flow.add(virtual_server_tasks.CreateVirtualServerTask(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
@@ -808,7 +804,7 @@ class LoadBalancerFlows(object):
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER),
             provides=a10constants.LB_COUNT_FLAVOR))
         delete_LB_flow.add(nat_pool_tasks.NatPoolDelete(
-            requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
+            requires=(constants.SUBNET, constants.LOADBALANCER, a10constants.VTHUNDER,
                       a10constants.LB_COUNT_FLAVOR, constants.FLAVOR_DATA)))
         delete_LB_flow.add(a10_database_tasks.CountLBThunderPartition(
             requires=a10constants.VTHUNDER,
