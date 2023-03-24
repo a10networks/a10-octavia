@@ -531,6 +531,9 @@ class VThunderFlows(object):
         amp_for_lb_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
+        amp_for_lb_flow.add(vthunder_tasks.UpdateAcosVersionInVthunderEntry(
+            name=sf_name + '-' + a10constants.UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY,
+            requires=(a10constants.VTHUNDER)))
         return amp_for_lb_flow
 
     def _is_vrrp_configured(self, history):
