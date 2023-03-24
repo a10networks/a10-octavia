@@ -15,6 +15,7 @@
 
 from concurrent import futures
 import datetime
+import multiprocessing
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -27,6 +28,9 @@ from a10_octavia.db import repositories as a10repo
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
+mp_mgr = multiprocessing.Manager()
+hk_ctx_map = mp_mgr.dict()
+hk_ctx_lock = mp_mgr.Lock()
 
 
 class SpareAmphora(object):
@@ -161,3 +165,22 @@ class WriteMemory(object):
         else:
             LOG.warning("No thunders found that are recently updated."
                         " Not performing write memory...")
+
+
+class PendingResourceCleanup(object):
+
+    def __init__(self):
+        self.loadbalancer_repo = a10repo.LoadBalancerRepository()
+        self.vthunder_repo = a10repo.VThunderRepository()
+        self.listener_repo = repo.ListenerRepository()
+        self.pool_repo = repo.PoolRepository()
+        self.member_repo = repo.MemberRepository()
+        self.cw = cw.A10ControllerWorker()
+        self.svc_up_time = datetime.datetime.utcnow()
+
+    def cleanup_slb_resources(self):
+        cleanup_interval = CONF.a10_house_keeping.resource_cleanup_interval
+        pending_lbs = self.loadbalancer_repo.get_pending_lbs_to_be_deleted(db_api.get_session(),
+                                                                           cleanup_interval)
+        for pending_lb in pending_lbs:
+            self.cw.delete_load_balancer_with_housekeeping(pending_lb, True)

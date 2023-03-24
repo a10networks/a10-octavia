@@ -191,4 +191,7 @@ class HealthMonitorToErrorOnRevertTask(lifecycle_tasks.BaseLifecycleTask):
         pass
 
     def revert(self, health_mon, *args, **kwargs):
-        self.task_utils.mark_health_mon_prov_status_error(health_mon.pool_id)
+        try:
+            self.task_utils.mark_health_mon_prov_status_error(health_mon.pool_id)
+        except Exception as e:
+            LOG.exception("Failed to change status to error due to: %s", e)

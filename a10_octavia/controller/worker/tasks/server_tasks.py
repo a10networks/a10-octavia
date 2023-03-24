@@ -261,4 +261,7 @@ class MemberToErrorOnRevertTask(lifecycle_tasks.BaseLifecycleTask):
         pass
 
     def revert(self, member, *args, **kwargs):
-        self.task_utils.mark_member_prov_status_error(member.id)
+        try:
+            self.task_utils.mark_member_prov_status_error(member.id)
+        except Exception as e:
+            LOG.exception("Failed to change status due to: %s", e)
