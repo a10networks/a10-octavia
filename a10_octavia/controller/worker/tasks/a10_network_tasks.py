@@ -805,12 +805,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         :return: return the update list of VRID object, If empty the need to remove all VRID
         objects from DB else need update existing ones.
         """
-        if subnet.ip_version == 6:
-            IP_address = 'ipv6-address'
-            IP_address_cfg = 'ipv6-address-cfg'
-        else:
-            IP_address = 'ip-address'
-            IP_address_cfg = 'ip-address-cfg'
         updated_vrid_list = []
         if not subnet:
             return updated_vrid_list
@@ -923,12 +917,6 @@ class DeleteVRIDPort(BaseNetworkTask):
     def execute(self, vthunder, vrid_list, subnet,
                 use_device_flavor, lb_count_subnet, member_count,
                 lb_count_thunder, member_count_thunder, lb_resource):
-        if subnet.ip_version == 6:
-            IP_address = 'ipv6-address'
-            IP_address_cfg = 'ipv6-address-cfg'
-        else:
-            IP_address = 'ip-address'
-            IP_address_cfg = 'ip-address-cfg'
         if not subnet:
             return None, False
         vrid = None
