@@ -883,6 +883,7 @@ class LoadBalancerFlows(object):
         handle_vrid_for_lb_subflow = linear_flow.Flow(
             a10constants.HANDLE_VRID_LOADBALANCER_SUBFLOW)
         handle_vrid_for_lb_subflow.add(a10_network_tasks.GetLBResourceSubnet(
+            name=a10constants.GET_LB_RESOURCE_SUBNET,
             rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
             provides=constants.SUBNET))
         handle_vrid_for_lb_subflow.add(
