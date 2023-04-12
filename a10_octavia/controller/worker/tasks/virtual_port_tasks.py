@@ -244,6 +244,7 @@ class ListenerUpdateForPool(ListenersParent, task.Task):
                 c_pers, s_pers = utils.get_sess_pers_templates(pool)
                 listener.protocol = openstack_mappings.virtual_port_protocol(
                     self.axapi_client, listener.protocol).lower()
+                clear_aflex = True
 
                 if aflex is not None:
                     curr_vport = self.axapi_client.slb.virtual_server.vport.get(
@@ -252,6 +253,7 @@ class ListenerUpdateForPool(ListenersParent, task.Task):
                     exclude = a10constants.PROXY_PROTOCPL_AFLEX_NAME
                     aflex_scripts = utils.get_proxy_aflex_list(curr_vport, aflex, exclude)
                     kargs["aflex_scripts"] = aflex_scripts
+                    clear_aflex = False
 
                 self.axapi_client.slb.virtual_server.vport.update(
                     loadbalancer.id,
@@ -261,7 +263,7 @@ class ListenerUpdateForPool(ListenersParent, task.Task):
                     pool_id,
                     s_pers_name=s_pers, c_pers_name=c_pers,
                     tcp_proxy_name=tcp_proxy,
-                    aflex_scripts_clear=True,
+                    aflex_scripts_clear=clear_aflex,
                     **kargs)
                 LOG.debug("Successfully updated listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
