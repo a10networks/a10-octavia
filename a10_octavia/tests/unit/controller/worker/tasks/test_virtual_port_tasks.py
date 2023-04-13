@@ -33,6 +33,7 @@ from a10_octavia.tests.unit import base
 VTHUNDER = data_models.VThunder()
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
 UPDATE_DICT = {}
+POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID, name="sg1")
 
 
 class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
@@ -404,17 +405,17 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         listener_task = task.ListenerUpdateForPool()
         listener_task.axapi_client = self.client_mock
 
-        listener_task.execute(LB, listener, VTHUNDER)
+        listener_task.execute(LB, listener, POOL, VTHUNDER)
         self.client_mock.slb.virtual_server.vport.update.assert_called_with(
             LB.id,
             listener.id,
             listener.protocol,
             listener.protocol_port,
-            listener.default_pool_id,
+            POOL.id,
             c_pers_name=None,
             s_pers_name=a10constants.MOCK_POOL_ID,
             tcp_proxy_name=None,
-            aflex_scripts_clear=True
+            aflex_scripts_clear=False
         )
 
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
@@ -428,17 +429,17 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         listener_task = task.ListenerUpdateForPool()
         listener_task.axapi_client = self.client_mock
 
-        listener_task.execute(LB, listener, VTHUNDER)
+        listener_task.execute(LB, listener, POOL, VTHUNDER)
         self.client_mock.slb.virtual_server.vport.update.assert_called_with(
             LB.id,
             listener.id,
             listener.protocol,
             listener.protocol_port,
-            listener.default_pool_id,
+            POOL.id,
             c_pers_name=None,
             s_pers_name=None,
             tcp_proxy_name=None,
-            aflex_scripts_clear=True
+            aflex_scripts_clear=False
         )
 
     @mock.patch('a10_octavia.common.openstack_mappings.virtual_port_protocol')
@@ -452,17 +453,17 @@ class TestHandlerVirtualPortTasks(base.BaseTaskTestCase):
         listener_task = task.ListenerUpdateForPool()
         listener_task.axapi_client = self.client_mock
 
-        listener_task.execute(LB, listener, VTHUNDER)
+        listener_task.execute(LB, listener, POOL, VTHUNDER)
         self.client_mock.slb.virtual_server.vport.update.assert_called_with(
             LB.id,
             listener.id,
             listener.protocol,
             listener.protocol_port,
-            listener.default_pool_id,
+            POOL.id,
             c_pers_name=a10constants.MOCK_POOL_ID,
             s_pers_name=None,
             tcp_proxy_name=None,
-            aflex_scripts_clear=True
+            aflex_scripts_clear=False
         )
 
     def test_set_http_virtual_port_conn_limit_with_cli(self):
