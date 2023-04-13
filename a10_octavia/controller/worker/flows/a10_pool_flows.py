@@ -73,7 +73,8 @@ class PoolFlows(object):
             provides=constants.POOL)
         create_pool_flow.add(*self._get_sess_pers_subflow(create_pool))
         create_pool_flow.add(virtual_port_tasks.ListenerUpdateForPool(
-            requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
+            requires=[constants.LOADBALANCER, constants.LISTENER,
+                      constants.POOL, a10constants.VTHUNDER]))
         create_pool_flow.add(database_tasks.MarkPoolActiveInDB(
             requires=constants.POOL))
         create_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
@@ -170,7 +171,8 @@ class PoolFlows(object):
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
         delete_pool_flow.add(virtual_port_tasks.ListenerUpdateForPool(
-            requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
+            requires=[constants.LOADBALANCER, constants.LISTENER,
+                      constants.POOL, a10constants.VTHUNDER]))
         delete_pool_flow.add(persist_tasks.DeleteSessionPersistence(
             requires=[a10constants.VTHUNDER, constants.POOL]))
         delete_pool_flow.add(a10_database_tasks.GetProxyProtocolPoolCount(
@@ -277,7 +279,8 @@ class PoolFlows(object):
             provides=constants.POOL)
         update_pool_flow.add(*self._get_sess_pers_subflow(update_pool))
         update_pool_flow.add(virtual_port_tasks.ListenerUpdateForPool(
-            requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
+            requires=[constants.LOADBALANCER, constants.LISTENER,
+                      constants.POOL, a10constants.VTHUNDER]))
         update_pool_flow.add(database_tasks.UpdatePoolInDB(
             requires=[constants.POOL, constants.UPDATE_DICT]))
         update_pool_flow.add(database_tasks.MarkPoolActiveInDB(
@@ -327,10 +330,11 @@ class PoolFlows(object):
             rebind={constants.POOL: pool_name}))
         delete_pool_flow.add(virtual_port_tasks.ListenerUpdateForPool(
             name='listener_update_for_pool_' + pool_name,
-            requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER,
-                      a10constants.FLOW_TYPE],
+            requires=[constants.LOADBALANCER, constants.LISTENER, constants.POOL,
+                      a10constants.VTHUNDER, a10constants.FLOW_TYPE],
             inject={a10constants.FLOW_TYPE: a10constants.FLOW_TYPE_DELETE},
-            rebind={constants.LISTENER: pool_listener_name}))
+            rebind={constants.LISTENER: pool_listener_name,
+                    constants.POOL: pool_name}))
         delete_pool_flow.add(persist_tasks.DeleteSessionPersistence(
             name='delete_session_persistence_' + pool_name,
             requires=[a10constants.VTHUNDER, constants.POOL],
@@ -387,7 +391,8 @@ class PoolFlows(object):
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
         delete_pool_flow.add(virtual_port_tasks.ListenerUpdateForPool(
-            requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER]))
+            requires=[constants.LOADBALANCER, constants.LISTENER,
+                      constants.POOL, a10constants.VTHUNDER]))
         delete_pool_flow.add(persist_tasks.DeleteSessionPersistence(
             requires=[a10constants.VTHUNDER, constants.POOL]))
         delete_pool_flow.add(vthunder_tasks.SetupDeviceNetworkMap(
