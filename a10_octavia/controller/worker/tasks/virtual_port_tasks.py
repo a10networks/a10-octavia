@@ -18,6 +18,8 @@ from oslo_log import log as logging
 from requests.exceptions import ConnectionError
 from taskflow import task
 
+from octavia.common import constants
+
 from a10_octavia.common import a10constants
 from a10_octavia.common import exceptions
 from a10_octavia.common import openstack_mappings
@@ -231,12 +233,11 @@ class ListenerUpdateForPool(ListenersParent, task.Task):
     """Task to update listener while pool delete"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, listener, vthunder, flow_type=None):
+    def execute(self, loadbalancer, listener, pool, vthunder, flow_type=None):
         try:
             if listener:
                 kargs = {}
-                pool = listener.default_pool
-                pool_id = listener.default_pool_id
+                pool_id = pool.id
                 if flow_type is not None and flow_type == "delete":
                     pool = None
                     pool_id = None
@@ -253,6 +254,9 @@ class ListenerUpdateForPool(ListenersParent, task.Task):
                     exclude = a10constants.PROXY_PROTOCPL_AFLEX_NAME
                     aflex_scripts = utils.get_proxy_aflex_list(curr_vport, aflex, exclude)
                     kargs["aflex_scripts"] = aflex_scripts
+                    clear_aflex = True
+                if (pool and pool.provisioning_status == constants.PENDING_DELETE and
+                        utils.proxy_protocol_use_aflex(listener, pool)) is True:
                     clear_aflex = True
 
                 self.axapi_client.slb.virtual_server.vport.update(
