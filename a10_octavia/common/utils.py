@@ -388,7 +388,10 @@ def get_ipv6_address_from_conf(address_list, subnet_id):
         for key in address:
             if key == subnet_id:
                 final_address_list.append({'ipv6-addr': address[key]})
-                return final_address_list
+    if not final_address_list:
+        raise exceptions.IPv6AddressNotFoundInConfig(subnet_id)
+    else:
+        return final_address_list
 
 
 def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list):
