@@ -325,11 +325,11 @@ class EnableInterface(VThunderBaseTask):
                                 self.axapi_client.system.action.setInterface(ifnum,
                                                                              ifnum_address[ifnum],
                                                                              6)
-                    else:
-                        self.axapi_client.device_context.switch(1, None)
-                        self.axapi_client.system.action.setInterface(ifnum, None, 4)
-                        self.axapi_client.device_context.switch(2, None)
-                        self.axapi_client.system.action.setInterface(ifnum, None, 4)
+                        else:
+                            self.axapi_client.device_context.switch(1, None)
+                            self.axapi_client.system.action.setInterface(ifnum, None, 4)
+                            self.axapi_client.device_context.switch(2, None)
+                            self.axapi_client.system.action.setInterface(ifnum, None, 4)
         except(acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure ethernet interface vThunder: %s", str(e))
             raise e
