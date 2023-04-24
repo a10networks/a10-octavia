@@ -401,12 +401,12 @@ def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list)
         if port_mac_address == acos_mac_address:
             if nic.network_id in amp_boot_networks:
                 final_address_list = get_ipv6_address_from_conf(address_list, nic.network_id)
-                if len(final_address_list) > 0:
+                if final_address_list and len(final_address_list) > 0:
                     break
 
             if nic.network_id == subnet.network_id and not loadbalancers_list:
                 final_address_list = get_ipv6_address_from_conf(address_list, subnet.id)
-                if len(final_address_list) > 0:
+                if final_address_list and len(final_address_list) > 0:
                     break
 
             if loadbalancers_list:
@@ -414,15 +414,15 @@ def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list)
                     if lb.vip.network_id == nic.network_id:
                         final_address_list = get_ipv6_address_from_conf(address_list,
                                                                         lb.vip.subnet_id)
-                        if len(final_address_list) > 0:
+                        if final_address_list and len(final_address_list) > 0:
                             break
-                for pool in lb.pools:
-                    for member in pool.members:
-                        member_subnet = network_driver.get_subnet(member.subnet_id)
-                        if member_subnet.network_id == nic.network_id:
-                            final_address_list = get_ipv6_address_from_conf(address_list,
-                                                                            member.subnet_id)
-                            if len(final_address_list) > 0:
+                    for pool in lb.pools:
+                        for member in pool.members:
+                            member_subnet = network_driver.get_subnet(member.subnet_id)
+                            if member_subnet.network_id == nic.network_id:
+                                final_address_list = get_ipv6_address_from_conf(address_list,
+                                                                                member.subnet_id)
+                            if final_address_list and len(final_address_list) > 0:
                                 break
     return final_address_list
 

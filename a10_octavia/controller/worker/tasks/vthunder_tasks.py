@@ -283,6 +283,7 @@ class EnableInterface(VThunderBaseTask):
     @axapi_client_decorator
     def execute(self, vthunder, loadbalancer, added_ports, subnet, ifnum_master=None,
                 ifnum_backup=None, backup_vthunder=None, ifnum_address=None):
+
         if not vthunder:
             return
         topology = CONF.a10_controller_worker.loadbalancer_topology
@@ -297,50 +298,38 @@ class EnableInterface(VThunderBaseTask):
             nics = network_driver.get_plugged_networks(compute_id)
             added_ports[amphora_id] = []
             added_ports[amphora_id].append(nics[1])
-
         try:
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 interfaces = self.axapi_client.interface.get_list()
                 if (not lb_exists_flag and topology == "ACTIVE_STANDBY") or topology == "SINGLE":
                     for i in range(len(interfaces['interface']['ethernet-list'])):
                         ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
-                        if subnet.ip_version == 6:
-                            if not ifnum_address[ifnum]:
-                                LOG.warning('IPv6 Address for ethernet %s not found'
-                                            'in configurations', ifnum)
-                                continue
+                        if ifnum_address.get(ifnum):
                             self.axapi_client.system.action.setInterface(ifnum,
                                                                          ifnum_address[ifnum],
-                                                                         subnet.ip_version)
-                        elif interfaces['interface']['ethernet-list'][i]['action'] == "disable":
-                            self.axapi_client.system.action.setInterface(ifnum, None,
-                                                                         subnet.ip_version)
+                                                                         6)
+                        else:
+                            self.axapi_client.system.action.setInterface(ifnum, None, 4)
                     LOG.debug("Configured the ethernet interface for vThunder: %s", vthunder.id)
                 else:
                     for i in range(len(interfaces['interface']['ethernet-list'])):
                         ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
-                        if subnet.ip_version == 6:
-                            if not ifnum_address[ifnum]:
-                                LOG.warning('IPv6 Address for ethernet %s not found'
-                                            'in configurations', ifnum)
-                                continue
+                        if ifnum_address.get(ifnum):
                             if backup_vthunder:
                                 self.axapi_client.device_context.switch(2, None)
                                 self.axapi_client.system.action.setInterface(ifnum,
                                                                              ifnum_address[ifnum],
-                                                                             subnet.ip_version)
+                                                                             6)
                             else:
                                 self.axapi_client.device_context.switch(1, None)
                                 self.axapi_client.system.action.setInterface(ifnum,
                                                                              ifnum_address[ifnum],
-                                                                             subnet.ip_version)
-                        elif interfaces['interface']['ethernet-list'][i]['action'] == "disable":
-                            self.axapi_client.device_context.switch(1, None)
-                            self.axapi_client.system.action.setInterface(ifnum, None,
-                                                                         subnet.ip_version)
-                            self.axapi_client.device_context.switch(2, None)
-                            self.axapi_client.system.action.setInterface(ifnum, None,
-                                                                         subnet.ip_version)
+                                                                             6)
+                    else:
+                        self.axapi_client.device_context.switch(1, None)
+                        self.axapi_client.system.action.setInterface(ifnum, None, 4)
+                        self.axapi_client.device_context.switch(2, None)
+                        self.axapi_client.system.action.setInterface(ifnum, None, 4)
         except(acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure ethernet interface vThunder: %s", str(e))
             raise e
@@ -351,8 +340,6 @@ class GetValidIPv6Address(VThunderBaseTask):
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder, subnet, loadbalancers_list):
         if vthunder:
-            if subnet.ip_version != 6:
-                return None
             ipv6_address_list = {}
             topology = CONF.a10_controller_worker.loadbalancer_topology
             compute_id = loadbalancer.amphorae[0].compute_id
@@ -371,7 +358,8 @@ class GetValidIPv6Address(VThunderBaseTask):
                     ifnum_oper = self.axapi_client.interface.ethernet.get_oper(ifnum)
                     ifnum_address = a10_utils.get_ipv6_address(ifnum_oper, subnet, nics,
                                                                address_list, loadbalancers_list)
-                    ipv6_address_list[ifnum] = ifnum_address
+                    if ifnum_address:
+                        ipv6_address_list[ifnum] = ifnum_address
             return ipv6_address_list
         else:
             return None
@@ -391,7 +379,7 @@ class EnableInterfaceForMembers(VThunderBaseTask):
                 interfaces = self.axapi_client.interface.get_list()
                 for i in range(len(interfaces['interface']['ethernet-list'])):
                     ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
-                    if subnet.ip_version == 6:
+                    if ifnum_address.get(ifnum):
                         if not ifnum_address[ifnum]:
                             LOG.warning("IPv6 Address for ethernet %s not found in configurations",
                                         ifnum)
@@ -399,29 +387,29 @@ class EnableInterfaceForMembers(VThunderBaseTask):
                         if topology == "SINGLE":
                             self.axapi_client.system.action.setInterface(ifnum,
                                                                          ifnum_address[ifnum],
-                                                                         subnet.ip_version)
+                                                                         6)
                         else:
                             if backup_vthunder:
                                 self.axapi_client.device_context.switch(2, None)
                                 self.axapi_client.system.action.setInterface(ifnum,
                                                                              ifnum_address[ifnum],
-                                                                             subnet.ip_version)
+                                                                             6)
                             else:
                                 self.axapi_client.device_context.switch(1, None)
                                 self.axapi_client.system.action.setInterface(ifnum,
                                                                              ifnum_address[ifnum],
-                                                                             subnet.ip_version)
-                    elif interfaces['interface']['ethernet-list'][i]['action'] == "disable":
+                                                                             6)
+                    else:
                         if topology == "SINGLE":
                             self.axapi_client.system.action.setInterface(ifnum, None,
-                                                                         subnet.ip_version)
+                                                                         4)
                         else:
                             self.axapi_client.device_context.switch(1, None)
                             self.axapi_client.system.action.setInterface(ifnum, None,
-                                                                         subnet.ip_version)
+                                                                         4)
                             self.axapi_client.device_context.switch(2, None)
                             self.axapi_client.system.action.setInterface(ifnum, None,
-                                                                         subnet.ip_version)
+                                                                         4)
                 LOG.debug("Configured the new interface required for member.")
             else:
                 LOG.debug("Configuration of new interface is not required for member.")
