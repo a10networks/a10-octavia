@@ -129,11 +129,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
     @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
-    @mock.patch(
-        'a10_octavia.common.utils.get_acos_parameter_for_vrid',
-        return_value=[constants.IP_ADDRESS, constants.IP_ADDRESS_CFG])
     def test_HandleVRIDFloatingIP_create_floating_ip_in_shared_partition_with_static_ip(
-            self, mock_patched_ip, mock_floating_ip, mock_acos_params):
+            self, mock_patched_ip, mock_floating_ip):
         member = copy.deepcopy(MEMBER)
         member.subnet_id = SUBNET_1.id
         vthunder = copy.deepcopy(VTHUNDER)
@@ -160,11 +157,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
 
     @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
-    @mock.patch(
-        'a10_octavia.common.utils.get_acos_parameter_for_vrid',
-        return_value=[constants.IP_ADDRESS, constants.IP_ADDRESS_CFG])
     def test_HandleVRIDFloatingIP_create_floating_ip_with_device_name_flavor(
-            self, mock_patched_ip, mock_acos_params):
+            self, mock_patched_ip):
         member = copy.deepcopy(MEMBER)
         member.subnet_id = SUBNET_1.id
         vthunder = copy.deepcopy(VTHUNDER)
@@ -193,11 +187,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
     @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
     @mock.patch('a10_octavia.controller.worker.tasks.a10_network_tasks.a10_task_utils')
-    @mock.patch(
-        'a10_octavia.common.utils.get_acos_parameter_for_vrid',
-        return_value=[constants.IP_ADDRESS_PARTITION, constants.IP_ADDRESS_PARTITION_CFG])
     def test_HandleVRIDFloatingIP_create_floating_ip_in_specified_partition_with_static_ip(
-            self, mock_utils, mock_patched_ip, get_floating_ip, mock_acos_params):
+            self, mock_utils, mock_patched_ip, get_floating_ip):
         member = copy.deepcopy(MEMBER)
         member.subnet_id = SUBNET_1.id
         subnet = copy.deepcopy(SUBNET_1)
@@ -261,11 +252,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
     @mock.patch(
         'a10_octavia.common.utils.get_vrid_floating_ip_for_project',
         return_value='dhcp')
-    @mock.patch(
-        'a10_octavia.common.utils.get_acos_parameter_for_vrid',
-        return_value=[constants.IP_ADDRESS_PARTITION, constants.IP_ADDRESS_PARTITION_CFG])
     def test_HandleVRIDFloatingIP_create_floating_ip_in_specified_partition_with_dhcp(
-            self, get_floating_ip, check_subnet, mock_acos_params):
+            self, get_floating_ip, check_subnet):
         member = copy.deepcopy(MEMBER)
         member.subnet_id = SUBNET_1.id
         subnet = copy.deepcopy(SUBNET_1)
@@ -313,11 +301,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
     @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
-    @mock.patch(
-        'a10_octavia.common.utils.get_acos_parameter_for_vrid',
-        return_value=[constants.IP_ADDRESS, constants.IP_ADDRESS_CFG])
     def test_HandleVRIDFloatingIP_noop_device_fip_and_conf_fip_both_given_same_ip(
-            self, mock_patched_ip, get_floating_ip, mock_acos_params):
+            self, mock_patched_ip, get_floating_ip):
         vrid = copy.deepcopy(VRID_1)
         vrid.vrid_floating_ip = a10constants.MOCK_VRID_FLOATING_IP_1
         vrid.vrid = VRID_VALUE
@@ -343,11 +328,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
     @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_2)
     @mock.patch('a10_octavia.controller.worker.tasks.a10_network_tasks.a10_task_utils')
-    @mock.patch(
-        'a10_octavia.common.utils.get_acos_parameter_for_vrid',
-        return_value=[constants.IP_ADDRESS, constants.IP_ADDRESS_CFG])
     def test_HandleVRIDFloatingIP_replace_floating_ip_in_shared_partition_with_static_ip(
-            self, mock_utils, mock_patched_ip, get_floating_ip, mock_acos_params):
+            self, mock_utils, mock_patched_ip, get_floating_ip):
         vrid = copy.deepcopy(VRID_1)
         vthunder = copy.deepcopy(VTHUNDER)
         vthunder.ip_address = '10.0.0.1'
@@ -383,11 +365,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
     @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_2)
     @mock.patch('a10_octavia.controller.worker.tasks.a10_network_tasks.a10_task_utils')
-    @mock.patch(
-        'a10_octavia.common.utils.get_acos_parameter_for_vrid',
-        return_value=[constants.IP_ADDRESS_PARTITION, constants.IP_ADDRESS_PARTITION_CFG])
     def test_HandleVRIDFloatingIP_replace_floating_ip_in_specified_partition_with_static_ip(
-            self, mock_utils, mock_patched_ip, get_floating_ip, mock_acos_params):
+            self, mock_utils, mock_patched_ip, get_floating_ip):
         vrid = copy.deepcopy(VRID_1)
         vrid.vrid_floating_ip = a10constants.MOCK_VRID_FLOATING_IP_1
         vrid.vrid = VRID_VALUE
@@ -490,11 +469,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
     @mock.patch('a10_octavia.common.utils.get_vrid_floating_ip_for_project',
                 return_value='dhcp')
     @mock.patch('a10_octavia.controller.worker.tasks.a10_network_tasks.a10_task_utils')
-    @mock.patch(
-        'a10_octavia.common.utils.get_acos_parameter_for_vrid',
-        return_value=[constants.IP_ADDRESS_PARTITION, constants.IP_ADDRESS_PARTITION_CFG])
     def test_HandleVRIDFloatingIP_replace_floating_ip_diff_subnet_in_set_part_conf_fip_set_dhcp(
-            self, mock_utils, get_floating_ip, check_subnet, mock_acos_params):
+            self, mock_utils, get_floating_ip, check_subnet):
         vrid = copy.deepcopy(VRID_1)
         vrid.vrid_floating_ip = a10constants.MOCK_VRID_FLOATING_IP_1
         vrid.vrid = VRID_VALUE
@@ -655,11 +631,8 @@ class TestNetworkTasks(base.BaseTaskTestCase):
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
     @mock.patch('a10_octavia.common.utils.get_patched_ip_address',
                 return_value=a10constants.MOCK_VRID_FLOATING_IP_1)
-    @mock.patch(
-        'a10_octavia.common.utils.get_acos_parameter_for_vrid',
-        return_value=[constants.IP_ADDRESS, constants.IP_ADDRESS_CFG])
     def test_HandleVRIDFloatingIP_create_floating_ip_for_subnet_list(
-            self, mock_patched_ip, mock_floating_ip, mock_acos_params):
+            self, mock_patched_ip, mock_floating_ip):
         vthunder = copy.deepcopy(VTHUNDER)
         vthunder.ip_address = '10.0.0.1'
         subnet = copy.deepcopy(SUBNET_1)

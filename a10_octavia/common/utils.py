@@ -419,12 +419,12 @@ def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list)
                                                                         lb.vip.subnet_id)
                         if len(final_address_list) > 0:
                             break
-                for pool in lb.pools:
-                    for member in pool.members:
-                        member_subnet = network_driver.get_subnet(member.subnet_id)
-                        if member_subnet.network_id == nic.network_id:
-                            final_address_list = get_ipv6_address_from_conf(address_list,
-                                                                            member.subnet_id)
+                    for pool in lb.pools:
+                        for member in pool.members:
+                            member_subnet = network_driver.get_subnet(member.subnet_id)
+                            if member_subnet.network_id == nic.network_id:
+                                final_address_list = get_ipv6_address_from_conf(address_list,
+                                                                                member.subnet_id)
                             if len(final_address_list) > 0:
                                 break
     return final_address_list

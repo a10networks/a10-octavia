@@ -834,8 +834,6 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         self._add_vrid_to_list(updated_vrid_list, subnet, owner)
         for vrid in updated_vrid_list:
             vrid_subnet = self.network_driver.get_subnet(vrid.subnet_id)
-            IP_addr, IP_addr_cfg = a10_utils.get_acos_parameter_for_vrid(vrid_subnet.ip_version,
-                                                                         vthunder.partition_name)
             try:
                 vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
             except Exception as e:
@@ -845,12 +843,28 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
                 vrid_fip = vrid_summary['vrid']['floating-ip']
                 if vthunder.partition_name != 'shared':
-                    for i in range(len(vrid_fip[IP_addr_cfg])):
-                        existing_fips.append(
-                            vrid_fip[IP_addr_cfg][i][IP_addr])
+                    if vrid_fip.get(a10constants.IP_ADDRESS_PARTITION_CFG):
+                        for i in range(len(vrid_fip[a10constants.IP_ADDRESS_PARTITION_CFG])):
+                            existing_fips.append(
+                                vrid_fip[a10constants.IP_ADDRESS_PARTITION_CFG][i]
+                                        [a10constants.IP_ADDRESS_PARTITION])
+                    else:
+                        for i in range(len(vrid_fip[a10constants.IPV6_ADDRESS_PARTITION_CFG])):
+                            existing_fips.append(
+                                vrid_fip[a10constants.IPV6_ADDRESS_PARTITION_CFG][i]
+                                        [a10constants.IPV6_ADDRESS_PARTITION])
+
                 else:
-                    for i in range(len(vrid_fip[IP_addr_cfg])):
-                        existing_fips.append(vrid_fip[IP_addr_cfg][i][IP_addr])
+                    if vrid_fip.get(a10constants.IP_ADDRESS_CFG):
+                        for i in range(len(vrid_fip[a10constants.IP_ADDRESS_CFG])):
+                            existing_fips.append(
+                                vrid_fip[a10constants.IP_ADDRESS_CFG][i][a10constants.IP_ADDRESS])
+                    if vrid_fip.get(a10constants.IPV6_ADDRESS_CFG):
+                        for i in range(len(vrid_fip[a10constants.IPV6_ADDRESS_CFG])):
+                            existing_fips.append(
+                                vrid_fip[a10constants.IPV6_ADDRESS_CFG][i]
+                                        [a10constants.IPV6_ADDRESS])
+
             vrid.vrid = vrid_value
             if conf_floating_ip.lower() == 'dhcp':
                 subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(
