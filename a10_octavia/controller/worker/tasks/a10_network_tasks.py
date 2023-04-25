@@ -875,8 +875,11 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
                     vrid = self._replace_vrid_port(vrid, vrid_subnet, lb_resource)
                     update_vrid_flag = True
             else:
-                new_ip = a10_utils.get_patched_ip_address(
-                    conf_floating_ip, vrid_subnet.cidr, vrid_subnet.ip_version)
+                if vrid.vrid_floating_ip == None:
+                    new_ip = a10_utils.get_patched_ip_address(
+                        conf_floating_ip, vrid_subnet.cidr, vrid_subnet.ip_version)
+                else:
+                    new_ip = vrid.vrid_floating_ip
                 if new_ip != vrid.vrid_floating_ip:
                     vrid = self._replace_vrid_port(vrid, vrid_subnet, lb_resource, new_ip)
                     update_vrid_flag = True
