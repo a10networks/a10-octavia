@@ -302,6 +302,17 @@ class EnableInterface(VThunderBaseTask):
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 interfaces = self.axapi_client.interface.get_list()
                 if (not lb_exists_flag and topology == "ACTIVE_STANDBY") or topology == "SINGLE":
+                    # Clear un-matched static IPv6 addresses interfaces
+                    for i in range(len(interfaces['interface']['ethernet-list'])):
+                        eth = interfaces['interface']['ethernet-list'][i]
+                        ifnum = eth['ifnum']
+                        if "ipv6" in eth and "address-list" in eth['ipv6']:
+                            old_addr = eth['ipv6']['address-list'][0].get('ipv6-addr')
+                            if ifnum_address[ifnum] and ifnum_address[ifnum] == old_addr:
+                                continue
+                            self.axapi_client.system.action.setInterface(ifnum, None, 6)
+
+                    # Enable and Configure Interfaces
                     for i in range(len(interfaces['interface']['ethernet-list'])):
                         ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                         if ifnum_address.get(ifnum):
@@ -312,6 +323,21 @@ class EnableInterface(VThunderBaseTask):
                             self.axapi_client.system.action.setInterface(ifnum, None, 4)
                     LOG.debug("Configured the ethernet interface for vThunder: %s", vthunder.id)
                 else:
+                    # Clear un-matched static IPv6 addresses interfaces
+                    for i in range(len(interfaces['interface']['ethernet-list'])):
+                        eth = interfaces['interface']['ethernet-list'][i]
+                        ifnum = eth['ifnum']
+                        if "ipv6" in eth and "address-list" in eth['ipv6']:
+                            old_addr = eth['ipv6']['address-list'][0].get('ipv6-addr')
+                            if ifnum_address[ifnum] and ifnum_address[ifnum] == old_addr:
+                                continue
+                            if backup_vthunder:
+                                self.axapi_client.device_context.switch(2, None)
+                            else:
+                                self.axapi_client.device_context.switch(1, None)
+                            self.axapi_client.system.action.setInterface(ifnum, None, 6)
+
+                    # Enable and Configure Interfaces
                     for i in range(len(interfaces['interface']['ethernet-list'])):
                         ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                         if ifnum_address.get(ifnum):
@@ -378,6 +404,25 @@ class EnableInterfaceForMembers(VThunderBaseTask):
         try:
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 interfaces = self.axapi_client.interface.get_list()
+                # Clear un-matched static IPv6 addresses interfaces
+                for i in range(len(interfaces['interface']['ethernet-list'])):
+                    eth = interfaces['interface']['ethernet-list'][i]
+                    ifnum = eth['ifnum']
+
+                    if "ipv6" in eth and "address-list" in eth['ipv6']:
+                        old_addr = eth['ipv6']['address-list'][0].get('ipv6-addr')
+                        if ifnum_address[ifnum] and ifnum_address[ifnum] == old_addr:
+                            continue
+                        if topology == "SINGLE":
+                            self.axapi_client.system.action.setInterface(ifnum, None, 6)
+                        else:
+                            if backup_vthunder:
+                                self.axapi_client.device_context.switch(2, None)
+                            else:
+                                self.axapi_client.device_context.switch(1, None)
+                            self.axapi_client.system.action.setInterface(ifnum, None, 6)
+
+                # Enable and Configure Interfaces
                 for i in range(len(interfaces['interface']['ethernet-list'])):
                     ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                     if ifnum_address.get(ifnum):
