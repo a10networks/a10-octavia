@@ -23,6 +23,7 @@ import netaddr
 import socket
 import struct
 
+from ipaddress import ip_address, IPv6Address
 from oslo_config import cfg
 from oslo_log import log as logging
 
@@ -381,13 +382,16 @@ def get_loadbalancer_flavor(loadbalancer):
             return flavor_data
 
 
-def get_ipv6_address_from_conf(address_list, subnet_id):
+def get_ipv6_address_from_conf(address_list, subnet_id, amp_network=False):
     final_address_list = []
     for address in address_list:
         address = json.loads(address)
         for key in address:
             if key == subnet_id:
                 final_address_list.append({'ipv6-addr': address[key]})
+    if amp_network:
+        return final_address_list
+
     if not final_address_list:
         raise exceptions.IPv6AddressNotFoundInConfig(subnet_id)
     else:
@@ -403,18 +407,18 @@ def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list)
         port_mac_address = network_driver.get_port(nic.port_id).mac_address.replace(":", "")
         if port_mac_address == acos_mac_address:
             if nic.network_id in amp_boot_networks:
-                final_address_list = get_ipv6_address_from_conf(address_list, nic.network_id)
+                final_address_list = get_ipv6_address_from_conf(address_list, nic.network_id, True)
                 if len(final_address_list) > 0:
                     break
 
-            if nic.network_id == subnet.network_id and not loadbalancers_list:
+            if nic.network_id == subnet.network_id and not loadbalancers_list and subnet.ip_version == 6:
                 final_address_list = get_ipv6_address_from_conf(address_list, subnet.id)
                 if len(final_address_list) > 0:
                     break
 
             if loadbalancers_list:
                 for lb in loadbalancers_list:
-                    if lb.vip.network_id == nic.network_id:
+                    if lb.vip.network_id == nic.network_id and type(ip_address(lb.vip.ip_address)) is IPv6Address:
                         final_address_list = get_ipv6_address_from_conf(address_list,
                                                                         lb.vip.subnet_id)
                         if len(final_address_list) > 0:
@@ -422,7 +426,7 @@ def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list)
                     for pool in lb.pools:
                         for member in pool.members:
                             member_subnet = network_driver.get_subnet(member.subnet_id)
-                            if member_subnet.network_id == nic.network_id:
+                            if member_subnet.network_id == nic.network_id and member_subnet.ip_version == 6:
                                 final_address_list = get_ipv6_address_from_conf(address_list,
                                                                                 member.subnet_id)
                             if len(final_address_list) > 0:
