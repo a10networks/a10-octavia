@@ -330,7 +330,7 @@ class EnableInterface(VThunderBaseTask):
                             self.axapi_client.system.action.setInterface(ifnum, None, 4)
                             self.axapi_client.device_context.switch(2, None)
                             self.axapi_client.system.action.setInterface(ifnum, None, 4)
-        except(acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure ethernet interface vThunder: %s", str(e))
             raise e
 
@@ -346,7 +346,8 @@ class GetValidIPv6Address(VThunderBaseTask):
             network_driver = utils.get_network_driver()
             nics = network_driver.get_plugged_networks(compute_id)
             if topology == "ACTIVE_STANDBY":
-                backup_nics = network_driver.get_plugged_networks(loadbalancer.amphorae[1].compute_id)
+                backup_nics = network_driver.get_plugged_networks(
+                    loadbalancer.amphorae[1].compute_id)
                 nics = nics + backup_nics
             address_list = CONF.a10_global.subnet_ipv6_addresses
             if address_list:
