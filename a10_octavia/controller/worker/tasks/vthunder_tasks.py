@@ -308,7 +308,7 @@ class EnableInterface(VThunderBaseTask):
                         ifnum = eth['ifnum']
                         if "ipv6" in eth and "address-list" in eth['ipv6']:
                             old_addr = eth['ipv6']['address-list'][0].get('ipv6-addr')
-                            if ifnum_address[ifnum] and ifnum_address[ifnum] == old_addr:
+                            if ifnum_address.get(ifnum) and ifnum_address[ifnum] == old_addr:
                                 continue
                             self.axapi_client.system.action.setInterface(ifnum, None, 6)
 
@@ -329,7 +329,7 @@ class EnableInterface(VThunderBaseTask):
                         ifnum = eth['ifnum']
                         if "ipv6" in eth and "address-list" in eth['ipv6']:
                             old_addr = eth['ipv6']['address-list'][0].get('ipv6-addr')
-                            if ifnum_address[ifnum] and ifnum_address[ifnum] == old_addr:
+                            if ifnum_address.get(ifnum) and ifnum_address[ifnum] == old_addr:
                                 continue
                             if backup_vthunder:
                                 self.axapi_client.device_context.switch(2, None)
