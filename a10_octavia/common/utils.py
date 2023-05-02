@@ -381,6 +381,15 @@ def get_loadbalancer_flavor(loadbalancer):
             return flavor_data
 
 
+def network_with_ipv6_subnet(network):
+    network_driver = get_network_driver()
+    for subnet_id in network.subnets:
+        subnet = network_driver.get_subnet(subnet_id)
+        if subnet.ip_version == 6:
+            return True
+    return False
+
+
 def get_ipv6_address_from_conf(address_list, subnet_id):
     final_address_list = []
     for address in address_list:
@@ -390,8 +399,17 @@ def get_ipv6_address_from_conf(address_list, subnet_id):
                 final_address_list.append({'ipv6-addr': address[key]})
     if not final_address_list:
         raise exceptions.IPv6AddressNotFoundInConfig(subnet_id)
-    else:
-        return final_address_list
+
+    return final_address_list
+
+
+def get_network_ipv6_address_from_conf(address_list, network):
+    addr_list = []
+    for subnet_id in network.subnets:
+        addr_list = get_ipv6_address_from_conf(address_list, subnet_id)
+        if addr_list:
+            break
+    return addr_list
 
 
 def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list):
@@ -400,10 +418,14 @@ def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list)
     amp_boot_networks = CONF.a10_controller_worker.amp_boot_network_list
     acos_mac_address = ifnum_oper['ethernet']['oper']['mac'].replace(".", "")
     for nic in nics:
+        network = network_driver.get_network(nic.network_id)
+        if network_with_ipv6_subnet(network) is False:
+            continue
+
         port_mac_address = network_driver.get_port(nic.port_id).mac_address.replace(":", "")
         if port_mac_address == acos_mac_address:
             if nic.network_id in amp_boot_networks:
-                final_address_list = get_ipv6_address_from_conf(address_list, nic.network_id)
+                final_address_list = get_network_ipv6_address_from_conf(address_list, network)
                 if len(final_address_list) > 0:
                     break
 
