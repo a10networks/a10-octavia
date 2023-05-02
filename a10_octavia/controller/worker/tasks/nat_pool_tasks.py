@@ -51,7 +51,7 @@ class NatPoolCreate(task.Task):
                             else:
                                 self.axapi_client.nat.pool.create(**nat_pool)
                             self._added_pool_list.append(nat_pool['pool_name'])
-                        except(acos_errors.Exists) as e:
+                        except (acos_errors.Exists) as e:
                             LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                           "thunder device %s",
                                           nat_pool['pool_name'], vthunder.partition_name,
@@ -80,7 +80,7 @@ class NatPoolCreate(task.Task):
                     else:
                         self.axapi_client.nat.pool.create(**natpool_flavor)
                     self._added_pool_list.append(natpool_flavor['pool_name'])
-                except(acos_errors.Exists) as e:
+                except (acos_errors.Exists) as e:
                     LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                   "thunder device %s",
                                   natpool_flavor['pool_name'], vthunder.partition_name,
@@ -144,7 +144,7 @@ class NatPoolDelete(task.Task):
                                     self.axapi_client.nat.ipv6pool.delete(pool_name)
                                 else:
                                     self.axapi_client.nat.pool.delete(pool_name)
-                            except(acos_errors.ACOSException) as e:
+                            except (acos_errors.ACOSException) as e:
                                 LOG.exception("Failed to delete Nat-pool with name %s due to %s",
                                               pool_name, str(e))
                     if natpool_flavor:
@@ -154,7 +154,7 @@ class NatPoolDelete(task.Task):
                                 self.axapi_client.nat.ipv6pool.delete(pool_name)
                             else:
                                 self.axapi_client.nat.pool.delete(pool_name)
-                        except(acos_errors.ACOSException) as e:
+                        except (acos_errors.ACOSException) as e:
                             LOG.exception("Failed to delete Nat-pool with name %s due to %s",
                                           pool_name, str(e))
             else:

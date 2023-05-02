@@ -25,10 +25,10 @@ from oslo_config import fixture as oslo_fixture
 from octavia.common import data_models as o_data_models
 from octavia.network import data_models as o_net_data_models
 
+from a10_octavia.common import a10constants as constants
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
 from a10_octavia.controller.worker.tasks import a10_network_tasks
-from a10_octavia.common import a10constants as constants
 from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
