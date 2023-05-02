@@ -410,6 +410,10 @@ def get_ipv6_address_from_conf(address_list, subnet_id, amp_network=False):
 
 def get_network_ipv6_address_from_conf(address_list, network):
     addr_list = []
+    addr_list = get_ipv6_address_from_conf(address_list, network.id, True)
+    if addr_list:
+        return addr_list
+
     for subnet_id in network.subnets:
         addr_list = get_ipv6_address_from_conf(address_list, subnet_id, True)
         if addr_list:
