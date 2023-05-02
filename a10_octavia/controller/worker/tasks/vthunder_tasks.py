@@ -349,11 +349,11 @@ class GetValidIPv6Address(VThunderBaseTask):
                 backup_nics = network_driver.get_plugged_networks(loadbalancer.amphorae[1].compute_id)
                 nics = nics + backup_nics
             address_list = CONF.a10_global.subnet_ipv6_addresses
-            address_list[0] = address_list[0].strip("[")
-            address_list[len(address_list) - 1] = address_list[len(address_list) - 1].strip("]")
-            interfaces = self.axapi_client.interface.get_list()
-            for i in range(len(interfaces['interface']['ethernet-list'])):
-                if address_list:
+            if address_list:
+                address_list[0] = address_list[0].strip("[")
+                address_list[len(address_list) - 1] = address_list[len(address_list) - 1].strip("]")
+                interfaces = self.axapi_client.interface.get_list()
+                for i in range(len(interfaces['interface']['ethernet-list'])):
                     ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                     ifnum_oper = self.axapi_client.interface.ethernet.get_oper(ifnum)
                     ifnum_address = a10_utils.get_ipv6_address(ifnum_oper, subnet, nics,
