@@ -379,14 +379,17 @@ class GetValidIPv6Address(VThunderBaseTask):
             if address_list:
                 address_list[0] = address_list[0].strip("[")
                 address_list[len(address_list) - 1] = address_list[len(address_list) - 1].strip("]")
-                interfaces = self.axapi_client.interface.get_list()
-                for i in range(len(interfaces['interface']['ethernet-list'])):
-                    ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
-                    ifnum_oper = self.axapi_client.interface.ethernet.get_oper(ifnum)
-                    ifnum_address = a10_utils.get_ipv6_address(ifnum_oper, subnet, nics,
-                                                               address_list, loadbalancers_list)
-                    if ifnum_address:
-                        ipv6_address_list[ifnum] = ifnum_address
+            else:
+                address_list = []
+
+            interfaces = self.axapi_client.interface.get_list()
+            for i in range(len(interfaces['interface']['ethernet-list'])):
+                ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
+                ifnum_oper = self.axapi_client.interface.ethernet.get_oper(ifnum)
+                ifnum_address = a10_utils.get_ipv6_address(ifnum_oper, subnet, nics,
+                                                           address_list, loadbalancers_list)
+                if ifnum_address:
+                    ipv6_address_list[ifnum] = ifnum_address
             return ipv6_address_list
         else:
             return None

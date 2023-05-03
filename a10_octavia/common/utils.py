@@ -402,9 +402,6 @@ def get_ipv6_address_from_conf(address_list, subnet_id, amp_network=False):
     if amp_network:
         return final_address_list
 
-    if not final_address_list:
-        raise exceptions.IPv6AddressNotFoundInConfig(subnet_id)
-
     return final_address_list
 
 
@@ -431,7 +428,8 @@ def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list)
         if network_with_ipv6_subnet(network) is False:
             continue
 
-        port_mac_address = network_driver.get_port(nic.port_id).mac_address.replace(":", "")
+        neutron_port = network_driver.get_port(nic.port_id)
+        port_mac_address = neutron_port.mac_address.replace(":", "")
         if port_mac_address == acos_mac_address:
             if nic.network_id in amp_boot_networks:
                 final_address_list = get_network_ipv6_address_from_conf(address_list, network)
@@ -461,6 +459,14 @@ def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list)
                                                                                 member.subnet_id)
                             if len(final_address_list) > 0:
                                 break
+
+            for fixed_ip in neutron_port.fixed_ips:
+                if type(ip_address(fixed_ip.ip_address)) is IPv6Address:
+                    addr_subnet = network_driver.get_subnet(fixed_ip.subnet_id)
+                    subnet_prefix, subnet_mask = addr_subnet.cidr.split('/')
+                    final_addr = fixed_ip.ip_address + '/' + subnet_mask
+                    final_address_list.append({'ipv6-addr': final_addr})
+                    break
     return final_address_list
 
 
