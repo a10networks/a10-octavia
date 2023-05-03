@@ -430,6 +430,7 @@ def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list)
 
         neutron_port = network_driver.get_port(nic.port_id)
         port_mac_address = neutron_port.mac_address.replace(":", "")
+        LOG.debug("[IPv6 Addr] get_ipv6_address get addr for mac:%s", port_mac_address)
         if port_mac_address == acos_mac_address:
             if nic.network_id in amp_boot_networks:
                 final_address_list = get_network_ipv6_address_from_conf(address_list, network)
@@ -460,13 +461,15 @@ def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list)
                             if len(final_address_list) > 0:
                                 break
 
-            for fixed_ip in neutron_port.fixed_ips:
-                if type(ip_address(fixed_ip.ip_address)) is IPv6Address:
-                    addr_subnet = network_driver.get_subnet(fixed_ip.subnet_id)
-                    subnet_prefix, subnet_mask = addr_subnet.cidr.split('/')
-                    final_addr = fixed_ip.ip_address + '/' + subnet_mask
-                    final_address_list.append({'ipv6-addr': final_addr})
-                    break
+            if not final_address_list:
+                for fixed_ip in neutron_port.fixed_ips:
+                    if type(ip_address(fixed_ip.ip_address)) is IPv6Address:
+                        addr_subnet = network_driver.get_subnet(fixed_ip.subnet_id)
+                        subnet_prefix, subnet_mask = addr_subnet.cidr.split('/')
+                        final_addr = fixed_ip.ip_address + '/' + subnet_mask
+                        final_address_list.append({'ipv6-addr': final_addr})
+                        LOG.debug("[IPv6 Addr] got: %s for mac: %s", final_addr, port_mac_address)
+                        break
     return final_address_list
 
 
