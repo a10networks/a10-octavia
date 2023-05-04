@@ -361,11 +361,20 @@ def validate_interface_vlan_map(hardware_device):
 
 def get_natpool_addr_list(nat_flavor):
     addr_list = []
-    start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
-    end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
-    while start <= end:
-        addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
-        start += 1
+    if type(ip_address(nat_flavor['start_address'])) is IPv6Address:
+        sh, sl = struct.unpack(">QQ",
+                               socket.inet_pton(socket.AF_INET6, nat_flavor['start_address']))
+        eh, el = struct.unpack(">QQ",
+                               socket.inet_pton(socket.AF_INET6, nat_flavor['end_address']))
+        while sl <= el:
+            addr_list.append(socket.inet_ntop(socket.AF_INET6, struct.pack(">QQ", sh, sl)))
+            sl += 1
+    else:
+        start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
+        end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
+        while start <= end:
+            addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
+            start += 1
     return addr_list
 
 
