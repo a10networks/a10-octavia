@@ -913,7 +913,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         self._subnet = self.network_driver.get_subnet(subnet_id)
         if self._subnet.ip_version != 4:
             raise exceptions.IpVersionNotSupport(self._subnet.ip_version)
-        subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(self._subnet.cidr)
+        subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(self._subnet.cidr, 4)
         self._subnet_ip = subnet_ip
         self._subnet_mask = subnet_mask
 
