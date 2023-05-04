@@ -131,6 +131,7 @@ PROXY_PROTOCPL_AFLEX_NAME = 'octavia_aflex_proxy_protocol_v1'
 PROXY_PROTOCPL_V1 = "v1"
 PROXY_PROTOCPL_V2 = "v2"
 
+DUAL_STACK_MASK = 10000
 
 # ============================
 # Taskflow flow and task names

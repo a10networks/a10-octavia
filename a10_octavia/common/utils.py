@@ -24,6 +24,7 @@ import socket
 import struct
 
 from ipaddress import ip_address
+from ipaddress import IPv4Address
 from ipaddress import IPv6Address
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -433,6 +434,8 @@ def get_network_ipv6_address_from_conf(address_list, network):
 
 def get_ipv6_address(ifnum_oper, nics, address_list, loadbalancers_list):
     final_address_list = []
+    has_v6_addr = False
+    has_v4_addr = False
     network_driver = get_network_driver()
     acos_mac_address = ifnum_oper['ethernet']['oper']['mac'].replace(".", "")
     for nic in nics:
@@ -445,38 +448,30 @@ def get_ipv6_address(ifnum_oper, nics, address_list, loadbalancers_list):
         LOG.debug("[IPv6 Addr] get_ipv6_address get addr for mac:%s", port_mac_address)
         if port_mac_address == acos_mac_address:
             final_address_list = get_network_ipv6_address_from_conf(address_list, network)
-            if len(final_address_list) > 0:
-                break
+            if final_address_list:
+                has_v6_addr = True
+            for fixed_ip in neutron_port.fixed_ips:
+                if type(ip_address(fixed_ip.ip_address)) is IPv6Address:
+                    addr_subnet = network_driver.get_subnet(fixed_ip.subnet_id)
+                    subnet_prefix, subnet_mask = addr_subnet.cidr.split('/')
+                    final_addr = fixed_ip.ip_address + '/' + subnet_mask
+                    final_address_list.append({'ipv6-addr': final_addr})
+                    LOG.debug("[IPv6 Addr] got: %s for mac: %s", final_addr, port_mac_address)
+                    has_v6_addr = True
+                if not has_v4_addr and type(ip_address(fixed_ip.ip_address)) is IPv4Address:
+                    has_v4_addr = True
+            break
+    return final_address_list, (has_v6_addr and has_v4_addr)
 
-            # do we still need this block?
-            if loadbalancers_list:
-                for lb in loadbalancers_list:
-                    if (lb.vip.network_id == nic.network_id and
-                            type(ip_address(lb.vip.ip_address)) is IPv6Address):
-                        final_address_list = get_ipv6_address_from_conf(address_list,
-                                                                        lb.vip.subnet_id)
-                        if len(final_address_list) > 0:
-                            break
-                    for pool in lb.pools:
-                        for member in pool.members:
-                            member_subnet = network_driver.get_subnet(member.subnet_id)
-                            if (member_subnet.network_id == nic.network_id and
-                                    member_subnet.ip_version == 6):
-                                final_address_list = get_ipv6_address_from_conf(address_list,
-                                                                                member.subnet_id)
-                            if len(final_address_list) > 0:
-                                break
 
-            if not final_address_list:
-                for fixed_ip in neutron_port.fixed_ips:
-                    if type(ip_address(fixed_ip.ip_address)) is IPv6Address:
-                        addr_subnet = network_driver.get_subnet(fixed_ip.subnet_id)
-                        subnet_prefix, subnet_mask = addr_subnet.cidr.split('/')
-                        final_addr = fixed_ip.ip_address + '/' + subnet_mask
-                        final_address_list.append({'ipv6-addr': final_addr})
-                        LOG.debug("[IPv6 Addr] got: %s for mac: %s", final_addr, port_mac_address)
-                        break
-    return final_address_list
+def set_dual_stack(ifnum_address, ifnum):
+    ifnum_address[(ifnum + a10constants.DUAL_STACK_MASK)] = True
+
+
+def is_dual_stack(ifnum_address, ifnum):
+    if (ifnum + a10constants.DUAL_STACK_MASK) in ifnum_address:
+        return True
+    return False
 
 
 def get_acos_parameter_for_vrid(ip_version, partition):

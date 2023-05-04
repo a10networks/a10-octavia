@@ -316,9 +316,10 @@ class EnableInterface(VThunderBaseTask):
                     for i in range(len(interfaces['interface']['ethernet-list'])):
                         ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                         if ifnum_address.get(ifnum):
+                            dual = a10_utils.is_dual_stack(ifnum_address, ifnum)
                             self.axapi_client.system.action.setInterface(ifnum,
                                                                          ifnum_address[ifnum],
-                                                                         6)
+                                                                         6, dual)
                         else:
                             self.axapi_client.system.action.setInterface(ifnum, None, 4)
                     LOG.debug("Configured the ethernet interface for vThunder: %s", vthunder.id)
@@ -341,16 +342,17 @@ class EnableInterface(VThunderBaseTask):
                     for i in range(len(interfaces['interface']['ethernet-list'])):
                         ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                         if ifnum_address.get(ifnum):
+                            dual = a10_utils.is_dual_stack(ifnum_address, ifnum)
                             if backup_vthunder:
                                 self.axapi_client.device_context.switch(2, None)
                                 self.axapi_client.system.action.setInterface(ifnum,
                                                                              ifnum_address[ifnum],
-                                                                             6)
+                                                                             6, dual)
                             else:
                                 self.axapi_client.device_context.switch(1, None)
                                 self.axapi_client.system.action.setInterface(ifnum,
                                                                              ifnum_address[ifnum],
-                                                                             6)
+                                                                             6, dual)
                         else:
                             self.axapi_client.device_context.switch(1, None)
                             self.axapi_client.system.action.setInterface(ifnum, None, 4)
@@ -386,10 +388,12 @@ class GetValidIPv6Address(VThunderBaseTask):
             for i in range(len(interfaces['interface']['ethernet-list'])):
                 ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                 ifnum_oper = self.axapi_client.interface.ethernet.get_oper(ifnum)
-                ifnum_address = a10_utils.get_ipv6_address(ifnum_oper, nics,
-                                                           address_list, loadbalancers_list)
+                ifnum_address, dual = a10_utils.get_ipv6_address(ifnum_oper, nics,
+                                                                 address_list, loadbalancers_list)
                 if ifnum_address:
                     ipv6_address_list[ifnum] = ifnum_address
+                    if dual:
+                        a10_utils.set_dual_stack(ipv6_address_list, ifnum)
             return ipv6_address_list
         else:
             return None
@@ -433,21 +437,22 @@ class EnableInterfaceForMembers(VThunderBaseTask):
                             LOG.warning("IPv6 Address for ethernet %s not found in configurations",
                                         ifnum)
                             continue
+                        dual = a10_utils.is_dual_stack(ifnum_address, ifnum)
                         if topology == "SINGLE":
                             self.axapi_client.system.action.setInterface(ifnum,
                                                                          ifnum_address[ifnum],
-                                                                         6)
+                                                                         6, dual)
                         else:
                             if backup_vthunder:
                                 self.axapi_client.device_context.switch(2, None)
                                 self.axapi_client.system.action.setInterface(ifnum,
                                                                              ifnum_address[ifnum],
-                                                                             6)
+                                                                             6, dual)
                             else:
                                 self.axapi_client.device_context.switch(1, None)
                                 self.axapi_client.system.action.setInterface(ifnum,
                                                                              ifnum_address[ifnum],
-                                                                             6)
+                                                                             6, dual)
                     else:
                         if topology == "SINGLE":
                             self.axapi_client.system.action.setInterface(ifnum, None,
