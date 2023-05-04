@@ -416,21 +416,24 @@ def get_ipv6_address_from_conf(address_list, subnet_id, amp_network=False):
 
 def get_network_ipv6_address_from_conf(address_list, network):
     addr_list = []
+    network_driver = get_network_driver()
+
     addr_list = get_ipv6_address_from_conf(address_list, network.id, True)
     if addr_list:
         return addr_list
 
     for subnet_id in network.subnets:
-        addr_list = get_ipv6_address_from_conf(address_list, subnet_id, True)
-        if addr_list:
-            break
+        subnet = network_driver.get_subnet(subnet_id)
+        if subnet.ip_version == 6:
+            addr_list = get_ipv6_address_from_conf(address_list, subnet_id, True)
+            if addr_list:
+                break
     return addr_list
 
 
-def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list):
+def get_ipv6_address(ifnum_oper, nics, address_list, loadbalancers_list):
     final_address_list = []
     network_driver = get_network_driver()
-    amp_boot_networks = CONF.a10_controller_worker.amp_boot_network_list
     acos_mac_address = ifnum_oper['ethernet']['oper']['mac'].replace(".", "")
     for nic in nics:
         network = network_driver.get_network(nic.network_id)
@@ -441,17 +444,11 @@ def get_ipv6_address(ifnum_oper, subnet, nics, address_list, loadbalancers_list)
         port_mac_address = neutron_port.mac_address.replace(":", "")
         LOG.debug("[IPv6 Addr] get_ipv6_address get addr for mac:%s", port_mac_address)
         if port_mac_address == acos_mac_address:
-            if nic.network_id in amp_boot_networks:
-                final_address_list = get_network_ipv6_address_from_conf(address_list, network)
-                if len(final_address_list) > 0:
-                    break
+            final_address_list = get_network_ipv6_address_from_conf(address_list, network)
+            if len(final_address_list) > 0:
+                break
 
-            if (nic.network_id == subnet.network_id and not loadbalancers_list and
-                    subnet.ip_version == 6):
-                final_address_list = get_ipv6_address_from_conf(address_list, subnet.id)
-                if len(final_address_list) > 0:
-                    break
-
+            # do we still need this block?
             if loadbalancers_list:
                 for lb in loadbalancers_list:
                     if (lb.vip.network_id == nic.network_id and

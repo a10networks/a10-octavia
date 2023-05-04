@@ -318,24 +318,24 @@ class LoadBalancerFlows(object):
             delete_LB_flow.add(vthunder_tasks.GetValidIPv6Address(
                 name=a10constants.GET_MASTER_IPV6_ADDRESS,
                 requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
-                          constants.SUBNET, a10constants.LOADBALANCERS_LIST),
+                          a10constants.LOADBALANCERS_LIST),
                 provides=a10constants.IPV6_ADDRESS_LIST))
             delete_LB_flow.add(vthunder_tasks.EnableInterface(
                 name=a10constants.ENABLE_VTHUNDER_INTERFACE,
                 requires=(a10constants.VTHUNDER, constants.LOADBALANCER,
-                          constants.ADDED_PORTS, constants.SUBNET,
+                          constants.ADDED_PORTS,
                           a10constants.IPV6_ADDRESS_LIST)))
             if topology == constants.TOPOLOGY_ACTIVE_STANDBY:
                 delete_LB_flow.add(vthunder_tasks.GetValidIPv6Address(
                     name=a10constants.GET_BACKUP_IPV6_ADDRESS,
                     rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                     requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
-                              constants.SUBNET, a10constants.LOADBALANCERS_LIST),
+                              a10constants.LOADBALANCERS_LIST),
                     provides=a10constants.IPV6_ADDRESS_LIST))
                 delete_LB_flow.add(vthunder_tasks.EnableInterface(
                     name=a10constants.BACKUP_ENABLE_INTERFACE,
                     requires=(a10constants.VTHUNDER, constants.LOADBALANCER,
-                              constants.ADDED_PORTS, constants.SUBNET, a10constants.BACKUP_VTHUNDER,
+                              constants.ADDED_PORTS, a10constants.BACKUP_VTHUNDER,
                               a10constants.IPV6_ADDRESS_LIST)))
         delete_LB_flow.add(
             a10_database_tasks.GetChildProjectsOfParentPartition(
@@ -472,12 +472,12 @@ class LoadBalancerFlows(object):
             new_LB_net_subflow.add(vthunder_tasks.GetValidIPv6Address(
                 name=a10constants.GET_MASTER_IPV6_ADDRESS,
                 requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
-                          constants.SUBNET, a10constants.LOADBALANCERS_LIST),
+                          a10constants.LOADBALANCERS_LIST),
                 provides=a10constants.IPV6_ADDRESS_LIST))
             new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
                 name=a10constants.ENABLE_VTHUNDER_INTERFACE,
                 requires=(a10constants.VTHUNDER, constants.LOADBALANCER,
-                          constants.ADDED_PORTS, constants.SUBNET,
+                          constants.ADDED_PORTS,
                           a10constants.IPV6_ADDRESS_LIST)))
             new_LB_net_subflow.add(a10_database_tasks.GetBackupVThunderByLoadBalancer(
                 name=a10constants.GET_BACKUP_VTHUNDER_FROM_DB,
@@ -488,12 +488,12 @@ class LoadBalancerFlows(object):
                     name=a10constants.GET_BACKUP_IPV6_ADDRESS,
                     rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                     requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
-                              constants.SUBNET, a10constants.LOADBALANCERS_LIST),
+                              a10constants.LOADBALANCERS_LIST),
                     provides=a10constants.IPV6_ADDRESS_LIST))
                 new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
                     name=a10constants.BACKUP_ENABLE_INTERFACE,
                     requires=(a10constants.VTHUNDER, constants.LOADBALANCER,
-                              constants.ADDED_PORTS, constants.SUBNET,
+                              constants.ADDED_PORTS,
                               a10constants.BACKUP_VTHUNDER, a10constants.IPV6_ADDRESS_LIST)))
         else:
             new_LB_net_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
@@ -502,13 +502,13 @@ class LoadBalancerFlows(object):
         new_LB_net_subflow.add(vthunder_tasks.GetValidIPv6Address(
             name=a10constants.GET_IPV6_ADDRESS,
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
-                      constants.SUBNET, a10constants.LOADBALANCERS_LIST),
+                      a10constants.LOADBALANCERS_LIST),
             provides=a10constants.IPV6_ADDRESS_LIST))
         new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
             name=a10constants.ENABLE_MASTER_VTHUNDER_INTERFACE,
             inject={constants.ADDED_PORTS: {}},
             requires=(a10constants.VTHUNDER, constants.LOADBALANCER, constants.ADDED_PORTS,
-                      constants.SUBNET, a10constants.IPV6_ADDRESS_LIST)))
+                      a10constants.IPV6_ADDRESS_LIST)))
         new_LB_net_subflow.add(a10_database_tasks.MarkVThunderStatusInDB(
             name=a10constants.MARK_VTHUNDER_MASTER_ACTIVE_IN_DB,
             requires=a10constants.VTHUNDER,
@@ -523,13 +523,13 @@ class LoadBalancerFlows(object):
                 name=a10constants.GET_IPV6_ADDRESS_FOR_BACKUP,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                 requires=(constants.LOADBALANCER, a10constants.VTHUNDER,
-                          constants.SUBNET, a10constants.LOADBALANCERS_LIST),
+                          a10constants.LOADBALANCERS_LIST),
                 provides=a10constants.IPV6_ADDRESS_LIST))
             new_LB_net_subflow.add(vthunder_tasks.EnableInterface(
                 name=a10constants.ENABLE_BACKUP_VTHUNDER_INTERFACE,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                 inject={constants.ADDED_PORTS: {}},
-                requires=(constants.LOADBALANCER, constants.ADDED_PORTS, constants.SUBNET,
+                requires=(constants.LOADBALANCER, constants.ADDED_PORTS,
                           a10constants.IPV6_ADDRESS_LIST)))
             new_LB_net_subflow.add(a10_database_tasks.MarkVThunderStatusInDB(
                 name=a10constants.MARK_VTHUNDER_BACKUP_ACTIVE_IN_DB,
