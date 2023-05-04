@@ -281,7 +281,7 @@ class EnableInterface(VThunderBaseTask):
     """Task to configure vThunder ports"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, loadbalancer, added_ports, subnet, ifnum_master=None,
+    def execute(self, vthunder, loadbalancer, added_ports, ifnum_master=None,
                 ifnum_backup=None, backup_vthunder=None, ifnum_address=None):
 
         if not vthunder:
@@ -364,7 +364,7 @@ class EnableInterface(VThunderBaseTask):
 class GetValidIPv6Address(VThunderBaseTask):
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, vthunder, subnet, loadbalancers_list):
+    def execute(self, loadbalancer, vthunder, loadbalancers_list):
         if vthunder:
             ipv6_address_list = {}
             topology = CONF.a10_controller_worker.loadbalancer_topology
@@ -386,7 +386,7 @@ class GetValidIPv6Address(VThunderBaseTask):
             for i in range(len(interfaces['interface']['ethernet-list'])):
                 ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
                 ifnum_oper = self.axapi_client.interface.ethernet.get_oper(ifnum)
-                ifnum_address = a10_utils.get_ipv6_address(ifnum_oper, subnet, nics,
+                ifnum_address = a10_utils.get_ipv6_address(ifnum_oper, nics,
                                                            address_list, loadbalancers_list)
                 if ifnum_address:
                     ipv6_address_list[ifnum] = ifnum_address
@@ -399,7 +399,7 @@ class EnableInterfaceForMembers(VThunderBaseTask):
     """Task to enable an interface associated with a member"""
 
     @axapi_client_decorator
-    def execute(self, added_ports, loadbalancer, vthunder, subnet, backup_vthunder=None,
+    def execute(self, added_ports, loadbalancer, vthunder, backup_vthunder=None,
                 ifnum_address=None):
         """Enable specific interface of amphora"""
         topology = CONF.a10_controller_worker.loadbalancer_topology
@@ -414,7 +414,7 @@ class EnableInterfaceForMembers(VThunderBaseTask):
 
                     if "ipv6" in eth and "address-list" in eth['ipv6']:
                         old_addr = eth['ipv6']['address-list'][0].get('ipv6-addr')
-                        if ifnum_address[ifnum] and ifnum_address[ifnum] == old_addr:
+                        if ifnum_address.get(ifnum) and ifnum_address[ifnum] == old_addr:
                             continue
                         if topology == "SINGLE":
                             self.axapi_client.system.action.setInterface(ifnum, None, 6)
