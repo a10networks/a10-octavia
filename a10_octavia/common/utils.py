@@ -426,16 +426,24 @@ def get_network_ipv6_address_from_conf(address_list, network):
     for subnet_id in network.subnets:
         subnet = network_driver.get_subnet(subnet_id)
         if subnet.ip_version == 6:
-            addr_list = get_ipv6_address_from_conf(address_list, subnet_id, True)
-            if addr_list:
-                break
+            new_addr_list = get_ipv6_address_from_conf(address_list, subnet_id, True)
+            addr_list.extend(new_addr_list)
     return addr_list
+
+
+def is_ipv6_subnet_in_conf(address_list, subnet_id):
+    for address in address_list:
+        address = json.loads(address)
+        if address.get(subnet_id):
+            return True
+    return False
 
 
 def get_ipv6_address(ifnum_oper, nics, address_list, loadbalancers_list):
     final_address_list = []
     has_v6_addr = False
     has_v4_addr = False
+    opt_addr_only = CONF.a10_global.use_subnet_ipv6_addresses_only
     network_driver = get_network_driver()
     acos_mac_address = ifnum_oper['ethernet']['oper']['mac'].replace(".", "")
     for nic in nics:
@@ -452,6 +460,8 @@ def get_ipv6_address(ifnum_oper, nics, address_list, loadbalancers_list):
                 has_v6_addr = True
             for fixed_ip in neutron_port.fixed_ips:
                 if type(ip_address(fixed_ip.ip_address)) is IPv6Address:
+                    if opt_addr_only and is_ipv6_subnet_in_conf(address_list, fixed_ip.subnet_id):
+                        continue
                     addr_subnet = network_driver.get_subnet(fixed_ip.subnet_id)
                     subnet_prefix, subnet_mask = addr_subnet.cidr.split('/')
                     final_addr = fixed_ip.ip_address + '/' + subnet_mask
