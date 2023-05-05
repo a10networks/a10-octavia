@@ -56,6 +56,9 @@ A10_GLOBAL_OPTS = [
                        ' subnet (for use with kube cloud provider)')),
     cfg.BoolOpt('nlbaas_member_names', default=False,
                 help=_('Use neutron lbaas member names in a10 config.')),
+    cfg.BoolOpt('use_subnet_ipv6_addresses_only', default=False,
+                help=_('Configure only IPv6 addresses in subnet_ipv6_addresses for ACOS '
+                       'interfaces.')),
     cfg.ListOpt('subnet_ipv6_addresses',
                 default='',
                 help=_('A list of subnet and IPv6 address pair, which a10-octavia will attach '
