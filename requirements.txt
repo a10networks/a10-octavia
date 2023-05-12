@@ -1,4 +1,4 @@
-acos-client>=2.9.1		#
+acos-client>=2.10.0		#
 octavia>=7.0.0,<=10.0.0	# victoria version of octavia
 octavia-lib			    #
 keystone==18.0.0
