@@ -313,3 +313,11 @@ class IpVersionNotSupport(base.NetworkException):
     def __init__(self, version):
         msg = ('Unsupported IP Version {0}').format(version)
         super(IpVersionNotSupport, self).__init__(msg)
+
+
+class IPv6AddressNotFoundInConfig(acos_errors.ACOSException):
+
+    def __init__(self, subnet_id):
+        msg = ('IPv6 address for subnet {0} is not found in the configuration'
+               ' file.').format(subnet_id)
+        super(IPv6AddressNotFoundInConfig, self).__init__(msg=msg)

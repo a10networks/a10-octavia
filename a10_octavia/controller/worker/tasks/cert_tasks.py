@@ -41,12 +41,32 @@ class CheckListenerType(task.Task):
 class GetSSLCertData(task.Task):
     """Task to get SSL certificate data from Barbican"""
 
-    def execute(self, loadbalancer, listener):
+    @axapi_client_decorator
+    def execute(self, loadbalancer, listener, vthunder, update_dict={}):
         cert_data = None
+        if listener and update_dict:
+            listener.__dict__.update(update_dict)
         try:
             barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
             cert_data = utils.get_cert_data(barbican_client, listener)
-            cert_data.template_name = listener.id
+            if not cert_data.template_name:
+                client_ssl = self.axapi_client.slb.template.client_ssl.get(name=listener.id)
+                if utils.acos_version_cmp(vthunder.acos_version, "5.2.1") >= 0:
+                    certificate_list = client_ssl['client-ssl']['certificate-list'][0]
+                    if certificate_list.get('cert') and certificate_list.get('key'):
+                        cert_data.cert_filename = certificate_list.get('cert')
+                        cert_data.key_filename = certificate_list.get('key')
+                        cert_data.template_name = listener.id
+                    else:
+                        cert_data = None
+                else:
+                    if client_ssl['client-ssl'].get('cert') and client_ssl['client-ssl'].get('key'):
+                        cert_data.cert_filename = client_ssl['client-ssl'].get('cert')
+                        cert_data.key_filename = client_ssl['client-ssl'].get('key')
+                        cert_data.template_name = listener.id
+                    else:
+                        cert_data = None
+
             LOG.debug("Successfully received barbican data for listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to get barbican data for listener: %s", listener.id)
@@ -171,6 +191,12 @@ class SSLCertUpdate(task.Task):
                                                        size=len(cert_data.cert_content),
                                                        action=action,
                                                        certificate_type=certificate_type)
+            else:
+                self.axapi_client.file.ssl_cert.create(file=cert_data.cert_filename,
+                                                       cert=cert_data.cert_content,
+                                                       size=len(cert_data.cert_content),
+                                                       action="import",
+                                                       certificate_type=certificate_type)
                 LOG.debug("Successfully updated SSL certificate: %s", cert_data.cert_filename)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update SSL certificate: %s", cert_data.cert_filename)
@@ -188,6 +214,11 @@ class SSLKeyUpdate(task.Task):
                                                       cert=cert_data.key_content,
                                                       size=len(cert_data.key_content),
                                                       action=action)
+            else:
+                self.axapi_client.file.ssl_key.create(file=cert_data.key_filename,
+                                                      cert=cert_data.key_content,
+                                                      size=len(cert_data.key_content),
+                                                      action="import")
                 LOG.debug("Successfully updated SSL key: %s", cert_data.key_filename)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update SSL key: %s", cert_data.key_filename)
@@ -201,10 +232,33 @@ class ClientSSLTemplateUpdate(task.Task):
     def execute(self, cert_data, vthunder):
         try:
             if self.axapi_client.slb.template.client_ssl.exists(name=cert_data.template_name):
+                old = self.axapi_client.slb.template.client_ssl.get(name=cert_data.template_name)
                 self.axapi_client.slb.template.client_ssl.update(name=cert_data.template_name,
                                                                  cert=cert_data.cert_filename,
                                                                  key=cert_data.key_filename,
                                                                  passphrase=cert_data.key_pass)
+
+                try:
+                    if utils.acos_version_cmp(vthunder.acos_version, "5.2.1") >= 0:
+                        old_certificate_list = old['client-ssl']['certificate-list'][0]
+                        if 'cert' in old_certificate_list and 'key' in old_certificate_list:
+                            if old_certificate_list['cert'] != cert_data.cert_filename:
+                                self.axapi_client.file.ssl_cert.delete(
+                                    private_key=old_certificate_list['key'],
+                                    cert_name=old_certificate_list['cert'])
+                    else:
+                        if 'cert' in old['client-ssl'].keys() and 'key' in old['client-ssl'].keys():
+                            if old['client-ssl']['cert'] != cert_data.cert_filename:
+                                self.axapi_client.file.ssl_cert.delete(
+                                    private_key=old['client-ssl']['key'],
+                                    cert_name=old['client-ssl']['cert'])
+                            if old['client-ssl']['key'] != cert_data.key_filename:
+                                self.axapi_client.file.ssl_key.delete(
+                                    private_key=old['client-ssl']['key'])
+                except Exception as e:
+                    LOG.warning("Clean up old cert/key files failed. error:%s", str(e))
+                    # clean up with best effort, don't raise here
+
                 LOG.debug("Successfully updated SSL template: %s", cert_data.template_name)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to update SSL template: %s", cert_data.template_name)
@@ -216,17 +270,18 @@ class SSLCertDelete(task.Task):
 
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
-        try:
-            if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
-                self.axapi_client.file.ssl_cert.delete(private_key=cert_data.key_filename,
-                                                       cert_name=cert_data.cert_filename)
-                LOG.debug("Successfully deleted SSL certificate: %s", cert_data.cert_filename)
-        except acos_errors.Exists as e:
-            LOG.warning("Failed to delete SSL cert as its being used in another place")
-            LOG.exception(str(e))
-        except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception("Failed to delete SSL certificate: %s", cert_data.cert_filename)
-            raise e
+        if cert_data:
+            try:
+                if self.axapi_client.file.ssl_cert.exists(file=cert_data.cert_filename):
+                    self.axapi_client.file.ssl_cert.delete(private_key=cert_data.key_filename,
+                                                           cert_name=cert_data.cert_filename)
+                    LOG.debug("Successfully deleted SSL certificate: %s", cert_data.cert_filename)
+            except acos_errors.Exists as e:
+                LOG.warning("Failed to delete SSL cert as its being used in another place")
+                LOG.exception(str(e))
+            except (acos_errors.ACOSException, ConnectionError) as e:
+                LOG.exception("Failed to delete SSL certificate: %s", cert_data.cert_filename)
+                raise e
 
 
 class SSLKeyDelete(task.Task):
@@ -234,27 +289,28 @@ class SSLKeyDelete(task.Task):
 
     @axapi_client_decorator
     def execute(self, cert_data, vthunder):
-        try:
-            if self.axapi_client.file.ssl_key.exists(file=cert_data.key_filename):
-                self.axapi_client.file.ssl_key.delete(private_key=cert_data.key_filename)
-                LOG.debug("Successfully deleted SSL key: %s", cert_data.key_filename)
-        except acos_errors.Exists as e:
-            LOG.warning("Failed to delete SSL cert as its being used in another place")
-            LOG.exception(str(e))
-        except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception("Failed to delete SSL key: %s", cert_data.key_filename)
-            raise e
+        if cert_data:
+            try:
+                if self.axapi_client.file.ssl_key.exists(file=cert_data.key_filename):
+                    self.axapi_client.file.ssl_key.delete(private_key=cert_data.key_filename)
+                    LOG.debug("Successfully deleted SSL key: %s", cert_data.key_filename)
+            except acos_errors.Exists as e:
+                LOG.warning("Failed to delete SSL cert as its being used in another place")
+                LOG.exception(str(e))
+            except (acos_errors.ACOSException, ConnectionError) as e:
+                LOG.exception("Failed to delete SSL key: %s", cert_data.key_filename)
+                raise e
 
 
 class ClientSSLTemplateDelete(task.Task):
     """Task to delete a client ssl template for a listener"""
 
     @axapi_client_decorator
-    def execute(self, cert_data, vthunder):
+    def execute(self, vthunder, listener):
         try:
-            if self.axapi_client.slb.template.client_ssl.exists(name=cert_data.template_name):
-                self.axapi_client.slb.template.client_ssl.delete(name=cert_data.template_name)
-                LOG.debug("Successfully deleted SSL template: %s", cert_data.template_name)
+            if self.axapi_client.slb.template.client_ssl.exists(name=listener.id):
+                self.axapi_client.slb.template.client_ssl.delete(name=listener.id)
+                LOG.debug("Successfully deleted SSL template: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception("Failed to delete SSL template: %s", cert_data.template_name)
+            LOG.exception("Failed to delete SSL template: %s", listener.id)
             raise e

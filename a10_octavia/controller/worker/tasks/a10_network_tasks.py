@@ -514,7 +514,12 @@ class DeallocateVIP(BaseNetworkTask):
     def execute(self, loadbalancer, lb_count_subnet):
         """Deallocate a VIP."""
         LOG.debug("Deallocating a VIP %s", loadbalancer.vip.ip_address)
-        self.network_driver.deallocate_vip(loadbalancer, lb_count_subnet)
+        try:
+            self.network_driver.deallocate_vip(loadbalancer, lb_count_subnet)
+        except Exception as e:
+            LOG.error("Failed to deallocate VIP.  Resources may still "
+                      "be in use from vip: %(vip)s due to error: %(except)s",
+                      {'vip': loadbalancer.vip.ip_address, 'except': e})
 
 
 class UpdateVIP(BaseNetworkTask):
@@ -657,14 +662,17 @@ class ApplyQos(BaseNetworkTask):
     def revert(self, result, loadbalancer, amps_data=None, update_dict=None,
                *args, **kwargs):
         """Handle a failure to apply QoS to VIP"""
-        request_qos_id = loadbalancer.vip.qos_policy_id
-        orig_lb = self.task_utils.get_current_loadbalancer_from_db(
-            loadbalancer.id)
-        orig_qos_id = orig_lb.vip.qos_policy_id
-        if request_qos_id != orig_qos_id:
-            self._apply_qos_on_vrrp_ports(loadbalancer, amps_data, orig_qos_id,
-                                          is_revert=True,
-                                          request_qos_id=request_qos_id)
+        try:
+            request_qos_id = loadbalancer.vip.qos_policy_id
+            orig_lb = self.task_utils.get_current_loadbalancer_from_db(
+                loadbalancer.id)
+            orig_qos_id = orig_lb.vip.qos_policy_id
+            if request_qos_id != orig_qos_id:
+                self._apply_qos_on_vrrp_ports(loadbalancer, amps_data, orig_qos_id,
+                                              is_revert=True,
+                                              request_qos_id=request_qos_id)
+        except Exception:
+            LOG.exception("Error for Apply qos policy on the vrrp ports")
         return
 
 
@@ -825,6 +833,7 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
         owner = vthunder.ip_address + "_" + vthunder.partition_name
         self._add_vrid_to_list(updated_vrid_list, subnet, owner)
         for vrid in updated_vrid_list:
+            vrid_subnet = self.network_driver.get_subnet(vrid.subnet_id)
             try:
                 vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
             except Exception as e:
@@ -834,28 +843,46 @@ class HandleVRIDFloatingIP(BaseNetworkTask):
             if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
                 vrid_fip = vrid_summary['vrid']['floating-ip']
                 if vthunder.partition_name != 'shared':
-                    for i in range(len(vrid_fip['ip-address-part-cfg'])):
-                        existing_fips.append(
-                            vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
+                    if vrid_fip.get(a10constants.IP_ADDRESS_PARTITION_CFG):
+                        for i in range(len(vrid_fip[a10constants.IP_ADDRESS_PARTITION_CFG])):
+                            existing_fips.append(
+                                vrid_fip[a10constants.IP_ADDRESS_PARTITION_CFG][i]
+                                        [a10constants.IP_ADDRESS_PARTITION])
+                    else:
+                        for i in range(len(vrid_fip[a10constants.IPV6_ADDRESS_PARTITION_CFG])):
+                            existing_fips.append(
+                                vrid_fip[a10constants.IPV6_ADDRESS_PARTITION_CFG][i]
+                                        [a10constants.IPV6_ADDRESS_PARTITION])
+
                 else:
-                    for i in range(len(vrid_fip['ip-address-cfg'])):
-                        existing_fips.append(vrid_fip['ip-address-cfg'][i]['ip-address'])
-            vrid_subnet = self.network_driver.get_subnet(vrid.subnet_id)
+                    if vrid_fip.get(a10constants.IP_ADDRESS_CFG):
+                        for i in range(len(vrid_fip[a10constants.IP_ADDRESS_CFG])):
+                            existing_fips.append(
+                                vrid_fip[a10constants.IP_ADDRESS_CFG][i][a10constants.IP_ADDRESS])
+                    if vrid_fip.get(a10constants.IPV6_ADDRESS_CFG):
+                        for i in range(len(vrid_fip[a10constants.IPV6_ADDRESS_CFG])):
+                            existing_fips.append(
+                                vrid_fip[a10constants.IPV6_ADDRESS_CFG][i]
+                                        [a10constants.IPV6_ADDRESS])
+
             vrid.vrid = vrid_value
             if conf_floating_ip.lower() == 'dhcp':
                 subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(
-                    vrid_subnet.cidr)
-                if not a10_utils.check_ip_in_subnet_range(
-                        vrid.vrid_floating_ip, subnet_ip, subnet_mask):
+                    vrid_subnet.cidr, vrid_subnet.ip_version)
+                if not a10_utils.check_ip_in_subnet_range(vrid.vrid_floating_ip, subnet_ip,
+                                                          subnet_mask, vrid_subnet.ip_version,
+                                                          vrid_subnet.cidr):
                     vrid = self._replace_vrid_port(vrid, vrid_subnet, lb_resource)
                     update_vrid_flag = True
             else:
-                new_ip = a10_utils.get_patched_ip_address(
-                    conf_floating_ip, vrid_subnet.cidr)
+                if vrid.vrid_floating_ip is None:
+                    new_ip = a10_utils.get_patched_ip_address(
+                        conf_floating_ip, vrid_subnet.cidr, vrid_subnet.ip_version)
+                else:
+                    new_ip = vrid.vrid_floating_ip
                 if new_ip != vrid.vrid_floating_ip:
                     vrid = self._replace_vrid_port(vrid, vrid_subnet, lb_resource, new_ip)
                     update_vrid_flag = True
-
             if isinstance(subnet, list):
                 subnet_ids = set([s.id for s in subnet])
                 if vrid_subnet.id in subnet_ids or vrid.vrid_floating_ip in existing_fips:
@@ -917,7 +944,11 @@ class DeleteVRIDPort(BaseNetworkTask):
         else:
             resource_count = lb_count_subnet + member_count
         if resource_count <= 1 and vthunder:
+            partition = vthunder.partition_name
             for vr in vrid_list:
+                vr_subnet = self.network_driver.get_subnet(vr.subnet_id)
+                IP_addr, IP_addr_cfg = a10_utils.get_acos_parameter_for_vrid(vr_subnet.ip_version,
+                                                                             partition)
                 try:
                     vrid_summary = self.axapi_client.vrrpa.get(vr.vrid)
                 except Exception as e:
@@ -927,12 +958,12 @@ class DeleteVRIDPort(BaseNetworkTask):
                 if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
                     vrid_fip = vrid_summary['vrid']['floating-ip']
                     if vthunder.partition_name != 'shared':
-                        for i in range(len(vrid_fip['ip-address-part-cfg'])):
+                        for i in range(len(vrid_fip[IP_addr_cfg])):
                             existing_fips.append(
-                                vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
+                                vrid_fip[IP_addr_cfg][i][IP_addr])
                     else:
-                        for i in range(len(vrid_fip['ip-address-cfg'])):
-                            existing_fips.append(vrid_fip['ip-address-cfg'][i]['ip-address'])
+                        for i in range(len(vrid_fip[IP_addr_cfg])):
+                            existing_fips.append(vrid_fip[IP_addr_cfg][i][IP_addr])
                 if vr.subnet_id == subnet.id:
                     vrid = vr
                 elif vr.vrid_floating_ip in existing_fips:
@@ -967,6 +998,7 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
                 vrids = []
                 vrid_floating_ip_list = []
                 existing_fips = []
+                partition = vthunder.partition_name
                 for vrid in vrid_list:
                     try:
                         vrid_summary = self.axapi_client.vrrpa.get(vrid.vrid)
@@ -974,15 +1006,18 @@ class DeleteMultipleVRIDPort(BaseNetworkTask):
                         vrid_summary = {}
                         LOG.exception("Failed to get existing VRID summary due to: %s", str(e))
 
+                    subnet = self.network_driver.get_subnet(vrid.subnet_id)
+                    IP_addr, IP_addr_cfg = a10_utils.get_acos_parameter_for_vrid(subnet.ip_version,
+                                                                                 partition)
                     if vrid_summary and 'floating-ip' in vrid_summary['vrid']:
                         vrid_fip = vrid_summary['vrid']['floating-ip']
                         if vthunder.partition_name != 'shared':
-                            for i in range(len(vrid_fip['ip-address-part-cfg'])):
+                            for i in range(len(vrid_fip[IP_addr_cfg])):
                                 existing_fips.append(
-                                    vrid_fip['ip-address-part-cfg'][i]['ip-address-partition'])
+                                    vrid_fip[IP_addr_cfg][i][IP_addr])
                         else:
-                            for i in range(len(vrid_fip['ip-address-cfg'])):
-                                existing_fips.append(vrid_fip['ip-address-cfg'][i]['ip-address'])
+                            for i in range(len(vrid_fip[IP_addr_cfg])):
+                                existing_fips.append(vrid_fip[IP_addr_cfg][i][IP_addr])
 
                     subnet_matched = list(filter(lambda x: x == vrid.subnet_id,
                                           subnet_list))
@@ -1210,8 +1245,10 @@ class ValidateSubnet(BaseNetworkTask):
     def execute(self, member):
         if member.subnet_id:
             member_subnet = self.network_driver.get_subnet(member.subnet_id)
-            subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(member_subnet.cidr)
+            subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(member_subnet.cidr,
+                                                                      member_subnet.ip_version)
             if not a10_utils.check_ip_in_subnet_range(
-                    member.ip_address, subnet_ip, subnet_mask):
+                    member.ip_address, subnet_ip, subnet_mask, member_subnet.ip_version,
+                    member_subnet.cidr):
                 raise exceptions.IPAddressNotInSubnetRangeError(
                     member.ip_address, member_subnet.cidr)

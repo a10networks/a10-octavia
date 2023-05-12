@@ -177,11 +177,15 @@ class AllowL2DSR(VThunderBaseTask):
             return
 
         if flavor_data:
-            deployment = flavor_data.get('deployment')
-            if deployment and 'dsr_type' in deployment:
-                if deployment['dsr_type'] == "l2dsr_transparent":
-                    for amp in amphora:
-                        self.network_driver.remove_any_source_ip_on_egress(subnet.network_id, amp)
+            try:
+                deployment = flavor_data.get('deployment')
+                if deployment and 'dsr_type' in deployment:
+                    if deployment['dsr_type'] == "l2dsr_transparent":
+                        for amp in amphora:
+                            self.network_driver.remove_any_source_ip_on_egress(
+                                subnet.network_id, amp)
+            except Exception as e:
+                LOG.exception("Failed to revert AllowL2DSR due to: %s", e)
 
 
 class DeleteL2DSR(VThunderBaseTask):
@@ -277,64 +281,190 @@ class EnableInterface(VThunderBaseTask):
     """Task to configure vThunder ports"""
 
     @axapi_client_decorator
-    def execute(self, vthunder, loadbalancer, added_ports, ifnum_master=None, ifnum_backup=None):
+    def execute(self, vthunder, loadbalancer, added_ports, ifnum_master=None,
+                ifnum_backup=None, backup_vthunder=None, ifnum_address=None):
+
+        if not vthunder:
+            return
         topology = CONF.a10_controller_worker.loadbalancer_topology
         amphora_id = loadbalancer.amphorae[0].id
-        compute_id = loadbalancer.amphorae[0].compute_id
-        network_driver = utils.get_network_driver()
-        nics = network_driver.get_plugged_networks(compute_id)
         lb_exists_flag = self.loadbalancer_repo.check_lb_exists_in_project(
             db_apis.get_session(),
             loadbalancer.project_id)
 
         if not lb_exists_flag:
+            compute_id = loadbalancer.amphorae[0].compute_id
+            network_driver = utils.get_network_driver()
+            nics = network_driver.get_plugged_networks(compute_id)
             added_ports[amphora_id] = []
             added_ports[amphora_id].append(nics[1])
-
         try:
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 interfaces = self.axapi_client.interface.get_list()
                 if (not lb_exists_flag and topology == "ACTIVE_STANDBY") or topology == "SINGLE":
+                    # Clear un-matched static IPv6 addresses interfaces
                     for i in range(len(interfaces['interface']['ethernet-list'])):
-                        if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
-                            ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
-                            self.axapi_client.system.action.setInterface(ifnum)
+                        eth = interfaces['interface']['ethernet-list'][i]
+                        ifnum = eth['ifnum']
+                        if "ipv6" in eth and "address-list" in eth['ipv6']:
+                            old_addr = eth['ipv6']['address-list'][0].get('ipv6-addr')
+                            if ifnum_address.get(ifnum) and ifnum_address[ifnum] == old_addr:
+                                continue
+                            self.axapi_client.system.action.setInterface(ifnum, None, 6)
+
+                    # Enable and Configure Interfaces
+                    for i in range(len(interfaces['interface']['ethernet-list'])):
+                        ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
+                        if ifnum_address.get(ifnum):
+                            dual = a10_utils.is_dual_stack(ifnum_address, ifnum)
+                            self.axapi_client.system.action.setInterface(ifnum,
+                                                                         ifnum_address[ifnum],
+                                                                         6, dual)
+                        else:
+                            self.axapi_client.system.action.setInterface(ifnum, None, 4)
                     LOG.debug("Configured the ethernet interface for vThunder: %s", vthunder.id)
                 else:
+                    # Clear un-matched static IPv6 addresses interfaces
                     for i in range(len(interfaces['interface']['ethernet-list'])):
-                        if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
-                            ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
+                        eth = interfaces['interface']['ethernet-list'][i]
+                        ifnum = eth['ifnum']
+                        if "ipv6" in eth and "address-list" in eth['ipv6']:
+                            old_addr = eth['ipv6']['address-list'][0].get('ipv6-addr')
+                            if ifnum_address.get(ifnum) and ifnum_address[ifnum] == old_addr:
+                                continue
+                            if backup_vthunder:
+                                self.axapi_client.device_context.switch(2, None)
+                            else:
+                                self.axapi_client.device_context.switch(1, None)
+                            self.axapi_client.system.action.setInterface(ifnum, None, 6)
+
+                    # Enable and Configure Interfaces
+                    for i in range(len(interfaces['interface']['ethernet-list'])):
+                        ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
+                        if ifnum_address.get(ifnum):
+                            dual = a10_utils.is_dual_stack(ifnum_address, ifnum)
+                            if backup_vthunder:
+                                self.axapi_client.device_context.switch(2, None)
+                                self.axapi_client.system.action.setInterface(ifnum,
+                                                                             ifnum_address[ifnum],
+                                                                             6, dual)
+                            else:
+                                self.axapi_client.device_context.switch(1, None)
+                                self.axapi_client.system.action.setInterface(ifnum,
+                                                                             ifnum_address[ifnum],
+                                                                             6, dual)
+                        else:
                             self.axapi_client.device_context.switch(1, None)
-                            self.axapi_client.system.action.setInterface(ifnum)
+                            self.axapi_client.system.action.setInterface(ifnum, None, 4)
                             self.axapi_client.device_context.switch(2, None)
-                            self.axapi_client.system.action.setInterface(ifnum)
-        except(acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
+                            self.axapi_client.system.action.setInterface(ifnum, None, 4)
+        except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
             LOG.exception("Failed to configure ethernet interface vThunder: %s", str(e))
             raise e
+
+
+class GetValidIPv6Address(VThunderBaseTask):
+
+    @axapi_client_decorator
+    def execute(self, loadbalancer, vthunder, loadbalancers_list):
+        if vthunder:
+            ipv6_address_list = {}
+            topology = CONF.a10_controller_worker.loadbalancer_topology
+            compute_id = loadbalancer.amphorae[0].compute_id
+            network_driver = utils.get_network_driver()
+            nics = network_driver.get_plugged_networks(compute_id)
+            if topology == "ACTIVE_STANDBY":
+                backup_nics = network_driver.get_plugged_networks(
+                    loadbalancer.amphorae[1].compute_id)
+                nics = nics + backup_nics
+            address_list = CONF.a10_global.subnet_ipv6_addresses
+            if address_list:
+                address_list[0] = address_list[0].strip("[")
+                address_list[len(address_list) - 1] = address_list[len(address_list) - 1].strip("]")
+            else:
+                address_list = []
+
+            interfaces = self.axapi_client.interface.get_list()
+            for i in range(len(interfaces['interface']['ethernet-list'])):
+                ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
+                ifnum_oper = self.axapi_client.interface.ethernet.get_oper(ifnum)
+                ifnum_address, dual = a10_utils.get_ipv6_address(ifnum_oper, nics,
+                                                                 address_list, loadbalancers_list)
+                if ifnum_address:
+                    ipv6_address_list[ifnum] = ifnum_address
+                    if dual:
+                        a10_utils.set_dual_stack(ipv6_address_list, ifnum)
+            return ipv6_address_list
+        else:
+            return None
 
 
 class EnableInterfaceForMembers(VThunderBaseTask):
     """Task to enable an interface associated with a member"""
 
     @axapi_client_decorator
-    def execute(self, added_ports, loadbalancer, vthunder):
+    def execute(self, added_ports, loadbalancer, vthunder, backup_vthunder=None,
+                ifnum_address=None):
         """Enable specific interface of amphora"""
         topology = CONF.a10_controller_worker.loadbalancer_topology
         amphora_id = loadbalancer.amphorae[0].id
         try:
             if added_ports and amphora_id in added_ports and len(added_ports[amphora_id]) > 0:
                 interfaces = self.axapi_client.interface.get_list()
+                # Clear un-matched static IPv6 addresses interfaces
                 for i in range(len(interfaces['interface']['ethernet-list'])):
-                    if interfaces['interface']['ethernet-list'][i]['action'] == "disable":
-                        ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
+                    eth = interfaces['interface']['ethernet-list'][i]
+                    ifnum = eth['ifnum']
+
+                    if "ipv6" in eth and "address-list" in eth['ipv6']:
+                        old_addr = eth['ipv6']['address-list'][0].get('ipv6-addr')
+                        if ifnum_address.get(ifnum) and ifnum_address[ifnum] == old_addr:
+                            continue
                         if topology == "SINGLE":
-                            self.axapi_client.system.action.setInterface(ifnum)
+                            self.axapi_client.system.action.setInterface(ifnum, None, 6)
+                        else:
+                            if backup_vthunder:
+                                self.axapi_client.device_context.switch(2, None)
+                            else:
+                                self.axapi_client.device_context.switch(1, None)
+                            self.axapi_client.system.action.setInterface(ifnum, None, 6)
+
+                # Enable and Configure Interfaces
+                for i in range(len(interfaces['interface']['ethernet-list'])):
+                    ifnum = interfaces['interface']['ethernet-list'][i]['ifnum']
+                    if ifnum_address.get(ifnum):
+                        if not ifnum_address[ifnum]:
+                            LOG.warning("IPv6 Address for ethernet %s not found in configurations",
+                                        ifnum)
+                            continue
+                        dual = a10_utils.is_dual_stack(ifnum_address, ifnum)
+                        if topology == "SINGLE":
+                            self.axapi_client.system.action.setInterface(ifnum,
+                                                                         ifnum_address[ifnum],
+                                                                         6, dual)
+                        else:
+                            if backup_vthunder:
+                                self.axapi_client.device_context.switch(2, None)
+                                self.axapi_client.system.action.setInterface(ifnum,
+                                                                             ifnum_address[ifnum],
+                                                                             6, dual)
+                            else:
+                                self.axapi_client.device_context.switch(1, None)
+                                self.axapi_client.system.action.setInterface(ifnum,
+                                                                             ifnum_address[ifnum],
+                                                                             6, dual)
+                    else:
+                        if topology == "SINGLE":
+                            self.axapi_client.system.action.setInterface(ifnum, None,
+                                                                         4)
                         else:
                             self.axapi_client.device_context.switch(1, None)
-                            self.axapi_client.system.action.setInterface(ifnum)
+                            self.axapi_client.system.action.setInterface(ifnum, None,
+                                                                         4)
                             self.axapi_client.device_context.switch(2, None)
-                            self.axapi_client.system.action.setInterface(ifnum)
-                            LOG.debug("Configured the new interface required for member.")
+                            self.axapi_client.system.action.setInterface(ifnum, None,
+                                                                         4)
+                LOG.debug("Configured the new interface required for member.")
             else:
                 LOG.debug("Configuration of new interface is not required for member.")
         except (acos_errors.ACOSException, req_exceptions.ConnectionError) as e:
@@ -732,6 +862,8 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         self._subnet = None
         self._subnet_ip = None
         self._subnet_mask = None
+        self._subnet_version = 4
+        self._subnet_cidr = None
 
     def reserve_ve_ip_with_neutron(self, vlan_id, subnet_id, vthunder, device_id=None):
         ve_ip = self._get_ve_ip(vlan_id, vthunder, device_id)
@@ -739,7 +871,8 @@ class TagInterfaceBaseTask(VThunderBaseTask):
             LOG.warning("Failed to reserve port from neutron for device %s", str(device_id))
             return None
 
-        if not a10_utils.check_ip_in_subnet_range(ve_ip, self._subnet_ip, self._subnet_mask):
+        if not a10_utils.check_ip_in_subnet_range(ve_ip, self._subnet_ip, self._subnet_mask,
+                                                  self._subnet_version, self._subnet_cidr):
             LOG.warning("Not creating neutron port, VE IP %s is out of range, subnet_ip %s,"
                         "subnet_mask %s, subnet_id %s", ve_ip, self._subnet_ip,
                         self._subnet_mask, subnet_id)
@@ -785,7 +918,7 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         self._subnet = self.network_driver.get_subnet(subnet_id)
         if self._subnet.ip_version != 4:
             raise exceptions.IpVersionNotSupport(self._subnet.ip_version)
-        subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(self._subnet.cidr)
+        subnet_ip, subnet_mask = a10_utils.get_net_info_from_cidr(self._subnet.cidr, 4)
         self._subnet_ip = subnet_ip
         self._subnet_mask = subnet_mask
 
@@ -937,13 +1070,15 @@ class TagInterfaceBaseTask(VThunderBaseTask):
         if vs_list:
             for vs in vs_list["virtual-server-list"]:
                 if a10_utils.check_ip_in_subnet_range(vs["ip-address"], self._subnet_ip,
-                                                      self._subnet_mask):
+                                                      self._subnet_mask, self._subnet_version,
+                                                      self._subnet_cidr):
                     return False
 
         if server_list:
             for server in server_list["server-list"]:
                 if a10_utils.check_ip_in_subnet_range(server["host"], self._subnet_ip,
-                                                      self._subnet_mask):
+                                                      self._subnet_mask, self._subnet_version,
+                                                      self._subnet_cidr):
                     return False
 
         return True

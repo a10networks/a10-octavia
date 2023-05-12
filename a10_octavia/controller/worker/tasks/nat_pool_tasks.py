@@ -31,21 +31,27 @@ class NatPoolCreate(task.Task):
         self._added_pool_list = []
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, vthunder, flavor_data=None):
+    def execute(self, subnet, loadbalancer, vthunder, flavor_data=None):
         device_pool = None
         if flavor_data:
             natpool_flavor_list = flavor_data.get('nat_pool_list')
             natpool_flavor = flavor_data.get('nat_pool')
             if natpool_flavor_list:
                 for nat_pool in natpool_flavor_list:
-                    device_pool = self.axapi_client.nat.pool.try_get(nat_pool['pool_name'])
+                    if subnet.ip_version == 6:
+                        device_pool = self.axapi_client.nat.ipv6pool.try_get(nat_pool['pool_name'])
+                    else:
+                        device_pool = self.axapi_client.nat.pool.try_get(nat_pool['pool_name'])
                     if not (device_pool and
                             (device_pool['pool']['start-address'] == nat_pool['start_address'] and
                                 device_pool['pool']['end-address'] == nat_pool['end_address'])):
                         try:
-                            self.axapi_client.nat.pool.create(**nat_pool)
+                            if subnet.ip_version == 6:
+                                self.axapi_client.nat.ipv6pool.create(**nat_pool)
+                            else:
+                                self.axapi_client.nat.pool.create(**nat_pool)
                             self._added_pool_list.append(nat_pool['pool_name'])
-                        except(acos_errors.Exists) as e:
+                        except (acos_errors.Exists) as e:
                             LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                           "thunder device %s",
                                           nat_pool['pool_name'], vthunder.partition_name,
@@ -58,16 +64,23 @@ class NatPoolCreate(task.Task):
                                           vthunder.ip_address)
                             raise e
             if natpool_flavor:
-                device_pool = self.axapi_client.nat.pool.try_get(natpool_flavor['pool_name'])
+                if subnet.ip_version == 6:
+                    device_pool = self.axapi_client.nat.ipv6pool.try_get(
+                        natpool_flavor['pool_name'])
+                else:
+                    device_pool = self.axapi_client.nat.pool.try_get(natpool_flavor['pool_name'])
                 if (device_pool and
                     (device_pool['pool']['start-address'] == natpool_flavor['start_address']
                         and device_pool['pool']['end-address'] == natpool_flavor['end_address']
                      )):
                     return
                 try:
-                    self.axapi_client.nat.pool.create(**natpool_flavor)
+                    if subnet.ip_version == 6:
+                        self.axapi_client.nat.ipv6pool.create(**natpool_flavor)
+                    else:
+                        self.axapi_client.nat.pool.create(**natpool_flavor)
                     self._added_pool_list.append(natpool_flavor['pool_name'])
-                except(acos_errors.Exists) as e:
+                except (acos_errors.Exists) as e:
                     LOG.exception("Nat-pool with name %s already exists on partition %s of "
                                   "thunder device %s",
                                   natpool_flavor['pool_name'], vthunder.partition_name,
@@ -81,23 +94,30 @@ class NatPoolCreate(task.Task):
                     raise e
 
     @axapi_client_decorator_for_revert
-    def revert(self, loadbalancer, vthunder, flavor_data=None, *args, **kwargs):
+    def revert(self, subnet, loadbalancer, vthunder, flavor_data=None, *args, **kwargs):
         if flavor_data:
-            natpool_flavor_list = flavor_data.get('nat_pool_list')
-            natpool_flavor = flavor_data.get('nat_pool')
             try:
+                natpool_flavor_list = flavor_data.get('nat_pool_list')
+                natpool_flavor = flavor_data.get('nat_pool')
+
                 if len(self._added_pool_list) > 0:
                     if natpool_flavor_list:
                         for nat_pool in natpool_flavor_list:
                             pool_name = nat_pool.get('pool_name')
                             if pool_name in self._added_pool_list:
                                 LOG.warning("Reverting creation of nat-pool: %s", pool_name)
-                                self.axapi_client.nat.pool.delete(pool_name)
+                                if subnet.ip_version == 6:
+                                    self.axapi_client.nat.ipv6pool.delete(pool_name)
+                                else:
+                                    self.axapi_client.nat.pool.delete(pool_name)
                     if natpool_flavor:
                         pool_name = natpool_flavor.get('pool_name')
                         if pool_name in self._added_pool_list:
                             LOG.warning("Reverting creation of nat-pool: %s", pool_name)
-                            self.axapi_client.nat.pool.delete(pool_name)
+                            if subnet.ip_version == 6:
+                                self.axapi_client.nat.ipv6pool.delete(pool_name)
+                            else:
+                                self.axapi_client.nat.pool.delete(pool_name)
             except ConnectionError:
                 LOG.exception(
                     "Failed to connect A10 Thunder device: %s", vthunder.ip_address)
@@ -110,7 +130,7 @@ class NatPoolDelete(task.Task):
     """Task to delete nat pool"""
 
     @axapi_client_decorator
-    def execute(self, loadbalancer, vthunder, lb_count_flavor, flavor_data=None):
+    def execute(self, subnet, loadbalancer, vthunder, lb_count_flavor, flavor_data=None):
         if vthunder:
             if lb_count_flavor <= 1:
                 if flavor_data:
@@ -120,15 +140,21 @@ class NatPoolDelete(task.Task):
                         for nat_pool in natpool_flavor_list:
                             pool_name = nat_pool['pool_name']
                             try:
-                                self.axapi_client.nat.pool.delete(pool_name)
-                            except(acos_errors.ACOSException) as e:
+                                if subnet.ip_version == 6:
+                                    self.axapi_client.nat.ipv6pool.delete(pool_name)
+                                else:
+                                    self.axapi_client.nat.pool.delete(pool_name)
+                            except (acos_errors.ACOSException) as e:
                                 LOG.exception("Failed to delete Nat-pool with name %s due to %s",
                                               pool_name, str(e))
                     if natpool_flavor:
                         pool_name = natpool_flavor['pool_name']
                         try:
-                            self.axapi_client.nat.pool.delete(pool_name)
-                        except(acos_errors.ACOSException) as e:
+                            if subnet.ip_version == 6:
+                                self.axapi_client.nat.ipv6pool.delete(pool_name)
+                            else:
+                                self.axapi_client.nat.pool.delete(pool_name)
+                        except (acos_errors.ACOSException) as e:
                             LOG.exception("Failed to delete Nat-pool with name %s due to %s",
                                           pool_name, str(e))
             else:

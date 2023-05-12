@@ -1502,3 +1502,48 @@ class A10ControllerWorker(base_taskflow.BaseTaskFlowEngine):
             flavor_data = json.loads(flavor_profile.flavor_data)
             return flavor_data
         return None
+
+    def delete_load_balancer_with_housekeeping(self, pending_lb, cascade=True):
+        """Function to delete load balancer for A10 provider using Housekeeper thread"""
+        if pending_lb.project_id in CONF.hardware_thunder.devices:
+            try:
+                vthunder = self._vthunder_repo.get_vthunder_from_lb(
+                    db_apis.get_session(), pending_lb.id)
+                if vthunder is not None:
+                    if vthunder.compute_id is not None:
+                        return
+                    else:
+                        self._vthunder_repo.update(
+                            db_apis.get_session(),
+                            vthunder.id,
+                            status=constants.ACTIVE)
+                self._lb_repo.update(db_apis.get_session(),
+                                     pending_lb.id,
+                                     provisioning_status=constants.ERROR)
+            except Exception as e:
+                LOG.exception("Failed to update load balancer %(lb) "
+                              "provisioning status to ERROR due to: "
+                              "%(except)s", {'lb': pending_lb.id, 'except': e})
+                raise e
+            lb = self._lb_repo.get(db_apis.get_session(), id=pending_lb.id)
+            vthunder = self._vthunder_repo.get_vthunder_from_lb(db_apis.get_session(),
+                                                                lb.id)
+            try:
+                vthunder_conf = CONF.hardware_thunder.devices.get(lb.project_id, None)
+                device_dict = CONF.hardware_thunder.devices
+                (flow, store) = self._lb_flows.get_delete_rack_vthunder_load_balancer_flow(
+                    lb, cascade,
+                    vthunder_conf=vthunder_conf, device_dict=device_dict)
+                store.update({constants.LOADBALANCER: lb,
+                              a10constants.COMPUTE_BUSY: False,
+                              constants.VIP: lb.vip,
+                              constants.SERVER_GROUP_ID: lb.server_group_id})
+
+                delete_lb_tf = self.taskflow_load(flow, store=store)
+
+                with tf_logging.DynamicLoggingListener(delete_lb_tf,
+                                                       log=LOG):
+                    delete_lb_tf.run()
+            except Exception:
+                # continue on other thunders (assume exception is logged)
+                pass

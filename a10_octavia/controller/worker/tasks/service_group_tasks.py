@@ -209,4 +209,7 @@ class PoolToErrorOnRevertTask(lifecycle_tasks.BaseLifecycleTask):
         pass
 
     def revert(self, pool, *args, **kwargs):
-        self.task_utils.mark_pool_prov_status_error(pool.id)
+        try:
+            self.task_utils.mark_pool_prov_status_error(pool.id)
+        except Exception as e:
+            LOG.exception("Failed to change status due to: %s", e)

@@ -17,11 +17,15 @@
 
 """
 import acos_client
+import ipaddress
 import json
 import netaddr
 import socket
 import struct
 
+from ipaddress import ip_address
+from ipaddress import IPv4Address
+from ipaddress import IPv6Address
 from oslo_config import cfg
 from oslo_log import log as logging
 
@@ -45,6 +49,24 @@ def validate_ipv4(address):
     if not netaddr.valid_ipv4(address, netaddr.core.INET_PTON):
         raise cfg.ConfigFileValueError(
             'Invalid IPAddress value given in configuration: {0}'.format(address))
+
+
+def validate_ipv6(IP: str):
+    try:
+        ipaddress.ip_address(IP)
+        LOG.debug("Valid IP address")
+    except ValueError:
+        raise cfg.ConfigFileValueError(
+            'Invalid IPAddress value given in configuration: {0}'.format(IP))
+
+
+def validate_partial_ipv6(IP: str):
+    try:
+        ipaddress.ip_address(IP)
+        LOG.debug("Valid IP address")
+        return True
+    except ValueError:
+        return False
 
 
 def validate_partial_ipv4(address):
@@ -165,20 +187,29 @@ def get_axapi_client(vthunder):
     return axapi_client
 
 
-def get_net_info_from_cidr(cidr):
-    subnet_ip, mask = cidr.split('/')
-    avail_hosts = (1 << 32 - int(mask))
-    netmask = socket.inet_ntoa(struct.pack('>I', (1 << 32) - avail_hosts))
-    return subnet_ip, netmask
+def get_net_info_from_cidr(cidr, ip_version):
+    if ip_version == 4:
+        subnet_ip, mask = cidr.split('/')
+        avail_hosts = (1 << 32 - int(mask))
+        netmask = socket.inet_ntoa(struct.pack('>I', (1 << 32) - avail_hosts))
+        return subnet_ip, netmask
+    else:
+        ipv6_ip, ipv6_mask = ipaddress.IPv6Interface(cidr).with_netmask.split('/')
+        return ipv6_ip, ipv6_mask
 
 
-def check_ip_in_subnet_range(ip, subnet, netmask):
-    if ip is None or subnet is None or netmask is None:
-        return False
-    int_ip = struct.unpack('>L', socket.inet_aton(ip))[0]
-    int_subnet = struct.unpack('>L', socket.inet_aton(subnet))[0]
-    int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
-    return int_ip & int_netmask == int_subnet
+def check_ip_in_subnet_range(ip, subnet, netmask, ip_version, subnet_cidr):
+    if ip_version == 4:
+        if ip is None or subnet is None or netmask is None:
+            return False
+        int_ip = struct.unpack('>L', socket.inet_aton(ip))[0]
+        int_subnet = struct.unpack('>L', socket.inet_aton(subnet))[0]
+        int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
+        return int_ip & int_netmask == int_subnet
+    else:
+        if ip is None or subnet_cidr is None:
+            return False
+        return ipaddress.IPv6Address(ip) in ipaddress.IPv6Network(subnet_cidr)
 
 
 def merge_host_and_network_ip(cidr, host_ip):
@@ -201,44 +232,54 @@ def get_network_driver():
     return network_driver
 
 
-def get_patched_ip_address(ip, cidr):
-    net_ip, netmask = get_net_info_from_cidr(cidr)
-    octets = ip.lstrip('.').split('.')
-
-    if len(octets) == 4:
-        validate_ipv4(ip)
-        if check_ip_in_subnet_range(ip, net_ip, netmask):
+def get_patched_ip_address(ip, cidr, ip_version):
+    net_ip, netmask = get_net_info_from_cidr(cidr, ip_version)
+    if ip_version == 6:
+        ip = ip.replace('.', "")
+        is_valid_ip = validate_partial_ipv6(ip)
+        if not is_valid_ip:
+            ip = str(ipaddress.IPv6Address(net_ip)) + str(ip.replace(':', ""))
+        if check_ip_in_subnet_range(ip, net_ip, netmask, ip_version, cidr):
             return ip
         else:
             raise exceptions.VRIDIPNotInSubentRangeError(ip, cidr)
+    else:
+        octets = ip.lstrip('.').split('.')
 
-    for i in range(4 - len(octets)):
-        octets.insert(0, '0')
-    host_ip = '.'.join(octets)
+        if len(octets) == 4:
+            validate_ipv4(ip)
+            if check_ip_in_subnet_range(ip, net_ip, netmask, 4, None):
+                return ip
+            else:
+                raise exceptions.VRIDIPNotInSubentRangeError(ip, cidr)
 
-    try:
-        int_host_ip = struct.unpack('>L', socket.inet_aton(host_ip))[0]
-    except socket.error:
-        raise exceptions.VRIDIPNotInSubentRangeError(host_ip, cidr)
+        for i in range(4 - len(octets)):
+            octets.insert(0, '0')
+        host_ip = '.'.join(octets)
 
-    int_net_ip = struct.unpack('>L', socket.inet_aton(net_ip))[0]
-    int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
+        try:
+            int_host_ip = struct.unpack('>L', socket.inet_aton(host_ip))[0]
+        except socket.error:
+            raise exceptions.VRIDIPNotInSubentRangeError(host_ip, cidr)
 
-    # Create a set of test bits to find partial netmask octet
-    # ie 1.1.1.1 & 255.255.254.0 -> 1.1.0.0
-    test_bits = (1 << 24 | 1 << 16 | 1 << 8 | 1)
-    test_bits = (int_netmask & test_bits)
+        int_net_ip = struct.unpack('>L', socket.inet_aton(net_ip))[0]
+        int_netmask = struct.unpack('>L', socket.inet_aton(netmask))[0]
 
-    # Then shift 8 bits (1 -> 256) and subtract by 1 in each octet to get 255
-    test_bits = (test_bits << 8) - test_bits
+        # Create a set of test bits to find partial netmask octet
+        # ie 1.1.1.1 & 255.255.254.0 -> 1.1.0.0
+        test_bits = (1 << 24 | 1 << 16 | 1 << 8 | 1)
+        test_bits = (int_netmask & test_bits)
 
-    # Use truncated mask to fill in any missing octets of partial IP
-    canidate_ip = (test_bits & int_net_ip) | int_host_ip
+        # Then shift 8 bits (1 -> 256) and subtract by 1 in each octet to get 255
+        test_bits = (test_bits << 8) - test_bits
 
-    if (canidate_ip & int_netmask) != (int_net_ip & int_netmask):
-        raise exceptions.VRIDIPNotInSubentRangeError(host_ip, cidr)
+        # Use truncated mask to fill in any missing octets of partial IP
+        canidate_ip = (test_bits & int_net_ip) | int_host_ip
 
-    return socket.inet_ntoa(struct.pack('>L', canidate_ip))
+        if (canidate_ip & int_netmask) != (int_net_ip & int_netmask):
+            raise exceptions.VRIDIPNotInSubentRangeError(host_ip, cidr)
+
+        return socket.inet_ntoa(struct.pack('>L', canidate_ip))
 
 
 def get_vrid_floating_ip_for_project(project_id):
@@ -321,11 +362,20 @@ def validate_interface_vlan_map(hardware_device):
 
 def get_natpool_addr_list(nat_flavor):
     addr_list = []
-    start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
-    end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
-    while start <= end:
-        addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
-        start += 1
+    if type(ip_address(nat_flavor['start_address'])) is IPv6Address:
+        sh, sl = struct.unpack(">QQ",
+                               socket.inet_pton(socket.AF_INET6, nat_flavor['start_address']))
+        eh, el = struct.unpack(">QQ",
+                               socket.inet_pton(socket.AF_INET6, nat_flavor['end_address']))
+        while sl <= el:
+            addr_list.append(socket.inet_ntop(socket.AF_INET6, struct.pack(">QQ", sh, sl)))
+            sl += 1
+    else:
+        start = (struct.unpack(">L", socket.inet_aton(nat_flavor['start_address'])))[0]
+        end = (struct.unpack(">L", socket.inet_aton(nat_flavor['end_address'])))[0]
+        while start <= end:
+            addr_list.append(socket.inet_ntoa(struct.pack(">L", start)))
+            start += 1
     return addr_list
 
 
@@ -341,3 +391,110 @@ def get_loadbalancer_flavor(loadbalancer):
                                                      id=flavor.flavor_profile_id)
             flavor_data = json.loads(flavor_profile.flavor_data)
             return flavor_data
+
+
+def network_with_ipv6_subnet(network):
+    network_driver = get_network_driver()
+    for subnet_id in network.subnets:
+        subnet = network_driver.get_subnet(subnet_id)
+        if subnet.ip_version == 6:
+            return True
+    return False
+
+
+def get_ipv6_address_from_conf(address_list, subnet_id, amp_network=False):
+    final_address_list = []
+    for address in address_list:
+        address = json.loads(address)
+        for key in address:
+            if key == subnet_id:
+                final_address_list.append({'ipv6-addr': address[key]})
+    if amp_network:
+        return final_address_list
+
+    return final_address_list
+
+
+def get_network_ipv6_address_from_conf(address_list, network):
+    addr_list = []
+    network_driver = get_network_driver()
+
+    addr_list = get_ipv6_address_from_conf(address_list, network.id, True)
+    if addr_list:
+        return addr_list
+
+    for subnet_id in network.subnets:
+        subnet = network_driver.get_subnet(subnet_id)
+        if subnet.ip_version == 6:
+            new_addr_list = get_ipv6_address_from_conf(address_list, subnet_id, True)
+            addr_list.extend(new_addr_list)
+    return addr_list
+
+
+def is_ipv6_subnet_in_conf(address_list, subnet_id):
+    for address in address_list:
+        address = json.loads(address)
+        if address.get(subnet_id):
+            return True
+    return False
+
+
+def get_ipv6_address(ifnum_oper, nics, address_list, loadbalancers_list):
+    final_address_list = []
+    has_v6_addr = False
+    has_v4_addr = False
+    opt_addr_only = CONF.a10_global.use_subnet_ipv6_addresses_only
+    network_driver = get_network_driver()
+    acos_mac_address = ifnum_oper['ethernet']['oper']['mac'].replace(".", "")
+    for nic in nics:
+        network = network_driver.get_network(nic.network_id)
+        if network_with_ipv6_subnet(network) is False:
+            continue
+
+        neutron_port = network_driver.get_port(nic.port_id)
+        port_mac_address = neutron_port.mac_address.replace(":", "")
+        LOG.debug("[IPv6 Addr] get_ipv6_address get addr for mac:%s", port_mac_address)
+        if port_mac_address == acos_mac_address:
+            final_address_list = get_network_ipv6_address_from_conf(address_list, network)
+            if final_address_list:
+                has_v6_addr = True
+            for fixed_ip in neutron_port.fixed_ips:
+                if type(ip_address(fixed_ip.ip_address)) is IPv6Address:
+                    if opt_addr_only and is_ipv6_subnet_in_conf(address_list, fixed_ip.subnet_id):
+                        continue
+                    addr_subnet = network_driver.get_subnet(fixed_ip.subnet_id)
+                    subnet_prefix, subnet_mask = addr_subnet.cidr.split('/')
+                    final_addr = fixed_ip.ip_address + '/' + subnet_mask
+                    final_address_list.append({'ipv6-addr': final_addr})
+                    LOG.debug("[IPv6 Addr] got: %s for mac: %s", final_addr, port_mac_address)
+                    has_v6_addr = True
+                if not has_v4_addr and type(ip_address(fixed_ip.ip_address)) is IPv4Address:
+                    has_v4_addr = True
+            break
+    return final_address_list, (has_v6_addr and has_v4_addr)
+
+
+def set_dual_stack(ifnum_address, ifnum):
+    ifnum_address[(ifnum + a10constants.DUAL_STACK_MASK)] = True
+
+
+def is_dual_stack(ifnum_address, ifnum):
+    if (ifnum + a10constants.DUAL_STACK_MASK) in ifnum_address:
+        return True
+    return False
+
+
+def get_acos_parameter_for_vrid(ip_version, partition):
+    if ip_version == 6 and partition == "shared":
+        IP_address = a10constants.IPV6_ADDRESS
+        IP_address_cfg = a10constants.IPV6_ADDRESS_CFG
+    elif ip_version == 6 and partition != "shared":
+        IP_address = a10constants.IPV6_ADDRESS_PARTITION
+        IP_address_cfg = a10constants.IPV6_ADDRESS_PARTITION_CFG
+    elif ip_version == 4 and partition == "shared":
+        IP_address = a10constants.IP_ADDRESS
+        IP_address_cfg = a10constants.IP_ADDRESS_CFG
+    else:
+        IP_address = a10constants.IP_ADDRESS_PARTITION
+        IP_address_cfg = a10constants.IP_ADDRESS_PARTITION_CFG
+    return IP_address, IP_address_cfg

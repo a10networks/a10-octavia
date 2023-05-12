@@ -128,14 +128,16 @@ class DNSConfiguration(task.Task):
     @axapi_client_decorator_for_revert
     def revert(self, vthunder, flavor=None, *args, **kwargs):
         flavor = flavor if flavor else {}
-        primary_dns, secondary_dns = self._get_dns_nameservers(vthunder, flavor)
-        if not primary_dns and not secondary_dns:
-            return None
-
         try:
+            primary_dns, secondary_dns = self._get_dns_nameservers(vthunder, flavor)
+            if not primary_dns and not secondary_dns:
+                return None
+
             self.axapi_client.dns.delete(primary_dns, secondary_dns)
         except req_exceptions.ConnectionError:
             LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
+        except Exception as e:
+            LOG.exception("Failed to connect A10 Thunder device due to: %s", e)
 
 
 class ActivateFlexpoolLicense(task.Task):

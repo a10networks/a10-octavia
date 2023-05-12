@@ -56,8 +56,11 @@ class ListenerFlows(object):
         create_listener_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
             provides=constants.FLAVOR_DATA))
+        create_listener_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
         create_listener_flow.add(nat_pool_tasks.NatPoolCreate(
-            requires=(constants.LOADBALANCER,
+            requires=(constants.SUBNET, constants.LOADBALANCER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             requires=[constants.LOADBALANCER, constants.LISTENER,
@@ -98,9 +101,12 @@ class ListenerFlows(object):
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
             inject={constants.LISTENER: listener},
             provides=constants.FLAVOR_DATA))
+        create_listener_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
         create_listener_flow.add(nat_pool_tasks.NatPoolCreate(
             name=sf_name + a10constants.FULLY_POPULATED_NAT_CREATE,
-            requires=(constants.LOADBALANCER,
+            requires=(constants.SUBNET, constants.LOADBALANCER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             name=sf_name + a10constants.FULLY_POPULATED_CREATE_LISTENER,
@@ -273,8 +279,11 @@ class ListenerFlows(object):
         create_listener_flow.add(a10_database_tasks.GetFlavorData(
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
             provides=constants.FLAVOR_DATA))
+        create_listener_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
         create_listener_flow.add(nat_pool_tasks.NatPoolCreate(
-            requires=(constants.LOADBALANCER,
+            requires=(constants.SUBNET, constants.LOADBALANCER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             requires=[constants.LOADBALANCER, constants.LISTENER,
@@ -309,9 +318,12 @@ class ListenerFlows(object):
             rebind={a10constants.LB_RESOURCE: constants.LISTENER},
             inject={constants.LISTENER: listener},
             provides=constants.FLAVOR_DATA))
+        create_listener_flow.add(a10_network_tasks.GetLBResourceSubnet(
+            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            provides=constants.SUBNET))
         create_listener_flow.add(nat_pool_tasks.NatPoolCreate(
             name=sf_name + a10constants.FULLY_POPULATED_NAT_CREATE,
-            requires=(constants.LOADBALANCER,
+            requires=(constants.SUBNET, constants.LOADBALANCER,
                       a10constants.VTHUNDER, constants.FLAVOR_DATA)))
         create_listener_flow.add(virtual_port_tasks.ListenerCreate(
             name=sf_name + a10constants.FULLY_POPULATED_CREATE_LISTENER,
@@ -340,12 +352,12 @@ class ListenerFlows(object):
         if listener is not None:
             create_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
                 name='get_ssl_cert_data_' + suffix,
-                requires=[constants.LOADBALANCER, constants.LISTENER],
+                requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER],
                 inject={constants.LISTENER: listener},
                 provides=a10constants.CERT_DATA))
         else:
             create_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
-                requires=[constants.LOADBALANCER, constants.LISTENER],
+                requires=[constants.LOADBALANCER, constants.LISTENER, a10constants.VTHUNDER],
                 provides=a10constants.CERT_DATA))
         create_ssl_cert_flow.add(cert_tasks.SSLCertCreate(
             name='ssl_cert_create_' + suffix,
@@ -368,17 +380,23 @@ class ListenerFlows(object):
         if listener is not None:
             delete_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
                 name='get_ssl_cert_data_' + suffix,
-                requires=[constants.LOADBALANCER, constants.LISTENER],
+                requires=[constants.LOADBALANCER, constants.LISTENER,
+                          a10constants.VTHUNDER],
                 inject={constants.LISTENER: listener},
                 provides=a10constants.CERT_DATA))
+            delete_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateDelete(
+                name='client_ssl_template_delete_' + suffix,
+                requires=[a10constants.VTHUNDER, constants.LISTENER],
+                inject={constants.LISTENER: listener}))
         else:
             delete_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
                 name='get_ssl_cert_data_' + suffix,
-                requires=[constants.LOADBALANCER, constants.LISTENER],
+                requires=[constants.LOADBALANCER, constants.LISTENER,
+                          a10constants.VTHUNDER],
                 provides=a10constants.CERT_DATA))
-        delete_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateDelete(
-            name='client_ssl_template_delete_' + suffix,
-            requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
+            delete_ssl_cert_flow.add(cert_tasks.ClientSSLTemplateDelete(
+                name='client_ssl_template_delete_' + suffix,
+                requires=[a10constants.VTHUNDER, constants.LISTENER]))
         delete_ssl_cert_flow.add(cert_tasks.SSLCertDelete(
             name='ssl_cert_delete_' + suffix,
             requires=[a10constants.CERT_DATA, a10constants.VTHUNDER]))
@@ -393,16 +411,18 @@ class ListenerFlows(object):
             suffix = 'listener_' + listener.id
 
         update_ssl_cert_flow = linear_flow.Flow(
-            a10constants.DELETE_SSL_CERT_FLOW + suffix)
+            a10constants.UPDATE_SSL_CERT_FLOW + suffix)
         if listener is not None:
             update_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
                 name='get_ssl_cert_data_' + suffix,
-                requires=[constants.LOADBALANCER, constants.LISTENER],
+                requires=[constants.LOADBALANCER, constants.LISTENER, constants.UPDATE_DICT,
+                          a10constants.VTHUNDER],
                 inject={constants.LISTENER: listener},
                 provides=a10constants.CERT_DATA))
         else:
             update_ssl_cert_flow.add(cert_tasks.GetSSLCertData(
-                requires=[constants.LOADBALANCER, constants.LISTENER],
+                requires=[constants.LOADBALANCER, constants.LISTENER, constants.UPDATE_DICT,
+                          a10constants.VTHUNDER],
                 provides=a10constants.CERT_DATA))
         update_ssl_cert_flow.add(cert_tasks.SSLCertUpdate(
             name='ssl_cert_update_' + suffix,
