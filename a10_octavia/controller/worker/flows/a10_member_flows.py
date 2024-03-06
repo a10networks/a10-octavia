@@ -408,17 +408,6 @@ class MemberFlows(object):
             name=a10constants.GET_LB_RESOURCE_SUBNET,
             rebind={a10constants.LB_RESOURCE: constants.MEMBER},
             provides=constants.SUBNET))
-        delete_member_flow.add(
-            a10_network_tasks.GetMembersOnThunder(
-                requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
-                provides=a10constants.MEMBERS))
-        delete_member_flow.add(
-            a10_database_tasks.CountMembersOnThunderBySubnet(
-                requires=[
-                    constants.SUBNET,
-                    a10constants.USE_DEVICE_FLAVOR,
-                    a10constants.MEMBERS],
-                provides=a10constants.MEMBER_COUNT_THUNDER))
         delete_member_flow.add(server_tasks.MemberFindNatPool(
             requires=[a10constants.VTHUNDER, constants.POOL,
                       constants.FLAVOR], provides=a10constants.NAT_FLAVOR))
@@ -530,6 +519,17 @@ class MemberFlows(object):
     def get_delete_member_vrid_subflow(self):
         delete_member_vrid_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBER_VRID_SUBFLOW)
+        delete_member_vrid_subflow.add(
+            a10_network_tasks.GetMembersOnThunder(
+                requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
+                provides=a10constants.MEMBERS))
+        delete_member_vrid_subflow.add(
+            a10_database_tasks.CountMembersOnThunderBySubnet(
+                requires=[
+                    constants.SUBNET,
+                    a10constants.USE_DEVICE_FLAVOR,
+                    a10constants.MEMBERS],
+                provides=a10constants.MEMBER_COUNT_THUNDER))        
         delete_member_vrid_subflow.add(a10_network_tasks.GetLBResourceSubnet(
             rebind={a10constants.LB_RESOURCE: constants.MEMBER},
             provides=constants.SUBNET))
