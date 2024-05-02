@@ -29,7 +29,6 @@ from octavia.controller.worker.v1.tasks import compute_tasks
 from octavia.controller.worker.v1.tasks import database_tasks
 from octavia.controller.worker.v1.tasks import lifecycle_tasks
 from octavia.controller.worker.v1.tasks import network_tasks
-from octavia.controller.worker.v2.tasks import notification_tasks
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 
@@ -51,6 +50,11 @@ from a10_octavia.db import repositories as a10repo
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
+try:
+    from octavia.controller.worker.v2.tasks import notification_tasks
+except:
+   LOG.error("Skipping importing notification_tasks as it is not supported for this openstack version")
+   
 
 class LoadBalancerFlows(object):
 
@@ -143,7 +147,7 @@ class LoadBalancerFlows(object):
             requires=a10constants.VTHUNDER))
         lb_create_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
-        if CONF.controller_worker.event_notifications:
+        if CONF.a10_controller_worker.event_notifications:
             lb_create_flow.add(
                 notification_tasks.SendCreateNotification(
                     requires=constants.LOADBALANCER
@@ -409,7 +413,7 @@ class LoadBalancerFlows(object):
             delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
                 name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-        if CONF.controller_worker.event_notifications:
+        if CONF.a10_controller_worker.event_notifications:
             delete_LB_flow.add(notification_tasks.SendDeleteNotification(
                 requires=constants.LOADBALANCER))
         return (delete_LB_flow, store)
@@ -619,7 +623,7 @@ class LoadBalancerFlows(object):
             inject={"status": constants.ACTIVE}))
         update_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
-        if CONF.controller_worker.event_notifications:
+        if CONF.a10_controller_worker.event_notifications:
             update_LB_flow.add(
                 notification_tasks.SendUpdateNotification(
                     requires=constants.LOADBALANCER
@@ -683,7 +687,7 @@ class LoadBalancerFlows(object):
             inject={"status": constants.ACTIVE}))
         update_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
-        if CONF.controller_worker.event_notifications:
+        if CONF.a10_controller_worker.event_notifications:
             update_LB_flow.add(
                 notification_tasks.SendUpdateNotification(
                     requires=constants.LOADBALANCER
@@ -761,7 +765,7 @@ class LoadBalancerFlows(object):
             requires=a10constants.VTHUNDER))
         lb_create_flow.add(a10_database_tasks.SetThunderUpdatedAt(
             requires=a10constants.VTHUNDER))
-        if CONF.controller_worker.event_notifications:
+        if CONF.a10_controller_worker.event_notifications:
             lb_create_flow.add(
                 notification_tasks.SendCreateNotification(
                     requires=constants.LOADBALANCER
@@ -872,7 +876,7 @@ class LoadBalancerFlows(object):
             delete_LB_flow.add(a10_database_tasks.SetThunderUpdatedAt(
                 name=a10constants.SET_THUNDER_BACKUP_UPDATE_AT,
                 rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER}))
-        if CONF.controller_worker.event_notifications:
+        if CONF.a10_controller_worker.event_notifications:
             delete_LB_flow.add(notification_tasks.SendDeleteNotification(
                 requires=constants.LOADBALANCER))
         return (delete_LB_flow, store)

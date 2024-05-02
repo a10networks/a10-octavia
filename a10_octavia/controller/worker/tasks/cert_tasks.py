@@ -49,7 +49,7 @@ class GetSSLCertData(task.Task):
         try:
             barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
             cert_data = utils.get_cert_data(barbican_client, listener)
-            if not cert_data.template_name:
+            if cert_data and not cert_data.template_name:
                 client_ssl = self.axapi_client.slb.template.client_ssl.get(name=listener.id)
                 if utils.acos_version_cmp(vthunder.acos_version, "5.2.1") >= 0:
                     certificate_list = client_ssl['client-ssl']['certificate-list'][0]
@@ -67,7 +67,7 @@ class GetSSLCertData(task.Task):
                     else:
                         cert_data = None
 
-            LOG.debug("Successfully received barbican data for listener: %s", listener.id)
+                LOG.debug("Successfully received barbican data for listener: %s", listener.id)
         except (acos_errors.ACOSException, ConnectionError) as e:
             LOG.exception("Failed to get barbican data for listener: %s", listener.id)
             raise e
