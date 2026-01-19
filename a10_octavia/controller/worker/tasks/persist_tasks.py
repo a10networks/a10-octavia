@@ -18,6 +18,7 @@ import acos_client.errors as acos_errors
 from requests.exceptions import ConnectionError
 from taskflow import task
 
+from octavia.common import constants
 from a10_octavia.common.a10constants import PERS_TYPE
 from a10_octavia.common.a10constants import SP_OBJ_DICT
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
@@ -31,22 +32,23 @@ class HandleSessionPersistenceDelta(task.Task):
 
     @axapi_client_decorator
     def execute(self, vthunder, pool):
-        sess_pers = pool.session_persistence
-        if pool.session_persistence and hasattr(pool.session_persistence, 'to_dict'):
-            sess_pers = pool.session_persistence.to_dict()
+        pool_id = pool.get(constants.ID) or pool.get(constants.POOL_ID)
+        sess_pers = pool.get('session_persistence')
+        if pool.get('session_persistence') and hasattr(pool.get('session_persistence'), 'to_dict'):
+            sess_pers = pool.get('session_persistence').to_dict()
 
         # Remove existing persistence template if any
         for sp_type in PERS_TYPE:
             try:
                 sp_template = getattr(self.axapi_client.slb.template, sp_type)
-                sp_template.delete(pool.id)
+                sp_template.delete(pool_id)
                 LOG.debug("Successfully deleted existing session persistence template "
-                          "for pool: %s", pool.id)
+                          "for pool: %s", pool_id)
             except acos_errors.NotFound:
                 pass
             except (acos_errors.ACOSException, ConnectionError) as e:
                 LOG.exception("Failed to delete existing session persistence for pool: %s",
-                              pool.id)
+                              pool_id)
                 raise e
 
         if sess_pers and sess_pers['type'] in SP_OBJ_DICT:
@@ -54,31 +56,36 @@ class HandleSessionPersistenceDelta(task.Task):
 
             try:
                 if sess_pers['cookie_name']:
-                    sp_template.create(pool.id, cookie_name=sess_pers['cookie_name'])
+                    sp_template.create(pool_id, cookie_name=sess_pers['cookie_name'])
                 else:
-                    sp_template.create(pool.id)
-                LOG.debug("Successfully created session persistence template for pool: %s", pool.id)
+                    sp_template.create(pool_id)
+                LOG.debug("Successfully created session persistence template for pool: %s", pool_id)
             except acos_errors.Exists:
                 pass
             except (acos_errors.ACOSException, ConnectionError) as e:
-                LOG.exception("Failed to create session persistence for pool: %s", pool.id)
+                LOG.exception("Failed to create session persistence for pool: %s", pool_id)
                 raise e
 
     @axapi_client_decorator_for_revert
     def revert(self, vthunder, pool, *args, **kwargs):
-        LOG.warning("Reverting creation of session persistence for pool: %s", pool.id)
-        try:
-            sp_template = getattr(self.axapi_client.slb.template,
-                                  SP_OBJ_DICT[pool.session_persistence.type])
-            sp_template.delete(pool.id)
-            LOG.debug("Successfully deleted session persistence template for pool: %s", pool.id)
-        except acos_errors.NotFound:
-            pass
-        except ConnectionError:
-            LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
-        except Exception as e:
-            LOG.exception("Failed to revert creation of session persistence template for pool:"
-                          " %s due to: %s", (pool.id, str(e)))
+        pool_id = pool.get(constants.ID) or pool.get(constants.POOL_ID)
+        LOG.warning("Reverting creation of session persistence for pool: %s", pool_id)
+        sess_pers = pool.get('session_persistence')
+        if sess_pers and hasattr(sess_pers, 'to_dict'):
+            sess_pers = sess_pers.to_dict()
+
+        if sess_pers and sess_pers.get('type') in SP_OBJ_DICT:
+            try:
+                sp_template = getattr(self.axapi_client.slb.template, SP_OBJ_DICT[sess_pers['type']])
+                sp_template.delete(pool_id)
+                LOG.debug("Successfully deleted session persistence template for pool: %s", pool_id)
+            except acos_errors.NotFound:
+                pass
+            except ConnectionError:
+                LOG.exception("Failed to connect A10 Thunder device: %s", vthunder.ip_address)
+            except Exception as e:
+                LOG.exception("Failed to revert creation of session persistence template for pool: %s due to: %s",
+                            pool_id, str(e))
 
 
 class DeleteSessionPersistence(task.Task):
@@ -86,13 +93,14 @@ class DeleteSessionPersistence(task.Task):
 
     @axapi_client_decorator
     def execute(self, vthunder, pool):
-        if pool.session_persistence:
+        if pool.get('session_persistence'):
+            pool_id = pool.get(constants.ID) or pool.get(constants.POOL_ID)
             for sp_type in PERS_TYPE:
                 try:
                     sp_template = getattr(self.axapi_client.slb.template, sp_type)
-                    sp_template.delete(pool.id)
+                    sp_template.delete(pool_id)
                     LOG.debug("Successfully deleted session persistence template for pool: %s",
-                              pool.id)
+                              pool_id)
                 except acos_errors.NotFound:
                     pass
                 except (acos_errors.ACOSException, ConnectionError) as e:

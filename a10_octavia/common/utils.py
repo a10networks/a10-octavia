@@ -35,14 +35,81 @@ from octavia.common import keystone
 from octavia.db import api as db_apis
 from octavia.db import repositories as repo
 from stevedore import driver as stevedore_driver
+from octavia.common import constants
 
 from a10_octavia.common import a10constants
 from a10_octavia.common import data_models
 from a10_octavia.common import exceptions
+from a10_octavia.controller.worker.tasks import utils as a10_task_utils
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 
+def deep_to_dict_api(obj):
+    """Serialize Octavia objects into Octavia API-like dict structure."""
+    if obj is None:
+        return None
+ 
+    # Handle lists
+    if isinstance(obj, list):
+        return [deep_to_dict_api(item) for item in obj]
+ 
+    # Handle ORM/Octavia model objects with to_dict()
+    if hasattr(obj, "to_dict"):
+        data = obj.to_dict()
+ 
+        # --- Listeners ---
+        if hasattr(obj, "listeners"):
+            data["listeners"] = []
+            for listener in obj.listeners:
+                ldict = listener.to_dict()
+                # Always include default_pool_id
+                if getattr(listener, "default_pool_id", None):
+                    ldict["default_pool_id"] = listener.default_pool_id
+ 
+                # Expand default_pool fully
+                if getattr(listener, "default_pool", None):
+                    pool = listener.default_pool
+                    pdict = pool.to_dict()
+                    # Expand members
+                    if hasattr(pool, "members"):
+                        pdict["members"] = [m.to_dict() for m in pool.members]
+                    # Expand health monitor
+                    if getattr(pool, "health_monitor", None):
+                        pdict["health_monitor"] = pool.health_monitor.to_dict()
+                    # Avoid expanding listeners again (cycle)
+                    pdict.pop("listeners", None)
+                    ldict["default_pool"] = pdict
+ 
+                # Expand L7policies (with rules)
+                if hasattr(listener, "l7policies"):
+                    ldict["l7policies"] = []
+                    for pol in listener.l7policies:
+                        pdict = pol.to_dict()
+                        if hasattr(pol, "l7rules"):
+                            pdict["l7rules"] = [rule.to_dict() for rule in pol.l7rules]
+                        ldict["l7policies"].append(pdict)
+ 
+                data["listeners"].append(ldict)
+ 
+        # --- Pools ---
+        if hasattr(obj, "pools"):
+            data["pools"] = []
+            for pool in obj.pools:
+                pdict = pool.to_dict()
+                # Expand members
+                if hasattr(pool, "members"):
+                    pdict["members"] = [m.to_dict() for m in pool.members]
+                # Expand health monitor
+                if getattr(pool, "health_monitor", None):
+                    pdict["health_monitor"] = pool.health_monitor.to_dict()
+                # Do not expand listeners again (avoid cycles)
+                pdict.pop("listeners", None)
+                data["pools"].append(pdict)
+ 
+        return data
+ 
+    return obj
 
 def validate_ipv4(address):
     """Validate for IP4 address format"""
@@ -90,14 +157,14 @@ def validate_partition(hardware_device):
 
 def validate_params(hardware_info):
     """Check for all the required parameters for hardware configurations."""
-    if all(k in hardware_info for k in ('ip_address', 'username', 'password', 'device_name')):
+    if all(k in hardware_info for k in ('ip_address', 'username', 'device_name')):
         if all(hardware_info[x] is not None for x in ('ip_address',
-                                                      'username', 'password', 'device_name')):
+                                                      'username', 'device_name')):
             validate_ipv4(hardware_info['ip_address'])
             validate_partition(hardware_info)
             return hardware_info
     raise cfg.ConfigFileValueError('Please check your configuration. The params `project_id`, '
-                                   '`ip_address`, `username`, `password` and `device_name` '
+                                   '`ip_address`, `username` and `device_name` '
                                    'under [hardware_thunder] section cannot be None ')
 
 
@@ -181,6 +248,7 @@ def get_parent_project(project_id):
 
 def get_axapi_client(vthunder):
     api_ver = acos_client.AXAPI_21 if vthunder.axapi_version == 21 else acos_client.AXAPI_30
+    vthunder.password=a10_task_utils.decode_base64(vthunder.password)
     axapi_client = acos_client.Client(vthunder.ip_address, api_ver,
                                       vthunder.username, vthunder.password,
                                       timeout=CONF.vthunder.default_axapi_timeout)
@@ -383,7 +451,7 @@ def get_loadbalancer_flavor(loadbalancer):
     flavor_repo = repo.FlavorRepository()
     flavor_profile_repo = repo.FlavorProfileRepository()
     flavor = {}
-    flavor_id = loadbalancer.flavor_id
+    flavor_id = loadbalancer.get(constants.FLAVOR_ID)
     if flavor_id:
         flavor = flavor_repo.get(db_apis.get_session(), id=flavor_id)
         if flavor and flavor.flavor_profile_id:

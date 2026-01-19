@@ -17,8 +17,9 @@ from oslo_db.sqlalchemy import models
 from oslo_utils import strutils
 from oslo_utils import uuidutils
 import sqlalchemy as sa
-from sqlalchemy.ext import declarative
+
 from sqlalchemy.orm import collections
+from sqlalchemy.orm import declarative_base
 
 
 class A10Base(models.ModelBase):
@@ -50,6 +51,9 @@ class A10Base(models.ModelBase):
             return obj.__class__.__name__ + obj.project_id
         elif obj.__class__.__name__ in ['VrrpSet']:
             return obj.__class__.__name__ + obj.mgmt_subnet + obj.project_id
+        elif obj.__class__.__name__ in ['AdditionalVip']:
+            return (obj.__class__.__name__ +
+                    obj.load_balancer_id + obj.subnet_id)
         else:
             raise NotImplementedError
 
@@ -133,4 +137,4 @@ class A10Base(models.ModelBase):
         return query
 
 
-BASE = declarative.declarative_base(cls=A10Base)
+BASE = declarative_base(cls=A10Base)

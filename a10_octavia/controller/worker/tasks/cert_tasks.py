@@ -18,6 +18,7 @@ from oslo_log import log as logging
 from requests.exceptions import ConnectionError
 from taskflow import task
 
+from octavia.common import constants
 from octavia.certificates.common.auth.barbican_acl import BarbicanACLAuth
 
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
@@ -31,8 +32,8 @@ class CheckListenerType(task.Task):
     """Task to check if listener type is TERMINATED_HTTPS"""
 
     def execute(self, listener):
-        if (listener.protocol == 'TERMINATED_HTTPS' or listener.protocol
-                == 'https') and listener.tls_certificate_id:
+        if (listener[constants.PROTOCOL] == 'TERMINATED_HTTPS' or listener[constants.PROTOCOL]
+                == 'https') and listener.get(constants.TLS_CERTIFICATE_ID):
             return True
         else:
             return False
@@ -47,29 +48,29 @@ class GetSSLCertData(task.Task):
         if listener and update_dict:
             listener.__dict__.update(update_dict)
         try:
-            barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.project_id)
+            barbican_client = BarbicanACLAuth().get_barbican_client(loadbalancer.get(constants.PROJECT_ID))
             cert_data = utils.get_cert_data(barbican_client, listener)
             if not cert_data.template_name:
-                client_ssl = self.axapi_client.slb.template.client_ssl.get(name=listener.id)
+                client_ssl = self.axapi_client.slb.template.client_ssl.get(name=listener.get(constants.ID))
                 if utils.acos_version_cmp(vthunder.acos_version, "5.2.1") >= 0:
                     certificate_list = client_ssl['client-ssl']['certificate-list'][0]
                     if certificate_list.get('cert') and certificate_list.get('key'):
                         cert_data.cert_filename = certificate_list.get('cert')
                         cert_data.key_filename = certificate_list.get('key')
-                        cert_data.template_name = listener.id
+                        cert_data.template_name = listener.get(constants.ID)
                     else:
                         cert_data = None
                 else:
                     if client_ssl['client-ssl'].get('cert') and client_ssl['client-ssl'].get('key'):
                         cert_data.cert_filename = client_ssl['client-ssl'].get('cert')
                         cert_data.key_filename = client_ssl['client-ssl'].get('key')
-                        cert_data.template_name = listener.id
+                        cert_data.template_name = listener.get(constants.ID)
                     else:
                         cert_data = None
 
-            LOG.debug("Successfully received barbican data for listener: %s", listener.id)
+            LOG.debug("Successfully received barbican data for listener: %s", listener.get(constants.ID))
         except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception("Failed to get barbican data for listener: %s", listener.id)
+            LOG.exception("Failed to get barbican data for listener: %s", listener.get(constants.ID))
             raise e
         return cert_data
 
@@ -308,9 +309,9 @@ class ClientSSLTemplateDelete(task.Task):
     @axapi_client_decorator
     def execute(self, vthunder, listener):
         try:
-            if self.axapi_client.slb.template.client_ssl.exists(name=listener.id):
-                self.axapi_client.slb.template.client_ssl.delete(name=listener.id)
-                LOG.debug("Successfully deleted SSL template: %s", listener.id)
+            if self.axapi_client.slb.template.client_ssl.exists(name=listener.get(constants.ID)):
+                self.axapi_client.slb.template.client_ssl.delete(name=listener.get(constants.ID))
+                LOG.debug("Successfully deleted SSL template: %s", listener.get(constants.ID))
         except (acos_errors.ACOSException, ConnectionError) as e:
-            LOG.exception("Failed to delete SSL template: %s", listener.id)
+            LOG.exception("Failed to delete SSL template: %s", listener.get(constants.ID))
             raise e

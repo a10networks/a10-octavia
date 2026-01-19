@@ -24,6 +24,7 @@ from oslo_config import fixture as oslo_fixture
 
 from octavia.common import constants as o_constants
 from octavia.common import data_models as o_data_models
+from octavia.common import config as o_config_options
 
 from a10_octavia.common import config_options
 from a10_octavia.common import data_models
@@ -33,7 +34,7 @@ from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 
 VTHUNDER = data_models.VThunder()
-POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID, name="sg1")
+POOL = (o_data_models.Pool(id=a10constants.MOCK_POOL_ID, name="sg1")).to_dict(recurse=True)
 AXAPI_ARGS = {'service_group': utils.meta(POOL, 'service_group', {})}
 
 
@@ -48,6 +49,8 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
                                 group=a10constants.SERVICE_GROUP_CONF_SECTION)
         self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
                                 group=a10constants.A10_GLOBAL_CONF_SECTION)
+        self.conf.register_opts(o_config_options.controller_worker_opts,
+                                 group='controller_worker')
 
     def tearDown(self):
         super(TestHandlerServiceGroupTasks, self).tearDown()
@@ -212,15 +215,15 @@ class TestHandlerServiceGroupTasks(BaseTaskTestCase):
         mock_pool = task.PoolCreate()
         mock_pool.axapi_client = self.client_mock
         mock_pool.revert(POOL, VTHUNDER)
-        self.client_mock.slb.service_group.delete.assert_called_with(POOL.id)
+        self.client_mock.slb.service_group.delete.assert_called_with(POOL[o_constants.ID])
 
     def test_create_lb_algorithm_source_ip_hash_only(self):
         mock_pool = task.PoolCreate()
         mock_pool.axapi_client = self.client_mock
         mock_pool.CONF = self.conf
-        pool = o_data_models.Pool(id=a10constants.MOCK_POOL_ID,
+        pool = (o_data_models.Pool(id=a10constants.MOCK_POOL_ID,
                                   protocol=o_constants.PROTOCOL_HTTP,
-                                  lb_algorithm=o_constants.LB_ALGORITHM_SOURCE_IP)
+                                  lb_algorithm=o_constants.LB_ALGORITHM_SOURCE_IP)).to_dict(recurse=True)
         mock_pool.execute(pool, VTHUNDER)
         self.client_mock.slb.service_group.create.assert_called_with(
             a10constants.MOCK_POOL_ID,

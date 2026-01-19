@@ -21,6 +21,7 @@ except ImportError:
     import mock
 
 from octavia.common import data_models as o_data_models
+from octavia.common import constants as o_constants
 
 from a10_octavia.common.data_models import VThunder
 from a10_octavia.controller.worker.tasks import persist_tasks
@@ -55,7 +56,8 @@ class TestPersistTasks(BaseTaskTestCase):
         mock_session_persist = persist_tasks.HandleSessionPersistenceDelta()
         mock_session_persist.axapi_client = self.client_mock
         self.pool.session_persistence = SOURCE_IP_SESS_PERS
-        mock_session_persist.execute(VTHUNDER, self.pool)
+        POOL_DICT = (self.pool).to_dict(recurse=True)
+        mock_session_persist.execute(VTHUNDER, POOL_DICT)
         self.client_mock.slb.template.src_ip_persistence.delete.assert_called_with(
             POOL.id)
         self.client_mock.slb.template.src_ip_persistence.create.assert_called_with(
@@ -65,7 +67,8 @@ class TestPersistTasks(BaseTaskTestCase):
         mock_session_persist = persist_tasks.HandleSessionPersistenceDelta()
         mock_session_persist.axapi_client = self.client_mock
         self.pool.session_persistence = APP_COOKIE_SESS_PERS
-        mock_session_persist.execute(VTHUNDER, self.pool)
+        POOL_DICT = (self.pool).to_dict(recurse=True)
+        mock_session_persist.execute(VTHUNDER, POOL_DICT)
         self.client_mock.slb.template.cookie_persistence.delete.assert_called_with(
             POOL.id)
         self.client_mock.slb.template.cookie_persistence.create.assert_called_with(
@@ -75,7 +78,8 @@ class TestPersistTasks(BaseTaskTestCase):
         mock_session_persist = persist_tasks.HandleSessionPersistenceDelta()
         mock_session_persist.axapi_client = self.client_mock
         self.pool.session_persistence = HTTP_COOKIE_SESS_PERS
-        mock_session_persist.execute(VTHUNDER, self.pool)
+        POOL_DICT = (self.pool).to_dict(recurse=True)
+        mock_session_persist.execute(VTHUNDER, POOL_DICT)
         self.client_mock.slb.template.cookie_persistence.delete.assert_called_with(
             POOL.id)
         self.client_mock.slb.template.cookie_persistence.create.assert_called_with(
@@ -85,14 +89,16 @@ class TestPersistTasks(BaseTaskTestCase):
         mock_session_persist = persist_tasks.HandleSessionPersistenceDelta()
         mock_session_persist.axapi_client = self.client_mock
         self.pool.session_persistence = APP_COOKIE_SESS_PERS_WITH_NO_TYPE
-        mock_session_persist.execute(VTHUNDER, self.pool)
+        POOL_DICT = (self.pool).to_dict(recurse=True)
+        mock_session_persist.execute(VTHUNDER, POOL_DICT)
         self.client_mock.slb.template.cookie_persistence.delete.assert_called_with(POOL.id)
         self.client_mock.slb.template.cookie_persistence.create.assert_not_called()
 
     def test_handle_session_persistence_with_source_ip_with_no_sess_pers(self):
         mock_session_persist = persist_tasks.HandleSessionPersistenceDelta()
         mock_session_persist.axapi_client = self.client_mock
-        mock_session_persist.execute(VTHUNDER, self.pool)
+        POOL_DICT = (self.pool).to_dict(recurse=True)
+        mock_session_persist.execute(VTHUNDER, POOL_DICT)
         self.client_mock.slb.template.src_ip_persistence.delete.assert_called_with(POOL.id)
         self.client_mock.slb.template.src_ip_persistence.create.assert_not_called()
 
@@ -100,7 +106,8 @@ class TestPersistTasks(BaseTaskTestCase):
         mock_session_persist = persist_tasks.HandleSessionPersistenceDelta()
         mock_session_persist.axapi_client = self.client_mock
         self.pool.session_persistence = SOURCE_IP_SESS_PERS
-        mock_session_persist.execute(VTHUNDER, self.pool)
+        POOL_DICT = (self.pool).to_dict(recurse=True)
+        mock_session_persist.execute(VTHUNDER, POOL_DICT)
         self.client_mock.slb.template.src_ip_persistence.delete.assert_called_with(
             POOL.id)
 
@@ -108,7 +115,8 @@ class TestPersistTasks(BaseTaskTestCase):
         mock_session_persist = persist_tasks.HandleSessionPersistenceDelta()
         mock_session_persist.axapi_client = self.client_mock
         self.pool.session_persistence = HTTP_COOKIE_SESS_PERS
-        mock_session_persist.execute(VTHUNDER, self.pool)
+        POOL_DICT = (self.pool).to_dict(recurse=True)
+        mock_session_persist.execute(VTHUNDER, POOL_DICT)
         self.client_mock.slb.template.cookie_persistence.delete.assert_called_with(
             POOL.id)
 
@@ -116,25 +124,30 @@ class TestPersistTasks(BaseTaskTestCase):
         mock_session_persist = persist_tasks.HandleSessionPersistenceDelta()
         mock_session_persist.axapi_client = self.client_mock
         self.client_mock.side_effect = acos_errors.Exists
-        mock_session_persist.execute(VTHUNDER, self.pool)
+        POOL_DICT = (self.pool).to_dict(recurse=True)
+        mock_session_persist.execute(VTHUNDER, POOL_DICT)
 
     def test_delete_session_persistence(self):
         mock_session_persist = persist_tasks.DeleteSessionPersistence()
         mock_session_persist.axapi_client = self.client_mock
         self.pool.session_persistence = APP_COOKIE_SESS_PERS
-        mock_session_persist.execute(VTHUNDER, self.pool)
+        POOL_DICT = (self.pool).to_dict(recurse=True)
+        POOL_DICT[o_constants.POOL_ID] = POOL_DICT[o_constants.ID]
+        mock_session_persist.execute(VTHUNDER, POOL_DICT)
         self.client_mock.slb.template.cookie_persistence.delete.assert_called_with(POOL.id)
 
     def test_delete_session_persistence_with_no_sess_pers(self):
         mock_session_persist = persist_tasks.DeleteSessionPersistence()
         mock_session_persist.axapi_client = self.client_mock
-        mock_session_persist.execute(VTHUNDER, self.pool)
+        POOL_DICT = (self.pool).to_dict(recurse=True)
+        mock_session_persist.execute(VTHUNDER, POOL_DICT)
         self.client_mock.slb.template.cookie_persistence.delete.assert_not_called()
 
     def test_unset_session_persistence(self):
         mock_session_persist = persist_tasks.HandleSessionPersistenceDelta()
         mock_session_persist.axapi_client = self.client_mock
         self.pool.session_persistence = None
-        mock_session_persist.execute(VTHUNDER, self.pool)
+        POOL_DICT =(self.pool).to_dict(recurse=True)
+        mock_session_persist.execute(VTHUNDER, POOL_DICT)
         self.client_mock.slb.template.src_ip_persistence.delete.assert_called_with(POOL.id)
         self.client_mock.slb.template.src_ip_persistence.create.assert_not_called()

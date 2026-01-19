@@ -17,10 +17,13 @@ import time
 from oslo_config import cfg
 from oslo_log import log as logging
 from taskflow.types import failure
+from taskflow import retry
 
+from octavia.db import api as db_apis
+from octavia.db import repositories as repo
 from octavia.common import constants
 from octavia.common import exceptions
-from octavia.controller.worker.v1.tasks.compute_tasks import BaseComputeTask
+from octavia.controller.worker.v2.tasks.compute_tasks import BaseComputeTask
 
 from a10_octavia.common import exceptions as a10_exception
 from a10_octavia.common import utils as a10_utils
@@ -35,6 +38,7 @@ class ComputeCreate(BaseComputeTask):
     def __init__(self, **kwargs):
         super(ComputeCreate, self).__init__(**kwargs)
         self._network_driver = None
+        self._lb_repo = repo.LoadBalancerRepository()
 
     @property
     def network_driver(self):
@@ -53,14 +57,19 @@ class ComputeCreate(BaseComputeTask):
         if not mgmt_net:
             raise a10_exception.NetworkNotFoundToBootAmphora()
 
+        if loadbalancer:
+            with db_apis.session().begin() as session:
+                lb = self._lb_repo.get(session,
+                                    id=loadbalancer[constants.LOADBALANCER_ID])
+
         network_ids = set(boot_net_list) if boot_net_list else set()
         if CONF.glm_license.amp_license_network:
             network_ids.add(CONF.glm_license.amp_license_network)
         if network_list:
             network_ids = network_ids.union(set(network_list))
         if loadbalancer:
-            network_ids.add(loadbalancer.vip.network_id)
-            for pool in loadbalancer.pools:
+            network_ids.add(lb.vip.network_id)
+            for pool in lb.pools:
                 for member in pool.members:
                     if member.subnet_id is not None:
                         network_id = self.network_driver.get_subnet(member.subnet_id).network_id
@@ -90,7 +99,7 @@ class ComputeCreate(BaseComputeTask):
                 port_ids=[port.id for port in ports],
                 server_group_id=server_group_id)
 
-            LOG.debug("Server created with id: %s for amphora id: %s",
+            LOG.info("Server created with id: %s for amphora id: %s",
                       compute_id, amphora_id)
 
             return compute_id
@@ -115,18 +124,40 @@ class ComputeCreate(BaseComputeTask):
             LOG.exception("Failed to revert creation of compute %s due to %s: ",
                           compute_id, str(e))
 
+# class ComputeRetry(retry.Times):
 
-class ComputeActiveWait(BaseComputeTask):
+#     def on_failure(self, history, *args, **kwargs):
+#         last_errors = history[-1][1]
+#         max_retry_attempt = CONF.a10_controller_worker.amp_active_retries
+#         for task_name, ex_info in last_errors.items():
+#             if len(history) <= max_retry_attempt:
+#                 # When taskflow persistence is enabled and flow/task state is
+#                 # saved in the backend. If flow(task) is restored(restart of
+#                 # worker,etc) we are getting ex_info as None - we need to RETRY
+#                 # task to check its real state.
+#                 if ex_info is None or ex_info._exc_info is None:
+#                     return retry.RETRY
+#                 excp = ex_info._exc_info[1]
+#                 if isinstance(excp, exceptions.ComputeWaitTimeoutException):
+#                     return retry.RETRY
+
+#         return retry.REVERT_ALL
+
+# class ComputeActiveWait(BaseComputeTask):
+
+class ComputeWait(BaseComputeTask):
     """Wait for the compute driver to mark the amphora active."""
 
     def execute(self, compute_id, amphora_id):
         """Wait for the compute driver to mark the amphora active"""
+
         for i in range(CONF.a10_controller_worker.amp_active_retries):
             amp, fault = self.compute.get_amphora(compute_id)
+            LOG.info("amphora status: %s", amp.status)
             if amp.status == constants.ACTIVE:
                 if CONF.a10_controller_worker.build_rate_limit != -1:
                     self.rate_limit.remove_from_build_req_queue(amphora_id)
-                return amp
+                return amp.to_dict()
             elif amp.status == constants.ERROR:
                 raise exceptions.ComputeBuildException(fault=fault)
             time.sleep(CONF.a10_controller_worker.amp_active_wait_sec)

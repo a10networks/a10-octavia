@@ -94,6 +94,8 @@ def _start_provider_agents(exit_event):
 
 def main():
     service.prepare_service(sys.argv)
+    LOG.debug('Full set of CONF:')
+    CONF.log_opt_values(LOG, logging.DEBUG)
 
     gmr.TextGuruMeditation.setup_autorun(version)
 
@@ -153,7 +155,7 @@ def main():
                             'ignoring and continuing shutdown process.',
                             str(e), proc.name)
             else:
-                LOG.info('Provider agent "%s" has succesfully shutdown.',
+                LOG.info('Provider agent "%s" has successfully shutdown.',
                          proc.name)
 
     signal.signal(signal.SIGTERM, process_cleanup)

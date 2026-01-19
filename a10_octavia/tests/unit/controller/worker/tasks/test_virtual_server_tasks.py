@@ -21,6 +21,7 @@ except ImportError:
 
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
+from octavia.common import constants as o_constants
 from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
 
@@ -33,8 +34,10 @@ from a10_octavia.tests.unit.base import BaseTaskTestCase
 VTHUNDER = VThunder()
 AMPHORA = o_data_models.Amphora(id=t_constants.MOCK_AMP_ID1)
 VIP = o_data_models.Vip(ip_address="1.1.1.1")
-LOADBALANCER = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
-                                          amphorae=[AMPHORA], vip=VIP)
+LOADBALANCER = (o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
+                                          amphorae=[AMPHORA], vip=VIP)).to_dict(recurse=True)
+LOADBALANCER[o_constants.LOADBALANCER_ID] = LOADBALANCER[o_constants.ID]
+LOADBALANCER[o_constants.VIP_ADDRESS] = LOADBALANCER[o_constants.VIP]
 
 
 class TestHandlerVirtualServerTasks(BaseTaskTestCase):
@@ -57,7 +60,7 @@ class TestHandlerVirtualServerTasks(BaseTaskTestCase):
         mock_load_balancer = task.CreateVirtualServerTask()
         mock_load_balancer.axapi_client = self.client_mock
         mock_load_balancer.revert(LOADBALANCER, VTHUNDER)
-        self.client_mock.slb.virtual_server.delete.assert_called_with(LOADBALANCER.id)
+        self.client_mock.slb.virtual_server.delete.assert_called_with(LOADBALANCER[o_constants.ID])
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.parse_name_expressions',
                 mock.MagicMock())

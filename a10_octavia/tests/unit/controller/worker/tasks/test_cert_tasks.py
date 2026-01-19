@@ -33,11 +33,11 @@ from a10_octavia.controller.worker.tasks import cert_tasks
 from a10_octavia.tests.common import a10constants as a10_test_constants
 from a10_octavia.tests.unit.base import BaseTaskTestCase
 
-LB = o_data_models.LoadBalancer(id=a10_test_constants.MOCK_LOAD_BALANCER_ID,
-                                project_id=t_constants.MOCK_PROJECT_ID)
-LISTENER = o_data_models.Listener(id=a10_test_constants.MOCK_LISTENER_ID,
+LB = (o_data_models.LoadBalancer(id=a10_test_constants.MOCK_LOAD_BALANCER_ID,
+                                project_id=t_constants.MOCK_PROJECT_ID)).to_dict(recurse=True)
+LISTENER = (o_data_models.Listener(id=a10_test_constants.MOCK_LISTENER_ID,
                                   protocol='TERMINATED_HTTPS', protocol_port=2222,
-                                  load_balancer=LB, tls_certificate_id='certificate-id-1')
+                                  load_balancer=LB, tls_certificate_id='certificate-id-1')).to_dict(recurse=True)
 VTHUNDER = VThunder()
 
 CERT_DATA = Certificate(cert_filename=a10_test_constants.MOCK_CERT_FILENAME,
@@ -218,6 +218,11 @@ class TestCertHandlerTasks(BaseTaskTestCase):
     def test_client_ssl_template_update(self):
         mock_client_ssl_template = cert_tasks.ClientSSLTemplateUpdate()
         mock_client_ssl_template.axapi_client = self.client_mock
+        self.client_mock.slb.template.client_ssl.exists.return_value = True
+        self.client_mock.slb.template.client_ssl.get.return_value = {'client-ssl': {'certificate-list': [{'cert': 'old-cert.pem', 'key': 'old-key.pem'}]}}
+        self.client_mock.file.ssl_cert.delete.return_value = None
+        self.client_mock.file.ssl_key.delete.return_value = None
+        VTHUNDER.acos_version = "5.2.0"
         mock_client_ssl_template.execute(CERT_DATA, VTHUNDER)
         self.client_mock.slb.template.client_ssl.exists.assert_called_with(
             name=a10_test_constants.MOCK_TEMPLATE_NAME)

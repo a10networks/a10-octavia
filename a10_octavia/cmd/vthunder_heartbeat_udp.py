@@ -82,13 +82,17 @@ class VThunderUDPStatusGetter(object):
             ip, port = srcaddr
             LOG.info('Received packet from %s', ip)
             # get record id of first vThunder from srcaddr
-            record_id = self.vthunder_repo.get_vthunder_from_src_addr(db_api.get_session(), ip)
+            session = db_api.get_session()
+            try:
+                record_id = self.vthunder_repo.get_vthunder_from_src_addr(session, ip)
+                if record_id:
+                    self.vthunder_repo.update(session, record_id,
+                                            last_udp_update=datetime.datetime.utcnow(),
+                                            health_state='UP')
+                session.commit()
+            finally:
+                session.close()
 
-            if record_id:
-                last_udp_update = datetime.datetime.utcnow()
-                self.vthunder_repo.update(db_api.get_session(), record_id,
-                                          last_udp_update=last_udp_update,
-                                          health_state='UP')
         except socket.timeout:
             # Pass here as this is an expected cycling of the listen socket
             pass

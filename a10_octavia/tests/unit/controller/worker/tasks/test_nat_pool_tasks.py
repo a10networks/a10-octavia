@@ -126,8 +126,9 @@ class TestHandlerNatPoolTasks(base.BaseTaskTestCase):
         log_message = str("Cannot delete Nat-pool(s) in flavor None as they are in use by "
                           "another loadbalancer(s)")
         expected_log = ["WARNING:{}:{}".format(task_path, log_message)]
+        LB_DICT = LB.to_dict(recurse=True)
         with self.assertLogs(task_path, level='WARN') as cm:
-            mock_nat_pool_task.execute(SUBNET, LB, vthunder, lb_count, flavor_data=NAT_POOL_FLAVOR1)
+            mock_nat_pool_task.execute(SUBNET, LB_DICT, vthunder, lb_count, flavor_data=NAT_POOL_FLAVOR1)
             self.assertEqual(expected_log, cm.output)
 
     def test_delete_nat_pool_when_virtual_port_uses_it(self):

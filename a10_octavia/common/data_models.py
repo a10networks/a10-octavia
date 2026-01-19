@@ -20,45 +20,97 @@ from sqlalchemy.orm import collections
 
 
 class BaseDataModel(object):
+    # def to_dict(self, calling_classes=None, recurse=False, **kwargs):
+    #     """Converts a data model to a dictionary."""
+    #     calling_classes = calling_classes or []
+    #     ret = {}
+    #     for attr in self.__dict__:
+    #         if attr.startswith('_') or not kwargs.get(attr, True):
+    #             continue
+    #         value = self.__dict__[attr]
+
+    #         if recurse:
+    #             if isinstance(getattr(self, attr), list):
+    #                 ret[attr] = []
+    #                 for item in value:
+    #                     if isinstance(item, BaseDataModel):
+    #                         if type(self) not in calling_classes:
+    #                             ret[attr].append(
+    #                                 item.to_dict(calling_classes=(
+    #                                     calling_classes + [type(self)])))
+    #                         else:
+    #                             ret[attr] = None
+    #                     else:
+    #                         ret[attr] = item
+    #             elif isinstance(getattr(self, attr), BaseDataModel):
+    #                 if type(self) not in calling_classes:
+    #                     ret[attr] = value.to_dict(
+    #                         calling_classes=calling_classes + [type(self)])
+    #                 else:
+    #                     ret[attr] = None
+    #             elif six.PY2 and isinstance(value, six.text_type):
+    #                 ret[attr.encode('utf8')] = value.encode('utf8')
+    #             else:
+    #                 ret[attr] = value
+    #         else:
+    #             if isinstance(getattr(self, attr), (BaseDataModel, list)):
+    #                 ret[attr] = None
+    #             else:
+    #                 ret[attr] = value
+
+    #     return ret
+
     def to_dict(self, calling_classes=None, recurse=False, **kwargs):
         """Converts a data model to a dictionary."""
         calling_classes = calling_classes or []
         ret = {}
-        for attr in self.__dict__:
+        for attr, value in self.__dict__.items():
             if attr.startswith('_') or not kwargs.get(attr, True):
                 continue
-            value = self.__dict__[attr]
-
-            if recurse:
-                if isinstance(getattr(self, attr), list):
-                    ret[attr] = []
-                    for item in value:
-                        if isinstance(item, BaseDataModel):
-                            if type(self) not in calling_classes:
-                                ret[attr].append(
-                                    item.to_dict(calling_classes=(
-                                        calling_classes + [type(self)])))
-                            else:
-                                ret[attr] = None
-                        else:
-                            ret[attr] = item
-                elif isinstance(getattr(self, attr), BaseDataModel):
-                    if type(self) not in calling_classes:
-                        ret[attr] = value.to_dict(
-                            calling_classes=calling_classes + [type(self)])
-                    else:
-                        ret[attr] = None
-                elif six.PY2 and isinstance(value, six.text_type):
-                    ret[attr.encode('utf8')] = value.encode('utf8')
-                else:
-                    ret[attr] = value
-            else:
-                if isinstance(getattr(self, attr), (BaseDataModel, list)):
-                    ret[attr] = None
-                else:
-                    ret[attr] = value
+            ret[attr] = self._to_dict(value, calling_classes=calling_classes,
+                                      recurse=recurse)
 
         return ret
+    
+    def _to_dict(self, value, calling_classes=None, recurse=False):
+        calling_classes = calling_classes or []
+        # We need to have json convertible data for storing it in
+        # persistence jobboard backend.
+        if recurse:
+            if isinstance(value, list):
+                ret = []
+                for item in value:
+                    if isinstance(item, BaseDataModel):
+                        if type(self) not in calling_classes:
+                            ret.append(
+                                item.to_dict(calling_classes=(
+                                    calling_classes + [type(self)])))
+                        else:
+                            ret = None
+                    else:
+                        ret.append(
+                            self._to_dict(item,
+                                          calling_classes=calling_classes,
+                                          recurse=recurse))
+            elif isinstance(value, BaseDataModel):
+                if type(self) not in calling_classes:
+                    ret = value.to_dict(
+                        calling_classes=calling_classes + [type(self)])
+                else:
+                    ret = None
+            elif six.PY2 and isinstance(value, six.text_type):
+                ret[attr.encode('utf8')] = value.encode('utf8')
+            else:
+                ret = value  
+        else:
+            if isinstance(value, BaseDataModel):
+                ret = None
+            elif isinstance(value, list):
+                ret = []
+            else:
+                ret = value
+        return ret      
+                            
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -134,7 +186,7 @@ class Thunder(BaseDataModel):
 
     def __init__(self, id=None, vthunder_id=None, amphora_id=None,
                  device_name=None, ip_address=None, username=None,
-                 password=None, axapi_version=None, undercloud=None,
+                 axapi_version=None, undercloud=None,
                  loadbalancer_id=None, project_id=None, compute_id=None,
                  topology="STANDALONE", role="MASTER", last_udp_update=None, status="ACTIVE",
                  created_at=datetime.utcnow(), updated_at=datetime.utcnow(),
@@ -148,7 +200,7 @@ class Thunder(BaseDataModel):
         self.device_name = device_name
         self.ip_address = ip_address
         self.username = username
-        self.password = password
+        # self.password = password
         self.axapi_version = axapi_version
         self.undercloud = undercloud
         self.loadbalancer_id = loadbalancer_id

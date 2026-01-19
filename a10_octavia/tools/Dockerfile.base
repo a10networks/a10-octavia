@@ -1,0 +1,22 @@
+# Dockerfile.base
+FROM quay.io/airshipit/octavia:2024.2-ubuntu_jammy
+
+USER root
+
+# Install dependencies for pip and git
+RUN apt-get update && \
+    apt-get install -y python3-pip git && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get update && apt-get install -y git
+
+# Set OpenStack-Helm Octavia virtualenv path
+ENV VENV=/var/lib/openstack
+
+# Install acos-client in the same environment as Octavia
+RUN $VENV/bin/pip3 install --no-cache-dir git+https://github.com/a10networks/acos-client.git
+
+# Install a10-octavia in the same environment as Octavia
+RUN $VENV/bin/pip3 install --no-cache-dir git+https://github.com/a10networks/a10-octavia@feature/caracal
+
+# Verify installation
+RUN $VENV/bin/python3 -c "import a10_octavia; print('a10_octavia installed at:', a10_octavia.__file__)"

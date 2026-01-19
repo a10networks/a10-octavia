@@ -35,7 +35,6 @@ class VThunder(base_models.BASE):
     device_name = sa.Column(sa.String(1024), nullable=False)
     ip_address = sa.Column('ip_address', sa.String(64), nullable=False)
     username = sa.Column(sa.String(1024), nullable=False)
-    password = sa.Column(sa.String(50), nullable=False)
     axapi_version = sa.Column(sa.Integer, default=30, nullable=False)
     undercloud = sa.Column(sa.Boolean(), default=False, nullable=False)
     loadbalancer_id = sa.Column(sa.String(36))

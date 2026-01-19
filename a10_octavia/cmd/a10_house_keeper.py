@@ -136,12 +136,14 @@ def pending_resource_cleanup():
 
 
 def _mutate_config(*args, **kwargs):
-    LOG.info("Housekeeping recieved HUP signal, mutating config.")
+    LOG.info("Housekeeping received HUP signal, mutating config.")
     CONF.mutate_config_files()
 
 
 def main():
     service.prepare_service(sys.argv)
+    LOG.debug('Full set of CONF:')
+    CONF.log_opt_values(LOG, logging.DEBUG)
 
     gmr.TextGuruMeditation.setup_autorun(version)
 

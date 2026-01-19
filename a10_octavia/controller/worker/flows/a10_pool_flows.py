@@ -17,9 +17,10 @@ from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
-from octavia.controller.worker.v1.tasks import database_tasks
-from octavia.controller.worker.v1.tasks import lifecycle_tasks
-from octavia.controller.worker.v1.tasks import model_tasks
+from octavia.api.drivers import utils as provider_utils
+from octavia.controller.worker.v2.tasks import database_tasks
+from octavia.controller.worker.v2.tasks import lifecycle_tasks
+#from octavia.controller.worker.v1.tasks import model_tasks
 
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows
@@ -33,7 +34,6 @@ from a10_octavia.controller.worker.tasks import vthunder_tasks
 
 from oslo_config import cfg
 CONF = cfg.CONF
-
 
 class PoolFlows(object):
 
@@ -49,14 +49,14 @@ class PoolFlows(object):
 
         create_pool_flow = linear_flow.Flow(constants.CREATE_POOL_FLOW)
         create_pool_flow.add(lifecycle_tasks.PoolToErrorOnRevertTask(
-            requires=[constants.POOL,
+            requires=[constants.POOL_ID,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
         create_pool_flow.add(vthunder_tasks.VthunderInstanceBusy(
             requires=a10constants.COMPUTE_BUSY))
 
         create_pool_flow.add(database_tasks.MarkPoolPendingCreateInDB(
-            requires=constants.POOL))
+            requires=constants.POOL_ID))
         create_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -66,7 +66,8 @@ class PoolFlows(object):
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
         create_pool_flow.add(a10_database_tasks.GetFlavorData(
-            rebind={a10constants.LB_RESOURCE: constants.POOL},
+            rebind={constants.PROVISIONING_STATUS: constants.PROVISIONING_STATUS,
+                    constants.FLAVOR_ID: constants.FLAVOR_ID},
             provides=constants.FLAVOR))
         create_pool = service_group_tasks.PoolCreate(
             requires=[constants.POOL, a10constants.VTHUNDER, constants.FLAVOR, constants.LISTENER],
@@ -76,9 +77,9 @@ class PoolFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENER,
                       constants.POOL, a10constants.VTHUNDER]))
         create_pool_flow.add(database_tasks.MarkPoolActiveInDB(
-            requires=constants.POOL))
+            requires=constants.POOL_ID))
         create_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+            requires=(constants.LOADBALANCER_ID, constants.LISTENERS)))
         create_pool_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         create_pool_flow.add(a10_database_tasks.SetThunderUpdatedAt(
@@ -90,16 +91,12 @@ class PoolFlows(object):
                                              device_dict=None, vthunder_flow=False):
         """Create pool for fully populated creation"""
 
-        sf_name = constants.CREATE_POOL_FLOW + '_' + pool.id
+        sf_name = constants.CREATE_POOL_FLOW + '_' + (pool.get(constants.POOL_ID) or pool.get(constants.ID))
         create_pool_flow = linear_flow.Flow(sf_name)
         create_pool_flow.add(service_group_tasks.PoolToErrorOnRevertTask(
             name=sf_name + a10constants.FULLY_POPULATED_ERROR_ON_REVERT,
             requires=constants.POOL,
             inject={constants.POOL: pool}))
-
-        if pool.health_monitor:
-            create_pool_flow.add(self.hm_flow.get_fully_populated_create_health_monitor_flow(
-                topology, pool.health_monitor))
 
         create_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=sf_name + a10constants.GET_VTHUNDER_BY_LB,
@@ -112,8 +109,8 @@ class PoolFlows(object):
                 provides=a10constants.VTHUNDER))
         create_pool_flow.add(a10_database_tasks.GetFlavorData(
             name=sf_name + a10constants.FULLY_POPULATED_GET_FLAVOR,
-            inject={constants.POOL: pool},
-            rebind={a10constants.LB_RESOURCE: constants.POOL},
+            rebind={constants.PROVISIONING_STATUS: constants.PROVISIONING_STATUS,
+                    constants.FLAVOR_ID: constants.FLAVOR_ID},
             provides=constants.FLAVOR))
         create_pool_flow.add(a10_database_tasks.GetPoolListener(
             name=sf_name + a10constants.FULLY_POPULATED_GET_POOL_LISTENER,
@@ -128,10 +125,11 @@ class PoolFlows(object):
         create_pool_flow.add(*self._get_sess_pers_subflow(create_pool, sf_name))
         create_pool_flow.add(database_tasks.MarkPoolActiveInDB(
             name=sf_name + a10constants.FULLY_POPULATED_MARK_POOL_ACTIVE,
-            requires=constants.POOL,
-            inject={constants.POOL: pool}))
+            requires=constants.POOL_ID,
+            inject={constants.POOL_ID: (pool.get(constants.POOL_ID) or pool.get(constants.ID))}))
 
-        for member in pool.members:
+        for member in pool[constants.MEMBERS]:
+            member = provider_utils.member_dict_to_provider_dict(member)
             if vthunder_flow:
                 create_pool_flow.add(
                     self.member_flow.get_vthunder_fully_populated_create_member_flow(
@@ -139,6 +137,10 @@ class PoolFlows(object):
             else:
                 create_pool_flow.add(self.member_flow.get_rack_fully_populated_create_member_flow(
                     vthunder_conf, device_dict, member))
+        
+        hm=provider_utils.hm_dict_to_provider_dict(pool.get('health_monitor'))
+        create_pool_flow.add(self.hm_flow.get_fully_populated_create_health_monitor_flow(
+            topology, hm, pool))
 
         return create_pool_flow
 
@@ -149,18 +151,18 @@ class PoolFlows(object):
         """
         delete_pool_flow = linear_flow.Flow(constants.DELETE_POOL_FLOW)
         delete_pool_flow.add(lifecycle_tasks.PoolToErrorOnRevertTask(
-            requires=[constants.POOL,
+            requires=[constants.POOL_ID,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
         delete_pool_flow.add(vthunder_tasks.VthunderInstanceBusy(
             requires=a10constants.COMPUTE_BUSY))
 
         delete_pool_flow.add(database_tasks.MarkPoolPendingDeleteInDB(
-            requires=constants.POOL))
+            requires=constants.POOL_ID))
         delete_pool_flow.add(database_tasks.CountPoolChildrenForQuota(
-            requires=constants.POOL, provides=constants.POOL_CHILD_COUNT))
-        delete_pool_flow.add(model_tasks.DeleteModelObject(
-            rebind={constants.OBJECT: constants.POOL}))
+            requires=constants.POOL_ID, provides=constants.POOL_CHILD_COUNT))
+        # delete_pool_flow.add(model_tasks.DeleteModelObject(
+        #     rebind={constants.OBJECT: constants.POOL}))
         # Get VThunder details from database
         delete_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
@@ -185,7 +187,7 @@ class PoolFlows(object):
             requires=[constants.POOL, a10constants.VTHUNDER, constants.LISTENER,
                       a10constants.PROXY_POOL_COUNT]))
         delete_pool_flow.add(database_tasks.DeletePoolInDB(
-            requires=constants.POOL))
+            requires=constants.POOL_ID))
         # Interface delete.
         delete_pool_flow.add(a10_database_tasks.GetLoadBalancerListByProjectID(
             requires=a10constants.VTHUNDER,
@@ -198,12 +200,12 @@ class PoolFlows(object):
                       a10constants.MEMBER_LIST),
             provides=constants.DELTAS))
         delete_pool_flow.add(a10_network_tasks.HandleNetworkDeltas(
-            requires=constants.DELTAS, provides=constants.ADDED_PORTS))
+            requires=constants.DELTAS, provides=constants.UPDATED_PORTS))
         delete_pool_flow.add(
             vthunder_tasks.AmphoraePostNetworkUnplug(
                 requires=(
                     constants.LOADBALANCER,
-                    constants.ADDED_PORTS,
+                    constants.UPDATED_PORTS,
                     a10constants.VTHUNDER)))
         delete_pool_flow.add(database_tasks.GetAmphoraeFromLoadbalancer(
             requires=constants.LOADBALANCER_ID,
@@ -211,9 +213,9 @@ class PoolFlows(object):
         delete_pool_flow.add(vthunder_tasks.VThunderComputeConnectivityWait(
             requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         delete_pool_flow.add(database_tasks.DecrementPoolQuota(
-            requires=[constants.POOL, constants.POOL_CHILD_COUNT]))
+            requires=[constants.PROJECT_ID, constants.POOL_CHILD_COUNT]))
         delete_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+            requires=(constants.LOADBALANCER_ID, constants.LISTENERS)))
         delete_pool_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         delete_pool_flow.add(a10_database_tasks.SetThunderUpdatedAt(
@@ -229,21 +231,31 @@ class PoolFlows(object):
                 delete_hm_vthunder_subflow.add(
                     self.hm_flow.get_delete_health_monitor_vthunder_subflow(health_mon))
             else:
+                health_mon = health_mon.to_dict(recurse=True)
                 delete_hm_vthunder_subflow.add(
-                    self.hm_flow.get_delete_health_monitor_vthunder_subflow())
+                    self.hm_flow.get_delete_health_monitor_vthunder_subflow(health_mon))
         return delete_hm_vthunder_subflow
 
-    def _get_delete_member_vthunder_subflow(self, members, store, pool=constants.POOL):
+    def _get_delete_member_vthunder_subflow(self, members, store, pool=None):
+        if pool is None:
+            pool = store.get(constants.POOL)
         delete_member_vthunder_subflow = linear_flow.Flow(
             a10constants.DELETE_MEMBERS_SUBFLOW_WITH_POOL_DELETE_FLOW)
         member_store = {}
-        for member in members:
-            member_store[member.id] = member
+        members_dicts = []
+        for member in members or []:
+            if hasattr(member, "to_dict"):
+                member_dict = member.to_dict(recurse=True)
+            elif isinstance(member, dict):
+                member_dict = member
+            members_dicts.append(member_dict)
+        for member in members_dicts:
+            member_store[member.get(constants.ID) or member.get(constants.MEMBER_ID)] = member
             delete_member_vthunder_subflow.add(
-                self.member_flow.get_delete_member_vthunder_internal_subflow(member.id, pool))
-        if members and CONF.a10_global.handle_vrid:
+                self.member_flow.get_delete_member_vthunder_internal_subflow(member, pool))
+        if members_dicts and CONF.a10_global.handle_vrid:
             delete_member_vthunder_subflow.add(
-                self.member_flow.get_delete_member_vrid_internal_subflow(pool, members))
+                self.member_flow.get_delete_member_vrid_internal_subflow(pool, members_dicts))
         store.update(member_store)
         return delete_member_vthunder_subflow
 
@@ -254,14 +266,14 @@ class PoolFlows(object):
         """
         update_pool_flow = linear_flow.Flow(constants.UPDATE_POOL_FLOW)
         update_pool_flow.add(lifecycle_tasks.PoolToErrorOnRevertTask(
-            requires=[constants.POOL,
+            requires=[constants.POOL_ID,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
         update_pool_flow.add(vthunder_tasks.VthunderInstanceBusy(
             requires=a10constants.COMPUTE_BUSY))
 
         update_pool_flow.add(database_tasks.MarkPoolPendingUpdateInDB(
-            requires=constants.POOL))
+            requires=constants.POOL_ID))
         update_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -271,7 +283,8 @@ class PoolFlows(object):
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
         update_pool_flow.add(a10_database_tasks.GetFlavorData(
-            rebind={a10constants.LB_RESOURCE: constants.POOL},
+            rebind={constants.PROVISIONING_STATUS: constants.PROVISIONING_STATUS,
+                    constants.FLAVOR_ID: constants.FLAVOR_ID},
             provides=constants.FLAVOR))
         update_pool = service_group_tasks.PoolUpdate(
             requires=[constants.POOL, a10constants.VTHUNDER,
@@ -282,11 +295,11 @@ class PoolFlows(object):
             requires=[constants.LOADBALANCER, constants.LISTENER,
                       constants.POOL, a10constants.VTHUNDER]))
         update_pool_flow.add(database_tasks.UpdatePoolInDB(
-            requires=[constants.POOL, constants.UPDATE_DICT]))
+            requires=[constants.POOL_ID, constants.UPDATE_DICT]))
         update_pool_flow.add(database_tasks.MarkPoolActiveInDB(
-            requires=constants.POOL))
+            requires=constants.POOL_ID))
         update_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+            requires=(constants.LOADBALANCER_ID, constants.LISTENERS)))
         update_pool_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         update_pool_flow.add(a10_database_tasks.SetThunderUpdatedAt(
@@ -311,65 +324,65 @@ class PoolFlows(object):
         return history[history.keys()[0]].session_persistence is not None
 
     def get_cascade_delete_pool_internal_flow(
-            self, pool_name, members, pool_listener_name, health_mon):
+            self, pool, members, default_listener, health_mon):
         """Create a flow to delete a pool, etc.
         :returns: The flow for deleting a pool
         """
         store = {}
+        pool_id = pool.get(constants.ID)
         delete_pool_flow = linear_flow.Flow(constants.DELETE_POOL_FLOW)
         # health monitor should cascade
         # members should cascade
         delete_pool_flow.add(database_tasks.MarkPoolPendingDeleteInDB(
-            name='mark_pool_pending_delete_in_db_' + pool_name,
-            requires=constants.POOL,
-            rebind={constants.POOL: pool_name}))
+            name='mark_pool_pending_delete_in_db_' + pool_id,
+            requires=constants.POOL_ID,
+            inject={constants.POOL_ID: pool_id}))
         delete_pool_flow.add(database_tasks.CountPoolChildrenForQuota(
-            name='count_pool_children_for_quota_' + pool_name,
-            requires=constants.POOL,
+            name='count_pool_children_for_quota_' + pool_id,
+            requires=constants.POOL_ID,
             provides=constants.POOL_CHILD_COUNT,
-            rebind={constants.POOL: pool_name}))
+            inject={constants.POOL_ID: pool_id}))
         delete_pool_flow.add(virtual_port_tasks.ListenerUpdateForPool(
-            name='listener_update_for_pool_' + pool_name,
+            name='listener_update_for_pool_' + pool_id,
             requires=[constants.LOADBALANCER, constants.LISTENER, constants.POOL,
                       a10constants.VTHUNDER, a10constants.FLOW_TYPE],
-            inject={a10constants.FLOW_TYPE: a10constants.FLOW_TYPE_DELETE},
-            rebind={constants.LISTENER: pool_listener_name,
-                    constants.POOL: pool_name}))
+            inject={a10constants.FLOW_TYPE: a10constants.FLOW_TYPE_DELETE,
+                    constants.LISTENER: default_listener,
+                    constants.POOL: pool}))
         delete_pool_flow.add(persist_tasks.DeleteSessionPersistence(
-            name='delete_session_persistence_' + pool_name,
+            name='delete_session_persistence_' + pool_id,
             requires=[a10constants.VTHUNDER, constants.POOL],
-            rebind={constants.POOL: pool_name}))
-        delete_pool_flow.add(model_tasks.DeleteModelObject(
-            name='delete_model_object_' + pool_name,
-            rebind={constants.OBJECT: pool_name}))
+            inject={constants.POOL: pool}))
+        # delete_pool_flow.add(model_tasks.DeleteModelObject(
+        #     name='delete_model_object_' + pool_id,
+        #    rebind={constants.OBJECT: pool_id}))
         delete_pool_flow.add(a10_network_tasks.GetPoolsOnThunder(
-            name='get_pools_on_thunder_' + pool_name,
+            name='get_pools_on_thunder_' + pool_id,
             requires=[a10constants.VTHUNDER, a10constants.USE_DEVICE_FLAVOR],
             provides=a10constants.POOLS))
         delete_pool_flow.add(a10_database_tasks.GetProxyProtocolPoolCount(
-            name='get_proxy_pool_count_' + pool_name,
+            name='get_proxy_pool_count_' + pool_id,
             requires=[constants.LISTENER, constants.POOL],
-            rebind={constants.POOL: pool_name, constants.LISTENER: pool_listener_name},
+            inject={constants.POOL: pool, constants.LISTENER: default_listener},
             provides=a10constants.PROXY_POOL_COUNT))
         # Delete pool children
-        delete_pool_flow.add(self._get_delete_member_vthunder_subflow(members, store, pool_name))
+        delete_pool_flow.add(self._get_delete_member_vthunder_subflow(members, store, pool))
         delete_pool_flow.add(self._get_delete_health_monitor_vthunder_subflow(health_mon, True))
         delete_pool_flow.add(service_group_tasks.PoolDelete(
-            name='pool_delete_' + pool_name,
+            name='pool_delete_' + pool_id,
             requires=[constants.POOL, a10constants.VTHUNDER, constants.LISTENER,
                       a10constants.PROXY_POOL_COUNT],
-            rebind={constants.POOL: pool_name, constants.LISTENER: pool_listener_name}))
+            inject={constants.POOL: pool, constants.LISTENER: default_listener}))
         delete_pool_flow.add(database_tasks.DeletePoolInDB(
-            name='delete_pool_in_db_' + pool_name,
-            requires=constants.POOL,
-            rebind={constants.POOL: pool_name}))
+            name='delete_pool_in_db_' + pool_id,
+            requires=constants.POOL_ID,
+            inject={constants.POOL_ID: pool_id}))
         delete_pool_flow.add(database_tasks.DecrementPoolQuota(
-            name='decrement_pool_quota_' + pool_name,
-            requires=[constants.POOL, constants.POOL_CHILD_COUNT],
-            rebind={constants.POOL: pool_name}))
+            name='decrement_pool_quota_' + pool_id,
+            requires=[constants.PROJECT_ID, constants.POOL_CHILD_COUNT]))
 
         return (delete_pool_flow, store)
-
+    
     def get_delete_pool_rack_flow(self, members, health_mon, store):
         """Create a flow to delete a pool rack
 
@@ -377,15 +390,15 @@ class PoolFlows(object):
         """
         delete_pool_flow = linear_flow.Flow(constants.DELETE_POOL_FLOW)
         delete_pool_flow.add(lifecycle_tasks.PoolToErrorOnRevertTask(
-            requires=[constants.POOL,
+            requires=[constants.POOL_ID,
                       constants.LISTENERS,
                       constants.LOADBALANCER]))
         delete_pool_flow.add(database_tasks.MarkPoolPendingDeleteInDB(
-            requires=constants.POOL))
+            requires=constants.POOL_ID))
         delete_pool_flow.add(database_tasks.CountPoolChildrenForQuota(
-            requires=constants.POOL, provides=constants.POOL_CHILD_COUNT))
-        delete_pool_flow.add(model_tasks.DeleteModelObject(
-            rebind={constants.OBJECT: constants.POOL}))
+            requires=constants.POOL_ID, provides=constants.POOL_CHILD_COUNT))
+        # delete_pool_flow.add(model_tasks.DeleteModelObject(
+        #     rebind={constants.OBJECT: constants.POOL}))
         # Get VThunder details from database
         delete_pool_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
@@ -401,7 +414,8 @@ class PoolFlows(object):
 
         # Device Flavor
         delete_pool_flow.add(a10_database_tasks.GetFlavorData(
-            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            rebind={constants.PROVISIONING_STATUS: constants.PROVISIONING_STATUS,
+                    constants.FLAVOR_ID: constants.FLAVOR_ID},
             provides=constants.FLAVOR))
         delete_pool_flow.add(vthunder_tasks.GetVthunderConfByFlavor(
             requires=(constants.LOADBALANCER, a10constants.VTHUNDER_CONFIG,
@@ -422,11 +436,11 @@ class PoolFlows(object):
             requires=[constants.POOL, a10constants.VTHUNDER, constants.LISTENER,
                       a10constants.PROXY_POOL_COUNT]))
         delete_pool_flow.add(database_tasks.DeletePoolInDB(
-            requires=constants.POOL))
+            requires=constants.POOL_ID))
         delete_pool_flow.add(database_tasks.DecrementPoolQuota(
-            requires=[constants.POOL, constants.POOL_CHILD_COUNT]))
+            requires=[constants.PROJECT_ID, constants.POOL_CHILD_COUNT]))
         delete_pool_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+            requires=(constants.LOADBALANCER_ID, constants.LISTENERS)))
         delete_pool_flow.add(vthunder_tasks.WriteMemory(
             requires=a10constants.VTHUNDER))
         delete_pool_flow.add(a10_database_tasks.SetThunderUpdatedAt(

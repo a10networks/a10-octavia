@@ -24,7 +24,9 @@ from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
 from oslo_utils import uuidutils
 
+from octavia.common import constants as o_constants
 from octavia.common import data_models as o_data_models
+from octavia.common import config as o_config_options
 from octavia.common import exceptions as o_exceptions
 from octavia.network import data_models as n_data_models
 from octavia.tests.common import constants as t_constants
@@ -49,6 +51,8 @@ HW_THUNDER = data_models.HardwareThunder(
     partition_name="shared")
 LB = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
                                 flavor_id=a10constants.MOCK_FLAVOR_ID)
+lb_dict = LB.to_dict(recurse=True)
+lb_dict[o_constants.LOADBALANCER_ID] = lb_dict[o_constants.ID]
 LB2 = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID)
 FIXED_IP = n_data_models.FixedIP(ip_address='10.10.10.10')
 PORT = n_data_models.Port(id=uuidutils.generate_uuid(), fixed_ips=[FIXED_IP])
@@ -58,12 +62,13 @@ VRID = data_models.VRID(id=1, vrid=0,
                         vrid_floating_ip='10.0.12.32')
 VRRP_SET = data_models.VrrpSet(set_id=a10constants.MOCK_SET_ID)
 LISTENER = o_data_models.Listener(id=a10constants.MOCK_LISTENER_ID, load_balancer=LB)
-POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID, load_balancer=LB)
+POOL = (o_data_models.Pool(id=a10constants.MOCK_POOL_ID, load_balancer=LB)).to_dict(recurse=True)
 HM = o_data_models.HealthMonitor(id=a10constants, pool=POOL)
 MEMBER_1 = o_data_models.Member(id=uuidutils.generate_uuid(),
                                 project_id=a10constants.MOCK_PROJECT_ID,
                                 subnet_id=a10constants.MOCK_SUBNET_ID,
                                 pool=POOL)
+
 MEMBER_2 = o_data_models.Member(id=uuidutils.generate_uuid(),
                                 project_id=a10constants.MOCK_PROJECT_ID,
                                 subnet_id=a10constants.MOCK_SUBNET_ID_2,
@@ -96,10 +101,13 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
             config_options.A10_HARDWARE_THUNDER_OPTS,
             group=a10constants.HARDWARE_THUNDER_CONF_SECTION)
         self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
-                                group=a10constants.A10_GLOBAL_OPTS)
+                                group=a10constants.A10_GLOBAL_CONF_SECTION)
+        self.conf.register_opts(o_config_options.controller_worker_opts,
+                                 group='controller_worker')
         self.db_session = mock.patch(
             'a10_octavia.controller.worker.tasks.a10_database_tasks.db_apis.get_session')
-        self.db_session.start()
+        self.mock_db_session = self.db_session.start()
+        self.mock_db_session.return_value.begin.return_value.__enter__.return_value = mock.Mock()
 
     def tearDown(self):
         super(TestA10DatabaseTasks, self).tearDown()
@@ -114,6 +122,23 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
                                  "ip_address": thunder.ip_address}]
         return hardware_device_conf
 
+    def test_update_vthunder_entry(self):
+        db_task = task.UpdateVThunderEntry()
+        db_task.vthunder_repo = mock.Mock()
+        db_task.vthunder_repo.get_vthunder_from_lb = mock.Mock()
+        db_task.vthunder_repo.update = mock.Mock()
+        vthunder_old = copy.deepcopy(VTHUNDER)
+        vthunder_old.password = 'abc'
+        vthunder_new = copy.deepcopy(VTHUNDER)
+        vthunder_new.password = 'def'
+        db_task.vthunder_repo.get_vthunder_from_lb.side_effect = [vthunder_old, vthunder_new]
+        vthunder_op = db_task.execute(lb_dict, vthunder_new)
+        db_task.vthunder_repo.update.assert_called_once_with(mock.ANY,
+                                                            vthunder_new.id,
+                                                            password=vthunder_new.password,
+                                                            updated_at=mock.ANY)
+        self.assertEqual(vthunder_op, vthunder_new)
+
     def test_get_vthunder_by_loadbalancer(self):
         self.conf.config(
             group=a10constants.A10_GLOBAL_CONF_SECTION,
@@ -121,7 +146,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_get_vthunder = task.GetVThunderByLoadBalancer()
         mock_get_vthunder.vthunder_repo = mock.MagicMock()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = None
-        vthunder = mock_get_vthunder.execute(LB)
+        vthunder = mock_get_vthunder.execute(lb_dict)
         self.assertEqual(vthunder, None)
 
     def test_get_backup_vthunder_by_loadbalancer(self):
@@ -134,7 +159,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_get_vthunder.vthunder_repo = mock.MagicMock()
         mock_get_vthunder.vthunder_repo.get_vthunder_from_lb.return_value = None
         mock_get_vthunder.vthunder_repo.get_backup_vthunder_from_lb.return_value = vthunder
-        backup_vthunder = mock_get_vthunder.execute(LB, False)
+        backup_vthunder = mock_get_vthunder.execute(lb_dict, False)
         self.assertEqual(backup_vthunder, vthunder)
 
     def test_get_vrid_for_project_member_hmt_use_partition(self):
@@ -180,7 +205,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vthunder_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.get_vrid_from_owner.return_value = VRID
-        vrid = mock_vrid_entry.execute(MEMBER_1, thunder, lb)
+        vrid = mock_vrid_entry.execute(MEMBER_1.to_dict(recurse=True), thunder, lb)
         mock_vrid_entry.vthunder_repo.get_partition_for_project.assert_not_called()
         self.assertEqual(VRID, vrid)
 
@@ -196,7 +221,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
 
         mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
-        mock_vrid_entry.execute(MEMBER_1, [], thunder)
+        mock_vrid_entry.execute(MEMBER_1.to_dict(recurse=True), [], thunder)
         mock_vrid_entry.vrid_repo.delete.assert_called_once_with(
             mock.ANY,
             owner=thunder.ip_address + "_" + thunder.partition_name
@@ -222,7 +247,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_vrid_entry = task.UpdateVRIDForLoadbalancerResource()
         mock_vrid_entry.vrid_repo = mock.Mock()
         mock_vrid_entry.vrid_repo.exists.return_value = False
-        mock_vrid_entry.execute(MEMBER_1, [VRID], thunder)
+        mock_vrid_entry.execute(MEMBER_1.to_dict(recurse=True), [VRID], thunder)
         mock_vrid_entry.vrid_repo.create.assert_called_once_with(
             mock.ANY,
             owner=thunder.ip_address + "_" + thunder.partition_name,
@@ -264,15 +289,15 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_count_member = task.CountMembersWithIP()
         mock_count_member.member_repo.get_member_count_by_ip_address = mock.Mock()
         mock_count_member.member_repo.get_member_count_by_ip_address.return_value = 1
-        member_count = mock_count_member.execute(MEMBER_1)
+        member_count = mock_count_member.execute(MEMBER_1.to_dict(recurse=True))
         self.assertEqual(1, member_count)
 
     def test_count_members_in_project_ip_port_protocol(self):
-        member_1 = o_data_models.Member(
+        member_1 = (o_data_models.Member(
             id=uuidutils.generate_uuid(),
             protocol_port=t_constants.MOCK_PORT_ID,
             project_id=t_constants.MOCK_PROJECT_ID,
-            ip_address=t_constants.MOCK_IP_ADDRESS)
+            ip_address=t_constants.MOCK_IP_ADDRESS)).to_dict(rescurse=True)
         mock_count_member = task.CountMembersWithIPPortProtocol()
         mock_count_member.member_repo.get_member_count_by_ip_address_port_protocol = mock.Mock()
         mock_count_member.member_repo.get_member_count_by_ip_address_port_protocol.return_value = 2
@@ -281,10 +306,10 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
 
     def test_pool_count_accn_ip(self):
         use_dev_flavor = False
-        member_1 = o_data_models.Member(id=uuidutils.generate_uuid(),
+        member_1 = (o_data_models.Member(id=uuidutils.generate_uuid(),
                                         project_id=t_constants.MOCK_PROJECT_ID,
                                         ip_address=t_constants.MOCK_IP_ADDRESS,
-                                        pool_id=a10constants.MOCK_POOL_ID)
+                                        pool_id=a10constants.MOCK_POOL_ID)).to_dict(recurse=True)
         mock_count_pool = task.PoolCountforIP()
         mock_count_pool.member_repo.get_pool_count_by_ip = mock.Mock()
         mock_count_pool.member_repo.get_pool_count_by_ip.return_value = 2
@@ -299,7 +324,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet = mock.Mock()
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet.return_value = 0
         subnet_list = mock_subnets.execute(
-            [MEMBER_1, MEMBER_2], [a10constants.MOCK_PROJECT_ID], use_dev_flavor, mock.ANY)
+            [MEMBER_1.to_dict(recurse=True), MEMBER_2.to_dict(recurse=True)], [a10constants.MOCK_PROJECT_ID], use_dev_flavor, mock.ANY)
         self.assertEqual(['mock-subnet-1', 'mock-subnet-2'], subnet_list)
 
     def test_get_subnet_for_deletion_with_multiple_pool_lb(self):
@@ -310,7 +335,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet = mock.Mock()
         mock_subnets.loadbalancer_repo.get_lb_count_by_subnet.return_value = 2
         subnet_list = mock_subnets.execute(
-            [MEMBER_1, MEMBER_2], [a10constants.MOCK_PROJECT_ID], use_dev_flavor, mock.ANY)
+            [MEMBER_1.to_dict(recurse=True), MEMBER_2.to_dict(recurse=True)], [a10constants.MOCK_PROJECT_ID], use_dev_flavor, mock.ANY)
         self.assertEqual([], subnet_list)
 
     def test_get_child_projects_for_partition(self):
@@ -319,7 +344,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         vthunder.ip_address = "mock-ip-addr"
         mock_get_projects = task.GetChildProjectsOfParentPartition()
         mock_get_projects.vthunder_repo.get_project_list_using_partition = mock.Mock()
-        mock_get_projects.execute(MEMBER_1, vthunder)
+        mock_get_projects.execute(MEMBER_1.to_dict(recurse=True), vthunder)
         mock_get_projects.vthunder_repo.get_project_list_using_partition.\
             assert_called_once_with(mock.ANY, partition_name='mock-partition-name',
                                     ip_address="mock-ip-addr")
@@ -377,7 +402,9 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
     def test_GetFlavorData_execute_no_flavor_id(self, mock_utils):
         mock_utils.attribute_search.return_value = None
         flavor_task = task.GetFlavorData()
-        ret_val = flavor_task.execute(LB)
+        flavor = copy.deepcopy(FLAVOR)
+        flavor.id = None
+        ret_val = flavor_task.execute(lb_dict, flavor.id)
         self.assertEqual(ret_val, None)
 
     def test_GetFlavorData_execute_no_flavor_or_profile(self):
@@ -386,15 +413,16 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         flavor_task.flavor_repo.get.return_value = None
         flavor_task._flavor_search = mock.Mock(
             return_value=a10constants.MOCK_FLAVOR_ID)
-        ret_val = flavor_task.execute
-        self.assertRaises(exceptions.FlavorNotFound, ret_val, LB)
+        provisioning_status = "PENDING_UPDATE"
+        flavor_id = 'flavor-test'
+        self.assertRaises(exceptions.FlavorNotFound, flavor_task.execute, provisioning_status, flavor_id)
 
         flavor_task.flavor_repo.reset_mock()
         flavor_task.flavor_repo = mock.Mock()
         flavor = copy.deepcopy(FLAVOR)
-        flavor.flavor_profile_id = None
         flavor_task.flavor_repo.get.return_value = flavor
-        ret_val = flavor_task.execute(LB)
+        flavor.id = None
+        ret_val = flavor_task.execute(lb_dict, flavor.id)
         self.assertEqual(ret_val, None)
 
     def test_GetFlavorData_execute_with_default_flavor_id(self):
@@ -408,7 +436,7 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
                          default_flavor_id=flavor)
         flavor_task.flavor_profile_repo = mock.Mock()
         flavor_task.flavor_profile_repo.get.return_value = flavor_prof
-        ret_val = flavor_task.execute(LB2)
+        ret_val = flavor_task.execute(LB2, flavor.id)
         self.assertEqual(ret_val, {})
 
     def test_GetFlavorData_execute_return_flavor(self):
@@ -424,22 +452,23 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         flavor_prof.flavor_data = "{}"
         flavor_task.flavor_profile_repo = mock.Mock()
         flavor_task.flavor_profile_repo.get.return_value = flavor_prof
-        ret_val = flavor_task.execute(LB)
+        ret_val = flavor_task.execute(lb_dict, FLAVOR.id)
         self.assertEqual(ret_val, {})
 
     def test_GetNatPoolEntry(self):
         db_task = task.GetNatPoolEntry()
         db_task.nat_pool_repo = self.nat_pool_repo
         flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
-        db_task.execute(MEMBER_1, flavor)
-        self.nat_pool_repo.get(mock.ANY, name="p1", subnet_id=MEMBER_1.subnet_id)
+        MEMBER_1_DICT = MEMBER_1.to_dict(recurse=True)
+        db_task.execute(MEMBER_1_DICT, flavor)
+        self.nat_pool_repo.get(mock.ANY, name="p1", subnet_id=MEMBER_1_DICT['subnet_id'])
 
     def test_UpdateNatPoolDB_update(self):
         db_task = task.UpdateNatPoolDB()
         db_task.nat_pool_repo = self.nat_pool_repo
         flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
         NAT_POOL.member_ref_count = 1
-        db_task.execute(MEMBER_1, flavor, NAT_POOL, None)
+        db_task.execute(MEMBER_1.to_dict(recurse=True), flavor, NAT_POOL, None)
         self.nat_pool_repo.update.assert_called_with(mock.ANY, mock.ANY, member_ref_count=2)
 
     def test_UpdateNatPoolDB_create(self):
@@ -447,10 +476,11 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
         db_task.nat_pool_repo = self.nat_pool_repo
         flavor = {"pool_name": "p1", "start_address": "1.1.1.1", "end_address": "1.1.1.2"}
         port = mock.Mock(id="1")
-        db_task.execute(MEMBER_1, flavor, None, port)
+        MEMBER_1_DICT = MEMBER_1.to_dict(recurse=True)
+        db_task.execute(MEMBER_1_DICT, flavor, None, port)
         self.nat_pool_repo.create.assert_called_with(
             mock.ANY, id=mock.ANY, name="p1",
-            subnet_id=MEMBER_1.subnet_id, start_address="1.1.1.1", end_address="1.1.1.2",
+            subnet_id=MEMBER_1_DICT['subnet_id'], start_address="1.1.1.1", end_address="1.1.1.2",
             member_ref_count=1, port_id="1")
 
     def test_DeleteNatPoolEntry_update(self):
@@ -469,9 +499,13 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
 
     def test_lb_count_according_to_flavor(self):
         mock_count_lb = task.CountLoadbalancersWithFlavor()
+        mock_count_lb._lb_repo = mock.Mock()
+        mock_lb = mock.Mock()
+        mock_lb.flavor_id = FLAVOR.id
+        mock_count_lb._lb_repo.get.return_value = mock_lb
         mock_count_lb.loadbalancer_repo.get_lb_count_by_flavor = mock.Mock()
         mock_count_lb.loadbalancer_repo.get_lb_count_by_flavor.return_value = 2
-        lb_count = mock_count_lb.execute(LB, VTHUNDER)
+        lb_count = mock_count_lb.execute(lb_dict, VTHUNDER)
         self.assertEqual(2, lb_count)
 
     def test_SetThunderUpdatedAt_execute_update(self):
@@ -549,14 +583,14 @@ class TestA10DatabaseTasks(base.BaseTaskTestCase):
             amp_boot_network_list="mgmt_subnet_1")
         db_task = task.AddProjectSetIdDB()
         db_task.vrrp_set_repo.get = mock.Mock()
-        db_task.execute(LB)
+        db_task.execute(lb_dict)
         db_task.vrrp_set_repo.get.assert_called_once_with(mock.ANY, mgmt_subnet='mgmt_subnet_1',
                                                           project_id=mock.ANY)
 
     def test_DeleteProjectSetIdDB(self):
         db_task = task.DeleteProjectSetIdDB()
         db_task.vrrp_set_repo.delete = mock.Mock()
-        db_task.execute(LB)
+        db_task.execute(lb_dict)
         db_task.vrrp_set_repo.delete.assert_called_once_with(mock.ANY, project_id=mock.ANY)
 
     def test_CheckExistingVthunderTopology_execute_raised_exception(self):

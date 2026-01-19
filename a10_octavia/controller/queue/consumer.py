@@ -18,12 +18,16 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_messaging.rpc import dispatcher
 
+from oslo_utils import uuidutils
+from oslo_config import cfg
+
 from octavia.common import rpc
 
 from a10_octavia.controller.queue import endpoint
 
 LOG = logging.getLogger(__name__)
-
+CONF = cfg.CONF
+CONF.import_group('task_flow', 'octavia.common.config')
 
 class ConsumerService(cotyledon.Service):
     name = "a10-octavia"
@@ -50,7 +54,7 @@ class ConsumerService(cotyledon.Service):
             access_policy=self.access_policy
         )
         self.message_listener.start()
-
+    
     def terminate(self, graceful=False):
         if self.message_listener:
             LOG.info('Stopping consumer...')

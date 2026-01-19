@@ -17,7 +17,8 @@ try:
 except ImportError:
     from unittest import mock
 
-from neutronclient.common import exceptions as neutron_client_exceptions
+import openstack.exceptions as os_exceptions
+from openstack.network.v2.port import Port
 
 from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
@@ -39,17 +40,16 @@ class TestA10NeutronDriver(base.TestCase):
 
     def setUp(self):
         super(TestA10NeutronDriver, self).setUp()
-        with mock.patch('octavia.common.clients.neutron_client.Client',
-                        autospec=True) as neutron_client:
+        with mock.patch('octavia.common.clients.openstack.connection'
+                        '.Connection', autospec=True) as os_connection:
             with mock.patch('stevedore.driver.DriverManager.driver',
                             autospec=True):
-                client = neutron_client(clients.NEUTRON_VERSION)
-                client.list_extensions.return_value = {
-                    'extensions': [
-                        {'alias': allowed_address_pairs.AAP_EXT_ALIAS},
-                        {'alias': neutron_base.SEC_GRP_EXT_ALIAS}
-                    ]
-                }
+                network_proxy = os_connection().network
+                network_proxy.find_extension = (
+                    lambda x: 'alias' if x in (
+                        allowed_address_pairs.AAP_EXT_ALIAS,
+                        neutron_base.SEC_GRP_EXT_ALIAS)
+                    else None)
                 self.k_session = mock.patch(
                     'keystoneauth1.session.Session').start()
                 self.driver = a10_octavia_neutron.A10OctaviaNeutronDriver()
@@ -124,7 +124,7 @@ class TestA10NeutronDriver(base.TestCase):
 
         self.driver.sec_grp_enabled = False
         self._setup_deallocate_vip_mocks()
-        self.driver.neutron_client.show_port.return_value = vip_port
+        self.driver.network_proxy.show_port.return_value = vip_port
         get_ports_subnet = self.driver._get_instance_ports_by_subnet
         cleanup_port = self.driver._cleanup_port
         delete_sec_grp = self.driver._delete_vip_security_group
@@ -145,7 +145,7 @@ class TestA10NeutronDriver(base.TestCase):
                  {'id': 'instance-port-2'}]
 
         self._setup_deallocate_vip_mocks()
-        self.driver.neutron_client.show_port.return_value = vip_port
+        self.driver.network_proxy.show_port.return_value = vip_port
         get_lb_sec = self.driver._get_lb_security_group
         get_ports_sec = self.driver._get_ports_by_security_group
         get_ports_subnet = self.driver._get_instance_ports_by_subnet
@@ -169,7 +169,8 @@ class TestA10NeutronDriver(base.TestCase):
                  {'id': 'instance-port-2'}]
 
         self._setup_deallocate_vip_mocks()
-        self.driver.neutron_client.show_port.return_value = vip_port
+        self.driver.network_proxy.show_port.return_value = vip_port
+        self.driver.sec_grp_enabled = False
         get_lb_sec = self.driver._get_lb_security_group
         get_ports_subnet = self.driver._get_instance_ports_by_subnet
         cleanup_port = self.driver._cleanup_port
@@ -177,6 +178,7 @@ class TestA10NeutronDriver(base.TestCase):
         rem_sec_grp = self.driver._remove_security_group
         get_lb_sec.return_value = None
         get_ports_subnet.return_value = ports
+        self.driver.network_proxy.get_port.return_value = vip_port
 
         self.driver.deallocate_vip(lb, 2)
         cleanup_port.assert_called_with(lb.vip.port_id, vip_port)
@@ -184,25 +186,25 @@ class TestA10NeutronDriver(base.TestCase):
         rem_sec_grp.assert_not_called()
 
     def test_get_ports_by_security_group(self):
-        ports = {'ports': [{'id': 'instance-port-1',
-                            'security_groups': ['sec-grp-1', 'sec-grp-2'],
-                            'device_owner': a10constants.OCTAVIA_OWNER},
-                           {'id': 'instance-port-2',
-                            'security_groups': ['sec-grp-1', 'sec-grp-2'],
-                            'device_owner': a10constants.OCTAVIA_OWNER},
-                           {'id': 'vrrp-port-1',
-                            'security_groups': ['sec-grp-1'],
-                            'device_owner': a10constants.OCTAVIA_OWNER}]}
+        ports = [Port(**{'id': 'instance-port-1',
+                    'security_group_ids': ['sec-grp-1', 'sec-grp-2'],
+                    'device_owner': a10constants.OCTAVIA_OWNER}),
+                 Port(**{'id': 'instance-port-2',
+                    'security_group_ids': ['sec-grp-1', 'sec-grp-2'],
+                    'device_owner': a10constants.OCTAVIA_OWNER}),
+                 Port(**{'id': 'vrrp-port-1',
+                    'security_group_ids': ['sec-grp-1'],
+                    'device_owner': a10constants.OCTAVIA_OWNER})]
         self.driver.project_id = 'proj-1'
-        self.driver.neutron_client.list_ports.return_value = ports
+        self.driver.network_proxy.ports.return_value = ports
 
         actual_ports = self.driver._get_ports_by_security_group('sec-grp-1')
-        self.assertEqual(ports['ports'], actual_ports)
+        self.assertEqual(ports, actual_ports)
 
     def test_get_ports_by_security_group_empty_ret(self):
         ports = {}
         self.driver.project_id = 'proj-1'
-        self.driver.neutron_client.list_ports.return_value = ports
+        self.driver.network_proxy.list_ports.return_value = ports
 
         actual_ports = self.driver._get_ports_by_security_group('sec-grp-1')
         self.assertEqual([], actual_ports)
@@ -218,26 +220,26 @@ class TestA10NeutronDriver(base.TestCase):
                             'security_groups': [],
                             'device_owner': a10constants.OCTAVIA_OWNER}]}
         self.driver.project_id = 'proj-1'
-        self.driver.neutron_client.list_ports.return_value = ports
+        self.driver.network_proxy.list_ports.return_value = ports
 
         actual_ports = self.driver._get_ports_by_security_group('sec-grp-1')
         self.assertEqual([], actual_ports)
 
     def test_get_ports_by_security_group_oct_not_owner(self):
-        ports = {'ports': [{'id': 'instance-port-1',
-                            'security_groups': ['sec-grp-1', 'sec-grp-2'],
-                            'device_owner': 'outis'},
-                           {'id': 'instance-port-2',
-                            'security_groups': ['sec-grp-1', 'sec-grp-2'],
-                            'device_owner': 'outis'},
-                           {'id': 'vrrp-port-1',
-                            'security_groups': ['sec-grp-1'],
-                            'device_owner': 'outis'}]}
+        ports = [Port(**{'id': 'instance-port-1',
+                    'security_group_ids': ['sec-grp-1', 'sec-grp-2'],
+                    'device_owner': 'outis'}),
+                 Port(**{'id': 'instance-port-2',
+                    'security_group_ids': ['sec-grp-1', 'sec-grp-2'],
+                    'device_owner': 'outis'}),
+                 Port(**{'id': 'vrrp-port-1',
+                    'security_group_ids': ['sec-grp-1'],
+                    'device_owner': 'outis'})]
         self.driver.project_id = 'proj-1'
-        self.driver.neutron_client.list_ports.return_value = ports
+        self.driver.network_proxy.ports.return_value = ports
 
         actual_ports = self.driver._get_ports_by_security_group('sec-grp-1')
-        self.assertEqual(ports['ports'], actual_ports)
+        self.assertEqual(ports, actual_ports)
 
     def test_get_instance_ports_by_subnet(self):
         ports = {'ports': [{'id': 'instance-port-1',
@@ -249,7 +251,7 @@ class TestA10NeutronDriver(base.TestCase):
                            {'id': 'instance-port-3',
                             'fixed_ips': [{'subnet_id': 'subnet-20'}],
                             'device_owner': a10constants.OCTAVIA_OWNER}]}
-        self.driver.neutron_client.list_ports.return_value = ports
+        self.driver.network_proxy.ports.return_value = ports
 
         actual_ports = self.driver._get_instance_ports_by_subnet('amp-comp-1', 'subnet-1')
         ports['ports'].pop(2)
@@ -262,7 +264,7 @@ class TestA10NeutronDriver(base.TestCase):
                            {'id': 'instance-port-2',
                             'fixed_ips': [{'subnet_id': 'subnet-1'}],
                             'device_owner': 'outis'}]}
-        self.driver.neutron_client.list_ports.return_value = ports
+        self.driver.network_proxy.list_ports.return_value = ports
 
         actual_ports = self.driver._get_instance_ports_by_subnet('amp-comp-1', 'subnet-1')
         self.assertEqual([], actual_ports)
@@ -270,15 +272,15 @@ class TestA10NeutronDriver(base.TestCase):
     def test_cleanup_port(self):
         vip_port_id = 'vrrp-port-1'
         port = {'id': 'instance-port-1'}
-        delete_port = self.driver.neutron_client.delete_port
+        delete_port = self.driver.network_proxy.delete_port
         self.driver._cleanup_port(vip_port_id, port)
         delete_port.assert_called_with(port['id'])
 
     def test_cleanup_port_vip_port_deleted(self):
         vip_port_id = 'vrrp-port-1'
         port = {'id': vip_port_id}
-        delete_port = self.driver.neutron_client.delete_port
-        delete_port.side_effect = neutron_client_exceptions.NotFound
+        delete_port = self.driver.network_proxy.delete_port
+        delete_port.side_effect = os_exceptions.NotFoundException
 
         log_path = "a10_octavia.network.drivers.neutron.a10_octavia_neutron"
         log_message = str("VIP port %s already deleted. Skipping.")
@@ -293,8 +295,8 @@ class TestA10NeutronDriver(base.TestCase):
     def test_cleanup_port_not_found(self):
         vip_port_id = 'vrrp-port-1'
         port = {'id': 'instance-port-1'}
-        delete_port = self.driver.neutron_client.delete_port
-        delete_port.side_effect = neutron_client_exceptions.PortNotFoundClient
+        delete_port = self.driver.network_proxy.delete_port
+        delete_port.side_effect = os_exceptions.ResourceNotFound
 
         log_path = "a10_octavia.network.drivers.neutron.a10_octavia_neutron"
         log_message = str("Can't deallocate instance port %s because it "
@@ -311,7 +313,7 @@ class TestA10NeutronDriver(base.TestCase):
     def test_cleanup_port_unknown_failure(self):
         vip_port_id = 'vrrp-port-1'
         port = {'id': 'instance-port-1'}
-        delete_port = self.driver.neutron_client.delete_port
+        delete_port = self.driver.network_proxy.delete_port
         delete_port.side_effect = Exception
 
         log_path = "a10_octavia.network.drivers.neutron.a10_octavia_neutron"
@@ -332,7 +334,7 @@ class TestA10NeutronDriver(base.TestCase):
         port = {'id': 'instance-port-1',
                 'security_groups': [sec_grp_id, 'sec-grp-2']}
         expected_payload = {'port': {'security_groups': ['sec-grp-2']}}
-        update_port = self.driver.neutron_client.update_port
+        update_port = self.driver.network_proxy.update_port
 
         self.driver._remove_security_group(port, sec_grp_id)
         update_port.assert_called_with(port['id'], expected_payload)
@@ -342,8 +344,8 @@ class TestA10NeutronDriver(base.TestCase):
         port = {'id': 'instance-port-1',
                 'security_groups': [sec_grp_id, 'sec-grp-2']}
         expected_payload = {'port': {'security_groups': ['sec-grp-2']}}
-        update_port = self.driver.neutron_client.update_port
-        update_port.side_effect = neutron_client_exceptions.PortNotFoundClient
+        update_port = self.driver.network_proxy.update_port
+        update_port.side_effect = os_exceptions.ResourceNotFound
 
         expected_error = network_driver_base.PortNotFound
         module_func = self.driver._remove_security_group
@@ -357,7 +359,7 @@ class TestA10NeutronDriver(base.TestCase):
         port = {'id': 'instance-port-1',
                 'security_groups': [sec_grp_id, 'sec-grp-2']}
         expected_payload = {'port': {'security_groups': ['sec-grp-2']}}
-        update_port = self.driver.neutron_client.update_port
+        update_port = self.driver.network_proxy.update_port
         update_port.side_effect = Exception
 
         expected_error = network_driver_base.NetworkException

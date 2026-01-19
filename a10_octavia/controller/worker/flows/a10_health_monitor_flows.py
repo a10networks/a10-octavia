@@ -16,9 +16,9 @@
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
-from octavia.controller.worker.v1.tasks import database_tasks
-from octavia.controller.worker.v1.tasks import lifecycle_tasks
-from octavia.controller.worker.v1.tasks import model_tasks
+from octavia.controller.worker.v2.tasks import database_tasks
+from octavia.controller.worker.v2.tasks import lifecycle_tasks
+# from octavia.controller.worker.v1.tasks import model_tasks
 
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_database_tasks
@@ -52,17 +52,18 @@ class HealthMonitorFlows(object):
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
         create_hm_flow.add(a10_database_tasks.GetFlavorData(
-            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            rebind={constants.PROVISIONING_STATUS: constants.PROVISIONING_STATUS,
+                    constants.FLAVOR_ID: constants.FLAVOR_ID},
             provides=constants.FLAVOR))
         create_hm_flow.add(health_monitor_tasks.CreateAndAssociateHealthMonitor(
-            requires=[constants.LISTENERS, constants.HEALTH_MON, a10constants.VTHUNDER,
+            requires=[constants.LISTENERS, constants.HEALTH_MON, constants.POOL, a10constants.VTHUNDER,
                       constants.FLAVOR]))
         create_hm_flow.add(database_tasks.MarkHealthMonitorActiveInDB(
             requires=constants.HEALTH_MON))
         create_hm_flow.add(database_tasks.MarkPoolActiveInDB(
-            requires=constants.POOL))
+            requires=constants.POOL_ID))
         create_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+            requires=(constants.LOADBALANCER_ID, constants.LISTENERS)))
         create_hm_flow.add(vthunder_tasks.WriteMemory(
             name=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION,
             requires=(a10constants.VTHUNDER)))
@@ -73,12 +74,13 @@ class HealthMonitorFlows(object):
             requires=(a10constants.VTHUNDER)))
         return create_hm_flow
 
-    def get_fully_populated_create_health_monitor_flow(self, topology, hm):
+    def get_fully_populated_create_health_monitor_flow(self, topology, hm, pool):
         """Create health monitor flow for fully populated loadbalancer creation
 
         :returns: The flow for creating a health monitor
         """
-        sf_name = constants.CREATE_HEALTH_MONITOR_FLOW + '_' + hm.id
+        hm_id = hm.get(constants.ID) or hm.get(constants.HEALTHMONITOR_ID)
+        sf_name = constants.CREATE_HEALTH_MONITOR_FLOW + '_' + hm_id
         create_hm_flow = linear_flow.Flow(sf_name)
         create_hm_flow.add(health_monitor_tasks.HealthMonitorToErrorOnRevertTask(
             name=sf_name + a10constants.FULLY_POPULATED_ERROR_ON_REVERT,
@@ -96,13 +98,14 @@ class HealthMonitorFlows(object):
                 provides=a10constants.VTHUNDER))
         create_hm_flow.add(a10_database_tasks.GetFlavorData(
             name=sf_name + a10constants.FULLY_POPULATED_GET_FLAVOR,
-            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            rebind={constants.PROVISIONING_STATUS: constants.PROVISIONING_STATUS,
+                    constants.FLAVOR_ID: constants.FLAVOR_ID},
             provides=constants.FLAVOR))
         create_hm_flow.add(health_monitor_tasks.CreateAndAssociateHealthMonitor(
             name=sf_name + a10constants.FULLY_POPULATED_CREATE_HM,
-            requires=[constants.LISTENERS, constants.HEALTH_MON, a10constants.VTHUNDER,
+            requires=[constants.LISTENERS, constants.HEALTH_MON, constants.POOL, a10constants.VTHUNDER,
                       constants.FLAVOR],
-            inject={constants.HEALTH_MON: hm, constants.LISTENERS: None}))
+            inject={constants.HEALTH_MON: hm, constants.LISTENERS: None, constants.POOL: pool}))
         create_hm_flow.add(database_tasks.MarkHealthMonitorActiveInDB(
             name=sf_name + a10constants.FULLY_POPULATED_MARK_HM_ACTIVE,
             requires=constants.HEALTH_MON,
@@ -124,9 +127,9 @@ class HealthMonitorFlows(object):
 
         delete_hm_flow.add(database_tasks.MarkHealthMonitorPendingDeleteInDB(
             requires=constants.HEALTH_MON))
-        delete_hm_flow.add(model_tasks.
-                           DeleteModelObject(rebind={constants.OBJECT:
-                                                     constants.HEALTH_MON}))
+        # delete_hm_flow.add(model_tasks.
+        #                    DeleteModelObject(rebind={constants.OBJECT:
+        #                                              constants.HEALTH_MON}))
         delete_hm_flow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             requires=constants.LOADBALANCER,
             provides=a10constants.VTHUNDER))
@@ -139,15 +142,15 @@ class HealthMonitorFlows(object):
         delete_hm_flow.add(database_tasks.DeleteHealthMonitorInDB(
             requires=constants.HEALTH_MON))
         delete_hm_flow.add(database_tasks.DecrementHealthMonitorQuota(
-            requires=constants.HEALTH_MON))
+            requires=constants.PROJECT_ID))
         delete_hm_flow.add(
             database_tasks.UpdatePoolMembersOperatingStatusInDB(
-                requires=constants.POOL,
+                requires=constants.POOL_ID,
                 inject={constants.OPERATING_STATUS: constants.NO_MONITOR}))
         delete_hm_flow.add(database_tasks.MarkPoolActiveInDB(
-            requires=constants.POOL))
+            requires=constants.POOL_ID))
         delete_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+            requires=(constants.LOADBALANCER_ID, constants.LISTENERS)))
         delete_hm_flow.add(vthunder_tasks.WriteMemory(
             name=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION,
             requires=(a10constants.VTHUNDER)))
@@ -161,10 +164,16 @@ class HealthMonitorFlows(object):
     def get_delete_health_monitor_vthunder_subflow(self, health_mon=constants.HEALTH_MON):
         delete_hm_vthunder_subflow = linear_flow.Flow(
             a10constants.DELETE_HEALTH_MONITOR_VTHUNDER_SUBFLOW)
-        delete_hm_vthunder_subflow.add(health_monitor_tasks.DeleteHealthMonitor(
-            name="delete_health_monitor_" + health_mon,
+        if isinstance(health_mon, dict):
+            delete_hm_vthunder_subflow.add(health_monitor_tasks.DeleteHealthMonitor(
+            name="delete_health_monitor_" + health_mon.get(constants.ID),
             requires=[constants.HEALTH_MON, a10constants.VTHUNDER],
-            rebind={constants.HEALTH_MON: health_mon}))
+            inject={constants.HEALTH_MON: health_mon}))
+        else:
+            delete_hm_vthunder_subflow.add(health_monitor_tasks.DeleteHealthMonitor(
+                name="delete_health_monitor",
+                requires=[constants.HEALTH_MON, a10constants.VTHUNDER],
+                rebind={constants.HEALTH_MON: health_mon}))
         return delete_hm_vthunder_subflow
 
     def get_update_health_monitor_flow(self, topology):
@@ -191,7 +200,8 @@ class HealthMonitorFlows(object):
                 requires=a10constants.VTHUNDER,
                 provides=a10constants.VTHUNDER))
         update_hm_flow.add(a10_database_tasks.GetFlavorData(
-            rebind={a10constants.LB_RESOURCE: constants.LOADBALANCER},
+            rebind={constants.PROVISIONING_STATUS: constants.PROVISIONING_STATUS,
+                    constants.FLAVOR_ID: constants.FLAVOR_ID},
             provides=constants.FLAVOR))
         update_hm_flow.add(health_monitor_tasks.UpdateHealthMonitor(
             requires=[constants.LISTENERS, constants.HEALTH_MON,
@@ -202,9 +212,9 @@ class HealthMonitorFlows(object):
         update_hm_flow.add(database_tasks.MarkHealthMonitorActiveInDB(
             requires=constants.HEALTH_MON))
         update_hm_flow.add(database_tasks.MarkPoolActiveInDB(
-            requires=constants.POOL))
+            requires=constants.POOL_ID))
         update_hm_flow.add(database_tasks.MarkLBAndListenersActiveInDB(
-            requires=[constants.LOADBALANCER, constants.LISTENERS]))
+            requires=(constants.LOADBALANCER_ID, constants.LISTENERS)))
         update_hm_flow.add(vthunder_tasks.WriteMemory(
             name=a10constants.WRITE_MEM_FOR_LOCAL_PARTITION,
             requires=(a10constants.VTHUNDER)))

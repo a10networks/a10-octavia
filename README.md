@@ -22,12 +22,7 @@ No such limitation exists for hardware Thunder devices in versions >=1.3. Throug
 
 ```
 | a10-octavia            | acos-client   | ACOS Version        |
-| v1.1                   | v2.6.1        | 5.2.1, 4.1.4-GR1-P5 |
-| v1.2                   | v2.7.0        | 5.2.1-p1            |
-| v1.3, v1.3.1, v1.3.2   | v2.8.0        | 5.2.1-p1            |
-| v2.0                   | v2.9.0        | 5.2.1-p2            |
-| v2.1                   | v2.9.1        | 5.2.1-p2            |
-| v2.2                   | v2.10.0       | 5.2.1-p2 and later  |
+| v                      | v2.10.0       | 6.0.7  |
 ```
 
 ## Project Resources

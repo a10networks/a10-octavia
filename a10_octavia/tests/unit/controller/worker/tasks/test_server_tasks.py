@@ -23,6 +23,8 @@ except ImportError:
 from oslo_config import cfg
 from oslo_config import fixture as oslo_fixture
 
+from octavia.common import constants as o_constants
+from octavia.common import config as o_config_options
 from octavia.common import data_models as o_data_models
 from octavia.tests.common import constants as t_constants
 
@@ -36,16 +38,17 @@ from a10_octavia.tests.common import a10constants
 from a10_octavia.tests.unit import base
 
 VTHUNDER = data_models.VThunder()
-POOL = o_data_models.Pool(id=a10constants.MOCK_POOL_ID,
-                          protocol=a10constants.MOCK_SERVICE_GROUP_PROTOCOL)
-MEMBER = o_data_models.Member(
+POOL = (o_data_models.Pool(id=a10constants.MOCK_POOL_ID,
+                          protocol=a10constants.MOCK_SERVICE_GROUP_PROTOCOL)).to_dict(recurse=True)
+MEMBER = (o_data_models.Member(
     id=a10constants.MOCK_MEMBER_ID, protocol_port=t_constants.MOCK_PORT_ID,
     project_id=t_constants.MOCK_PROJECT_ID, ip_address=t_constants.MOCK_IP_ADDRESS,
-    subnet_id=a10constants.MOCK_SUBNET_ID)
+    subnet_id=a10constants.MOCK_SUBNET_ID)).to_dict(recurse=True)
+MEMBER[o_constants.MEMBER_ID] = a10constants.MOCK_MEMBER_ID
 
 KEY_ARGS = {'server': utils.meta(MEMBER, 'server', {'conn_resume': None, 'conn_limit': 64000000})}
-SERVER_NAME = '{}_{}'.format(MEMBER.project_id[:5],
-                             MEMBER.ip_address.replace('.', '_'))
+SERVER_NAME = '{}_{}'.format(MEMBER[o_constants.PROJECT_ID][:5],
+                             MEMBER[o_constants.IP_ADDRESS].replace('.', '_'))
 
 
 class TestHandlerServerTasks(base.BaseTaskTestCase):
@@ -59,6 +62,8 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                 group=a10constants.SERVER_CONF_SECTION)
         self.conf.register_opts(config_options.A10_GLOBAL_OPTS,
                                 group=a10constants.A10_GLOBAL_CONF_SECTION)
+        self.conf.register_opts(o_config_options.controller_worker_opts,
+                                 group='controller_worker')
 
     def tearDown(self):
         super(TestHandlerServerTasks, self).tearDown()
@@ -110,7 +115,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         mock_create_member.execute(MEMBER, VTHUNDER, POOL,
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
-            SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
+            SERVER_NAME, MEMBER[o_constants.IP_ADDRESS], status=mock.ANY,
             health_check=mock.ANY, server_templates=mock.ANY, **expect_key_args)
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
@@ -123,15 +128,15 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         flavor['server'] = regex
         expect_key_args = {"server": {'conn_limit': 800, 'conn_resume': None}}
         mock_create_member.CONF = self.conf
-        member_obj = o_data_models.Member(
+        member_obj = (o_data_models.Member(
             id=a10constants.MOCK_MEMBER_ID, protocol_port=t_constants.MOCK_PORT_ID,
             project_id=t_constants.MOCK_PROJECT_ID, ip_address=t_constants.MOCK_IP_ADDRESS,
-            name="srv1")
+            name="srv1")).to_dict(recurse=True)
         mock_create_member.axapi_client = self.client_mock
         mock_create_member.execute(member_obj, VTHUNDER, POOL,
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
-            SERVER_NAME, member_obj.ip_address, status=mock.ANY,
+            SERVER_NAME, member_obj[o_constants.IP_ADDRESS], status=mock.ANY,
             health_check=mock.ANY, server_templates=mock.ANY, **expect_key_args)
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
@@ -144,15 +149,15 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         flavor['server'] = regex
         expect_key_args = {"server": {'conn_limit': 800, 'conn_resume': None}}
         mock_create_member.CONF = self.conf
-        member_obj = o_data_models.Member(
+        member_obj = (o_data_models.Member(
             id=a10constants.MOCK_MEMBER_ID, protocol_port=t_constants.MOCK_PORT_ID,
             project_id=t_constants.MOCK_PROJECT_ID, ip_address=t_constants.MOCK_IP_ADDRESS,
-            name="srv1")
+            name="srv1")).to_dict(recurse=True)
         mock_create_member.axapi_client = self.client_mock
         mock_create_member.execute(member_obj, VTHUNDER, POOL,
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
-            SERVER_NAME, member_obj.ip_address, status=mock.ANY,
+            SERVER_NAME, member_obj[o_constants.IP_ADDRESS], status=mock.ANY,
             health_check=mock.ANY, server_templates=mock.ANY, **expect_key_args)
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
@@ -168,7 +173,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         mock_create_member.execute(MEMBER, VTHUNDER, POOL,
                                    member_port_count_ip, flavor)
         self.client_mock.slb.server.create.assert_called_with(
-            SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
+            SERVER_NAME, MEMBER[o_constants.IP_ADDRESS], status=mock.ANY,
             health_check=mock.ANY, server_templates=mock.ANY, **expect_key_args)
 
     def test_MemberCreate_revert_created_member(self):
@@ -190,10 +195,10 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         mock_create_member.execute(MEMBER, VTHUNDER, POOL,
                                    member_port_count_ip)
         self.client_mock.slb.server.create.assert_called_with(
-            SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
+            SERVER_NAME, MEMBER[o_constants.IP_ADDRESS], status=mock.ANY,
             health_check=mock.ANY, server_templates=mock.ANY, **KEY_ARGS)
         self.client_mock.slb.service_group.member.create.assert_called_with(
-            POOL.id, SERVER_NAME, MEMBER.protocol_port)
+            POOL[o_constants.ID], SERVER_NAME, MEMBER['protocol_port'])
 
     def test_create_member_task_multi_port_revert_no_delete(self):
         mock_member = task.MemberCreate()
@@ -212,10 +217,10 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
                                    member_port_count_ip)
         self.client_mock.slb.server.create.assert_not_called()
         self.client_mock.slb.server.update.assert_called_with(
-            SERVER_NAME, MEMBER.ip_address, status=mock.ANY,
+            SERVER_NAME, MEMBER[o_constants.IP_ADDRESS], status=mock.ANY,
             health_check=mock.ANY, server_templates=mock.ANY, **KEY_ARGS)
         self.client_mock.slb.service_group.member.create.assert_called_with(
-            POOL.id, SERVER_NAME, MEMBER.protocol_port)
+            POOL[o_constants.ID], SERVER_NAME, MEMBER['protocol_port'])
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
     def test_delete_member_task_single_no_port(self, mock_server_name):
@@ -224,7 +229,7 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         mock_delete_member.axapi_client = self.client_mock
         mock_delete_member.execute(MEMBER, VTHUNDER, POOL, 0, 0)
         self.client_mock.slb.service_group.member.delete.assert_called_with(
-            POOL.id, SERVER_NAME, MEMBER.protocol_port)
+            POOL[o_constants.ID], SERVER_NAME, MEMBER['protocol_port'])
         self.client_mock.slb.server.delete.assert_called_with(SERVER_NAME)
 
     @mock.patch('a10_octavia.controller.worker.tasks.utils.get_member_server_name')
@@ -239,9 +244,9 @@ class TestHandlerServerTasks(base.BaseTaskTestCase):
         mock_delete_member.execute(MEMBER, VTHUNDER, POOL,
                                    member_port_count_ip, 0)
         self.client_mock.slb.service_group.member.delete.assert_called_with(
-            POOL.id, SERVER_NAME, MEMBER.protocol_port)
+            POOL[o_constants.ID], SERVER_NAME, MEMBER['protocol_port'])
         self.client_mock.slb.server.port.delete.assert_called_with(
-            SERVER_NAME, MEMBER.protocol_port, pool_protocol_tcp)
+            SERVER_NAME, MEMBER['protocol_port'], pool_protocol_tcp)
 
     def test_get_server_name(self):
         server_name = {

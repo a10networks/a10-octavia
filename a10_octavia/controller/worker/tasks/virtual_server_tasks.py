@@ -17,6 +17,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from requests import exceptions
 from taskflow import task
+from octavia.common import constants
 
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
@@ -36,13 +37,12 @@ class LoadBalancerParent(object):
             'vrid': CONF.slb.default_virtual_server_vrid,
             'virtual_server': utils.meta(loadbalancer, 'virtual_server', {})
         }
-
         status = self.axapi_client.slb.UP
-        if not loadbalancer.provisioning_status:
+        if not loadbalancer.get(constants.PROVISIONING_STATUS, True):
             status = self.axapi_client.slb.DOWN
         config_args['status'] = status
 
-        desc = loadbalancer.description
+        desc = loadbalancer[constants.DESCRIPTION]
         if not desc:
             desc = None
         elif str(desc).isspace() or not str(desc):
@@ -61,10 +61,10 @@ class LoadBalancerParent(object):
                 if name_exprs:
                     del virtual_server_flavor['name_expressions']
                 virtual_server_flavor.update(utils.parse_name_expressions(
-                    loadbalancer.name, name_exprs))
+                    loadbalancer[constants.NAME], name_exprs))
                 config_args['virtual_server'].update(virtual_server_flavor)
 
-        set_method(loadbalancer.id, loadbalancer.vip.ip_address, **config_args)
+        set_method(loadbalancer[constants.LOADBALANCER_ID], loadbalancer[constants.VIP_ADDRESS], **config_args)
 
 
 class CreateVirtualServerTask(LoadBalancerParent, task.Task):
@@ -74,22 +74,22 @@ class CreateVirtualServerTask(LoadBalancerParent, task.Task):
     def execute(self, loadbalancer, vthunder, flavor_data=None):
         try:
             self.set(self.axapi_client.slb.virtual_server.create, loadbalancer, flavor_data)
-            LOG.debug("Successfully created load balancer: %s", loadbalancer.id)
+            LOG.debug("Successfully created load balancer: %s", loadbalancer[constants.LOADBALANCER_ID])
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
-            LOG.exception("Failed to created load balancer: %s", loadbalancer.id)
+            LOG.exception("Failed to created load balancer: %s", loadbalancer[constants.LOADBALANCER_ID])
             raise e
 
     @axapi_client_decorator_for_revert
     def revert(self, loadbalancer, vthunder, flavor_data=None, *args, **kwargs):
         try:
-            LOG.warning("Reverting creation of load balancer: %s", loadbalancer.id)
-            self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
+            LOG.warning("Reverting creation of load balancer: %s", loadbalancer[constants.LOADBALANCER_ID])
+            self.axapi_client.slb.virtual_server.delete(loadbalancer[constants.LOADBALANCER_ID])
         except exceptions.ConnectionError:
             LOG.exception(
                 "Failed to connect A10 Thunder device: %s", vthunder.ip)
         except Exception as e:
             LOG.exception("Failed to revert creation of load balancer: %s due to %s",
-                          loadbalancer.id, str(e))
+                          loadbalancer[constants.LOADBALANCER_ID], str(e))
 
 
 class DeleteVirtualServerTask(task.Task):
@@ -99,10 +99,10 @@ class DeleteVirtualServerTask(task.Task):
     def execute(self, loadbalancer, vthunder):
         if vthunder:
             try:
-                self.axapi_client.slb.virtual_server.delete(loadbalancer.id)
-                LOG.debug("Successfully deleted load balancer: %s", loadbalancer.id)
+                self.axapi_client.slb.virtual_server.delete(loadbalancer[constants.LOADBALANCER_ID])
+                LOG.debug("Successfully deleted load balancer: %s", loadbalancer[constants.LOADBALANCER_ID])
             except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
-                LOG.exception("Failed to delete load balancer: %s", loadbalancer.id)
+                LOG.exception("Failed to delete load balancer: %s", loadbalancer[constants.LOADBALANCER_ID])
                 raise e
 
 
@@ -112,12 +112,12 @@ class UpdateVirtualServerTask(LoadBalancerParent, task.Task):
     @axapi_client_decorator
     def execute(self, loadbalancer, vthunder, flavor_data=None, update_dict={}):
         try:
-            loadbalancer.__dict__.update(update_dict)
+            loadbalancer.update(update_dict)
             port_list = self.axapi_client.slb.virtual_server.get(
-                loadbalancer.id)['virtual-server'].get('port-list')
+                loadbalancer[constants.LOADBALANCER_ID])['virtual-server'].get('port-list')
             self.set(self.axapi_client.slb.virtual_server.replace, loadbalancer,
                      port_list=port_list, flavor_data=flavor_data)
-            LOG.debug("Successfully updated load balancer: %s", loadbalancer.id)
+            LOG.debug("Successfully updated load balancer: %s", loadbalancer[constants.LOADBALANCER_ID])
         except (acos_errors.ACOSException, exceptions.ConnectionError) as e:
-            LOG.exception("Failed to update load balancer: %s", loadbalancer.id)
+            LOG.exception("Failed to update load balancer: %s", loadbalancer[constants.LOADBALANCER_ID])
             raise e

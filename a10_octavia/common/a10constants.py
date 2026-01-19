@@ -39,6 +39,8 @@ IFNUM_MASTER = 'ifnum_master'
 IPV6_ADDRESS_LIST = 'ifnum_address'
 LISTENER_STATS = 'listener_stats'
 
+LB_CREATE_SPARES_POOL_PRIORITY = 60
+
 # Octavia taskflow flow and task names (missing name in victoria octavia)
 RELOADLOAD_BALANCER = 'octavia-reloadload-balancer'
 
@@ -55,6 +57,8 @@ NAT_FLAVOR = 'nat_flavor'
 SUBNET_PORT = 'subnet_port'
 WRITE_MEM_SHARED = 'write_mem_shared'
 WRITE_MEM_PRIVATE = 'write_mem_private'
+DEFAULT_VTHUNDER_PASSWORD = 'default_vthunder_password'
+SPARE_VTHUNDER_PASSWORD = 'spare_vthunder_password'
 
 FAILED = 'FAILED'
 USED_SPARE = 'USED_SPARE'
@@ -96,6 +100,7 @@ ID = 'id'
 SECURITY_GROUPS = 'security_groups'
 VIP_SEC_GROUP_PREFIX = 'lb-'
 LB_RESOURCE = 'lb_resource'
+VIP_DICT='vip_dict'
 
 SUBNET_ID = "subnet_id"
 VLAN_ID = "vlan_id"
@@ -136,6 +141,7 @@ DUAL_STACK_MASK = 10000
 # ============================
 # Taskflow flow and task names
 # ============================
+GET_MASTER_VTHUNDER_FOR_VRID = 'get_master_vthunder_for_vrid'
 GET_VTHUNDER_FOR_LB_SUBFLOW = 'octavia-get-vthunder-for-lb-subflow'
 BACKUP_AMPHORA_PLUG = 'backup-amphora-plug'
 GET_MASTER_VTHUNDER_INTERFACE = 'get-master-vthunder-intercae'
@@ -203,12 +209,18 @@ VALIDATE_COMPUTE_FOR_PROJECT = 'validate-compute-for-project'
 GET_SPARE_COMPUTE_FOR_PROJECT = 'get-spare-compute-for-project'
 DELETE_STALE_SPARE_VTHUNDER = 'delete-stale-spare-vthunder'
 CREATE_VTHUNDER_ENTRY = 'create-vthunder-entry'
+UPDATE_VTHUNDER_PASSWORD = 'update-vthunder-password'
+UPDATE_SPARE_VTHUNDER_PASSWORD = 'update-spare-vthunder-password'
+BACKUP_UPDATE_VTHUNDER_PASSWORD = 'backup-update-vthunder-password'
+UPDATE_VTHUNDER_ENTRY = 'update-vthunder-entry'
 UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY = 'update-acos-version-in-vthunder-entry'
 UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER = 'update-acos-version-for-backup-vthunder'
 VTHUNDER_BY_LB = 'vthunder-by-loadbalancer'
 GET_VTHUNDER_BY_LB = 'get-vthunder-by-lb'
+GET_SPARE_VTHUNDER = 'get-spare-vthunder'
 VTHUNDER_CONNECTIVITY_WAIT = 'vthunder-connectivity-wait'
 WAIT_FOR_VTHUNDER_CONNECTIVITY = 'wait-for-vthunder-connectivity'
+WAIT_FOR_VTHUNDER_CONNECTIVITY_RETRY = 'wait-for-vthunder-connectivity-retry'
 CHANGE_PARTITION = 'change-partition'
 CREATE_SSL_CERT_FLOW = 'create-ssl-cert-flow'
 DELETE_SSL_CERT_FLOW = 'delete-ssl-cert-flow'
@@ -218,6 +230,7 @@ DELETE_LOADBALANCER_VRID_SUBFLOW = 'delete-loadbalancer-vrid-subflow'
 REVOKE_ACTIVE_VTHUNDER_LICENSE = 'revoke-active-vthunder-license'
 REVOKE_BACKUP_VTHUNDER_LICENSE = 'revoke-backup-vthunder-license'
 HANDLE_VRID_LOADBALANCER_SUBFLOW = 'handle-vrid-loadbalancer-subflow'
+POPULATE_LB = 'populate-lb'
 CREATE_MEMBER_SNAT_POOL_SUBFLOW = 'create-member-snat-pool-subflow'
 DELETE_MEMBER_VTHUNDER_INTERNAL_SUBFLOW = 'delete-member-vthunder-internal-subflow'
 DELETE_MEMBER_VRID_SUBFLOW = 'delete-member-vrid-subflow'
@@ -258,6 +271,7 @@ GET_VCS_DEVICE_ID = 'get-vcs-device-id'
 POST_FAILOVER_DB_UPDATE = 'post-failover-db-update'
 MARK_LB_LIST_ERROR_ON_REVERT = 'mark-lb-list-error-on-revert'
 GET_BACKUP_VTHUNDER_FROM_DB = 'get-backup-vthunder-from-db'
+PROVIDE_AMPHORA_DICT = 'provide-amphora-dict'
 
 FULLY_POPULATED_LISTENER_CREATE = 'fully-populated-listener-create'
 FULLY_POPULATED_ERROR_ON_REVERT = '-error-on-revert'

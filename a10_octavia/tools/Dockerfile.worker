@@ -1,0 +1,17 @@
+# Dockerfile.worker
+FROM artifactory-1.oci-phx.a10networks.com/a10-octavia/a10-octavia-base:v1
+
+# Copy role scripts into the container
+COPY ../install/a10-octavia-worker /usr/local/bin/a10-octavia-worker
+
+RUN chmod +x /usr/local/bin/a10-octavia-worker 
+
+
+# Create config directories for all roles
+RUN mkdir -p /etc/octavia/conf.d/octavia-worker && \
+    chown -R octavia:octavia /etc/octavia/conf.d
+
+USER octavia
+
+# Use Octavia virtualenv Python for entrypoint
+ENTRYPOINT ["/var/lib/openstack/bin/python3", "/usr/local/bin/a10-octavia-worker", "--config-dir=/etc/octavia", "--config-file=/etc/a10/a10-octavia.conf"]

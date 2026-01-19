@@ -33,24 +33,27 @@ this provider driver uses a "Thunder per Tenant" architecture. Therefore, each t
 Openstack Controller Node Minimum Requirements
 * Memory: 8GB
 * Disk: 20GB 
-* OS: Ubuntu 18.04 or later
-* OpenStack (Nova, Neutron, Etc): Stein Release
-* Octavia version: >=4.1.1, <5.0.0.0rc1 (Stein versions)
+* OS: Ubuntu 22.04.5 or later
+* OpenStack (Nova, Neutron, Etc): Dalmatian Release(2024.2)
+* Octavia version: >=7.0.0, <15.0.2.dev8 (Dalmatian versions)
 
 Openstack Compute Node Minimum Requirements
-* vCPUs: 8
+* vCPUs: 4
 * Memory: 16GB
 * Disk: 40GB
-* OS: Ubuntu 18.04 or later
-* Openstack (Nova, Neutron, Etc): Stein Release
+* OS: Ubuntu 22.04.5 or later
+* Openstack (Nova, Neutron, Etc): Dalmatian Release(2024.2)
 
 ACOS Device Requirements
-* ACOS version: ACOS 4.1.4 GR1 P2
+* ACOS version: ACOS 6.0.7
 * AXAPI version: 3.0
+
+Limitations
+* Dynamic Interface Detection feature is not supported
 
 ## Installation
 
-This guide assumes that Openstack has already been deployed and Octavia has already been configured.
+This guide assumes that Openstack has already been deployed and Octavia has already been configured with Dalmatian version(2024.2).
 
 *Note: The following configurations should be done as an Openstack admin user*
 
@@ -86,15 +89,32 @@ Recommended vThunder flavor settings:
 * 30GB disk
 
 ```shell
-$ openstack image create --disk-format qcow2 --container-format bare --public --file vThunder414.qcow2 vThunder.qcow2
-$ openstack flavor create --vcpu 8 --ram 8192 --disk 30 vThunder_flavor
+$ openstack image create --disk-format qcow2 --container-format bare --public --file vThunder607.qcow2 vThunder.qcow2
+$ openstack flavor create --vcpu 4 --ram 16384 --disk 40 vThunder_flavor
 ```
 
 Note down the `image ID` and `flavor ID` of created resources.
 
 *Please contact support@a10networks.com for questions on acquiring and licensing vThunder images*
 
-#### 3ab. Create the a10-octavia.conf file
+#### 3ab. Create Barbican secrets for the default and updated password of vThunder
+
+*Note: Ensure that all barbican services are running*
+
+```shell
+$ openstack secret store --name default_vthunder_password --payload YTEw --payload-content-type text/plain
+$ openstack secret store --name <admin_project_id>_vthunder_password --payload <new_password_base64> --payload-content-type text/plain
+```
+
+Create Barbican secret for provisioning a spare vThunder in case of Failover
+
+```shell
+$ openstack secret store --name spare_vthunder_password --payload <new_password_base64> --payload-content-type text/plain
+```
+
+*Note: 'YTEw' is the Base64-encoded value of the default password "a10". Replace <new_password_base64> with Base64-encoded value to update vThunder password* 
+
+#### 3ac. Create the a10-octavia.conf file
 ```shell
 $ mkdir /etc/a10
 $ touch /etc/a10/a10-octavia.conf
@@ -102,11 +122,10 @@ $ touch /etc/a10/a10-octavia.conf
 
 *Note: Make sure the user running the Octavia service has access to these files* 
 
-#### 3ac. Sample a10-octavia.conf for vThunders
+#### 3ad. Sample a10-octavia.conf for vThunders
 ```shell
 [vthunder]
 default_vthunder_username = "admin"
-default_vthunder_password = "a10"
 default_axapi_version = "30"
 
 [a10_controller_worker]
@@ -141,7 +160,7 @@ amphorae_expiry_age = 3600
 
 Full list of options can be found here: [Config Options Module](https://github.com/a10networks/a10-octavia/blob/master/a10_octavia/common/config_options.py)
 
-#### 3ad. Update security group to access vThunder AXAPIs
+#### 3ae. Update security group to access vThunder AXAPIs
 
 These settings are for ports allocated on the managment network. It's up to the operator to define the data network security rules.
 
@@ -189,19 +208,18 @@ devices = [
                      "project_id":"<project_id>",
                      "ip_address":"10.0.0.4",
                      "username":"<username>",
-                     "password":"<password>",
                      "device_name":"<device_name>"
                      },
                      {
                      "project_id":"<another_project_id>",
                      "ip_address":"10.0.0.5",
                      "username":"<username>",
-                     "password":"<password>",
                      "device_name":"<device_name>",
                      "partition_name" : "<partition_name>"
                      }
              ]
 ```
+*Note: Create the Barbican secret for the vThunder password using the respective project ID(refer step 3ab)*
 
 ### 3c. Configuring High Availability for VThunders
 
@@ -234,20 +252,18 @@ devices = [
                      "project_id":"&lt;project_id&gt;",
                      "ip_address":"10.0.0.4",
                      "username":"&lt;username&gt;",
-                     "password":"&lt;password&gt;",
                      "device_name":"&lt;device_name&gt;"
                      },
                      {
                      "project_id":"&lt;another_project_id&gt;",
                      "ip_address":"10.0.0.5",
                      "username":"&lt;username&gt;",
-                     "password":"&lt;password&gt;",
                      "device_name":"&lt;device_name&gt;",
                      "partition_name" : "&lt;partition_name&gt;"
                      }
              ]
 </pre>
-
+*Note: Create Barbican secrets for the Active and Standby vThunder passwords with respective project ID (refer step 3ab)*
 
 To support VRRPA floating IP config for hardware devices, `vrid_floating_ip` setting can be included along with above config at global or local level.
 The valid values for `vrid_floating_ip` can be set as `dhcp`, partial IP octets such as '45', '.45', '0.0.45' or a full IPv4 address.
@@ -281,7 +297,6 @@ devices = [
                      "project_id":"&lt;project_id&gt;",
                      "ip_address":"10.0.0.4",
                      "username":"&lt;username&gt;",
-                     "password":"&lt;password&gt;",
                      "device_name":"&lt;device_name&gt;"
                      <b>"vrid_floating_ip": ".45"</b>
                      },
@@ -289,13 +304,14 @@ devices = [
                      "project_id":"&lt;another_project_id&gt;",
                      "ip_address":"10.0.0.5",
                      "username":"&lt;username&gt;",
-                     "password":"&lt;password&gt;",
                      "device_name":"&lt;device_name&gt;",
                      "partition_name" : "&lt;partition_name&gt;"
                      <b>"vrid_floating_ip": "10.10.13.45"</b>
                      }
              ]
 </pre>
+
+*Note: Create the Barbican secret for the vThunder password using the respective project ID(refer step 3ab)*
 
 Note: If the option is set at the local and global level, then the local configuration option shall be used.
  
@@ -317,7 +333,6 @@ devices = [
                "project_id":"<project_id>",
                "ip_address":<device IP / aVCS cluster floating IP>,
                "username":"<username>",
-               "password":"<password>",
                "device_name":"<device_name>"
                "interface_vlan_map": {
                    "device_1": {
@@ -341,7 +356,7 @@ devices = [
               }
           ]
 </pre>
-```
+
 
 ##### 3bcb. Configuring VLAN and VE for Ethernet Interfaces
 

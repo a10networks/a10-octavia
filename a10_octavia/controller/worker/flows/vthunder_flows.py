@@ -19,8 +19,8 @@ from taskflow.patterns import graph_flow
 from taskflow.patterns import linear_flow
 
 from octavia.common import constants
-from octavia.controller.worker.v1.tasks import compute_tasks as compute
-from octavia.controller.worker.v1.tasks import database_tasks
+from octavia.controller.worker.v2.tasks import compute_tasks as compute
+from octavia.controller.worker.v2.tasks import database_tasks
 
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.tasks import a10_compute_tasks as compute_tasks
@@ -60,7 +60,7 @@ class VThunderFlows(object):
         create_vthunder_flow.add(database_tasks.MarkAmphoraBootingInDB(
             name=sf_name + '-' + constants.MARK_AMPHORA_BOOTING_INDB,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_ID)))
-        create_vthunder_flow.add(compute_tasks.ComputeActiveWait(
+        create_vthunder_flow.add(compute_tasks.ComputeWait(
             name=sf_name + '-' + constants.COMPUTE_WAIT,
             requires=(constants.COMPUTE_ID, constants.AMPHORA_ID),
             provides=constants.COMPUTE_OBJ))
@@ -71,9 +71,22 @@ class VThunderFlows(object):
         create_vthunder_flow.add(a10_database_tasks.CreateSpareVThunderEntry(
             requires=(constants.AMPHORA),
             provides=a10constants.VTHUNDER))
+        create_vthunder_flow.add(a10_database_tasks.GetSpareVThunder(
+            name=sf_name + '-' + a10constants.GET_SPARE_VTHUNDER,
+            rebind={a10constants.SPARE_VTHUNDER: a10constants.VTHUNDER},
+            inject={"flag": True},
+            provides=a10constants.VTHUNDER))
         create_vthunder_flow.add(
             vthunder_tasks.VThunderComputeConnectivityWait(
                 name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
+                requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        create_vthunder_flow.add(vthunder_tasks.UpdateSpareVThunderPassword(
+                name=sf_name + '-' + a10constants.UPDATE_SPARE_VTHUNDER_PASSWORD,
+                requires=a10constants.VTHUNDER,
+                provides=a10constants.VTHUNDER))
+        create_vthunder_flow.add(
+            vthunder_tasks.VThunderComputeConnectivityWait(
+                name=sf_name + '--' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
                 requires=(a10constants.VTHUNDER, constants.AMPHORA)))
         create_vthunder_flow.add(vthunder_tasks.EnableInterfaceOnSpare(
             name=sf_name + '-' + a10constants.ENABLE_VTHUNDER_INTERFACE,
@@ -119,7 +132,7 @@ class VThunderFlows(object):
             inject={a10constants.ROLE: role},
             provides=constants.AMPHORA_ID)
 
-        create_amp = self._get_create_amp_for_lb_subflow(prefix, role)
+        create_amp = self.get_create_amp_for_lb_subflow(prefix, role)
 
         map_lb_to_vthunder = self._get_vthunder_for_amphora_subflow(
             prefix, role)
@@ -139,7 +152,7 @@ class VThunderFlows(object):
 
         return amp_for_lb_flow
 
-    def _get_create_amp_for_lb_subflow(self, prefix, role):
+    def get_create_amp_for_lb_subflow(self, prefix, role):
         """Flow to create a new vThunder for lb."""
 
         sf_name = prefix + '-' + constants.CREATE_AMP_FOR_LB_SUBFLOW
@@ -182,7 +195,18 @@ class VThunderFlows(object):
         create_amp_for_lb_subflow.add(database_tasks.MarkAmphoraBootingInDB(
             name=sf_name + '-' + constants.MARK_AMPHORA_BOOTING_INDB,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_ID)))
-        create_amp_for_lb_subflow.add(compute_tasks.ComputeActiveWait(
+        
+        #todo: add retry logic
+        # retry_subflow = linear_flow.Flow(
+        #     constants.COMPUTE_CREATE_RETRY_SUBFLOW,
+        #     retry=compute_tasks.ComputeRetry())
+        # retry_subflow.add(compute_tasks.ComputeWait(
+        #     name=sf_name + '-' + constants.COMPUTE_WAIT,
+        #     requires=(constants.COMPUTE_ID, constants.AMPHORA_ID),
+        #     provides=constants.COMPUTE_OBJ))
+        # create_amp_for_lb_subflow.add(retry_subflow)
+
+        create_amp_for_lb_subflow.add(compute_tasks.ComputeWait(
             name=sf_name + '-' + constants.COMPUTE_WAIT,
             requires=(constants.COMPUTE_ID, constants.AMPHORA_ID),
             provides=constants.COMPUTE_OBJ))
@@ -199,23 +223,45 @@ class VThunderFlows(object):
         create_amp_for_lb_subflow.add(a10_database_tasks.GetVThunderByLoadBalancer(
             name=sf_name + '-' + a10constants.VTHUNDER_BY_LB,
             requires=constants.LOADBALANCER,
+            inject={"flag": True},
             provides=a10constants.VTHUNDER))
+        
         # Get VThunder details from database
         if role == constants.ROLE_BACKUP:
             create_amp_for_lb_subflow.add(
                 a10_database_tasks.GetBackupVThunderByLoadBalancer(
                     requires=constants.LOADBALANCER,
+                    inject={"flag": True},
                     provides=a10constants.BACKUP_VTHUNDER))
             create_amp_for_lb_subflow.add(
                 vthunder_tasks.VThunderComputeConnectivityWait(
                     name=sf_name + '-' + a10constants.BACKUP_CONNECTIVITY_WAIT,
                     rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
                     requires=constants.AMPHORA))
+
+            # Change default password of backup vthunder
+            create_amp_for_lb_subflow.add(vthunder_tasks.UpdateVThunderPassword(
+                name=sf_name + '-' + a10constants.BACKUP_UPDATE_VTHUNDER_PASSWORD,
+                rebind={a10constants.VTHUNDER: a10constants.BACKUP_VTHUNDER},
+                requires=(a10constants.VTHUNDER, constants.LOADBALANCER),
+                provides=a10constants.VTHUNDER))
+
         else:
             create_amp_for_lb_subflow.add(
                 vthunder_tasks.VThunderComputeConnectivityWait(
                     name=sf_name + '-' + a10constants.WAIT_FOR_VTHUNDER_CONNECTIVITY,
                     requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+
+            # Change default password of vthunder
+            create_amp_for_lb_subflow.add(vthunder_tasks.UpdateVThunderPassword(
+                name=sf_name + '-' + a10constants.UPDATE_VTHUNDER_PASSWORD,
+                requires=(a10constants.VTHUNDER, constants.LOADBALANCER),
+                provides=a10constants.VTHUNDER))
+        
+        create_amp_for_lb_subflow.add(vthunder_tasks.VThunderComputeConnectivityWait(
+            name=sf_name + '-' + a10constants.WAIT_FOR_VTHUNDER_CONNECTIVITY_RETRY,
+            requires=(a10constants.VTHUNDER, constants.AMPHORA)))
+        
         # License the vThunder-Amphora
         create_amp_for_lb_subflow.add(
             *self.get_glm_license_subflow(prefix + '-' + role, role))
@@ -225,7 +271,7 @@ class VThunderFlows(object):
                 requires=(constants.AMPHORA, constants.LOADBALANCER_ID)))
         create_amp_for_lb_subflow.add(database_tasks.ReloadAmphora(
             name=sf_name + '-' + constants.RELOAD_AMPHORA,
-            requires=constants.AMPHORA_ID,
+            requires=constants.AMPHORA,
             provides=constants.AMPHORA))
         if role == constants.ROLE_MASTER:
             create_amp_for_lb_subflow.add(database_tasks.MarkAmphoraMasterInDB(
@@ -254,7 +300,7 @@ class VThunderFlows(object):
         else:
             create_amp_for_lb_subflow.add(
                 vthunder_tasks.UpdateAcosVersionInVthunderEntry(
-                    name=sf_name + '-' + a10constants.UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER,
+                    name=sf_name + '-' + a10constants.UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY,
                     requires=(a10constants.VTHUNDER)))
 
         return create_amp_for_lb_subflow
@@ -288,6 +334,10 @@ class VThunderFlows(object):
             name=sf_name + '-' + a10constants.GET_SPARE_COMPUTE_FOR_PROJECT,
             requires=constants.COMPUTE_ID,
             provides=(constants.COMPUTE_ID, a10constants.SPARE_VTHUNDER)))
+        vthunder_for_amphora_subflow.add(a10_database_tasks.GetSpareVThunder(
+            name=sf_name + '-' + a10constants.GET_SPARE_VTHUNDER,
+            requires=a10constants.SPARE_VTHUNDER,
+            provides=a10constants.SPARE_VTHUNDER))
         vthunder_for_amphora_subflow.add(a10_network_tasks.PlugVipNetworkOnSpare(
             name=sf_name + '-' + a10constants.PLUG_VIP_NETWORK_ON_SPARE,
             requires=(a10constants.SPARE_VTHUNDER, constants.LOADBALANCER),
@@ -312,7 +362,7 @@ class VThunderFlows(object):
         vthunder_for_amphora_subflow.add(database_tasks.UpdateAmphoraComputeId(
             name=sf_name + '-' + constants.UPDATE_AMPHORA_COMPUTEID,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_ID)))
-        vthunder_for_amphora_subflow.add(compute_tasks.ComputeActiveWait(
+        vthunder_for_amphora_subflow.add(compute_tasks.ComputeWait(
             name=sf_name + '-' + constants.COMPUTE_WAIT,
             requires=(constants.COMPUTE_ID, constants.AMPHORA_ID),
             provides=constants.COMPUTE_OBJ))
@@ -353,10 +403,11 @@ class VThunderFlows(object):
         vthunder_for_amphora_subflow.add(a10_network_tasks.AllocateVIP(
             name=sf_name + '-' + a10constants.ALLOCATE_VIP,
             requires=[constants.LOADBALANCER, a10constants.LB_COUNT_SUBNET],
-            provides=constants.VIP))
+            provides=a10constants.VIP_DICT))
         vthunder_for_amphora_subflow.add(database_tasks.UpdateVIPAfterAllocation(
             name=sf_name + '-' + a10constants.UPDATE_VIP_AFTER_ALLOCATION,
-            requires=(constants.LOADBALANCER_ID, constants.VIP),
+            requires=[constants.LOADBALANCER_ID, constants.VIP],
+            rebind = {constants.VIP: a10constants.VIP_DICT},
             provides=constants.LOADBALANCER))
         vthunder_for_amphora_subflow.add(
             database_tasks.MarkAmphoraAllocatedInDB(
@@ -364,7 +415,7 @@ class VThunderFlows(object):
                 requires=(constants.AMPHORA, constants.LOADBALANCER_ID)))
         vthunder_for_amphora_subflow.add(database_tasks.ReloadAmphora(
             name=sf_name + '-' + constants.RELOAD_AMPHORA,
-            requires=constants.AMPHORA_ID,
+            requires=constants.AMPHORA,
             provides=constants.AMPHORA))
         if role == constants.ROLE_MASTER:
             vthunder_for_amphora_subflow.add(database_tasks.MarkAmphoraMasterInDB(
@@ -372,7 +423,7 @@ class VThunderFlows(object):
                 requires=constants.AMPHORA))
             vthunder_for_amphora_subflow.add(
                 vthunder_tasks.UpdateAcosVersionInVthunderEntry(
-                    name=sf_name + '-' + a10constants.UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER,
+                    name=sf_name + '-' + a10constants.UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY,
                     requires=(a10constants.VTHUNDER)))
         elif role == constants.ROLE_BACKUP:
             vthunder_for_amphora_subflow.add(database_tasks.MarkAmphoraBackupInDB(
@@ -394,7 +445,7 @@ class VThunderFlows(object):
                     requires=constants.AMPHORA))
             vthunder_for_amphora_subflow.add(
                 vthunder_tasks.UpdateAcosVersionInVthunderEntry(
-                    name=sf_name + '-' + a10constants.UPDATE_ACOS_VERSION_FOR_BACKUP_VTHUNDER,
+                    name=sf_name + '-' + a10constants.UPDATE_ACOS_VERSION_IN_VTHUNDER_ENTRY,
                     requires=(a10constants.VTHUNDER)))
 
         # If spare vThunder is used, remove spare vThunder the database
@@ -545,13 +596,15 @@ class VThunderFlows(object):
     def get_write_memory_flow(self, vthunder, store, deleteCompute):
         """Perform write memory for thunder """
         sf_name = 'a10-house-keeper' + '-' + a10constants.WRITE_MEMORY_THUNDER_FLOW
-
         write_memory_flow = linear_flow.Flow(sf_name)
         vthunder_store = {}
-        vthunder_store[vthunder.vthunder_id] = vthunder
+        vthunder_store[vthunder] = vthunder
+        write_memory_flow.add(a10_database_tasks.PopulateVThunderCredentials(
+            requires=a10constants.VTHUNDER,
+            rebind={a10constants.VTHUNDER: vthunder},
+            provides=a10constants.VTHUNDER))
         write_memory_flow.add(a10_database_tasks.GetActiveLoadBalancersByThunder(
             requires=a10constants.VTHUNDER,
-            rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
             name='{flow}-{id}'.format(
                 id=vthunder.vthunder_id,
                 flow='GetActiveLoadBalancersByThunder'),
@@ -565,7 +618,6 @@ class VThunderFlows(object):
             write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
                 requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST,
                           a10constants.WRITE_MEM_SHARED_PART),
-                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
                 name='{flow}-{partition}-{id}'.format(
                     id=vthunder.vthunder_id,
                     flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
@@ -573,7 +625,6 @@ class VThunderFlows(object):
                 provides=a10constants.WRITE_MEM_SHARED))
             write_memory_flow.add(vthunder_tasks.WriteMemoryHouseKeeper(
                 requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST),
-                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
                 name='{flow}-{partition}-{id}'.format(
                     id=vthunder.vthunder_id,
                     flow='WriteMemory-' + a10constants.WRITE_MEMORY_THUNDER_FLOW,
@@ -583,7 +634,6 @@ class VThunderFlows(object):
                 requires=(a10constants.VTHUNDER,
                           a10constants.WRITE_MEM_SHARED,
                           a10constants.WRITE_MEM_PRIVATE),
-                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
                 name='{flow}-{id}'.format(
                     id=vthunder.vthunder_id,
                     flow='SetThunderLastWriteMem')))
@@ -591,7 +641,6 @@ class VThunderFlows(object):
             write_memory_flow.add(a10_database_tasks.SetThunderLastWriteMem(
                 requires=(a10constants.VTHUNDER),
                 inject={a10constants.WRITE_MEM_SHARED: True, a10constants.WRITE_MEM_PRIVATE: True},
-                rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
                 name='{flow}-{id}'.format(
                     id=vthunder.vthunder_id,
                     flow='SetThunderLastWriteMem')))
@@ -610,20 +659,22 @@ class VThunderFlows(object):
 
         reload_check_flow = linear_flow.Flow(sf_name)
         vthunder_store = {}
-        vthunder_store[vthunder.vthunder_id] = vthunder
+        vthunder_store[vthunder] = vthunder
+        reload_check_flow.add(a10_database_tasks.PopulateVThunderCredentials(
+            requires=a10constants.VTHUNDER,
+            rebind={a10constants.VTHUNDER: vthunder},
+            provides=a10constants.VTHUNDER))
         reload_check_flow.add(a10_database_tasks.GetActiveLoadBalancersByThunder(
             requires=a10constants.VTHUNDER,
-            rebind={a10constants.VTHUNDER: vthunder.vthunder_id},
             name='{flow}-{id}'.format(
                 id=vthunder.vthunder_id,
                 flow='GetActiveLoadBalancersByThunder'),
-            provides=a10constants.LOADBALANCERS_LIST))
+            provides=a10constants.LOADBALANCERS_LIST))      
         reload_check_flow.add(vthunder_tasks.WriteMemoryThunderStatusCheck(
             name='{flow}-{id}'.format(
                 id=vthunder.vthunder_id,
                 flow='WriteMemoryThunderStatusCheck'),
-            requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST),
-            rebind={a10constants.VTHUNDER: vthunder.vthunder_id}))
+            requires=(a10constants.VTHUNDER, a10constants.LOADBALANCERS_LIST)))
 
         store.update(vthunder_store)
         return reload_check_flow
@@ -636,6 +687,10 @@ class VThunderFlows(object):
         failover_flow.add(a10_database_tasks.GetVThunderAmphora(
             name=sf_name + '-' + a10constants.GET_VTHUNDER_AMPHORA,
             requires=a10constants.VTHUNDER,
+            provides=constants.AMPHORA))
+        failover_flow.add(vthunder_tasks.ProvideAmphoraDict(
+            name=sf_name + '-' + a10constants.PROVIDE_AMPHORA_DICT,
+            requires=constants.AMPHORA,
             provides=constants.AMPHORA))
         failover_flow.add(compute.ComputeDelete(
             name=sf_name + '-' + a10constants.COMPUTE_DELETE,
@@ -650,6 +705,10 @@ class VThunderFlows(object):
         """Flow to get spare amphora for failvoer"""
         sf_name = 'failover_get_spare_amphora'
         get_spare_flow = linear_flow.Flow(sf_name)
+        get_spare_flow.add(a10_database_tasks.GetSpareVThunder(
+            name=sf_name + '-' + a10constants.GET_SPARE_VTHUNDER,
+            requires=a10constants.SPARE_VTHUNDER,
+            provides=a10constants.SPARE_VTHUNDER))
         get_spare_flow.add(a10_network_tasks.PlugNetworksByID(
             name=sf_name + '-' + a10constants.PLUG_NETWORK_BY_IDS,
             requires=(a10constants.NETWORK_LIST),
@@ -693,7 +752,7 @@ class VThunderFlows(object):
         create_amp_flow.add(database_tasks.MarkAmphoraBootingInDB(
             name=sf_name + '-' + constants.MARK_AMPHORA_BOOTING_INDB,
             requires=(constants.AMPHORA_ID, constants.COMPUTE_ID)))
-        create_amp_flow.add(compute_tasks.ComputeActiveWait(
+        create_amp_flow.add(compute_tasks.ComputeWait(
             name=sf_name + '-' + constants.COMPUTE_WAIT,
             requires=(constants.COMPUTE_ID, constants.AMPHORA_ID),
             provides=constants.COMPUTE_OBJ))
@@ -704,9 +763,23 @@ class VThunderFlows(object):
         create_amp_flow.add(a10_database_tasks.CreateSpareVThunderEntry(
             requires=(constants.AMPHORA),
             provides=a10constants.SPARE_VTHUNDER))
+        create_amp_flow.add(a10_database_tasks.GetSpareVThunder(
+            name=sf_name + '-' + a10constants.GET_SPARE_VTHUNDER,
+            requires=a10constants.SPARE_VTHUNDER,
+            inject={"flag": True},
+            provides=a10constants.SPARE_VTHUNDER))
         create_amp_flow.add(
             vthunder_tasks.VThunderComputeConnectivityWait(
                 name=sf_name + '-' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
+                requires=constants.AMPHORA,
+                rebind={a10constants.VTHUNDER: a10constants.SPARE_VTHUNDER}))
+        create_amp_flow.add(vthunder_tasks.UpdateSpareVThunderPassword(
+                name=sf_name + '-' + a10constants.UPDATE_SPARE_VTHUNDER_PASSWORD,
+                rebind={a10constants.VTHUNDER: a10constants.SPARE_VTHUNDER},
+                provides=a10constants.VTHUNDER))
+        create_amp_flow.add(
+            vthunder_tasks.VThunderComputeConnectivityWait(
+                name=sf_name + '--' + constants.AMP_COMPUTE_CONNECTIVITY_WAIT,
                 requires=constants.AMPHORA,
                 rebind={a10constants.VTHUNDER: a10constants.SPARE_VTHUNDER}))
         create_amp_flow.add(a10_database_tasks.MarkVThunderStatusInDB(

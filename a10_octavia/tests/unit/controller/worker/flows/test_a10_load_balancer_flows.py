@@ -24,6 +24,7 @@ from taskflow.patterns import linear_flow as flow
 from octavia.common import constants
 from octavia.common import data_models as o_data_models
 from octavia.tests.unit import base
+from octavia.common import rpc
 
 from a10_octavia.common import config_options
 from a10_octavia.controller.worker.flows import a10_load_balancer_flows
@@ -59,11 +60,12 @@ RACK_DEVICE_LIST = {
 }
 
 
-@mock.patch("octavia.controller.worker.v1.tasks.database_tasks.UpdateAmphoraVIPData")
+@mock.patch("octavia.controller.worker.v2.tasks.database_tasks.UpdateAmphoraVIPData")
 class TestLoadBalancerFlows(base.TestCase):
     def setUp(self):
         super(TestLoadBalancerFlows, self).setUp()
         self.conf = self.useFixture(oslo_fixture.Config(cfg.CONF))
+        rpc.init()
 
         self.conf.config(
             group="controller_worker")
@@ -78,7 +80,8 @@ class TestLoadBalancerFlows(base.TestCase):
     def test_create_lb_flows(self, mock_net_driver):
         lb = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
                                         project_id='project-vthunder')
-        (create_flow, store) = self.flows.get_delete_load_balancer_flow(lb, False, False)
+        lb = lb.to_dict(recurse=True)
+        (create_flow, store) = self.flows.get_delete_load_balancer_flow(lb, False, False, False)
         self.assertIsInstance(create_flow, flow.Flow)
 
     def test_create_lb_rack_vthunder_vlan_flow(self, mock_net_driver):
@@ -99,5 +102,6 @@ class TestLoadBalancerFlows(base.TestCase):
                          devices=[RACK_DEVICE])
         lb = o_data_models.LoadBalancer(id=a10constants.MOCK_LOAD_BALANCER_ID,
                                         project_id='project-rack-vthunder')
-        (del_flow, store) = self.flows.get_delete_load_balancer_flow(lb, False, False)
+        lb = lb.to_dict(recurse=True)
+        (del_flow, store) = self.flows.get_delete_load_balancer_flow(lb, False, False, False)
         self.assertIsInstance(del_flow, flow.Flow)

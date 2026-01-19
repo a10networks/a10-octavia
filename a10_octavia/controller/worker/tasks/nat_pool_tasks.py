@@ -18,6 +18,7 @@ from taskflow import task
 
 import acos_client.errors as acos_errors
 
+from octavia.common import constants
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator
 from a10_octavia.controller.worker.tasks.decorators import axapi_client_decorator_for_revert
 
@@ -159,4 +160,4 @@ class NatPoolDelete(task.Task):
                                           pool_name, str(e))
             else:
                 LOG.warning("Cannot delete Nat-pool(s) in flavor %s as "
-                            "they are in use by another loadbalancer(s)", loadbalancer.flavor_id)
+                            "they are in use by another loadbalancer(s)", loadbalancer.get(constants.FLAVOR_ID))

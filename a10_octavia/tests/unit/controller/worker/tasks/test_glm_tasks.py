@@ -152,6 +152,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
 
         dns_task = task.DNSConfiguration()
         dns_task.axapi_client = self.client_mock
+        dns_task._get_dns_nameservers = mock.Mock(return_value=(PRIMARY_DNS, SECONDARY_DNS))
         dns_task.execute(vthunder)
         args, kwargs = self.client_mock.dns.set.call_args
         self.assertEqual(args, (PRIMARY_DNS, SECONDARY_DNS))
@@ -402,7 +403,7 @@ class TestGLMTasks(base.BaseTaskTestCase):
         flexpool_task.axapi_client.interface.get_list.return_value = interfaces
 
         flexpool_task.execute(vthunder, amphora)
-        self.client_mock.system.action.setInterface.assert_called_with(2)
+        self.client_mock.system.action.setInterface.assert_called_with(2, None, 6)
 
     def test_ActivateFlexpoolLicense_execute_enable_burst(self):
         self.conf.config(group=a10constants.GLM_LICENSE_CONFIG_SECTION,

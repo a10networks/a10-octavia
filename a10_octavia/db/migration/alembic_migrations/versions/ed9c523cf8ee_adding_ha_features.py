@@ -25,7 +25,6 @@ def upgrade():
         sa.Column('device_name', sa.String(1024), nullable=False),
         sa.Column('ip_address', sa.String(64), nullable=False),
         sa.Column('username', sa.String(1024), nullable=False),
-        sa.Column('password', sa.String(50), nullable=False),
         sa.Column('axapi_version', sa.Integer, default=30, nullable=False),
         sa.Column('undercloud', sa.Boolean(), default=False, nullable=False),
         sa.Column('loadbalancer_id', sa.String(36)),
