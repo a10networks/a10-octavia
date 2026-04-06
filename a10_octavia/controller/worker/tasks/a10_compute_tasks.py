@@ -27,6 +27,7 @@ from octavia.controller.worker.v2.tasks.compute_tasks import BaseComputeTask
 
 from a10_octavia.common import exceptions as a10_exception
 from a10_octavia.common import utils as a10_utils
+from a10_octavia.db import repositories as a10_repo
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -40,6 +41,13 @@ class ComputeCreate(BaseComputeTask):
         self._network_driver = None
         self._lb_repo = repo.LoadBalancerRepository()
 
+    def _create_port(self, network_id, subnet_id=None, security_groups=None):
+        port = self.network_driver.create_port(
+            network_id= network_id,
+            fixed_ips= [{"subnet_id": subnet_id}] if subnet_id else []
+        )
+        return port
+
     @property
     def network_driver(self):
         if self._network_driver is None:
@@ -49,7 +57,6 @@ class ComputeCreate(BaseComputeTask):
     def execute(self, amphora_id, loadbalancer=None,
                 build_type_priority=constants.LB_CREATE_NORMAL_PRIORITY,
                 server_group_id=None, ports=None, network_list=None):
-
         ports = ports or []
         boot_net_list = CONF.a10_controller_worker.amp_boot_network_list
         mgmt_net = CONF.a10_controller_worker.amp_mgmt_network
@@ -61,6 +68,7 @@ class ComputeCreate(BaseComputeTask):
             with db_apis.session().begin() as session:
                 lb = self._lb_repo.get(session,
                                     id=loadbalancer[constants.LOADBALANCER_ID])
+                lb = lb.to_dict(recurse=True)
 
         network_ids = set(boot_net_list) if boot_net_list else set()
         if CONF.glm_license.amp_license_network:
@@ -68,11 +76,21 @@ class ComputeCreate(BaseComputeTask):
         if network_list:
             network_ids = network_ids.union(set(network_list))
         if loadbalancer:
-            network_ids.add(lb.vip.network_id)
-            for pool in lb.pools:
-                for member in pool.members:
-                    if member.subnet_id is not None:
-                        network_id = self.network_driver.get_subnet(member.subnet_id).network_id
+            #Create port for VIP and each member of the loadbalancer
+            vip_net = lb['vip']['network_id']
+            vip_subnet = lb['vip']['subnet_id']
+
+            vip_port = self._create_port(
+                network_id=vip_net,
+                subnet_id=vip_subnet,
+                security_groups=CONF.a10_controller_worker.amp_secgroup_list
+            )
+
+            ports.append(vip_port)
+            for pool in lb['pools']:
+                for member in pool['members']:
+                    if member['subnet_id'] is not None:
+                        network_id = self.network_driver.get_subnet(member['subnet_id']).network_id
                         network_ids.add(network_id)
 
         if mgmt_net in network_ids:
@@ -219,3 +237,37 @@ class DeleteStaleCompute(BaseComputeTask):
                 LOG.exception("Failed to delete stale compute %s due to: %s",
                               vthunder.compute_id, str(e))
                 # pass here in case the compute is already deleted
+
+class DetachPortByPortID(BaseComputeTask):
+    """Detach port by port id"""
+    def execute(self,  compute_id,port_id):
+        try:
+            self.compute.detach_port(compute_id, port_id)
+        except Exception as e:
+            LOG.exception("Failed to detach port %s from compute %s due to: %s",
+                          port_id, compute_id, str(e))
+
+class RebootInstanceByComputeID(BaseComputeTask):
+    """Reboot instance by compute id"""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.loadbalancer_repo = a10_repo.LoadBalancerRepository()
+    
+    def execute(self,updated_ports, loadbalancer):
+        try:
+            session = db_apis.get_session()
+            with session.begin():
+                db_lb = self.loadbalancer_repo.get(
+                    session, id=loadbalancer[constants.LOADBALANCER_ID])
+            if db_lb.amphorae:
+                for amphora in db_lb.amphorae:
+                    amphora_id = amphora.id
+                    if updated_ports and amphora_id in updated_ports and len(updated_ports[amphora_id]) > 0:
+                        compute_id = amphora.compute_id
+                        LOG.info("Rebooting compute %s for amphora %s",compute_id, amphora_id)
+                        self.compute.manager.reboot(server=compute_id, reboot_type="HARD")
+                        LOG.debug("Waiting for 30 seconds to trigger amphora reboot.")
+                        time.sleep(30)
+                        LOG.debug("Successfully rebooted amphora: %s", amphora_id)
+        except Exception as e:
+            LOG.exception("Failed to reboot amphora %s due to: %s",amphora_id, str(e))

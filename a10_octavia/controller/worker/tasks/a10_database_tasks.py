@@ -749,8 +749,9 @@ class CountMembersWithIPPortProtocol(BaseDatabaseTask):
     def execute(self, member, pool):
         try:
             with db_apis.session().begin() as session:
+                ip = (member.get(constants.ADDRESS) or member.get('ip_address'))
                 return self.member_repo.get_member_count_by_ip_address_port_protocol(
-                    session, (member.get(constants.ADDRESS) or member.get('ip-address')), member[constants.PROJECT_ID],
+                    session, ip, member[constants.PROJECT_ID],
                     member.get('protocol_port'), pool.get(constants.PROTOCOL))
         except Exception as e:
             LOG.exception(
@@ -763,12 +764,13 @@ class PoolCountforIP(BaseDatabaseTask):
     def execute(self, member, use_device_flavor, pools):
         try:
             with db_apis.session().begin() as session:
+                ip = (member.get(constants.ADDRESS) or member.get('ip_address'))
                 if use_device_flavor:
                     return self.member_repo.get_pool_count_by_ip_on_thunder(
-                        session, member[constants.ADDRESS], pools)
+                        session, ip, pools)
                 else:
                     return self.member_repo.get_pool_count_by_ip(
-                        session, (member.get(constants.ADDRESS) or member.get('ip-address')), member[constants.PROJECT_ID])
+                        session, ip, member[constants.PROJECT_ID])
         except Exception as e:
             LOG.exception(
                 "Failed to get pool count with same IP address: %s",

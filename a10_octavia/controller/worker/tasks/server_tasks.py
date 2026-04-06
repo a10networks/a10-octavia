@@ -217,16 +217,16 @@ class MemberDeletePool(task.Task):
         try:
             if self.axapi_client and self.axapi_client.slb:
                 server_name = utils.get_member_server_name(self.axapi_client, member)
-                if pool_count_ip <= 1:
-                    self.axapi_client.slb.server.delete(server_name)
-                    LOG.debug("Successfully deleted member %s from pool %s", (member.get(constants.ID)or member.get(constants.MEMBER_ID)), (pool.get(constants.ID)or pool.get(constants.POOL_ID)))
-                elif member_count_ip_port_protocol <= 1:
+                if member_count_ip_port_protocol <= 1:
                     protocol = openstack_mappings.service_group_protocol(
                         self.axapi_client, pool[constants.PROTOCOL])
                     self.axapi_client.slb.server.port.delete(server_name, member.get('protocol_port'),
                                                             protocol)
                     LOG.debug("Successfully deleted port for member %s from pool %s",
                             (member.get(constants.ID)or member.get(constants.MEMBER_ID)), (pool.get(constants.ID)or pool.get(constants.POOL_ID)))
+                if pool_count_ip <= 1:
+                    self.axapi_client.slb.server.delete(server_name)
+                    LOG.debug("Successfully deleted member %s from pool %s", (member.get(constants.ID)or member.get(constants.MEMBER_ID)), (pool.get(constants.ID)or pool.get(constants.POOL_ID)))
         except acos_errors.NotFound:
             LOG.debug("Unable to find member %s in pool %s", (member.get(constants.ID)or member.get(constants.MEMBER_ID)), (pool.get(constants.ID)or pool.get(constants.POOL_ID)))
         except acos_errors.ACOSException:

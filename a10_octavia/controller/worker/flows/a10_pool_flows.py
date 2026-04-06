@@ -25,7 +25,7 @@ from octavia.controller.worker.v2.tasks import lifecycle_tasks
 from a10_octavia.common import a10constants
 from a10_octavia.controller.worker.flows import a10_health_monitor_flows
 from a10_octavia.controller.worker.flows import a10_member_flows
-from a10_octavia.controller.worker.tasks import a10_database_tasks
+from a10_octavia.controller.worker.tasks import a10_compute_tasks, a10_database_tasks
 from a10_octavia.controller.worker.tasks import a10_network_tasks
 from a10_octavia.controller.worker.tasks import persist_tasks
 from a10_octavia.controller.worker.tasks import service_group_tasks
@@ -195,12 +195,18 @@ class PoolFlows(object):
         delete_pool_flow.add(a10_database_tasks.GetMemberListByProjectID(
             requires=a10constants.VTHUNDER,
             provides=a10constants.MEMBER_LIST))
+        delete_pool_flow.add(vthunder_tasks.WriteMemory(
+            name="write-memory-before-reboot-for-interface-detach-pool",
+            requires=a10constants.VTHUNDER))
         delete_pool_flow.add(a10_network_tasks.CalculateDelta(
             requires=(constants.LOADBALANCER, a10constants.LOADBALANCERS_LIST,
                       a10constants.MEMBER_LIST),
             provides=constants.DELTAS))
         delete_pool_flow.add(a10_network_tasks.HandleNetworkDeltas(
             requires=constants.DELTAS, provides=constants.UPDATED_PORTS))
+        delete_pool_flow.add(a10_compute_tasks.RebootInstanceByComputeID(
+            name=a10constants.REBOOT_VTHUNDER_FOR_INTERFACE_DETACH_POOL,
+            requires=(constants.LOADBALANCER, constants.UPDATED_PORTS)))
         delete_pool_flow.add(
             vthunder_tasks.AmphoraePostNetworkUnplug(
                 requires=(
